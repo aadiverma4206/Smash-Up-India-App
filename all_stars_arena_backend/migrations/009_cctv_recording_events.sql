@@ -1,0 +1,12 @@
+-- 009_cctv_recording_events.sql
+CREATE TABLE IF NOT EXISTS public.cctv_recording_events (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('ev_' || SUBSTR(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT), 1, 16)),
+    recording_id VARCHAR(64) NOT NULL REFERENCES public.cctv_recordings(id) ON DELETE CASCADE,
+    event_type VARCHAR(64) NOT NULL, -- RECORDING_STARTED, MANUAL_STOP_TRIGGERED, AUTO_STOP_TRIGGERED, EXTENDED_DEADLINE, RECORDING_FAILED, UPLOAD_COMPLETED
+    actor_user_id VARCHAR(64) REFERENCES public.users(id) ON DELETE SET NULL,
+    event_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    metadata JSONB DEFAULT '{}'::jsonb NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cctv_recording_events_rec ON public.cctv_recording_events(recording_id);

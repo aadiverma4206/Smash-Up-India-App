@@ -1,0 +1,437 @@
+import { dbPool } from '../../config/db.config.js';
+
+export class ManagerRepository {
+  static async getManagerClub(userId: string) {
+    const res = await dbPool.query(
+      `SELECT clb.* FROM public.clubs clb
+       JOIN public.club_managers cm ON cm.club_id = clb.id
+       WHERE cm.user_id = $1 LIMIT 1;`,
+      [userId]
+    );
+    if (res.rows[0]) return res.rows[0];
+
+    // Fallback: If manager/admin account exists in public.users (Role 2 or 1), but lacks a club_managers link,
+    // automatically link them to the primary active turf club in their city so they are never blocked.
+    const userRes = await dbPool.query(
+      `SELECT id, role_id, city FROM public.users WHERE id = $1;`,
+      [userId]
+    );
+    if (userRes.rows.length > 0 && (Number(userRes.rows[0].role_id) === 2 || Number(userRes.rows[0].role_id) === 1)) {
+      const city = userRes.rows[0].city || 'Raipur';
+      const defaultClubRes = await dbPool.query(
+        `SELECT * FROM public.clubs WHERE status = 'ACTIVE' ORDER BY (city = $1) DESC, created_at ASC LIMIT 1;`,
+        [city]
+      );
+      if (defaultClubRes.rows.length > 0) {
+        const fallbackClub = defaultClubRes.rows[0];
+        await dbPool.query(
+          `INSERT INTO public.club_managers (club_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
+          [fallbackClub.id, userId]
+        );
+        return fallbackClub;
+      }
+    }
+
+    return null;
+  }
+
+  static async getDashboardStats(clubId: string) {
+    const gamesRes = await dbPool.query(
+      `SELECT COUNT(*) as total_games FROM public.games WHERE club_id = $1;`,
+      [clubId]
+    );
+    const bookingsRes = await dbPool.query(
+      `SELECT COUNT(*) as total_bookings, COALESCE(SUM(amount_paid), 0) as total_revenue
+       FROM public.court_bookings WHERE club_id = $1 AND status = 'CONFIRMED';`,
+      [clubId]
+    );
+    const courtsRes = await dbPool.query(
+      `SELECT COUNT(*) as total_courts FROM public.courts WHERE club_id = $1;`,
+      [clubId]
+    );
+    const cctvRes = await dbPool.query(
+      `SELECT COUNT(*) as total_cameras,
+              COUNT(*) FILTER (WHERE status = 'ONLINE') as online_cameras,
+              COUNT(*) FILTER (WHERE status = 'RECORDING') as recording_cameras
+       FROM public.cctv_cameras WHERE club_id = $1;`,
+      [clubId]
+    );
+
+    return {
+      totalGames: Number(gamesRes.rows[0]?.total_games || 0),
+      totalBookings: Number(bookingsRes.rows[0]?.total_bookings || 0),
+      totalRevenueRupees: Number(bookingsRes.rows[0]?.total_revenue || 0),
+      totalCourts: Number(courtsRes.rows[0]?.total_courts || 0),
+      cctvStats: {
+        totalCameras: Number(cctvRes.rows[0]?.total_cameras || 0),
+        onlineCameras: Number(cctvRes.rows[0]?.online_cameras || 0),
+        recordingCameras: Number(cctvRes.rows[0]?.recording_cameras || 0),
+      },
+    };
+  }
+
+  static async createCourt(data: {
+    clubId: string;
+    name: string;
+    environment: string;
+    surface: string;
+    basePrice: number;
+    peakMultiplier: number;
+    weekendMultiplier: number;
+  }) {
+    const query = `
+      INSERT INTO public.courts
+      (club_id, name, environment, surface, base_price, peak_multiplier, weekend_multiplier, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')
+      RETURNING *;
+    `;
+    const res = await dbPool.query(query, [
+      data.clubId,
+      data.name,
+      data.environment,
+      data.surface,
+      data.basePrice,
+      data.peakMultiplier,
+      data.weekendMultiplier,
+    ]);
+    return res.rows[0];
+  }
+
+  static async updateCourtPricing(
+    courtId: string,
+    data: {
+      basePrice?: number;
+      peakMultiplier?: number;
+      weekendMultiplier?: number;
+      peakWindowStart?: string;
+      peakWindowEnd?: string;
+    }
+  ) {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (data.basePrice !== undefined) { fields.push(`base_price = $${idx++}`); values.push(data.basePrice); }
+    if (data.peakMultiplier !== undefined) { fields.push(`peak_multiplier = $${idx++}`); values.push(data.peakMultiplier); }
+    if (data.weekendMultiplier !== undefined) { fields.push(`weekend_multiplier = $${idx++}`); values.push(data.weekendMultiplier); }
+    if (data.peakWindowStart) { fields.push(`peak_window_start = $${idx++}`); values.push(data.peakWindowStart); }
+    if (data.peakWindowEnd) { fields.push(`peak_window_end = $${idx++}`); values.push(data.peakWindowEnd); }
+
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(courtId);
+
+    const res = await dbPool.query(
+      `UPDATE public.courts SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *;`,
+      values
+    );
+    return res.rows[0];
+  }
+
+  static async createGame(data: {
+    title: string;
+    clubId: string;
+    courtId: string;
+    creatorId: string;
+    format: string;
+    maxPlayers: number;
+    entryFee: number;
+    matchDate: string;
+    startTime: string;
+    endTime: string;
+    privacy: string;
+    description?: string;
+  }) {
+    const query = `
+      INSERT INTO public.games
+      (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, match_date, start_time, end_time, privacy, status, approval_status, manager_id, description)
+      VALUES ($1, $2, $3, $4, 'MANAGER', false, $5, $6, $7, $8, $9, $10, $11, 'OPEN_FOR_JOINING', 'APPROVED', $4, $12)
+      RETURNING *;
+    `;
+    const res = await dbPool.query(query, [
+      data.title,
+      data.clubId,
+      data.courtId,
+      data.creatorId,
+      data.format,
+      data.maxPlayers,
+      data.entryFee,
+      data.matchDate,
+      data.startTime,
+      data.endTime,
+      data.privacy,
+      data.description || null,
+    ]);
+    return res.rows[0];
+  }
+
+  static async updateGame(gameId: string, data: Partial<{
+    title: string;
+    courtId: string;
+    format: string;
+    maxPlayers: number;
+    entryFee: number;
+    matchDate: string;
+    startTime: string;
+    endTime: string;
+    description: string;
+    privacy: string;
+  }>) {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (data.title !== undefined) { fields.push(`title = $${idx++}`); values.push(data.title); }
+    if (data.courtId !== undefined) { fields.push(`court_id = $${idx++}`); values.push(data.courtId); }
+    if (data.format !== undefined) { fields.push(`format = $${idx++}`); values.push(data.format); }
+    if (data.maxPlayers !== undefined) { fields.push(`max_players = $${idx++}`); values.push(data.maxPlayers); }
+    if (data.entryFee !== undefined) { fields.push(`entry_fee = $${idx++}`); values.push(data.entryFee); }
+    if (data.matchDate !== undefined) { fields.push(`match_date = $${idx++}`); values.push(data.matchDate); }
+    if (data.startTime !== undefined) { fields.push(`start_time = $${idx++}`); values.push(data.startTime); }
+    if (data.endTime !== undefined) { fields.push(`end_time = $${idx++}`); values.push(data.endTime); }
+    if (data.description !== undefined) { fields.push(`description = $${idx++}`); values.push(data.description); }
+    if (data.privacy !== undefined) { fields.push(`privacy = $${idx++}`); values.push(data.privacy); }
+
+    if (fields.length === 0) return null;
+
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(gameId);
+
+    const res = await dbPool.query(
+      `UPDATE public.games SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *;`,
+      values
+    );
+    return res.rows[0];
+  }
+
+  static async updateGameStatus(gameId: string, status: string) {
+    const res = await dbPool.query(
+      `UPDATE public.games SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *;`,
+      [status, gameId]
+    );
+    return res.rows[0];
+  }
+
+  static async getClubBookings(clubId: string) {
+    const res = await dbPool.query(
+      `SELECT b.*, crt.name as court_name, u.name as player_name, u.phone as player_phone
+       FROM public.court_bookings b
+       JOIN public.courts crt ON crt.id = b.court_id
+       JOIN public.users u ON u.id = b.user_id
+       WHERE b.club_id = $1
+       ORDER BY b.booking_date DESC, b.start_time DESC;`,
+      [clubId]
+    );
+    return res.rows;
+  }
+
+  static async getPendingRequests(clubId: string) {
+    const query = `
+      SELECT req.*, u.name as player_name, u.profile_image_url as player_image,
+             pd.position as player_position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,
+             g.title as game_title, g.match_date, g.start_time, g.end_time, g.format, g.max_players,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_roster_count
+      FROM public.game_slot_requests req
+      JOIN public.games g ON g.id = req.game_id
+      JOIN public.users u ON u.id = req.user_id
+      LEFT JOIN public.player_details pd ON pd.user_id = req.user_id
+      WHERE g.club_id = $1 AND req.status IN ('PENDING', 'APPROVED')
+      ORDER BY req.updated_at DESC, req.created_at ASC;
+    `;
+    const res = await dbPool.query(query, [clubId]);
+    return res.rows;
+  }
+
+  static async getClubMatchesByStatus(clubId: string, statusTab?: string) {
+    let statusCondition = '';
+    const tabUpper = (statusTab || '').toUpperCase();
+    if (tabUpper === 'TODAY') {
+      statusCondition = "AND g.match_date = CURRENT_DATE AND g.status <> 'CANCELLED'";
+    } else if (tabUpper === 'UPCOMING') {
+      statusCondition = "AND g.match_date > CURRENT_DATE AND g.status <> 'CANCELLED'";
+    } else if (tabUpper === 'ONGOING') {
+      statusCondition = "AND g.status = 'ONGOING'";
+    } else if (tabUpper === 'COMPLETED') {
+      statusCondition = "AND g.status = 'COMPLETED'";
+    } else if (tabUpper === 'CANCELLED') {
+      statusCondition = "AND g.status = 'CANCELLED'";
+    }
+
+    const query = `
+      SELECT g.*, crt.name as court_name,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
+             (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
+      FROM public.games g
+      LEFT JOIN public.courts crt ON crt.id = g.court_id
+      WHERE g.club_id = $1 ${statusCondition}
+      ORDER BY g.match_date ASC, g.start_time ASC;
+    `;
+    const res = await dbPool.query(query, [clubId]);
+    return res.rows;
+  }
+
+  static async getCourtsByClub(clubId: string) {
+    const query = `
+      SELECT crt.*,
+             (SELECT COUNT(*) FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true) as camera_count,
+             (SELECT cam.status FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true LIMIT 1) as camera_status
+      FROM public.courts crt
+      WHERE crt.club_id = $1
+      ORDER BY crt.name ASC;
+    `;
+    const res = await dbPool.query(query, [clubId]);
+    return res.rows;
+  }
+
+  static async getCourtById(courtId: string) {
+    const res = await dbPool.query(
+      `SELECT crt.*, clb.name as club_name, clb.address as club_address
+       FROM public.courts crt
+       JOIN public.clubs clb ON clb.id = crt.club_id
+       WHERE crt.id = $1;`,
+      [courtId]
+    );
+    return res.rows[0] || null;
+  }
+
+  static async getCourtSlots(courtId: string, date: string) {
+    const query = `
+      SELECT g.id, g.title, g.format, g.max_players, g.entry_fee, g.privacy,
+             g.match_date, g.start_time, g.end_time, g.status, g.approval_status,
+             g.created_by_player, g.creator_role_name, g.rejection_reason,
+             g.team_a_score, g.team_b_score, g.winner_team,
+             u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
+             crt.name as court_name,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') as paid_players_count,
+             cam.id as camera_id, cam.status as camera_status,
+             rec.id as recording_id, rec.recording_status
+      FROM public.games g
+      JOIN public.courts crt ON crt.id = g.court_id
+      LEFT JOIN public.users u ON u.id = g.creator_id
+      LEFT JOIN public.cctv_cameras cam ON cam.court_id = g.court_id AND cam.is_enabled = true
+      LEFT JOIN public.cctv_recordings rec ON rec.game_id = g.id AND rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING')
+      WHERE g.court_id = $1 AND g.match_date = $2
+      ORDER BY g.start_time ASC;
+    `;
+    const res = await dbPool.query(query, [courtId, date]);
+    return res.rows;
+  }
+
+  static async getPendingPlayerGames(clubId: string) {
+    const query = `
+      SELECT g.*, crt.name as court_name,
+             u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,
+             u.profile_image_url as host_image, pd.elo_rating as host_elo, pd.position as host_position,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count
+      FROM public.games g
+      JOIN public.courts crt ON crt.id = g.court_id
+      JOIN public.users u ON u.id = g.creator_id
+      LEFT JOIN public.player_details pd ON pd.user_id = g.creator_id
+      WHERE g.club_id = $1 AND g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
+      ORDER BY g.match_date ASC, g.start_time ASC;
+    `;
+    const res = await dbPool.query(query, [clubId]);
+    return res.rows;
+  }
+
+  static async getAllPlayers(search?: string, status?: string, limit = 50, offset = 0) {
+    const conditions: string[] = ['u.role_id = 3'];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (search && search.trim().length > 0) {
+      conditions.push(`(u.name ILIKE $${idx} OR u.email ILIKE $${idx} OR u.phone ILIKE $${idx} OR pd.position ILIKE $${idx})`);
+      values.push(`%${search.trim()}%`);
+      idx++;
+    }
+
+    if (status && status.toUpperCase() !== 'ALL' && status.toUpperCase() !== 'ALL PLAYERS') {
+      const statusUpper = status.toUpperCase();
+      if (statusUpper === 'BLOCKED' || statusUpper === 'SUSPENDED') {
+        conditions.push(`u.status = 'SUSPENDED'`);
+      } else if (statusUpper === 'ACTIVE') {
+        conditions.push(`u.status = 'ACTIVE'`);
+      } else {
+        conditions.push(`u.status = $${idx}`);
+        values.push(statusUpper);
+        idx++;
+      }
+    }
+
+    values.push(limit, offset);
+
+    const query = `
+      SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,
+             pd.position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,
+             pd.city, pd.bio,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.user_id = u.id) as matches_played
+      FROM public.users u
+      LEFT JOIN public.player_details pd ON pd.user_id = u.id
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY u.created_at DESC
+      LIMIT $${idx++} OFFSET $${idx++};
+    `;
+    const res = await dbPool.query(query, values);
+
+    const countQuery = `
+      SELECT COUNT(*) as total_count
+      FROM public.users u
+      WHERE ${conditions.join(' AND ')};
+    `;
+    const countRes = await dbPool.query(countQuery, values.slice(0, idx - 3));
+
+    return {
+      players: res.rows,
+      totalCount: parseInt(countRes.rows[0]?.total_count || '0', 10),
+    };
+  }
+
+  static async updatePlayerStatus(playerId: string, status: string) {
+    const res = await dbPool.query(
+      `UPDATE public.users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND role_id = 3 RETURNING id, name, email, status;`,
+      [status, playerId]
+    );
+    return res.rows[0] || null;
+  }
+
+  static async getGameForManager(gameId: string) {
+    const gameRes = await dbPool.query(
+      `SELECT g.*, crt.name as court_name, clb.name as club_name,
+              u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,
+              u.profile_image_url as host_image, pd.elo_rating as host_elo
+       FROM public.games g
+       LEFT JOIN public.courts crt ON crt.id = g.court_id
+       LEFT JOIN public.clubs clb ON clb.id = g.club_id
+       LEFT JOIN public.users u ON u.id = g.creator_id
+       LEFT JOIN public.player_details pd ON pd.user_id = g.creator_id
+       WHERE g.id = $1;`,
+      [gameId]
+    );
+
+    if (gameRes.rows.length === 0) return null;
+    const game = gameRes.rows[0];
+
+    const playersRes = await dbPool.query(
+      `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.created_at as joined_at,
+              u.name, u.email, u.phone, u.profile_image_url,
+              pd.elo_rating, pd.ovr_rating
+       FROM public.game_players gp
+       JOIN public.users u ON u.id = gp.user_id
+       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
+       WHERE gp.game_id = $1
+       ORDER BY gp.created_at ASC;`,
+      [gameId]
+    );
+
+    const recordingRes = await dbPool.query(
+      `SELECT * FROM public.cctv_recordings WHERE game_id = $1 ORDER BY created_at DESC LIMIT 1;`,
+      [gameId]
+    );
+
+    return {
+      ...game,
+      roster: playersRes.rows,
+      recording: recordingRes.rows[0] || null,
+    };
+  }
+}

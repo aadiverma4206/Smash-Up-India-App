@@ -1,0 +1,264 @@
+import { dbPool } from '../../config/db.config.js';
+
+export class PlayerRepository {
+  static async getProfile(userId: string) {
+    const res = await dbPool.query(
+      `SELECT u.id, u.name, u.email, u.phone, u.city, u.bio, u.status as account_status, u.date_of_birth,
+              COALESCE(u.profile_image_url, '') as avatar_url,
+              pd.position, pd.secondary_position, pd.preferred_foot, pd.skill_level,
+              pd.ovr_rating, pd.elo_rating, pd.badges, pd.wallet_balance
+       FROM public.users u
+       LEFT JOIN public.player_details pd ON pd.user_id = u.id
+       WHERE u.id = $1;`,
+      [userId]
+    );
+    const row = res.rows[0];
+    if (!row) return null;
+    return {
+      userId: row.id,
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      city: row.city || 'Raipur',
+      bio: row.bio || null,
+      avatarUrl: row.avatar_url || null,
+      avatar_url: row.avatar_url || null,
+      dateOfBirth: row.date_of_birth ? row.date_of_birth.toISOString().split('T')[0] : null,
+      position: row.position || 'ST',
+      secondaryPosition: row.secondary_position || null,
+      preferredFoot: row.preferred_foot || 'Right',
+      preferred_foot: row.preferred_foot || 'Right',
+      skillLevel: row.skill_level || 'AMATEUR',
+      skill_level: row.skill_level || 'AMATEUR',
+      ovr: row.ovr_rating || 75,
+      ovr_rating: row.ovr_rating || 75,
+      elo: row.elo_rating || 1200,
+      elo_rating: row.elo_rating || 1200,
+      walletBalance: parseFloat(row.wallet_balance || '0.00'),
+      wallet_balance: parseFloat(row.wallet_balance || '0.00'),
+      accountStatus: row.account_status || 'ACTIVE',
+    };
+  }
+
+  static async updateProfile(
+    userId: string,
+    data: {
+      name?: string;
+      bio?: string;
+      city?: string;
+      avatarUrl?: string;
+      dateOfBirth?: string;
+      position?: string;
+      secondaryPosition?: string;
+      preferredFoot?: string;
+      skillLevel?: string;
+    }
+  ) {
+    if (data.name || data.bio || data.city || data.avatarUrl || data.dateOfBirth) {
+      const userFields: string[] = [];
+      const userVals: any[] = [];
+      let idx = 1;
+
+      if (data.name) { userFields.push(`name = $${idx++}`); userVals.push(data.name); }
+      if (data.bio !== undefined) { userFields.push(`bio = $${idx++}`); userVals.push(data.bio); }
+      if (data.city) { userFields.push(`city = $${idx++}`); userVals.push(data.city); }
+      if (data.avatarUrl) { userFields.push(`profile_image_url = $${idx++}`); userVals.push(data.avatarUrl); }
+      if (data.dateOfBirth) { userFields.push(`date_of_birth = $${idx++}`); userVals.push(data.dateOfBirth); }
+      userFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+      userVals.push(userId);
+      await dbPool.query(
+        `UPDATE public.users SET ${userFields.join(', ')} WHERE id = $${idx};`,
+        userVals
+      );
+    }
+
+    if (data.position || data.secondaryPosition || data.preferredFoot || data.skillLevel) {
+      const pdFields: string[] = [];
+      const pdVals: any[] = [];
+      let idx = 1;
+
+      if (data.position) { pdFields.push(`position = $${idx++}`); pdVals.push(data.position); }
+      if (data.secondaryPosition !== undefined) { pdFields.push(`secondary_position = $${idx++}`); pdVals.push(data.secondaryPosition); }
+      if (data.preferredFoot) { pdFields.push(`preferred_foot = $${idx++}`); pdVals.push(data.preferredFoot); }
+      if (data.skillLevel) { pdFields.push(`skill_level = $${idx++}`); pdVals.push(data.skillLevel); }
+      pdFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+      pdVals.push(userId);
+      await dbPool.query(
+        `UPDATE public.player_details SET ${pdFields.join(', ')} WHERE user_id = $${idx};`,
+        pdVals
+      );
+    }
+
+    return await this.getProfile(userId);
+  }
+
+  static async updateAvatar(userId: string, avatarUrl: string) {
+    await dbPool.query(
+      `UPDATE public.users SET profile_image_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;`,
+      [avatarUrl, userId]
+    );
+    return await this.getProfile(userId);
+  }
+
+  static async getStats(userId: string) {
+    const res = await dbPool.query(
+      `SELECT * FROM public.player_stats WHERE user_id = $1;`,
+      [userId]
+    );
+    const row = res.rows[0];
+    if (!row) {
+      return {
+        matchesPlayed: 0,
+        matchesWon: 0,
+        matchesLost: 0,
+        matchesDrawn: 0,
+        goalsScored: 0,
+        assists: 0,
+        motmCount: 0,
+        winRatePercentage: 0.0,
+      };
+    }
+    return {
+      matchesPlayed: row.matches_played || 0,
+      matches_played: row.matches_played || 0,
+      matchesWon: row.matches_won || 0,
+      matches_won: row.matches_won || 0,
+      matchesLost: row.matches_lost || 0,
+      matches_lost: row.matches_lost || 0,
+      matchesDrawn: row.matches_drawn || 0,
+      matches_drawn: row.matches_drawn || 0,
+      goalsScored: row.goals_scored || 0,
+      goals_scored: row.goals_scored || 0,
+      assists: row.assists || 0,
+      motmCount: row.motm_count || 0,
+      motm_count: row.motm_count || 0,
+      winRatePercentage: parseFloat(row.win_rate_percentage) || 0.0,
+      win_rate_percentage: parseFloat(row.win_rate_percentage) || 0.0,
+    };
+  }
+
+  static async getHistory(userId: string, limit = 20, offset = 0) {
+    const res = await dbPool.query(
+      `SELECT gp.game_id, gp.team, gp.position,
+              g.title, g.match_date, g.start_time, g.end_time, g.status, g.format, g.entry_fee,
+              g.team_a_score, g.team_b_score, g.winner_team,
+              c.name as club_name, crt.name as court_name,
+              CASE
+                WHEN g.status <> 'COMPLETED' THEN 'PENDING'
+                WHEN g.winner_team = 'DRAW' THEN 'DRAW'
+                WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
+                ELSE 'LOSS'
+              END as result
+       FROM public.game_players gp
+       JOIN public.games g ON g.id = gp.game_id
+       LEFT JOIN public.clubs c ON c.id = g.club_id
+       LEFT JOIN public.courts crt ON crt.id = g.court_id
+       WHERE gp.user_id = $1
+       ORDER BY g.match_date DESC, g.start_time DESC
+       LIMIT $2 OFFSET $3;`,
+      [userId, limit, offset]
+    );
+    return res.rows;
+  }
+
+  static async getDashboardSummary(userId: string) {
+    const profile = await this.getProfile(userId);
+    const stats = await this.getStats(userId);
+
+    // Active/ongoing match
+    const activeRes = await dbPool.query(
+      `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position
+       FROM public.game_players gp
+       JOIN public.games g ON g.id = gp.game_id
+       LEFT JOIN public.clubs c ON c.id = g.club_id
+       LEFT JOIN public.courts crt ON crt.id = g.court_id
+       WHERE gp.user_id = $1 AND g.status = 'ONGOING'
+       ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
+      [userId]
+    );
+
+    // Upcoming match
+    const upcomingRes = await dbPool.query(
+      `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position
+       FROM public.game_players gp
+       JOIN public.games g ON g.id = gp.game_id
+       LEFT JOIN public.clubs c ON c.id = g.club_id
+       LEFT JOIN public.courts crt ON crt.id = g.court_id
+       WHERE gp.user_id = $1 AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))
+       ORDER BY g.match_date ASC, g.start_time ASC LIMIT 1;`,
+      [userId]
+    );
+
+    // Recent match
+    const recentRes = await dbPool.query(
+      `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position,
+              CASE
+                WHEN g.winner_team = 'DRAW' THEN 'DRAW'
+                WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
+                ELSE 'LOSS'
+              END as result
+       FROM public.game_players gp
+       JOIN public.games g ON g.id = gp.game_id
+       LEFT JOIN public.clubs c ON c.id = g.club_id
+       LEFT JOIN public.courts crt ON crt.id = g.court_id
+       WHERE gp.user_id = $1 AND g.status = 'COMPLETED'
+       ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
+      [userId]
+    );
+
+    return {
+      profile,
+      stats,
+      activeMatch: activeRes.rows[0] || null,
+      upcomingMatch: upcomingRes.rows[0] || null,
+      recentMatch: recentRes.rows[0] || null,
+      walletBalance: profile?.walletBalance || 0,
+    };
+  }
+
+  static async getMyMatches(userId: string, tab: string) {
+    let query = '';
+    let params: any[] = [userId];
+
+    if (tab === 'WAITLISTED') {
+      query = `
+        SELECT g.*, c.name as club_name, crt.name as court_name, gw.position as waitlist_position, gw.status as waitlist_status, gw.joined_at as waitlist_joined_at
+        FROM public.game_waitlist gw
+        JOIN public.games g ON g.id = gw.game_id
+        LEFT JOIN public.clubs c ON c.id = g.club_id
+        LEFT JOIN public.courts crt ON crt.id = g.court_id
+        WHERE gw.user_id = $1
+        ORDER BY g.match_date ASC, g.start_time ASC;
+      `;
+    } else {
+      let statusCondition = '';
+      if (tab === 'UPCOMING') {
+        statusCondition = "AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))";
+      } else if (tab === 'ONGOING') {
+        statusCondition = "AND g.status = 'ONGOING'";
+      } else if (tab === 'COMPLETED') {
+        statusCondition = "AND g.status = 'COMPLETED'";
+      } else if (tab === 'CANCELLED') {
+        statusCondition = "AND g.status = 'CANCELLED'";
+      }
+
+      query = `
+        SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
+               g.*, c.name as club_name, crt.name as court_name,
+               (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
+        FROM public.game_players gp
+        JOIN public.games g ON g.id = gp.game_id
+        LEFT JOIN public.clubs c ON c.id = g.club_id
+        LEFT JOIN public.courts crt ON crt.id = g.court_id
+        WHERE gp.user_id = $1 ${statusCondition}
+        ORDER BY g.match_date DESC, g.start_time DESC;
+      `;
+    }
+
+    const res = await dbPool.query(query, params);
+    return res.rows;
+  }
+}
