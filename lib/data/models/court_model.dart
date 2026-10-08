@@ -76,7 +76,7 @@ class CourtModel {
           json['basePricePerHour'] ??
               json['base_price'] ??
               json['base_price_per_hour'],
-          1200.0),
+          0.0),
       status: (json['status'] ?? 'AVAILABLE').toString(),
       city: (json['city'] ?? 'Raipur').toString(),
       address: (json['address'] ?? '').toString(),

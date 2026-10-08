@@ -25,6 +25,8 @@ class GamesRepository {
     double? maxEntryFee,
     String? status,
     String? privacy,
+    String? court,
+    bool? myGames,
     int page = 1,
     int limit = 20,
   }) async {
@@ -36,6 +38,8 @@ class GamesRepository {
       maxEntryFee: maxEntryFee,
       status: status,
       privacy: privacy,
+      court: court,
+      myGames: myGames,
       page: page,
       limit: limit,
     );

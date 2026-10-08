@@ -43,18 +43,47 @@ class CreateGameController extends GetxController {
   // Fixed Venue & Court options
   final availableClubs = <ClubModel>[].obs;
   final Rx<ClubModel> selectedClub = ClubModel(
-    id: 'clb_all_stars_turf_raipur',
+    id: 'all_stars_arena_club',
     name: 'All Stars Turf Raipur',
     city: 'Raipur',
-    address: 'Raipur',
+    address: 'VIP Road, Raipur',
   ).obs;
 
   final availableCourts = <CourtModel>[].obs;
   final Rxn<CourtModel> selectedCourt = Rxn<CourtModel>();
 
-  // Format defaults to 11v11
+  // Format selection
+  final formats = ['1v1', '2v2', '3v3', '4v4', '5v5', '7v7', '11v11'];
   final selectedFormat = '11v11'.obs;
   final maxPlayers = 22.obs;
+
+  void setFormat(String fmt) {
+    selectedFormat.value = fmt;
+    switch (fmt) {
+      case '1v1':
+        maxPlayers.value = 2;
+        break;
+      case '2v2':
+        maxPlayers.value = 4;
+        break;
+      case '3v3':
+        maxPlayers.value = 6;
+        break;
+      case '4v4':
+        maxPlayers.value = 8;
+        break;
+      case '5v5':
+        maxPlayers.value = 10;
+        break;
+      case '7v7':
+        maxPlayers.value = 14;
+        break;
+      case '11v11':
+      default:
+        maxPlayers.value = 22;
+        break;
+    }
+  }
 
   // Unselected initial state for Skill level & Date/Times
   final skillRequirement = RxnString();
@@ -133,65 +162,36 @@ class CreateGameController extends GetxController {
     }
   }
 
-  void _populateCourts(List<CourtModel> fetchedCourts) {
+  void _populateCourts([List<CourtModel>? fetchedCourts]) {
     final court1 = CourtModel(
-      id: 'crt_court_1',
-      clubId: selectedClub.value.id,
-      clubName: selectedClub.value.name,
+      id: 'court_1',
+      clubId: 'all_stars_arena_club',
+      clubName: 'All Stars Turf Raipur',
       name: 'Court 1',
-      surfaceType: 'Turf',
+      surfaceType: '3G Turf',
       basePricePerHour: 1200.0,
       status: 'AVAILABLE',
       city: 'Raipur',
-      address: 'Raipur',
+      address: 'VIP Road, Raipur',
     );
 
     final court2 = CourtModel(
-      id: 'crt_court_2',
-      clubId: selectedClub.value.id,
-      clubName: selectedClub.value.name,
+      id: 'court_2',
+      clubId: 'all_stars_arena_club',
+      clubName: 'All Stars Turf Raipur',
       name: 'Court 2',
-      surfaceType: 'Turf',
+      surfaceType: '3G Turf',
       basePricePerHour: 1200.0,
       status: 'AVAILABLE',
       city: 'Raipur',
-      address: 'Raipur',
+      address: 'VIP Road, Raipur',
     );
 
-    if (fetchedCourts.isNotEmpty) {
-      final courtsList = <CourtModel>[];
-      for (int i = 0; i < fetchedCourts.length; i++) {
-        final c = fetchedCourts[i];
-        final courtName = (c.name.toLowerCase().contains('court 2') || c.id.endsWith('2'))
-            ? 'Court 2'
-            : (i == 0 ? 'Court 1' : (i == 1 ? 'Court 2' : c.name));
-        courtsList.add(CourtModel(
-          id: c.id.isNotEmpty ? c.id : 'crt_court_${i + 1}',
-          clubId: c.clubId.isNotEmpty ? c.clubId : selectedClub.value.id,
-          clubName: c.clubName,
-          name: courtName,
-          surfaceType: c.surfaceType,
-          basePricePerHour: c.basePricePerHour,
-          status: c.status,
-          city: c.city,
-          address: c.address,
-        ));
-      }
+    availableCourts.assignAll([court1, court2]);
 
-      if (!courtsList.any((c) => c.name == 'Court 1')) {
-        courtsList.insert(0, court1);
-      }
-      if (!courtsList.any((c) => c.name == 'Court 2')) {
-        courtsList.add(court2);
-      }
-
-      availableCourts.assignAll(courtsList);
-    } else {
-      availableCourts.assignAll([court1, court2]);
-    }
-
-    if (selectedCourt.value == null || !availableCourts.contains(selectedCourt.value)) {
-      selectedCourt.value = availableCourts.first;
+    if (selectedCourt.value == null ||
+        (selectedCourt.value!.id != 'court_1' && selectedCourt.value!.id != 'court_2')) {
+      selectedCourt.value = court1;
     }
   }
 
@@ -488,11 +488,12 @@ class CreateGameController extends GetxController {
     String? razorpayOrderId,
     String? razorpaySignature,
   }) async {
-    final club = selectedClub.value;
     final court = selectedCourt.value;
-
-    final courtId = court?.id ?? '';
-    final courtName = court?.name ?? 'Court 1';
+    final courtId = (court?.name.toLowerCase().contains('2') == true ||
+            court?.id.toLowerCase().contains('2') == true)
+        ? 'court_2'
+        : 'court_1';
+    final courtName = courtId == 'court_2' ? 'Court 2' : 'Court 1';
 
     final dateStr = selectedDate.value != null
         ? AppDateUtils.formatIsoDate(selectedDate.value!)
@@ -514,11 +515,11 @@ class CreateGameController extends GetxController {
         'title': titleController.text.trim().isEmpty
             ? 'Football Game'
             : titleController.text.trim(),
-        'clubId': club.id,
+        'clubId': 'all_stars_arena_club',
         'courtId': courtId,
         'courtName': courtName,
-        'format': '11v11',
-        'maxPlayers': 22,
+        'format': selectedFormat.value,
+        'maxPlayers': maxPlayers.value,
         'reservePlayersCount': reserveCount,
         'entryFee': fee,
         'skillRequirement': skillRequirement.value ?? 'ANY',

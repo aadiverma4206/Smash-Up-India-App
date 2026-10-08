@@ -546,38 +546,36 @@ export const initDbTables = async () => {
       END;
       $$;
 
-      -- Normalize legacy pitch names to 'Court 1' / 'Court 2'
-      UPDATE public.courts SET name = 'Court 1' WHERE name ILIKE '%pitch 1%';
-      UPDATE public.courts SET name = 'Court 2' WHERE name ILIKE '%pitch 2%';
+      -- 1. Ensure canonical club 'all_stars_arena_club' exists
+      INSERT INTO public.clubs (id, name, address, city, status)
+      VALUES ('all_stars_arena_club', 'All Stars Turf Raipur', 'VIP Road', 'Raipur', 'ACTIVE')
+      ON CONFLICT (id) DO UPDATE SET name = 'All Stars Turf Raipur', status = 'ACTIVE';
 
-      -- Ensure every club has default 'Court 1' and 'Court 2'
-      INSERT INTO public.courts (club_id, name, base_price, status)
-      SELECT c.id, 'Court 1', 1200.00, 'AVAILABLE'::public.pitch_status
-      FROM public.clubs c
-      WHERE NOT EXISTS (
-        SELECT 1 FROM public.courts crt WHERE crt.club_id = c.id AND crt.name = 'Court 1'
-      )
+      -- 2. Ensure canonical courts 'court_1' and 'court_2' exist
+      INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)
+      VALUES 
+        ('court_1', 'all_stars_arena_club', 'Court 1', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE'),
+        ('court_2', 'all_stars_arena_club', 'Court 2', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')
+      ON CONFLICT (id) DO UPDATE SET 
+        club_id = 'all_stars_arena_club',
+        name = EXCLUDED.name,
+        surface = EXCLUDED.surface,
+        status = 'AVAILABLE';
+
+      -- 3. Normalize all games strictly to all_stars_arena_club and court_1 / court_2
+      UPDATE public.games
+      SET 
+        club_id = 'all_stars_arena_club',
+        court_id = CASE 
+          WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
+          ELSE 'court_1'
+        END
+      WHERE club_id <> 'all_stars_arena_club' OR court_id NOT IN ('court_1', 'court_2');
+
+      -- 4. Ensure all managers and admins are linked to all_stars_arena_club
+      INSERT INTO public.club_managers (club_id, user_id)
+      SELECT 'all_stars_arena_club', id FROM public.users WHERE role_id = 2 OR role_id = 1
       ON CONFLICT DO NOTHING;
-
-      INSERT INTO public.courts (club_id, name, base_price, status)
-      SELECT c.id, 'Court 2', 1200.00, 'AVAILABLE'::public.pitch_status
-      FROM public.clubs c
-      WHERE NOT EXISTS (
-        SELECT 1 FROM public.courts crt WHERE crt.club_id = c.id AND crt.name = 'Court 2'
-      )
-      ON CONFLICT DO NOTHING;
-
-      -- Ensure games with missing court_id are mapped to a valid court for their club
-      UPDATE public.games g
-      SET court_id = (
-        SELECT crt.id FROM public.courts crt
-        WHERE crt.club_id = g.club_id
-        ORDER BY (crt.name = 'Court 1') DESC, crt.created_at ASC
-        LIMIT 1
-      )
-      WHERE g.court_id IS NULL OR NOT EXISTS (
-        SELECT 1 FROM public.courts c WHERE c.id = g.court_id
-      );
     `);
     logger.info('Database Schema & Stored Functions Synchronized Successfully');
   } catch (error) {

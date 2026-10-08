@@ -309,7 +309,7 @@ export class AuthService {
   }
 
   /**
-   * Helper: Generate Access Token (15m) + Rotating Refresh Token (30d) & Session
+   * Helper: Generate Access Token + Rotating Refresh Token & Session
    */
   private static async generateTokensAndSession(
     userId: string,
@@ -318,14 +318,14 @@ export class AuthService {
     deviceInfo = 'Mobile App',
     ipAddress = '127.0.0.1'
   ) {
-    const accessSignOptions: SignOptions = { expiresIn: '15m' };
+    const accessSignOptions: SignOptions = { expiresIn: (env.JWT_EXPIRES_IN || '7d') as any };
     const accessToken = jwt.sign(
       { id: userId, email, roleId },
       env.JWT_SECRET,
       accessSignOptions
     );
 
-    const refreshSignOptions: SignOptions = { expiresIn: '30d' };
+    const refreshSignOptions: SignOptions = { expiresIn: (env.JWT_REFRESH_EXPIRES_IN || '30d') as any };
     const refreshToken = jwt.sign(
       { id: userId, email, nonce: crypto.randomUUID() },
       env.JWT_REFRESH_SECRET,
@@ -346,7 +346,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresInSeconds: 15 * 60,
+      expiresInSeconds: 7 * 24 * 60 * 60,
     };
   }
 

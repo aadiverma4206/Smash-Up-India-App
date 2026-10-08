@@ -33,6 +33,26 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
 
   final matchTabs = ['TODAY', 'UPCOMING', 'ONGOING', 'CANCELLED'];
 
+  List<GameModel> get court1Games {
+    final all = <GameModel>[...pendingPlayerGames, ...clubMatches];
+    final seen = <String>{};
+    return all.where((g) {
+      if (seen.contains(g.id)) return false;
+      seen.add(g.id);
+      return g.courtId == 'court_1' || g.courtName == 'Court 1';
+    }).toList();
+  }
+
+  List<GameModel> get court2Games {
+    final all = <GameModel>[...pendingPlayerGames, ...clubMatches];
+    final seen = <String>{};
+    return all.where((g) {
+      if (seen.contains(g.id)) return false;
+      seen.add(g.id);
+      return g.courtId == 'court_2' || g.courtName == 'Court 2';
+    }).toList();
+  }
+
   void changeNavIndex(int index) {
     selectedNavIndex.value = index;
   }
@@ -71,8 +91,43 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
           await repository.getClubMatches(tab: selectedMatchTab.value);
       clubMatches.assignAll(matches);
 
-      final crts = await repository.getClubCourts();
-      courts.assignAll(crts);
+      List<CourtModel> crts = [];
+      try {
+        crts = await repository.getClubCourts();
+      } catch (e) {
+        AppLogger.warning('Error fetching club courts: $e');
+      }
+
+      if (crts.isNotEmpty) {
+        courts.assignAll(crts);
+      } else {
+        const clubId = 'all_stars_arena_club';
+        const clubName = 'All Stars Turf Raipur';
+        courts.assignAll([
+          CourtModel(
+            id: 'court_1',
+            clubId: clubId,
+            clubName: clubName,
+            name: 'Court 1',
+            surfaceType: '3G Turf',
+            basePricePerHour: 1200.0,
+            status: 'AVAILABLE',
+            city: 'Raipur',
+            address: 'Raipur',
+          ),
+          CourtModel(
+            id: 'court_2',
+            clubId: clubId,
+            clubName: clubName,
+            name: 'Court 2',
+            surfaceType: '3G Turf',
+            basePricePerHour: 1200.0,
+            status: 'AVAILABLE',
+            city: 'Raipur',
+            address: 'Raipur',
+          ),
+        ]);
+      }
 
       final bkgs = await repository.getClubBookings();
       bookings.assignAll(bkgs);
@@ -80,8 +135,9 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
       await fetchPendingPlayerGames();
 
       if (courts.isNotEmpty) {
-        final courtId = courts[selectedCourtIndex.value.clamp(0, courts.length - 1)].id;
-        await fetchCourtSlots(courtId);
+        final clampedIndex = selectedCourtIndex.value.clamp(0, courts.length - 1);
+        final courtId = courts[clampedIndex].id;
+        await fetchCourtSlots(courtId, courtIndex: clampedIndex + 1);
       }
     } catch (e) {
       AppLogger.warning('Manager dashboard error: $e');
@@ -102,10 +158,11 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
   }
 
   Future<void> selectCourt(int index) async {
-    if (index < 0 || index >= courts.length) return;
-    selectedCourtIndex.value = index;
-    final courtId = courts[index].id;
-    await fetchCourtSlots(courtId);
+    if (courts.isEmpty) return;
+    final clamped = index.clamp(0, courts.length - 1);
+    selectedCourtIndex.value = clamped;
+    final courtId = courts[clamped].id;
+    await fetchCourtSlots(courtId, courtIndex: clamped + 1);
   }
 
   Future<void> fetchCourtSlots(String courtId, {int courtIndex = 1, String? date}) async {
@@ -120,6 +177,12 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
       }
     } catch (e) {
       AppLogger.warning('Error fetching slots for court $courtId: $e');
+      currentCourtSlots.clear();
+      if (courtIndex == 1) {
+        court1Slots.clear();
+      } else {
+        court2Slots.clear();
+      }
     } finally {
       isSlotsLoading.value = false;
     }
@@ -211,6 +274,22 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
       );
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Rejection Error', e);
+    } finally {
+      isActionLoading.value = false;
+    }
+  }
+
+  Future<void> updateGame(String gameId, Map<String, dynamic> gameData) async {
+    isActionLoading.value = true;
+    try {
+      await repository.updateGame(gameId, gameData);
+      await loadManagerData();
+      ErrorHandler.showSuccessSnackBar(
+        'Match Updated',
+        'Match details updated successfully',
+      );
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar('Update Error', e);
     } finally {
       isActionLoading.value = false;
     }

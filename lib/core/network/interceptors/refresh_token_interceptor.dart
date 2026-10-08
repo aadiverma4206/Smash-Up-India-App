@@ -62,6 +62,10 @@ class RefreshTokenInterceptor extends Interceptor {
             baseUrl: EnvConfig.baseUrl,
             connectTimeout: Duration(milliseconds: EnvConfig.connectTimeout),
             receiveTimeout: Duration(milliseconds: EnvConfig.receiveTimeout),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
           ),
         );
 

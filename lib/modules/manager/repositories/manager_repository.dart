@@ -36,14 +36,22 @@ class ManagerRepository {
     return response.data ?? {};
   }
 
-  Future<List<GameModel>> getClubMatches({String tab = 'TODAY'}) async {
-    final response = await remoteDataSource.getClubMatches(tab: tab);
+  Future<List<GameModel>> getClubMatches({String tab = 'TODAY', String? court}) async {
+    final response = await remoteDataSource.getClubMatches(tab: tab, court: court);
     return response.data ?? [];
   }
 
-  Future<List<GameModel>> getClubGames() async {
-    final response = await remoteDataSource.getClubGames();
+  Future<List<GameModel>> getClubGames({String? court, String? tab}) async {
+    final response = await remoteDataSource.getClubGames(court: court, tab: tab);
     return response.data ?? [];
+  }
+
+  Future<GameModel> updateGame(String gameId, Map<String, dynamic> gameData) async {
+    final response = await remoteDataSource.updateGame(gameId, gameData);
+    if (response.data == null) {
+      throw AppException('Failed to update game details.');
+    }
+    return response.data!;
   }
 
   Future<GameModel> startGame(String gameId) async {

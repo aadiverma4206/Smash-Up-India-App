@@ -267,45 +267,60 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
 
   Widget _buildSlotCard(BuildContext context, Map<String, dynamic> slot) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final String gameId = (slot['gameId'] ?? slot['id'] ?? '').toString();
     final String timeStr = (slot['time'] ??
-            '${slot['startTime'] ?? "18:00"} - ${slot['endTime'] ?? "19:30"}')
+            '${slot['startTime'] ?? slot['start_time'] ?? "18:00"} - ${slot['endTime'] ?? slot['end_time'] ?? "19:30"}')
         .toString();
+    final String approvalStatus = (slot['approvalStatus'] ??
+            slot['approval_status'] ??
+            slot['status'] ??
+            'APPROVED')
+        .toString()
+        .toUpperCase();
     final String status =
-        (slot['status'] ?? slot['slotStatus'] ?? 'SCHEDULED')
-            .toString()
-            .toUpperCase();
+        (slot['status'] ?? 'SCHEDULED').toString().toUpperCase();
     final String gameTitle =
-        (slot['gameTitle'] ?? slot['title'] ?? 'Available Slot').toString();
+        (slot['gameTitle'] ?? slot['title'] ?? 'Court Match').toString();
     final String hostName =
-        (slot['hostName'] ?? slot['host'] ?? 'N/A').toString();
-    final int currentPlayers =
-        int.tryParse(slot['currentPlayers']?.toString() ?? '0') ?? 0;
-    final int maxPlayers =
-        int.tryParse(slot['maxPlayers']?.toString() ?? '22') ?? 22;
+        (slot['hostName'] ?? slot['host_name'] ?? slot['host'] ?? 'N/A')
+            .toString();
+    final int currentPlayers = int.tryParse(
+            (slot['currentPlayers'] ?? slot['current_players_count'])
+                    ?.toString() ??
+                '0') ??
+        0;
+    final int maxPlayers = int.tryParse(
+            (slot['maxPlayers'] ?? slot['max_players'])?.toString() ?? '22') ??
+        22;
     final String paymentStatus =
         (slot['paymentStatus'] ?? 'PAID').toString().toUpperCase();
     final String recordingStatus =
         (slot['recordingStatus'] ?? 'AVAILABLE').toString().toUpperCase();
+    final double entryFee = double.tryParse(
+            (slot['entryFee'] ?? slot['entry_fee'])?.toString() ?? '0') ??
+        0.0;
 
     Color statusColor;
-    switch (status) {
-      case 'STARTED':
-      case 'ONGOING':
-        statusColor = Colors.orange;
-        break;
-      case 'COMPLETED':
-        statusColor = Colors.green;
-        break;
-      case 'CANCELLED':
-      case 'REJECTED':
-        statusColor = Colors.redAccent;
-        break;
-      case 'PENDING':
-        statusColor = Colors.amber;
-        break;
-      default:
-        statusColor = AppColors.primary;
+    String displayStatusBadge = approvalStatus;
+
+    if (approvalStatus == 'PENDING_APPROVAL' || approvalStatus == 'PENDING') {
+      statusColor = Colors.amber;
+      displayStatusBadge = 'PENDING APPROVAL';
+    } else if (status == 'STARTED' || status == 'ONGOING') {
+      statusColor = Colors.orange;
+      displayStatusBadge = 'ONGOING';
+    } else if (status == 'COMPLETED') {
+      statusColor = Colors.green;
+      displayStatusBadge = 'COMPLETED';
+    } else if (status == 'CANCELLED' || approvalStatus == 'REJECTED') {
+      statusColor = Colors.redAccent;
+      displayStatusBadge = approvalStatus == 'REJECTED' ? 'REJECTED' : 'CANCELLED';
+    } else {
+      statusColor = AppColors.primary;
+      displayStatusBadge = 'APPROVED';
     }
+
+    final bool isPending = approvalStatus == 'PENDING_APPROVAL' || approvalStatus == 'PENDING';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -350,7 +365,7 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                   border: Border.all(color: statusColor, width: 0.8),
                 ),
                 child: Text(
-                  status,
+                  displayStatusBadge,
                   style: TextStyle(
                     color: statusColor,
                     fontWeight: FontWeight.bold,
@@ -389,7 +404,7 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  'Payment: $paymentStatus',
+                  'Fee: ₹${entryFee.toStringAsFixed(0)} • Payment: $paymentStatus',
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 10,
@@ -414,6 +429,254 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Action Buttons: Approve, Reject, Edit, Cancel
+          if (gameId.isNotEmpty)
+            Column(
+              children: [
+                if (isPending) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          onPressed: () => controller.approvePlayerGame(gameId),
+                          icon: const Icon(Icons.check_circle_rounded,
+                              color: Colors.white, size: 16),
+                          label: const Text('Approve Match',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.redAccent),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          onPressed: () => _showRejectDialog(context, gameId, gameTitle),
+                          icon: const Icon(Icons.cancel_rounded,
+                              color: Colors.redAccent, size: 16),
+                          label: const Text('Reject Match',
+                              style: TextStyle(
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        onPressed: () => _showEditGameDialog(context, slot),
+                        icon: const Icon(Icons.edit_rounded,
+                            color: AppColors.primary, size: 16),
+                        label: const Text('Edit Match Details',
+                            style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                      ),
+                    ),
+                    if (!isPending && status != 'CANCELLED' && status != 'COMPLETED') ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+                        ),
+                        icon: const Icon(Icons.cancel_outlined,
+                            color: Colors.redAccent, size: 18),
+                        tooltip: 'Cancel Match',
+                        onPressed: () => _showCancelDialog(context, gameId, gameTitle),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showRejectDialog(BuildContext context, String gameId, String gameTitle) {
+    final reasonController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Reject Match: $gameTitle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter rejection reason for player host:',
+                style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: reasonController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Court time slot conflict',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+            ),
+            onPressed: () {
+              final reason = reasonController.text.trim();
+              Get.back();
+              controller.rejectPlayerGame(gameId, reason);
+            },
+            child: const Text('Confirm Reject', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelDialog(BuildContext context, String gameId, String gameTitle) {
+    final reasonController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Cancel Match: $gameTitle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter cancellation reason (Full refunds will be processed to joined players):',
+                style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: reasonController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Rain / Pitch Maintenance',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Back'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+            ),
+            onPressed: () {
+              final reason = reasonController.text.trim();
+              Get.back();
+              controller.cancelMatchWithRefunds(gameId, reason.isNotEmpty ? reason : 'Cancelled by club manager');
+            },
+            child: const Text('Cancel Match & Refund', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditGameDialog(BuildContext context, Map<String, dynamic> slot) {
+    final String gameId = (slot['gameId'] ?? slot['id'] ?? '').toString();
+    final titleController = TextEditingController(text: (slot['gameTitle'] ?? slot['title'] ?? '').toString());
+    final entryFeeController = TextEditingController(text: (slot['entryFee'] ?? slot['entry_fee'] ?? '200').toString());
+    final maxPlayersController = TextEditingController(text: (slot['maxPlayers'] ?? slot['max_players'] ?? '22').toString());
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Edit Match Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Match Title',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: entryFeeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Entry Fee per Player (₹)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: maxPlayersController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Max Capacity Players',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () {
+              final newTitle = titleController.text.trim();
+              final fee = double.tryParse(entryFeeController.text.trim()) ?? 0.0;
+              final players = int.tryParse(maxPlayersController.text.trim()) ?? 22;
+
+              Get.back();
+              controller.updateGame(gameId, {
+                if (newTitle.isNotEmpty) 'title': newTitle,
+                'entryFee': fee,
+                'maxPlayers': players,
+              });
+            },
+            child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

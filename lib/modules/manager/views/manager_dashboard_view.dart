@@ -112,10 +112,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
                             // Assigned Turf Club Header Banner
                             _buildClubHeader(context, d),
-                            const SizedBox(height: 16),
-
-                            // Row 2 Circular Action Buttons (Club Games, Courts & Prices, Bookings, CCTV)
-                            _buildSecondaryActionsGrid(context),
                             const SizedBox(height: 20),
 
                             // Manager Key Metrics Overview
@@ -128,6 +124,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
                             // Pending Player Slot Requests Section
                             _buildPendingSlotRequestsSection(context),
+                            const SizedBox(height: 20),
+
+                            // Court 1 & Court 2 Games Section
+                            _buildCourtWiseGamesSection(context),
                             const SizedBox(height: 20),
 
                             // Club Matches Section (TODAY, UPCOMING, ONGOING, CANCELLED)
@@ -766,47 +766,22 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         }
       },
       {
+        'icon': Icons.videocam_rounded,
+        'title': 'CCTV Cameras',
+        'onTap': () => Get.toNamed('/manager/cctv')
+      },
+      {
         'icon': Icons.history_rounded,
         'title': 'Match History',
         'onTap': () => Get.toNamed('/manager/history')
       },
-      {
-        'icon': Icons.people_alt_rounded,
-        'title': 'All Players',
-        'onTap': () => Get.toNamed('/manager/players')
-      },
+
     ];
 
     return _buildActionRow(context, row1);
   }
 
-  /// Row 2 Circular Action Buttons (Below Assigned Turf Club Banner): Club Games, Courts & Prices, Club Bookings, CCTV Cameras
-  Widget _buildSecondaryActionsGrid(BuildContext context) {
-    final row2 = [
-      {
-        'icon': Icons.sports_soccer_rounded,
-        'title': 'Club Games',
-        'onTap': () => Get.toNamed('/manager/games')
-      },
-      {
-        'icon': Icons.stadium_rounded,
-        'title': 'Courts & Prices',
-        'onTap': () => Get.toNamed('/manager/courts')
-      },
-      {
-        'icon': Icons.receipt_long_rounded,
-        'title': 'Club Bookings',
-        'onTap': () => Get.toNamed('/manager/bookings')
-      },
-      {
-        'icon': Icons.videocam_rounded,
-        'title': 'CCTV Cameras',
-        'onTap': () => Get.toNamed('/manager/cctv')
-      },
-    ];
 
-    return _buildActionRow(context, row2);
-  }
 
   Widget _buildActionRow(
       BuildContext context, List<Map<String, dynamic>> actions) {
@@ -1587,6 +1562,331 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             },
             child: const Text('Confirm Reject',
                 style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Court 1 & Court 2 Matches Section
+  Widget _buildCourtWiseGamesSection(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Court-Wise Game Management',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => Get.toNamed('/manager/courts'),
+              icon: const Icon(Icons.tune_rounded, size: 16, color: AppColors.primary),
+              label: const Text(
+                'Court Control',
+                style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Court 1 Card / Section
+        Obx(() {
+          final c1Games = controller.court1Games;
+          return _buildCourtSectionCard(
+            context,
+            courtName: 'COURT 1',
+            games: c1Games,
+            badgeColor: AppColors.primary,
+          );
+        }),
+        const SizedBox(height: 16),
+
+        // Court 2 Card / Section
+        Obx(() {
+          final c2Games = controller.court2Games;
+          return _buildCourtSectionCard(
+            context,
+            courtName: 'COURT 2',
+            games: c2Games,
+            badgeColor: Colors.deepPurple,
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildCourtSectionCard(
+    BuildContext context, {
+    required String courtName,
+    required List<GameModel> games,
+    required Color badgeColor,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.stadium_rounded, color: badgeColor, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    courtName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: badgeColor, width: 0.8),
+                ),
+                child: Text(
+                  '${games.length} Games',
+                  style: TextStyle(
+                    color: badgeColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (games.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E142B) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  'No games scheduled on $courtName',
+                  style: TextStyle(
+                    color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: games.map((game) => _buildCourtGameCard(context, game)).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourtGameCard(BuildContext context, GameModel game) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPlayerCreated = game.createdByPlayer;
+    final String statusUpper = game.status.toUpperCase();
+
+    Color statusColor;
+    String statusText = game.status;
+
+    if (statusUpper == 'OPEN_FOR_JOINING') {
+      statusColor = AppColors.primary;
+      statusText = 'OPEN';
+    } else if (statusUpper == 'FULL') {
+      statusColor = Colors.purple;
+      statusText = 'FULL';
+    } else if (statusUpper == 'ONGOING' || statusUpper == 'STARTED') {
+      statusColor = Colors.orange;
+      statusText = 'ONGOING';
+    } else if (statusUpper == 'COMPLETED') {
+      statusColor = Colors.green;
+      statusText = 'COMPLETED';
+    } else if (statusUpper == 'CANCELLED') {
+      statusColor = Colors.redAccent;
+      statusText = 'CANCELLED';
+    } else {
+      statusColor = AppColors.primary;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E142B) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  game.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: statusColor, width: 0.8),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isPlayerCreated ? Colors.amber.withValues(alpha: 0.15) : Colors.blue.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  isPlayerCreated ? 'Created By: Player' : 'Created By: Manager',
+                  style: TextStyle(
+                    color: isPlayerCreated ? Colors.amber.shade800 : Colors.blue.shade800,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Format: ${game.format}',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '₹${game.perPlayerFee.toStringAsFixed(0)} / player',
+                  style: TextStyle(
+                    color: Colors.green.shade800,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Players: ${game.currentPlayers} / ${game.maxPlayers}',
+                  style: TextStyle(
+                    color: Colors.purple.shade800,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${AppDateUtils.formatDate(game.matchDate)} @ ${AppDateUtils.formatTime(game.startTime)}',
+                style: TextStyle(
+                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                  fontSize: 11,
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                ),
+                onPressed: () {
+                  Get.find<ManagerGamesController>().selectedGame.value = game;
+                  Get.toNamed('/games/details');
+                },
+                child: const Text('Manage', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         ],
       ),

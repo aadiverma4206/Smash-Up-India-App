@@ -176,6 +176,18 @@ export const errorHandler = (
       },
       `🚨 [5xx Server Error] ${message}`
     );
+  } else if (code === 'TOKEN_EXPIRED') {
+    // Normal client auth lifecycle event (token expired, client should refresh or re-login)
+    logger.info(
+      {
+        requestId,
+        method,
+        url,
+        statusCode,
+        code,
+      },
+      `🔑 [Auth] ${message}`
+    );
   } else {
     logger.warn(
       {

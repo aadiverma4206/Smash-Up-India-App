@@ -44,13 +44,13 @@ export class ManagerService {
       throw new ApiError(404, 'No assigned club found for this manager', 'NO_CLUB_ASSIGNED');
     }
 
-    const court = await ManagerRepository.getCourtById(courtId);
+    const normalizedCourtId = (courtId && courtId.includes('2')) ? 'court_2' : 'court_1';
+    courtId = normalizedCourtId;
+    let court = await ManagerRepository.getCourtById(normalizedCourtId);
+
+
     if (!court) {
       throw new ApiError(404, 'Court pitch not found', 'COURT_NOT_FOUND');
-    }
-
-    if (court.club_id !== club.id) {
-      throw new ApiError(403, 'Forbidden: This court does not belong to your managed club', 'FORBIDDEN_COURT_SCOPE');
     }
 
     const queryDate = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : new Date().toISOString().split('T')[0];

@@ -19,9 +19,10 @@ class FindGamesController extends GetxController {
 
   final searchQuery = ''.obs;
   final selectedCity = ''.obs;
-  final selectedFormat = '11v11'.obs;
+  final selectedFormat = ''.obs;
   final selectedSkill = ''.obs;
   final selectedPrivacy = ''.obs;
+  final selectedCourt = 'ALL'.obs; // ALL, COURT_1, COURT_2
   final maxFee = 1000.0.obs;
 
   final skills = ['', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'PRO', 'ANY'];
@@ -46,6 +47,8 @@ class FindGamesController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      final isMyGames = selectedCourt.value == 'MY_GAMES';
+      final courtParam = (selectedCourt.value == 'ALL' || isMyGames) ? null : selectedCourt.value;
       final list = await repository.getGames(
         city: selectedCity.value,
         format: selectedFormat.value,
@@ -53,6 +56,8 @@ class FindGamesController extends GetxController {
         maxEntryFee: maxFee.value,
         status: 'OPEN_FOR_JOINING',
         privacy: selectedPrivacy.value,
+        court: courtParam,
+        myGames: isMyGames,
       );
       gamesList.value = list;
     } catch (e) {
@@ -66,9 +71,7 @@ class FindGamesController extends GetxController {
 
   void resetFilters() {
     searchQuery.value = '';
-    selectedFormat.value = '11v11';
-    selectedSkill.value = '';
-    selectedPrivacy.value = '';
+    selectedFormat.value = '';
     fetchGames();
   }
 }
@@ -130,36 +133,31 @@ class _FindGamesViewState extends State<FindGamesView> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return _buildFindGamesSkeletonView(context);
-        }
+      body: Stack(
+        children: [
+          // 1. Scrollable Main Content Body
+          NotificationListener<ScrollNotification>(
+            onNotification: _onScrollNotification,
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: controller.fetchGames,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Stadium Asset Background Image Banner (find_Games/dark.png & light.png)
+                    _buildHeaderBackground(context),
+                    const SizedBox(height: 16),
 
-        return Stack(
-          children: [
-            // 1. Scrollable Main Content Body
-            NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: RefreshIndicator(
-                color: AppColors.primary,
-                onRefresh: controller.fetchGames,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Stadium Asset Background Image Banner (find_Games/dark.png & light.png)
-                      _buildHeaderBackground(context),
-                      const SizedBox(height: 16),
-
-                      // Search & Filters Header Section
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child:
-                            _buildSearchAndFiltersHeader(context, controller),
-                      ),
-                      const SizedBox(height: 16),
+                    // Search & Filters Header Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child:
+                          _buildSearchAndFiltersHeader(context, controller),
+                    ),
+                    const SizedBox(height: 16),
 
                       // Open Matches List or Error State
                       Padding(
@@ -282,8 +280,7 @@ class _FindGamesViewState extends State<FindGamesView> {
               ),
             ),
           ],
-        );
-      }),
+        ),
     );
   }
 
@@ -493,239 +490,189 @@ class _FindGamesViewState extends State<FindGamesView> {
             ),
             onChanged: (val) => controller.searchQuery.value = val,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Scrollable Filter Chips Row
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                // Skill Chip Dropdown
-                Obx(() {
-                  final currentSkill = controller.selectedSkill.value;
-                  return _buildFilterChipDropdown<String>(
-                    context: context,
-                    icon: Icons.star_rounded,
-                    label: currentSkill.isEmpty ? 'Skill Level' : currentSkill,
-                    isSelected: currentSkill.isNotEmpty,
-                    items: controller.skills.map((s) {
-                      return DropdownMenuItem<String>(
-                        value: s,
-                        child: Text(s.isEmpty ? 'All Skill Levels' : s,
-                            style: TextStyle(
-                                fontSize: 12, color: context.textPrimary)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        controller.selectedSkill.value = val;
-                        controller.fetchGames();
-                      }
-                    },
-                  );
-                }),
-                const SizedBox(width: 8),
+          // Court Filter Chips (All Courts, Court 1, Court 2, My Games)
+          Obx(() {
+            final selectedCourt = controller.selectedCourt.value;
+            final courts = [
+              {'key': 'ALL', 'label': 'All Courts', 'icon': Icons.stadium_rounded},
+              {'key': 'COURT_1', 'label': 'Court 1', 'icon': Icons.sports_soccer_rounded},
+              {'key': 'COURT_2', 'label': 'Court 2', 'icon': Icons.sports_soccer_rounded},
+              {'key': 'MY_GAMES', 'label': 'My Games', 'icon': Icons.person_rounded},
+            ];
 
-                // Privacy Filter Chip (Public / Private / All)
-                Obx(() {
-                  final privacy = controller.selectedPrivacy.value;
-                  final isSelected = privacy.isNotEmpty;
-
-                  return FilterChip(
-                    avatar: Icon(
-                      privacy == 'PUBLIC'
-                          ? Icons.public_rounded
-                          : (privacy == 'PRIVATE'
-                              ? Icons.lock_rounded
-                              : Icons.tune_rounded),
-                      size: 16,
-                      color: isSelected ? Colors.white : AppColors.primary,
-                    ),
-                    label: Text(
-                      privacy.isEmpty ? 'Privacy' : privacy,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : context.textPrimary,
-                      ),
-                    ),
-                    selected: isSelected,
-                    selectedColor: AppColors.primary,
-                    backgroundColor: context.backgroundColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(
-                        color: isSelected
-                            ? AppColors.primary
-                            : context.borderColor,
-                      ),
-                    ),
-                    onSelected: (_) {
-                      if (privacy.isEmpty) {
-                        controller.selectedPrivacy.value = 'PUBLIC';
-                      } else if (privacy == 'PUBLIC') {
-                        controller.selectedPrivacy.value = 'PRIVATE';
-                      } else {
-                        controller.selectedPrivacy.value = '';
-                      }
-                      controller.fetchGames();
-                    },
-                  );
-                }),
-
-                // Reset Filters Button if any filter active
-                Obx(() {
-                  final hasActiveFilter =
-                      controller.selectedSkill.value.isNotEmpty ||
-                          controller.selectedPrivacy.value.isNotEmpty ||
-                          controller.searchQuery.value.isNotEmpty;
-
-                  if (!hasActiveFilter) return const SizedBox.shrink();
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: courts.map((c) {
+                  final key = c['key'] as String;
+                  final label = c['label'] as String;
+                  final icon = c['icon'] as IconData;
+                  final isSelected = selectedCourt == key;
 
                   return Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: ActionChip(
-                      avatar: const Icon(Icons.clear_all_rounded,
-                          size: 16, color: AppColors.error),
-                      label: const Text(
-                        'Reset',
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: ChoiceChip(
+                      avatar: Icon(
+                        icon,
+                        size: 14,
+                        color: isSelected ? Colors.white : AppColors.primary,
+                      ),
+                      label: Text(
+                        label,
                         style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.error),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : context.textPrimary,
+                        ),
                       ),
-                      backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                      selected: isSelected,
+                      selectedColor: AppColors.primary,
+                      backgroundColor: context.backgroundColor,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
-                            color: AppColors.error.withValues(alpha: 0.3)),
+                          color: isSelected ? AppColors.primary : context.borderColor,
+                        ),
                       ),
-                      onPressed: controller.resetFilters,
+                      onSelected: (_) {
+                        controller.selectedCourt.value = key;
+                        controller.fetchGames();
+                      },
                     ),
                   );
-                }),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChipDropdown<T>({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary : context.backgroundColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isSelected ? AppColors.primary : context.borderColor,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon,
-              size: 16, color: isSelected ? Colors.white : AppColors.primary),
-          const SizedBox(width: 6),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              isDense: true,
-              dropdownColor: context.cardColor,
-              icon: Icon(Icons.arrow_drop_down_rounded,
-                  color: isSelected ? Colors.white : context.textSecondary),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : context.textPrimary,
+                }).toList(),
               ),
-              items: items,
-              onChanged: onChanged,
-            ),
-          ),
+            );
+          }),
+          const SizedBox(height: 10),
+
+          // Reset Search / Filters Button if query active
+          Obx(() {
+            final hasActiveFilter = controller.searchQuery.value.isNotEmpty;
+
+            if (!hasActiveFilter) return const SizedBox.shrink();
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ActionChip(
+                  avatar: const Icon(Icons.clear_all_rounded,
+                      size: 16, color: AppColors.error),
+                  label: const Text(
+                    'Clear Search',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.error),
+                  ),
+                  backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                        color: AppColors.error.withValues(alpha: 0.3)),
+                  ),
+                  onPressed: controller.resetFilters,
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 
   Widget _buildGamesListSection(BuildContext context) {
-    if (controller.errorMessage.value.isNotEmpty &&
-        controller.gamesList.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: AppErrorWidget(
-          message: controller.errorMessage.value,
-          onRetry: controller.fetchGames,
-        ),
-      );
-    }
-
-    final list = controller.filteredGames;
-
-    if (list.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const EmptyStateWidget(
-              title: 'No Matches Found',
-              subtitle:
-                  'No open matches fit your criteria. Try resetting filters or host a new match!',
-              darkImagePath: 'assets/images/find_Games/dark.png',
-              lightImagePath: 'assets/images/find_Games/light.png',
+    return Obx(() {
+      if (controller.isLoading.value && controller.gamesList.isEmpty) {
+        return Column(
+          children: List.generate(
+            3,
+            (index) => const Padding(
+              padding: EdgeInsets.only(bottom: 14),
+              child: AppShimmer(
+                width: double.infinity,
+                height: 170,
+                borderRadius: 18,
+              ),
             ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: context.borderColor),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: controller.resetFilters,
-                  icon: const Icon(Icons.restart_alt_rounded),
-                  label: const Text('Reset Filters'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () => Get.toNamed('/games/create'),
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text('Host 11v11 Match',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
+          ),
+        );
+      }
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final game = list[index];
-        return _buildGameCard(context, game);
-      },
-    );
+      if (controller.errorMessage.value.isNotEmpty &&
+          controller.gamesList.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: AppErrorWidget(
+            message: controller.errorMessage.value,
+            onRetry: controller.fetchGames,
+          ),
+        );
+      }
+
+      final list = controller.filteredGames;
+
+      if (list.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const EmptyStateWidget(
+                title: 'No Matches Found',
+                subtitle:
+                    'No open matches fit your criteria. Try resetting filters or host a new match!',
+                darkImagePath: 'assets/images/find_Games/dark.png',
+                lightImagePath: 'assets/images/find_Games/light.png',
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: context.borderColor),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: controller.resetFilters,
+                    icon: const Icon(Icons.restart_alt_rounded),
+                    label: const Text('Reset Filters'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Get.toNamed('/games/create'),
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text('Host 11v11 Match',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final game = list[index];
+          return _buildGameCard(context, game);
+        },
+      );
+    });
   }
 
   Widget _buildGameCard(BuildContext context, GameModel game) {

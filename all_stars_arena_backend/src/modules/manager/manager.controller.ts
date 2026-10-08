@@ -145,13 +145,14 @@ export const rejectSlotRequestController = asyncHandler(async (req: Authenticate
 export const getClubMatchesController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   const tab = (req.query.tab as string) || (req.path.endsWith('/games') ? 'ALL' : 'TODAY');
+  const courtFilter = (req.query.court as string) || (req.query.courtId as string);
 
   if (!userId) throw new ApiError(401, 'Unauthorized');
 
   const club = await ManagerRepository.getManagerClub(userId);
   if (!club) throw new ApiError(404, 'No assigned club found');
 
-  const matches = await ManagerRepository.getClubMatchesByStatus(club.id, tab.toUpperCase());
+  const matches = await ManagerRepository.getClubMatchesByStatus(club.id, tab.toUpperCase(), courtFilter);
   res.status(200).json(ApiResponse.success('Club matches retrieved', matches));
 });
 

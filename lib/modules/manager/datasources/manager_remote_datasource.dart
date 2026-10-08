@@ -53,10 +53,13 @@ class ManagerRemoteDataSource {
   }
 
   Future<ApiResponseModel<List<GameModel>>> getClubMatches(
-      {String tab = 'TODAY'}) async {
+      {String tab = 'TODAY', String? court}) async {
     final response = await dioClient.dio.get(
       '/manager/matches',
-      queryParameters: {'tab': tab},
+      queryParameters: {
+        'tab': tab,
+        if (court != null && court.isNotEmpty) 'court': court,
+      },
     );
     return ApiResponseParser.parse<List<GameModel>>(
       response.data,
@@ -66,13 +69,31 @@ class ManagerRemoteDataSource {
     );
   }
 
-  Future<ApiResponseModel<List<GameModel>>> getClubGames() async {
-    final response = await dioClient.dio.get('/manager/games');
+  Future<ApiResponseModel<List<GameModel>>> getClubGames({String? court, String? tab}) async {
+    final response = await dioClient.dio.get(
+      '/manager/games',
+      queryParameters: {
+        if (court != null && court.isNotEmpty) 'court': court,
+        if (tab != null && tab.isNotEmpty) 'tab': tab,
+      },
+    );
     return ApiResponseParser.parse<List<GameModel>>(
       response.data,
       (json) => (json as List)
           .map((e) => GameModel.fromJson(e as Map<String, dynamic>))
           .toList(),
+    );
+  }
+
+  Future<ApiResponseModel<GameModel>> updateGame(
+      String gameId, Map<String, dynamic> gameData) async {
+    final response = await dioClient.dio.put(
+      '/manager/games/$gameId',
+      data: gameData,
+    );
+    return ApiResponseParser.parse<GameModel>(
+      response.data,
+      (json) => GameModel.fromJson(json as Map<String, dynamic>),
     );
   }
 

@@ -235,59 +235,61 @@ class CreateGameView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Fixed Football Format Banner
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border:
-                  Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.sports_soccer_rounded,
-                    color: AppColors.primary, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Standard Football Format: 11v11',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: context.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '22 Main Players (11 Team A + 11 Team B)',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text('Fixed',
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ],
+          // Game Format Selection
+          Text(
+            'Game Type / Format *',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: context.textSecondary,
             ),
           ),
+          const SizedBox(height: 6),
+          Obx(() {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: controller.formats.map((fmt) {
+                  final isSelected = controller.selectedFormat.value == fmt;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        fmt,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : context.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: AppColors.primary,
+                      backgroundColor: context.cardColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(
+                          color: isSelected
+                              ? AppColors.primary
+                              : context.borderColor,
+                        ),
+                      ),
+                      onSelected: (_) => controller.setFormat(fmt),
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          }),
+          const SizedBox(height: 6),
+          Obx(() => Text(
+                'Max Players: ${controller.maxPlayers.value} (${controller.maxPlayers.value ~/ 2} vs ${controller.maxPlayers.value ~/ 2})',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              )),
           const SizedBox(height: 16),
 
           // Match Title

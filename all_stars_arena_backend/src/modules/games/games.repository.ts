@@ -9,6 +9,8 @@ export class GamesRepository {
     maxEntryFee?: number;
     status?: string;
     privacy?: string;
+    court?: string;
+    userId?: string;
     limit?: number;
     offset?: number;
   }) {
@@ -39,10 +41,28 @@ export class GamesRepository {
     if (filters.status) {
       conditions.push(`g.status = $${idx++}`);
       values.push(filters.status);
+    } else {
+      conditions.push(`g.status = 'OPEN_FOR_JOINING'`);
     }
+    conditions.push(`g.approval_status IN ('APPROVED', 'PENDING_APPROVAL')`);
     if (filters.privacy) {
       conditions.push(`g.privacy = $${idx++}`);
       values.push(filters.privacy);
+    }
+    if (filters.userId) {
+      conditions.push(`(g.creator_id = $${idx++} OR g.id IN (SELECT game_id FROM public.game_players WHERE user_id = $${idx++}))`);
+      values.push(filters.userId, filters.userId);
+    }
+    if (filters.court && filters.court.trim().toUpperCase() !== 'ALL') {
+      const courtUpper = filters.court.trim().toUpperCase();
+      if (courtUpper === 'COURT_1' || courtUpper === 'COURT 1' || courtUpper.endsWith('1')) {
+        conditions.push(`(crt.name ILIKE '%Court 1%' OR g.court_id ILIKE '%court_1%' OR g.court_id ILIKE '%1')`);
+      } else if (courtUpper === 'COURT_2' || courtUpper === 'COURT 2' || courtUpper.endsWith('2')) {
+        conditions.push(`(crt.name ILIKE '%Court 2%' OR g.court_id ILIKE '%court_2%' OR g.court_id ILIKE '%2')`);
+      } else {
+        conditions.push(`g.court_id = $${idx++}`);
+        values.push(filters.court);
+      }
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -113,7 +133,7 @@ export class GamesRepository {
     dbClient: any = dbPool
   ) {
     if (data.id) {
-      const approvalStatus = (data as any).approvalStatus || (data.createdByPlayer ? 'PENDING_APPROVAL' : 'APPROVED');
+      const approvalStatus = (data as any).approvalStatus || 'APPROVED';
       const query = `
         INSERT INTO public.games
         (id, title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)
@@ -141,7 +161,7 @@ export class GamesRepository {
       ]);
       return res.rows[0];
     } else {
-      const approvalStatus = (data as any).approvalStatus || (data.createdByPlayer ? 'PENDING_APPROVAL' : 'APPROVED');
+      const approvalStatus = (data as any).approvalStatus || 'APPROVED';
       const query = `
         INSERT INTO public.games
         (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)

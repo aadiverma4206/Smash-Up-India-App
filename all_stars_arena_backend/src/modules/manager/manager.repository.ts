@@ -1,38 +1,15 @@
 import { dbPool } from '../../config/db.config.js';
 
 export class ManagerRepository {
-  static async getManagerClub(userId: string) {
+  static async getManagerClub(_userId?: string) {
     const res = await dbPool.query(
       `SELECT clb.* FROM public.clubs clb
-       JOIN public.club_managers cm ON cm.club_id = clb.id
-       WHERE cm.user_id = $1 LIMIT 1;`,
-      [userId]
+       WHERE clb.id = 'all_stars_arena_club' LIMIT 1;`
     );
     if (res.rows[0]) return res.rows[0];
 
-    // Fallback: If manager/admin account exists in public.users (Role 2 or 1), but lacks a club_managers link,
-    // automatically link them to the primary active turf club in their city so they are never blocked.
-    const userRes = await dbPool.query(
-      `SELECT id, role_id, city FROM public.users WHERE id = $1;`,
-      [userId]
-    );
-    if (userRes.rows.length > 0 && (Number(userRes.rows[0].role_id) === 2 || Number(userRes.rows[0].role_id) === 1)) {
-      const city = userRes.rows[0].city || 'Raipur';
-      const defaultClubRes = await dbPool.query(
-        `SELECT * FROM public.clubs WHERE status = 'ACTIVE' ORDER BY (city = $1) DESC, created_at ASC LIMIT 1;`,
-        [city]
-      );
-      if (defaultClubRes.rows.length > 0) {
-        const fallbackClub = defaultClubRes.rows[0];
-        await dbPool.query(
-          `INSERT INTO public.club_managers (club_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
-          [fallbackClub.id, userId]
-        );
-        return fallbackClub;
-      }
-    }
-
-    return null;
+    const fallbackRes = await dbPool.query(`SELECT * FROM public.clubs ORDER BY created_at ASC LIMIT 1;`);
+    return fallbackRes.rows[0] || null;
   }
 
   static async getDashboardStats(clubId: string) {
@@ -129,7 +106,7 @@ export class ManagerRepository {
 
   static async createGame(data: {
     title: string;
-    clubId: string;
+    clubId?: string;
     courtId: string;
     creatorId: string;
     format: string;
@@ -141,16 +118,16 @@ export class ManagerRepository {
     privacy: string;
     description?: string;
   }) {
+    const normalizedCourtId = (data.courtId || '').toLowerCase().includes('2') ? 'court_2' : 'court_1';
     const query = `
       INSERT INTO public.games
       (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, match_date, start_time, end_time, privacy, status, approval_status, manager_id, description)
-      VALUES ($1, $2, $3, $4, 'MANAGER', false, $5, $6, $7, $8, $9, $10, $11, 'OPEN_FOR_JOINING', 'APPROVED', $4, $12)
+      VALUES ($1, 'all_stars_arena_club', $2, $3, 'MANAGER', false, $4, $5, $6, $7, $8, $9, $10, 'OPEN_FOR_JOINING', 'APPROVED', $3, $11)
       RETURNING *;
     `;
     const res = await dbPool.query(query, [
       data.title,
-      data.clubId,
-      data.courtId,
+      normalizedCourtId,
       data.creatorId,
       data.format,
       data.maxPlayers,
@@ -241,96 +218,124 @@ export class ManagerRepository {
     return res.rows;
   }
 
-  static async getClubMatchesByStatus(clubId: string, statusTab?: string) {
-    let statusCondition = '';
+  static async getClubMatchesByStatus(_clubId: string, statusTab?: string, courtFilter?: string) {
+    const conditions: string[] = ["g.club_id = 'all_stars_arena_club'"];
+    const values: any[] = [];
+
     const tabUpper = (statusTab || '').toUpperCase();
     if (tabUpper === 'TODAY') {
-      statusCondition = "AND g.match_date = CURRENT_DATE AND g.status <> 'CANCELLED'";
+      conditions.push("g.match_date = CURRENT_DATE AND g.status <> 'CANCELLED'");
     } else if (tabUpper === 'UPCOMING') {
-      statusCondition = "AND g.match_date > CURRENT_DATE AND g.status <> 'CANCELLED'";
+      conditions.push("g.match_date > CURRENT_DATE AND g.status <> 'CANCELLED'");
     } else if (tabUpper === 'ONGOING') {
-      statusCondition = "AND g.status = 'ONGOING'";
+      conditions.push("g.status = 'ONGOING'");
     } else if (tabUpper === 'COMPLETED') {
-      statusCondition = "AND g.status = 'COMPLETED'";
+      conditions.push("g.status = 'COMPLETED'");
     } else if (tabUpper === 'CANCELLED') {
-      statusCondition = "AND g.status = 'CANCELLED'";
+      conditions.push("g.status = 'CANCELLED'");
+    }
+
+    if (courtFilter && courtFilter.trim().toUpperCase() !== 'ALL') {
+      const courtUpper = courtFilter.trim().toUpperCase();
+      if (courtUpper.includes('2')) {
+        conditions.push("g.court_id = 'court_2'");
+      } else if (courtUpper.includes('1')) {
+        conditions.push("g.court_id = 'court_1'");
+      }
     }
 
     const query = `
-      SELECT g.*, crt.name as court_name,
+      SELECT g.*, 
+             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
              (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
       FROM public.games g
-      LEFT JOIN public.courts crt ON crt.id = g.court_id
-      WHERE g.club_id = $1 ${statusCondition}
+      WHERE ${conditions.join(' AND ')}
       ORDER BY g.match_date ASC, g.start_time ASC;
     `;
-    const res = await dbPool.query(query, [clubId]);
+    const res = await dbPool.query(query, values);
     return res.rows;
   }
 
-  static async getCourtsByClub(clubId: string) {
+  static async getCourtsByClub(_clubId?: string) {
     const query = `
       SELECT crt.*,
              (SELECT COUNT(*) FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true) as camera_count,
              (SELECT cam.status FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true LIMIT 1) as camera_status
       FROM public.courts crt
-      WHERE crt.club_id = $1
-      ORDER BY crt.name ASC;
+      WHERE crt.id IN ('court_1', 'court_2')
+      ORDER BY crt.id ASC;
     `;
-    const res = await dbPool.query(query, [clubId]);
+    let res = await dbPool.query(query);
+
+    if (res.rows.length === 0) {
+      await dbPool.query(
+        `INSERT INTO public.clubs (id, name, address, city, status)
+         VALUES ('all_stars_arena_club', 'All Stars Turf Raipur', 'VIP Road', 'Raipur', 'ACTIVE')
+         ON CONFLICT (id) DO NOTHING;`
+      );
+      await dbPool.query(
+        `INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)
+         VALUES ('court_1', 'all_stars_arena_club', 'Court 1', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE'),
+                ('court_2', 'all_stars_arena_club', 'Court 2', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')
+         ON CONFLICT (id) DO NOTHING;`
+      );
+      res = await dbPool.query(query);
+    }
+
     return res.rows;
   }
 
   static async getCourtById(courtId: string) {
+    const normalizedId = courtId.includes('2') ? 'court_2' : 'court_1';
     const res = await dbPool.query(
-      `SELECT crt.*, clb.name as club_name, clb.address as club_address
+      `SELECT crt.*, 'All Stars Turf Raipur' as club_name, 'VIP Road, Raipur' as club_address
        FROM public.courts crt
-       JOIN public.clubs clb ON clb.id = crt.club_id
        WHERE crt.id = $1;`,
-      [courtId]
+      [normalizedId]
     );
     return res.rows[0] || null;
   }
 
   static async getCourtSlots(courtId: string, date: string) {
+    const normalizedCourtId = (courtId && courtId.includes('2')) ? 'court_2' : 'court_1';
+
     const query = `
       SELECT g.id, g.title, g.format, g.max_players, g.entry_fee, g.privacy,
              g.match_date, g.start_time, g.end_time, g.status, g.approval_status,
              g.created_by_player, g.creator_role_name, g.rejection_reason,
              g.team_a_score, g.team_b_score, g.winner_team,
              u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
-             crt.name as court_name,
+             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') as paid_players_count,
              cam.id as camera_id, cam.status as camera_status,
              rec.id as recording_id, rec.recording_status
       FROM public.games g
-      JOIN public.courts crt ON crt.id = g.court_id
       LEFT JOIN public.users u ON u.id = g.creator_id
       LEFT JOIN public.cctv_cameras cam ON cam.court_id = g.court_id AND cam.is_enabled = true
       LEFT JOIN public.cctv_recordings rec ON rec.game_id = g.id AND rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING')
       WHERE g.court_id = $1 AND g.match_date = $2
       ORDER BY g.start_time ASC;
     `;
-    const res = await dbPool.query(query, [courtId, date]);
+    const res = await dbPool.query(query, [normalizedCourtId, date]);
     return res.rows;
   }
 
-  static async getPendingPlayerGames(clubId: string) {
+  static async getPendingPlayerGames(_clubId?: string) {
     const query = `
-      SELECT g.*, crt.name as court_name,
+      SELECT g.*, 
+             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,
              u.profile_image_url as host_image, pd.elo_rating as host_elo, pd.position as host_position,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count
       FROM public.games g
-      JOIN public.courts crt ON crt.id = g.court_id
       JOIN public.users u ON u.id = g.creator_id
       LEFT JOIN public.player_details pd ON pd.user_id = g.creator_id
-      WHERE g.club_id = $1 AND g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
+      WHERE g.club_id = 'all_stars_arena_club' AND g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
       ORDER BY g.match_date ASC, g.start_time ASC;
     `;
-    const res = await dbPool.query(query, [clubId]);
+    const res = await dbPool.query(query);
     return res.rows;
   }
 

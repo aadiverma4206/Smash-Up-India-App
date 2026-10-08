@@ -842,11 +842,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final actions = [
       {
-        'icon': Icons.sports_soccer_rounded,
-        'title': 'Book Pitch',
-        'route': '/games/find'
-      },
-      {
         'icon': Icons.groups_rounded,
         'title': 'Find Matches',
         'route': '/games/find'
@@ -1244,7 +1239,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           }).toList(),
         ),
       ],
-    );
+    );//book pitch
   }
 
   /// Refer & Earn Ad Banner (Light Mode vs Dark Mode asset)

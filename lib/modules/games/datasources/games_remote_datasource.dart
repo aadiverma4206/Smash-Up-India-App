@@ -55,6 +55,8 @@ class GamesRemoteDataSource {
     double? maxEntryFee,
     String? status,
     String? privacy,
+    String? court,
+    bool? myGames,
     int page = 1,
     int limit = 20,
   }) async {
@@ -68,6 +70,8 @@ class GamesRemoteDataSource {
         if (maxEntryFee != null) 'entryFee': maxEntryFee,
         if (status != null && status.isNotEmpty) 'status': status,
         if (privacy != null && privacy.isNotEmpty) 'privacy': privacy,
+        if (court != null && court.isNotEmpty) 'court': court,
+        if (myGames == true) 'myGames': 'true',
         'limit': limit,
         'offset': (page - 1) * limit,
       },

@@ -24,6 +24,11 @@ export const getGamesController = asyncHandler(async (req: Request, res: Respons
     }
   }
 
+  const authReq = req as AuthenticatedRequest;
+  const userIdParam = req.query.userId as string;
+  const myGamesParam = req.query.myGames === 'true' || req.query.myGames === '1';
+  const resolvedUserId = userIdParam || (myGamesParam ? authReq.user?.id : undefined);
+
   const filters = {
     city: req.query.city as string,
     format: req.query.format as string,
@@ -32,6 +37,8 @@ export const getGamesController = asyncHandler(async (req: Request, res: Respons
     maxEntryFee: req.query.entryFee ? Number(req.query.entryFee) : undefined,
     status: req.query.status as string,
     privacy: req.query.privacy as string,
+    court: (req.query.court as string) || (req.query.courtId as string),
+    userId: resolvedUserId,
     limit: Number(req.query.limit) || 20,
     offset: Number(req.query.offset) || 0,
   };

@@ -96,6 +96,64 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                   ),
                   const SizedBox(height: 10),
 
+                  // Court Selection Tabs (All Games, Court 1, Court 2)
+                  Obx(() {
+                    final selectedCourt = controller.selectedCourtFilter.value;
+                    final courts = [
+                      {'key': 'ALL', 'label': 'All Courts'},
+                      {'key': 'COURT_1', 'label': 'Court 1'},
+                      {'key': 'COURT_2', 'label': 'Court 2'},
+                    ];
+
+                    return Row(
+                      children: courts.map((c) {
+                        final key = c['key'] as String;
+                        final label = c['label'] as String;
+                        final isSelected = selectedCourt == key;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ChoiceChip(
+                            avatar: Icon(
+                              Icons.stadium_rounded,
+                              size: 14,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                            label: Text(
+                              label,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isDark
+                                        ? AppColors.textPrimaryDark
+                                        : Colors.black87),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: AppColors.primary,
+                            backgroundColor: Theme.of(context).cardColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : (isDark
+                                        ? AppColors.darkBorder
+                                        : const Color(0xFFE2E8F0)),
+                              ),
+                            ),
+                            onSelected: (_) => controller.setCourtFilter(key),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  }),
+                  const SizedBox(height: 10),
+
                   // Date & Status Filter Chips Horizontal Scroll
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,

@@ -8,7 +8,15 @@ import { ApiError } from '../../utils/apiResponse.js';
 import { logger } from '../../utils/logger.js';
 
 const FORMAT_PLAYER_COUNTS: Record<string, number> = {
-
+  '1v1': 2,
+  '2v2': 4,
+  '3v3': 6,
+  '4v4': 8,
+  '5v5': 10,
+  '6v6': 12,
+  '7v7': 14,
+  '8v8': 16,
+  '9v9': 18,
   '11v11': 22,
 };
 
@@ -65,47 +73,28 @@ export class GamesService {
       ? 'MANAGER'
       : 'ADMIN';
 
-    // 2. Validate Club Exists & Active
-    const clubRes = await dbPool.query(
-      `SELECT id, name, status FROM public.clubs WHERE id = $1;`,
-      [data.clubId]
-    );
-    if (clubRes.rows.length === 0 || clubRes.rows[0].status !== 'ACTIVE') {
-      throw new ApiError(404, 'Selected turf club not found or is inactive', 'CLUB_NOT_FOUND');
-    }
+    // 2. Canonical Club & Court Resolution
+    // Canonical Club is strictly all_stars_arena_club
+    data.clubId = 'all_stars_arena_club';
 
-    // 3. Validate Court Exists, Belongs to Club & Available
-    let courtRes = await dbPool.query(
+    // Normalize Court ID strictly to 'court_1' or 'court_2'
+    const courtInput = (data.courtId || (data as any).courtName || '').toString().toLowerCase();
+    data.courtId = courtInput.includes('2') ? 'court_2' : 'court_1';
+
+    // Ensure court exists and is AVAILABLE in DB
+    const courtRes = await dbPool.query(
       `SELECT id, name, club_id, status FROM public.courts WHERE id = $1;`,
       [data.courtId]
     );
-
-    // If court not found directly by ID (e.g. client sent placeholder 'crt_court_1' / 'crt_court_2'),
-    // resolve to the club's actual Court 1 or Court 2
-    if (courtRes.rows.length === 0 && data.clubId) {
-      const preferredName = data.courtId?.includes('2') ? 'Court 2' : 'Court 1';
-      const fallbackRes = await dbPool.query(
-        `SELECT id, name, club_id, status FROM public.courts
-         WHERE club_id = $1 AND (name ILIKE $2 OR name ILIKE '%court%')
-         ORDER BY (name = $3) DESC, created_at ASC LIMIT 1;`,
-        [data.clubId, `%${preferredName}%`, preferredName]
-      );
-      if (fallbackRes.rows.length > 0) {
-        courtRes = fallbackRes;
-        data.courtId = fallbackRes.rows[0].id;
-      }
-    }
-
     if (courtRes.rows.length === 0) {
-      throw new ApiError(404, 'Selected court pitch does not exist. Please select a valid court.', 'COURT_NOT_FOUND');
+      await dbPool.query(
+        `INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)
+         VALUES ($1, 'all_stars_arena_club', $2, 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')
+         ON CONFLICT (id) DO NOTHING;`,
+        [data.courtId, data.courtId === 'court_2' ? 'Court 2' : 'Court 1']
+      );
     }
-    const court = courtRes.rows[0];
-    if (court.club_id !== data.clubId) {
-      throw new ApiError(400, 'Selected court pitch does not belong to the selected club', 'COURT_CLUB_MISMATCH');
-    }
-    if (court.status !== 'AVAILABLE') {
-      throw new ApiError(400, 'Selected court is currently unavailable for matches', 'COURT_UNAVAILABLE');
-    }
+
 
     // 4. Validate Format & Players
     const formatKey = (data.format || '11v11').toLowerCase().trim();
@@ -272,13 +261,16 @@ export class GamesService {
         throw new ApiError(400, 'Cannot join match that is pending manager approval or rejected', 'MATCH_NOT_APPROVED');
       }
 
-      // Check joining user account status (Blocked / Suspended player security)
+      // Check joining user account status & ensure managers cannot join matches as players
       const userRes = await client.query(
-        `SELECT id, status FROM public.users WHERE id = $1;`,
+        `SELECT id, status, role_id FROM public.users WHERE id = $1;`,
         [userId]
       );
       if (userRes.rows.length === 0 || userRes.rows[0].status === 'SUSPENDED') {
         throw new ApiError(403, 'Your account is blocked or suspended. You cannot join matches.', 'ACCOUNT_SUSPENDED');
+      }
+      if (Number(userRes.rows[0].role_id) !== 3) {
+        throw new ApiError(403, 'Managers cannot join or play matches as players', 'MANAGER_CANNOT_PLAY');
       }
 
       // 2. Prevent Duplicate Joins (Rule 4)
