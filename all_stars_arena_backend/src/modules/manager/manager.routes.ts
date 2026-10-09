@@ -17,6 +17,7 @@ import {
   approveSlotRequestController,
   rejectSlotRequestController,
   getClubMatchesController,
+  getClubHistoryController,
   getPendingGamesController,
   approvePlayerGameController,
   rejectPlayerGameController,
@@ -78,6 +79,7 @@ router.post('/requests/:id/reject', rejectSlotRequestController);
 
 // Matches & Bookings
 router.get('/matches', getClubMatchesController);
+router.get('/history', getClubHistoryController);
 router.get('/bookings', getManagerBookingsController);
 
 // All Players & Player Moderation (Block/Unblock)

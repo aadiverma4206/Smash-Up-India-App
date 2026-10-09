@@ -157,7 +157,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ),
               const SizedBox(height: 16),
 
-              // 🛡️ MANAGER CONTROLS PANEL (Exact Match as Requested)
+              // 🛡️ MANAGER CONTROLS PANEL (Single Score Entry Option / Locked Notice)
               _buildManagerControlsPanel(context, game),
               const SizedBox(height: 20),
 
@@ -273,9 +273,12 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// 🛡️ MANAGER CONTROLS PANEL Widget
+  /// 🛡️ MANAGER CONTROLS PANEL Widget (Single Score Entry Option)
   Widget _buildManagerControlsPanel(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusUpper = game.status.toUpperCase();
+    final isCompleted = statusUpper == 'COMPLETED';
+    final isCancelled = statusUpper == 'CANCELLED';
 
     return Container(
       width: double.infinity,
@@ -294,18 +297,17 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: MANAGER CONTROLS (CLUB_MANAGER)
           Row(
             children: [
-              const Icon(Icons.shield_outlined,
-                  color: Colors.amber, size: 20),
+              Icon(isCompleted ? Icons.check_circle_rounded : Icons.sports_score_rounded,
+                  color: isCompleted ? Colors.green : AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
-                'MANAGER CONTROLS (CLUB_MANAGER)',
+                isCompleted ? 'MATCH COMPLETED & SCORE LOCKED' : 'MATCH SCORE ENTRY',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: Colors.amber.shade800,
+                  color: isCompleted ? Colors.green : AppColors.primary,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -313,145 +315,51 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           ),
           const SizedBox(height: 14),
 
-          // Row 1: ▶ Start Match (Full-Width Green Pill)
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24)),
-                elevation: 2,
+          if (isCompleted) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
               ),
-              onPressed: () => controller.startGame(game.id),
-              icon: const Icon(Icons.play_arrow_rounded,
-                  color: Colors.white, size: 22),
-              label: const Text(
-                'Start Match',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Score has been submitted and locked.',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.green),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Final Score: Team A ${game.teamAScore} - ${game.teamBScore} Team B\nNote: Once added, scores can only be modified by an Administrator.',
+                    style: TextStyle(fontSize: 11.5, color: context.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (isCancelled) ...[
+            const Text('This match has been cancelled.', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ] else ...[
+            // Single option for score entry / finish match
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  elevation: 2,
+                ),
+                onPressed: () => _showScoreDialog(context, game, isFinish: true),
+                icon: const Icon(Icons.sports_score_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  'Submit Final Match Score',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-
-          // Row 2: ✔ Finish Match & 🏆 Live Score (Side by Side)
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 46,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                          color: isDark ? Colors.white38 : Colors.grey.shade400,
-                          width: 1.2),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24)),
-                      backgroundColor: Theme.of(context).cardColor,
-                    ),
-                    onPressed: () => _showScoreDialog(context, game, isFinish: true),
-                    icon: Icon(Icons.check_circle_outline_rounded,
-                        color: isDark ? Colors.white : Colors.black87, size: 18),
-                    label: Text(
-                      'Finish Match',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: SizedBox(
-                  height: 46,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber.shade700,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24)),
-                      elevation: 2,
-                    ),
-                    onPressed: () => _showScoreDialog(context, game, isFinish: false),
-                    icon: const Icon(Icons.emoji_events_outlined,
-                        color: Colors.white, size: 18),
-                    label: const Text(
-                      'Live Score',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Row 3: ✏️ Edit Match (Full/Half Width Button)
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 46,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primary, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24)),
-                      backgroundColor: Theme.of(context).cardColor,
-                    ),
-                    onPressed: () => _showEditMatchDialog(context, game),
-                    icon: const Icon(Icons.edit_outlined,
-                        color: AppColors.primary, size: 18),
-                    label: const Text(
-                      'Edit Match',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Row 4: 🗑️ Cancel Match (Full-Width Red Button)
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24)),
-                elevation: 2,
-              ),
-              onPressed: () => _confirmCancelMatch(context, game),
-              icon: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.white, size: 20),
-              label: const Text(
-                'Cancel Match',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -598,6 +506,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
   }
 
   Widget _buildRosterPaymentSection(BuildContext context, GameModel game) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final roster = game.roster ?? [];
 
     return Container(
@@ -648,100 +557,92 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ),
             )
           else
-            ...roster.map((p) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor:
-                          p.team == 'TEAM_A' ? Colors.blue : Colors.redAccent,
-                      child: Text(
-                        p.position,
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: roster.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final player = roster[index];
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: context.borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                        child: Text(
+                          player.name.isNotEmpty ? player.name[0].toUpperCase() : 'P',
+                          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            p.name,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: context.textPrimary,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              player.name,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.textPrimary),
                             ),
-                          ),
-                          Text(
-                            'Team: ${p.team == "TEAM_A" ? "Team A" : "Team B"}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: context.textSecondary,
+                            Text(
+                              'Position: ${player.position} • OVR: ${player.ovr}',
+                              style: TextStyle(fontSize: 11, color: context.textSecondary),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.4)),
-                      ),
-                      child: Text(
-                        'Paid ₹${game.perPlayerFee.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          player.team,
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
   }
 
   void _showScoreDialog(BuildContext context, GameModel game, {required bool isFinish}) {
-    teamAController.text = game.teamAScore.toString();
-    teamBController.text = game.teamBScore.toString();
-
     Get.dialog(
       AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
+        backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(isFinish ? 'Finish Match & Submit Score' : 'Update Live Score'),
+        title: Text('Submit Match Score: ${game.title}', style: TextStyle(color: context.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const Text('Enter final match score:', style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
                   child: AppTextField(
-                    label: 'Team A Score',
                     controller: teamAController,
+                    label: 'Team A Score',
                     keyboardType: TextInputType.number,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: AppTextField(
-                    label: 'Team B Score',
                     controller: teamBController,
+                    label: 'Team B Score',
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -757,106 +658,12 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () {
-              final scoreA = int.tryParse(teamAController.text.trim()) ?? 0;
-              final scoreB = int.tryParse(teamBController.text.trim()) ?? 0;
+              final a = int.tryParse(teamAController.text.trim()) ?? 0;
+              final b = int.tryParse(teamBController.text.trim()) ?? 0;
               Get.back();
-              if (isFinish) {
-                controller.completeGame(game.id, scoreA, scoreB);
-              } else {
-                controller.submitMatchScore(game.id, scoreA, scoreB);
-              }
+              controller.submitMatchScore(game.id, a, b, isFinal: isFinish);
             },
-            child: Text(isFinish ? 'Finish Match' : 'Save Score',
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditMatchDialog(BuildContext context, GameModel game) {
-    final titleCtrl = TextEditingController(text: game.title);
-    final feeCtrl = TextEditingController(text: game.perPlayerFee.toStringAsFixed(0));
-
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Match Details'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppTextField(
-              label: 'Match Title',
-              controller: titleCtrl,
-            ),
-            const SizedBox(height: 12),
-            AppTextField(
-              label: 'Entry Fee Per Player (₹)',
-              controller: feeCtrl,
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
-              Get.back();
-              controller.fetchClubGames();
-            },
-            child: const Text('Save Changes',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmCancelMatch(BuildContext context, GameModel game) {
-    final reasonController = TextEditingController();
-
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Match: ${game.title}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Cancelling will trigger automatic full refunds to all joined player wallets.',
-              style: TextStyle(color: Colors.redAccent, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Enter reason for match cancellation...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Get.back();
-              controller.cancelMatchWithRefunds(
-                  game.id, reasonController.text.trim());
-            },
-            child: const Text('Cancel & Issue Refunds',
-                style: TextStyle(color: Colors.white)),
+            child: const Text('Submit Score', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

@@ -301,3 +301,19 @@ export const getGameDetailsController = asyncHandler(async (req: AuthenticatedRe
   const result = await ManagerService.getGameDetails(userId, gameId);
   res.status(200).json(ApiResponse.success('Match details retrieved', result));
 });
+
+export const getClubHistoryController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const offset = parseInt(req.query.offset as string) || 0;
+  const status = req.query.status as string;
+  const court = req.query.court as string;
+
+  if (!userId) throw new ApiError(401, 'Unauthorized');
+
+  const club = await ManagerRepository.getManagerClub(userId);
+  if (!club) throw new ApiError(404, 'No assigned club found for this manager');
+
+  const history = await ManagerRepository.getClubHistoryMatches(club.id, limit, offset, status, court);
+  res.status(200).json(ApiResponse.success('Club history matches retrieved', history));
+});

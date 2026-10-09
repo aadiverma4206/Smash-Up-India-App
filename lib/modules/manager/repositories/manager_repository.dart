@@ -94,6 +94,21 @@ class ManagerRepository {
     return response.data ?? [];
   }
 
+  Future<List<GameModel>> getClubHistory({
+    int limit = 20,
+    int offset = 0,
+    String? status,
+    String? court,
+  }) async {
+    final response = await remoteDataSource.getClubHistory(
+      limit: limit,
+      offset: offset,
+      status: status,
+      court: court,
+    );
+    return response.data ?? [];
+  }
+
   Future<List<Map<String, dynamic>>> getCourtSlots(String courtId,
       {String? date}) async {
     final response =

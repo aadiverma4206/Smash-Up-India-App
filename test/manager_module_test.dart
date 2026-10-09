@@ -27,18 +27,43 @@ void main() {
       expect(dashboard.onlineCctvCount, 4);
     });
 
-    test('ManagerClubModel parses assigned club scoping details', () {
+    test('ManagerDashboardModel handles backend payload with nested stats and missing top-level keys', () {
       final json = {
-        'id': 'clb_102',
-        'name': 'Raipur Turf Club',
-        'city': 'Raipur',
-        'address': 'Telibandha',
-        'status': 'ACTIVE',
+        'club': {
+          'id': 'clb_103',
+          'name': 'Raipur Football Arena',
+        },
+        'stats': {
+          'totalGames': 8,
+          'totalBookings': 15,
+          'totalRevenueRupees': 22500,
+          'cctvStats': {
+            'totalCameras': 5,
+            'onlineCameras': 3,
+            'recordingCameras': 1,
+          },
+        },
       };
 
-      final club = ManagerClubModel.fromJson(json);
-      expect(club.id, 'clb_102');
-      expect(club.status, 'ACTIVE');
+      final dashboard = ManagerDashboardModel.fromJson(json);
+      expect(dashboard.club.id, 'clb_103');
+      expect(dashboard.club.name, 'Raipur Football Arena');
+      expect(dashboard.totalRevenue, 22500.0);
+      expect(dashboard.totalBookings, 15);
+      expect(dashboard.activeMatches, 8);
+      expect(dashboard.onlineCctvCount, 3);
+      expect(dashboard.occupancyRatePercentage, 0.0);
+    });
+
+    test('ManagerDashboardModel gracefully defaults all missing and null fields', () {
+      final json = <String, dynamic>{};
+      final dashboard = ManagerDashboardModel.fromJson(json);
+      expect(dashboard.totalRevenue, 0.0);
+      expect(dashboard.totalBookings, 0);
+      expect(dashboard.activeMatches, 0);
+      expect(dashboard.occupancyRatePercentage, 0.0);
+      expect(dashboard.onlineCctvCount, 0);
+      expect(dashboard.club.id, '');
     });
   });
 }

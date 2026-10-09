@@ -562,6 +562,9 @@ export const initDbTables = async () => {
         surface = EXCLUDED.surface,
         status = 'AVAILABLE';
 
+      -- Clean up any non-canonical courts that are not court_1 or court_2
+      DELETE FROM public.courts WHERE id NOT IN ('court_1', 'court_2');
+
       -- 3. Normalize all games strictly to all_stars_arena_club and court_1 / court_2
       UPDATE public.games
       SET 

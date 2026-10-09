@@ -160,6 +160,29 @@ class ManagerRemoteDataSource {
     );
   }
 
+  Future<ApiResponseModel<List<GameModel>>> getClubHistory({
+    int limit = 20,
+    int offset = 0,
+    String? status,
+    String? court,
+  }) async {
+    final response = await dioClient.dio.get(
+      '/manager/history',
+      queryParameters: {
+        'limit': limit,
+        'offset': offset,
+        if (status != null && status != 'ALL') 'status': status,
+        if (court != null && court != 'ALL') 'court': court,
+      },
+    );
+    return ApiResponseParser.parse<List<GameModel>>(
+      response.data,
+      (json) => (json as List)
+          .map((e) => GameModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
   Future<ApiResponseModel<List<Map<String, dynamic>>>> getCourtSlots(
       String courtId, {String? date}) async {
     final response = await dioClient.dio.get(
@@ -168,9 +191,17 @@ class ManagerRemoteDataSource {
     );
     return ApiResponseParser.parse<List<Map<String, dynamic>>>(
       response.data,
-      (json) => (json as List)
-          .map((e) => e as Map<String, dynamic>)
-          .toList(),
+      (json) {
+        if (json is Map<String, dynamic> && json['slots'] is List) {
+          return (json['slots'] as List)
+              .map((e) => e as Map<String, dynamic>)
+              .toList();
+        }
+        if (json is List) {
+          return json.map((e) => e as Map<String, dynamic>).toList();
+        }
+        return <Map<String, dynamic>>[];
+      },
     );
   }
 

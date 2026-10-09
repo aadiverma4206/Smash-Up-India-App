@@ -1,12 +1,21 @@
 import { dbPool } from '../../config/db.config.js';
 
 export class ManagerRepository {
-  static async getManagerClub(_userId?: string) {
-    const res = await dbPool.query(
-      `SELECT clb.* FROM public.clubs clb
-       WHERE clb.id = 'all_stars_arena_club' LIMIT 1;`
+  static async getManagerClub(userId?: string) {
+    if (userId) {
+      const res = await dbPool.query(
+        `SELECT clb.* FROM public.clubs clb
+         JOIN public.club_managers cm ON cm.club_id = clb.id
+         WHERE cm.user_id = $1 LIMIT 1;`,
+        [userId]
+      );
+      if (res.rows[0]) return res.rows[0];
+    }
+
+    const adminRes = await dbPool.query(
+      `SELECT clb.* FROM public.clubs clb WHERE clb.id = 'all_stars_arena_club' LIMIT 1;`
     );
-    if (res.rows[0]) return res.rows[0];
+    if (adminRes.rows[0]) return adminRes.rows[0];
 
     const fallbackRes = await dbPool.query(`SELECT * FROM public.clubs ORDER BY created_at ASC LIMIT 1;`);
     return fallbackRes.rows[0] || null;
@@ -257,32 +266,64 @@ export class ManagerRepository {
     return res.rows;
   }
 
-  static async getCourtsByClub(_clubId?: string) {
+  static async getClubHistoryMatches(clubId: string, limit = 20, offset = 0, statusFilter?: string, courtFilter?: string) {
+    const conditions: string[] = ["(g.club_id = $1 OR g.club_id = 'all_stars_arena_club')", "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')"];
+    const values: any[] = [clubId || 'all_stars_arena_club'];
+    let idx = 2;
+
+    if (statusFilter && statusFilter.toUpperCase() !== 'ALL') {
+      conditions.push(`UPPER(g.status::text) = $${idx++}`);
+      values.push(statusFilter.toUpperCase());
+    }
+
+    if (courtFilter && courtFilter.trim().toUpperCase() !== 'ALL') {
+      const courtUpper = courtFilter.trim().toUpperCase();
+      conditions.push(`g.court_id = $${idx++}`);
+      values.push(courtUpper.includes('2') ? 'court_2' : 'court_1');
+    }
+
+    values.push(limit, offset);
+
     const query = `
-      SELECT crt.*,
+      SELECT g.*,
+             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
+             u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') * g.entry_fee as total_amount_collected
+      FROM public.games g
+      LEFT JOIN public.users u ON u.id = g.creator_id
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY g.match_date DESC, g.start_time DESC
+      LIMIT $${idx++} OFFSET $${idx++};
+    `;
+    const res = await dbPool.query(query, values);
+    return res.rows;
+  }
+
+  static async getCourtsByClub(clubId: string) {
+    const targetClubId = clubId || 'all_stars_arena_club';
+    const clubCheck = await dbPool.query(`SELECT id FROM public.clubs WHERE id = $1;`, [targetClubId]);
+    if (clubCheck.rows.length === 0) {
+      return [];
+    }
+
+    const query = `
+      SELECT crt.id, crt.club_id, crt.name, crt.environment, crt.surface, crt.base_price,
+             crt.peak_multiplier, crt.weekend_multiplier, crt.peak_window_start, crt.peak_window_end,
+             crt.status, crt.image_url, crt.created_at, crt.updated_at,
              (SELECT COUNT(*) FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true) as camera_count,
              (SELECT cam.status FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true LIMIT 1) as camera_status
       FROM public.courts crt
-      WHERE crt.id IN ('court_1', 'court_2')
-      ORDER BY crt.id ASC;
+      WHERE crt.club_id = $1
+      ORDER BY
+          CASE
+              WHEN crt.id = 'court_1' THEN 1
+              WHEN crt.id = 'court_2' THEN 2
+              ELSE 999
+          END,
+          crt.name;
     `;
-    let res = await dbPool.query(query);
-
-    if (res.rows.length === 0) {
-      await dbPool.query(
-        `INSERT INTO public.clubs (id, name, address, city, status)
-         VALUES ('all_stars_arena_club', 'All Stars Turf Raipur', 'VIP Road', 'Raipur', 'ACTIVE')
-         ON CONFLICT (id) DO NOTHING;`
-      );
-      await dbPool.query(
-        `INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)
-         VALUES ('court_1', 'all_stars_arena_club', 'Court 1', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE'),
-                ('court_2', 'all_stars_arena_club', 'Court 2', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')
-         ON CONFLICT (id) DO NOTHING;`
-      );
-      res = await dbPool.query(query);
-    }
-
+    const res = await dbPool.query(query, [targetClubId]);
     return res.rows;
   }
 
@@ -297,8 +338,28 @@ export class ManagerRepository {
     return res.rows[0] || null;
   }
 
-  static async getCourtSlots(courtId: string, date: string) {
+  static async getCourtSlots(courtId: string, date?: string | null) {
     const normalizedCourtId = (courtId && courtId.includes('2')) ? 'court_2' : 'court_1';
+    const conditions: string[] = ['g.court_id = $1', "g.status <> 'CANCELLED'"];
+    const values: any[] = [normalizedCourtId];
+    let idx = 2;
+
+    if (date && date.toUpperCase() !== 'ALL') {
+      let targetDate = date;
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+      if (date.toUpperCase() === 'TODAY') {
+        targetDate = today;
+      } else if (date.toUpperCase() === 'TOMORROW') {
+        targetDate = tomorrow;
+      }
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+        conditions.push(`g.match_date = $${idx++}`);
+        values.push(targetDate);
+      }
+    }
 
     const query = `
       SELECT g.id, g.title, g.format, g.max_players, g.entry_fee, g.privacy,
@@ -315,10 +376,11 @@ export class ManagerRepository {
       LEFT JOIN public.users u ON u.id = g.creator_id
       LEFT JOIN public.cctv_cameras cam ON cam.court_id = g.court_id AND cam.is_enabled = true
       LEFT JOIN public.cctv_recordings rec ON rec.game_id = g.id AND rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING')
-      WHERE g.court_id = $1 AND g.match_date = $2
-      ORDER BY g.start_time ASC;
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY g.match_date ASC, g.start_time ASC
+      LIMIT 20;
     `;
-    const res = await dbPool.query(query, [normalizedCourtId, date]);
+    const res = await dbPool.query(query, values);
     return res.rows;
   }
 

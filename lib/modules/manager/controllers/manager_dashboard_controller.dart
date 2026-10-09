@@ -26,12 +26,81 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
 
   final RxInt selectedCourtIndex = 0.obs;
   final RxString selectedMatchTab = 'TODAY'.obs; // TODAY, UPCOMING, ONGOING, CANCELLED
+  final RxString selectedDateFilter = 'ALL'.obs; // ALL, TODAY, TOMORROW, or YYYY-MM-DD
+  final Rxn<DateTime> customSelectedDate = Rxn<DateTime>();
   final RxBool isLoading = false.obs;
   final RxBool isSlotsLoading = false.obs;
   final RxBool isActionLoading = false.obs;
   final RxInt selectedNavIndex = 0.obs;
+  final RxString searchQuery = ''.obs;
+
+  List<Map<String, dynamic>> get filteredCourtSlots {
+    List<Map<String, dynamic>> list = List.from(currentCourtSlots);
+    // Exclude completed matches from court matches view (they appear in History view)
+    list = list.where((slot) {
+      final status = (slot['status'] ?? '').toString().toUpperCase();
+      return status != 'COMPLETED';
+    }).toList();
+
+    if (searchQuery.value.trim().isNotEmpty) {
+      final q = searchQuery.value.trim().toLowerCase();
+      list = list.where((slot) {
+        final title = (slot['title'] ?? slot['gameTitle'] ?? '').toString().toLowerCase();
+        final host = (slot['hostName'] ?? slot['host_name'] ?? '').toString().toLowerCase();
+        final status = (slot['status'] ?? slot['approvalStatus'] ?? '').toString().toLowerCase();
+        final format = (slot['format'] ?? '').toString().toLowerCase();
+        return title.contains(q) || host.contains(q) || status.contains(q) || format.contains(q);
+      }).toList();
+    }
+    return list;
+  }
 
   final matchTabs = ['TODAY', 'UPCOMING', 'ONGOING', 'CANCELLED'];
+
+  String? get formattedQueryDate {
+    if (selectedDateFilter.value == 'ALL') return null;
+    if (selectedDateFilter.value == 'TODAY') {
+      return DateTime.now().toIso8601String().split('T')[0];
+    }
+    if (selectedDateFilter.value == 'TOMORROW') {
+      return DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T')[0];
+    }
+    return selectedDateFilter.value;
+  }
+
+  Future<void> changeDateFilter(String filter) async {
+    if (filter == 'CUSTOM') {
+      final picked = await showDatePicker(
+        context: Get.context!,
+        initialDate: customSelectedDate.value ?? DateTime.now(),
+        firstDate: DateTime(2025),
+        lastDate: DateTime(2030),
+      );
+      if (picked != null) {
+        customSelectedDate.value = picked;
+        selectedDateFilter.value = picked.toIso8601String().split('T')[0];
+        if (courts.isNotEmpty) {
+          final clamped = selectedCourtIndex.value.clamp(0, courts.length - 1);
+          await fetchCourtSlots(courts[clamped].id, courtIndex: clamped + 1, date: formattedQueryDate);
+        }
+      }
+      return;
+    }
+
+    selectedDateFilter.value = filter;
+    if (courts.isNotEmpty) {
+      final clamped = selectedCourtIndex.value.clamp(0, courts.length - 1);
+      await fetchCourtSlots(courts[clamped].id, courtIndex: clamped + 1, date: formattedQueryDate);
+    }
+  }
+
+  Future<void> selectCourt(int index) async {
+    if (courts.isEmpty) return;
+    final clamped = index.clamp(0, courts.length - 1);
+    selectedCourtIndex.value = clamped;
+    final courtId = courts[clamped].id;
+    await fetchCourtSlots(courtId, courtIndex: clamped + 1, date: formattedQueryDate);
+  }
 
   List<GameModel> get court1Games {
     final all = <GameModel>[...pendingPlayerGames, ...clubMatches];
@@ -39,7 +108,7 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     return all.where((g) {
       if (seen.contains(g.id)) return false;
       seen.add(g.id);
-      return g.courtId == 'court_1' || g.courtName == 'Court 1';
+      return g.courtId == 'court_1';
     }).toList();
   }
 
@@ -49,7 +118,7 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     return all.where((g) {
       if (seen.contains(g.id)) return false;
       seen.add(g.id);
-      return g.courtId == 'court_2' || g.courtName == 'Court 2';
+      return g.courtId == 'court_2';
     }).toList();
   }
 
@@ -98,36 +167,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
         AppLogger.warning('Error fetching club courts: $e');
       }
 
-      if (crts.isNotEmpty) {
-        courts.assignAll(crts);
-      } else {
-        const clubId = 'all_stars_arena_club';
-        const clubName = 'All Stars Turf Raipur';
-        courts.assignAll([
-          CourtModel(
-            id: 'court_1',
-            clubId: clubId,
-            clubName: clubName,
-            name: 'Court 1',
-            surfaceType: '3G Turf',
-            basePricePerHour: 1200.0,
-            status: 'AVAILABLE',
-            city: 'Raipur',
-            address: 'Raipur',
-          ),
-          CourtModel(
-            id: 'court_2',
-            clubId: clubId,
-            clubName: clubName,
-            name: 'Court 2',
-            surfaceType: '3G Turf',
-            basePricePerHour: 1200.0,
-            status: 'AVAILABLE',
-            city: 'Raipur',
-            address: 'Raipur',
-          ),
-        ]);
-      }
+      courts.assignAll(crts);
+      AppLogger.info('[ManagerCourt] loaded courts count: ${courts.length}, IDs: ${courts.map((c) => c.id).toList()}');
 
       final bkgs = await repository.getClubBookings();
       bookings.assignAll(bkgs);
@@ -137,7 +178,7 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
       if (courts.isNotEmpty) {
         final clampedIndex = selectedCourtIndex.value.clamp(0, courts.length - 1);
         final courtId = courts[clampedIndex].id;
-        await fetchCourtSlots(courtId, courtIndex: clampedIndex + 1);
+        await fetchCourtSlots(courtId, courtIndex: clampedIndex + 1, date: formattedQueryDate);
       }
     } catch (e) {
       AppLogger.warning('Manager dashboard error: $e');
@@ -157,13 +198,7 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     }
   }
 
-  Future<void> selectCourt(int index) async {
-    if (courts.isEmpty) return;
-    final clamped = index.clamp(0, courts.length - 1);
-    selectedCourtIndex.value = clamped;
-    final courtId = courts[clamped].id;
-    await fetchCourtSlots(courtId, courtIndex: clamped + 1);
-  }
+
 
   Future<void> fetchCourtSlots(String courtId, {int courtIndex = 1, String? date}) async {
     isSlotsLoading.value = true;

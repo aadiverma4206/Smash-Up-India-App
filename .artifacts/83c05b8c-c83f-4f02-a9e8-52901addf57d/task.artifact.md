@@ -1,0 +1,4 @@
+- `[x]` Task 1: Update backend repository & service to handle pagination, completion time threshold (end time + 15 mins), and score locking rules in TypeScript.
+- `[/]` Task 2: Update frontend manager history controller and view with infinite scroll pagination (20 items limit, load more on scroll).
+- `[ ]` Task 3: Update match details view for history/completed matches (restrict start/edit, manager score submission once, CCTV videos, and roster player list with amounts).
+- `[ ]` Task 4: Verify build and test.

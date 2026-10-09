@@ -20,8 +20,20 @@ export class ManagerService {
     const courts = await ManagerRepository.getCourtsByClub(club.id);
     const pendingGames = await ManagerRepository.getPendingPlayerGames(club.id);
 
+    const totalRevenue = Number(stats.totalRevenueRupees || 0);
+    const totalBookings = Number(stats.totalBookings || 0);
+    const activeMatches = Number(stats.totalGames || 0);
+    const onlineCctvCount = Number(stats.cctvStats?.onlineCameras || 0);
+    const occupancyRatePercentage = 0.0;
+
     return {
       club,
+      totalRevenue,
+      totalRevenueRupees: totalRevenue,
+      totalBookings,
+      activeMatches,
+      occupancyRatePercentage,
+      onlineCctvCount,
       stats: {
         ...stats,
         pendingGamesCount: pendingGames.length,
@@ -53,7 +65,7 @@ export class ManagerService {
       throw new ApiError(404, 'Court pitch not found', 'COURT_NOT_FOUND');
     }
 
-    const queryDate = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : new Date().toISOString().split('T')[0];
+    const queryDate = dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : null;
     const games = await ManagerRepository.getCourtSlots(courtId, queryDate);
 
     return {
@@ -65,7 +77,7 @@ export class ManagerService {
         basePrice: parseFloat(court.base_price || '0'),
         status: court.status,
       },
-      date: queryDate,
+      date: queryDate || 'ALL',
       totalGames: games.length,
       slots: games,
     };

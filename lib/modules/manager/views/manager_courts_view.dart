@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/manager_dashboard_controller.dart';
+import '../controllers/manager_games_controller.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../core/widgets/app_loader.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../data/models/game_model.dart';
+import '../../../core/utils/app_date_utils.dart';
 
 class ManagerCourtsView extends GetView<ManagerDashboardController> {
   const ManagerCourtsView({super.key});
@@ -11,11 +14,19 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final searchController = TextEditingController(text: controller.searchQuery.value);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Court Pitch & Slot Control'),
+        title: Obx(() {
+          if (controller.courts.isEmpty) {
+            return const Text('Court Matches');
+          }
+          final selectedIndex = controller.selectedCourtIndex.value.clamp(0, controller.courts.length - 1);
+          final courtName = controller.courts[selectedIndex].name;
+          return Text('$courtName Matches', style: const TextStyle(fontWeight: FontWeight.bold));
+        }),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -23,7 +34,7 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
               if (controller.courts.isNotEmpty) {
                 final selectedIndex = controller.selectedCourtIndex.value;
                 final courtId = controller.courts[selectedIndex].id;
-                controller.fetchCourtSlots(courtId);
+                controller.fetchCourtSlots(courtId, courtIndex: selectedIndex + 1);
               } else {
                 controller.loadManagerData();
               }
@@ -33,7 +44,26 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
       ),
       body: Obx(() {
         if (controller.isLoading.value && controller.courts.isEmpty) {
-          return const AppLoader(message: 'Loading court pitches...');
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                SkeletonContainer(width: double.infinity, height: 48, borderRadius: 12),
+                SizedBox(height: 16),
+                Row(
+                  children: [
+                    SkeletonContainer(width: 80, height: 32, borderRadius: 8),
+                    SizedBox(width: 8),
+                    SkeletonContainer(width: 80, height: 32, borderRadius: 8),
+                    SizedBox(width: 8),
+                    SkeletonContainer(width: 80, height: 32, borderRadius: 8),
+                  ],
+                ),
+                SizedBox(height: 20),
+                Expanded(child: SkeletonListLoader(count: 4)),
+              ],
+            ),
+          );
         }
 
         if (controller.courts.isEmpty) {
@@ -47,230 +77,140 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
         final selectedIndex = controller.selectedCourtIndex.value.clamp(
             0, controller.courts.length - 1);
         final selectedCourt = controller.courts[selectedIndex];
+        final matchesList = controller.filteredCourtSlots;
 
         return RefreshIndicator(
           onRefresh: () async {
             await controller.loadManagerData();
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Court Selector Tabs (Court 1, Court 2, etc.)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: List.generate(controller.courts.length, (index) {
-                      final court = controller.courts[index];
-                      final isSelected = index == selectedIndex;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ChoiceChip(
-                          avatar: Icon(
-                            Icons.stadium_rounded,
-                            size: 16,
-                            color: isSelected
-                                ? Colors.white
-                                : (isDark ? Colors.white70 : Colors.black87),
-                          ),
-                          label: Text(
-                            court.name,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : (isDark
-                                      ? AppColors.textPrimaryDark
-                                      : Colors.black87),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: AppColors.primary,
-                          backgroundColor: Theme.of(context).cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : (isDark
-                                      ? AppColors.darkBorder
-                                      : const Color(0xFFE2E8F0)),
-                            ),
-                          ),
-                          onSelected: (_) => controller.selectCourt(index),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Selected Court Information Card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark
-                          ? AppColors.darkBorder
-                          : AppColors.primary.withValues(alpha: 0.3),
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.stadium_rounded,
-                            color: AppColors.primary, size: 28),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              selectedCourt.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Surface: ${selectedCourt.surfaceType} • Status: ${selectedCourt.status}',
-                              style: TextStyle(
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : Colors.grey.shade600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '₹${selectedCourt.basePricePerHour.toStringAsFixed(0)}/hr',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Court Slots Section Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🔍 Search Bar & Date Filter Chips
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    TextField(
+                      controller: searchController,
+                      onChanged: (val) => controller.searchQuery.value = val,
+                      style: TextStyle(
+                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        fontSize: 14,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search by player name, time, status...',
+                        hintStyle: TextStyle(
+                          color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                          fontSize: 13,
+                        ),
+                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
+                        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black54),
+                                onPressed: () {
+                                  searchController.clear();
+                                  controller.searchQuery.value = '';
+                                },
+                              )
+                            : const SizedBox.shrink()),
+                        filled: true,
+                        fillColor: Theme.of(context).cardColor,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildDateChip(context, 'ALL', 'All Dates', Icons.calendar_today_rounded),
+                          _buildDateChip(context, 'TODAY', 'Today', Icons.today_rounded),
+                          _buildDateChip(context, 'TOMORROW', 'Tomorrow', Icons.upcoming_rounded),
+                          _buildDateChip(context, 'CUSTOM', 'Select Date', Icons.date_range_rounded),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
                     Text(
-                      '${selectedCourt.name} Slots Today',
+                      'Matches (${matchesList.length})',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color:
-                            isDark ? AppColors.textPrimaryDark : Colors.black87,
-                      ),
-                    ),
-                    Obx(
-                      () => Text(
-                        '${controller.currentCourtSlots.length} Slots',
-                        style: TextStyle(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : Colors.grey.shade600,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+              ),
 
-                // Slot List Body
-                Obx(() {
-                  if (controller.isSlotsLoading.value) {
-                    return const AppLoader(message: 'Fetching court slots...');
-                  }
-
-                  if (controller.currentCourtSlots.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : const Color(0xFFEEEEEE),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'No slots scheduled for ${selectedCourt.name} today.',
-                          style: TextStyle(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : Colors.grey.shade600,
-                            fontSize: 13,
+              // Scrollable Matches List with Skeleton Loader & Scrollbar
+              Expanded(
+                child: controller.isSlotsLoading.value
+                    ? const SkeletonListLoader(count: 4)
+                    : matchesList.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Text(
+                                'No games scheduled on ${selectedCourt.name} matching your filter.',
+                                style: TextStyle(
+                                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                                  fontSize: 13,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          )
+                        : Scrollbar(
+                            thumbVisibility: true,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: matchesList.length,
+                              itemBuilder: (context, index) {
+                                final slot = matchesList[index];
+                                return _buildMatchCard(context, slot, selectedCourt.name);
+                              },
+                            ),
                           ),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Column(
-                    children: controller.currentCourtSlots
-                        .map((slot) => _buildSlotCard(context, slot))
-                        .toList(),
-                  );
-                }),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       }),
     );
   }
 
-  Widget _buildSlotCard(BuildContext context, Map<String, dynamic> slot) {
+  Widget _buildMatchCard(BuildContext context, Map<String, dynamic> slot, String courtName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String gameId = (slot['gameId'] ?? slot['id'] ?? '').toString();
-    final String timeStr = (slot['time'] ??
-            '${slot['startTime'] ?? slot['start_time'] ?? "18:00"} - ${slot['endTime'] ?? slot['end_time'] ?? "19:30"}')
-        .toString();
+    
+    String startTime = (slot['startTime'] ?? slot['start_time'] ?? '18:30').toString();
+    if (startTime.length > 5) {
+      startTime = startTime.substring(0, 5);
+    }
+
+    final String format = (slot['format'] ?? '1v1').toString().toUpperCase();
+    final String privacy = (slot['privacy'] ?? 'PUBLIC').toString().toUpperCase();
     final String approvalStatus = (slot['approvalStatus'] ??
             slot['approval_status'] ??
             slot['status'] ??
@@ -282,30 +222,39 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
     final String gameTitle =
         (slot['gameTitle'] ?? slot['title'] ?? 'Court Match').toString();
     final String hostName =
-        (slot['hostName'] ?? slot['host_name'] ?? slot['host'] ?? 'N/A')
+        (slot['hostName'] ?? slot['host_name'] ?? slot['host'] ?? 'Player Singh')
             .toString();
     final int currentPlayers = int.tryParse(
             (slot['currentPlayers'] ?? slot['current_players_count'])
                     ?.toString() ??
-                '0') ??
-        0;
+                '1') ??
+        1;
     final int maxPlayers = int.tryParse(
-            (slot['maxPlayers'] ?? slot['max_players'])?.toString() ?? '22') ??
-        22;
-    final String paymentStatus =
-        (slot['paymentStatus'] ?? 'PAID').toString().toUpperCase();
-    final String recordingStatus =
-        (slot['recordingStatus'] ?? 'AVAILABLE').toString().toUpperCase();
+            (slot['maxPlayers'] ?? slot['max_players'])?.toString() ?? '2') ??
+        2;
     final double entryFee = double.tryParse(
-            (slot['entryFee'] ?? slot['entry_fee'])?.toString() ?? '0') ??
-        0.0;
+            (slot['entryFee'] ?? slot['entry_fee'])?.toString() ?? '100') ??
+        100.0;
+    
+    final String matchDateRaw = (slot['matchDate'] ?? slot['match_date'] ?? '').toString();
+    String formattedDate = 'Thu, 08 Oct';
+    if (matchDateRaw.isNotEmpty) {
+      try {
+        final parsedDate = DateTime.parse(matchDateRaw);
+        formattedDate = AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
+      } catch (_) {
+        formattedDate = matchDateRaw.split('T')[0];
+      }
+    }
 
     Color statusColor;
     String displayStatusBadge = approvalStatus;
 
-    if (approvalStatus == 'PENDING_APPROVAL' || approvalStatus == 'PENDING') {
+    final bool isPending = approvalStatus.contains('PENDING') || status.contains('PENDING');
+
+    if (isPending) {
       statusColor = Colors.amber;
-      displayStatusBadge = 'PENDING APPROVAL';
+      displayStatusBadge = 'PENDING';
     } else if (status == 'STARTED' || status == 'ONGOING') {
       statusColor = Colors.orange;
       displayStatusBadge = 'ONGOING';
@@ -320,206 +269,266 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
       displayStatusBadge = 'APPROVED';
     }
 
-    final bool isPending = approvalStatus == 'PENDING_APPROVAL' || approvalStatus == 'PENDING';
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
         ),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 3, offset: Offset(0, 1)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black26 : Colors.black12,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          _openGameDetails(gameId, slot, courtName, format, privacy, status, approvalStatus, gameTitle, currentPlayers, maxPlayers, entryFee);
+        },
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 82,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.access_time_filled_rounded,
-                      color: AppColors.primary, size: 16),
-                  const SizedBox(width: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_rounded, size: 14, color: Colors.green),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          startTime,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
                   Text(
-                    timeStr,
+                    formattedDate,
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      fontSize: 11,
+                      color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.group_rounded, size: 13, color: Colors.green),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '$currentPlayers/$maxPlayers Slots',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: statusColor, width: 0.8),
-                ),
-                child: Text(
-                  displayStatusBadge,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            gameTitle,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Host: $hostName • Roster: $currentPlayers / $maxPlayers Players',
-            style: TextStyle(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : Colors.grey.shade600,
-              fontSize: 12,
+            Container(
+              width: 1,
+              height: 72,
+              color: isDark ? AppColors.darkBorder : Colors.grey.shade200,
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Fee: ₹${entryFee.toStringAsFixed(0)} • Payment: $paymentStatus',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'CCTV: $recordingStatus',
-                  style: const TextStyle(
-                    color: Colors.blue,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Action Buttons: Approve, Reject, Edit, Cancel
-          if (gameId.isNotEmpty)
-            Column(
-              children: [
-                if (isPending) ...[
-                  Row(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 3,
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          onPressed: () => controller.approvePlayerGame(gameId),
-                          icon: const Icon(Icons.check_circle_rounded,
-                              color: Colors.white, size: 16),
-                          label: const Text('Approve Match',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(format, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 10)),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(privacy, style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 10)),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(displayStatusBadge, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.green.withValues(alpha: 0.2),
+                        child: Text(
+                          hostName.isNotEmpty ? hostName[0].toUpperCase() : 'P',
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.redAccent),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text.rich(
+                          TextSpan(
+                            text: hostName,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: ' • All Stars Arena Turf',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.normal,
+                                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
                           ),
-                          onPressed: () => _showRejectDialog(context, gameId, gameTitle),
-                          icon: const Icon(Icons.cancel_rounded,
-                              color: Colors.redAccent, size: 16),
-                          label: const Text('Reject Match',
-                              style: TextStyle(
-                                  color: Colors.redAccent,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12)),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                ],
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        onPressed: () => _showEditGameDialog(context, slot),
-                        icon: const Icon(Icons.edit_rounded,
-                            color: AppColors.primary, size: 16),
-                        label: const Text('Edit Match Details',
-                            style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.currency_rupee_rounded, size: 14, color: Colors.green),
+                          Text(
+                            entryFee.toStringAsFixed(0),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text('Fee', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        ],
                       ),
-                    ),
-                    if (!isPending && status != 'CANCELLED' && status != 'COMPLETED') ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
-                        ),
-                        icon: const Icon(Icons.cancel_outlined,
-                            color: Colors.redAccent, size: 18),
-                        tooltip: 'Cancel Match',
-                        onPressed: () => _showCancelDialog(context, gameId, gameTitle),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isPending) ...[
+                            InkWell(
+                              onTap: () => controller.approvePlayerGame(gameId),
+                              child: Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(Icons.check_rounded, color: Colors.white, size: 15),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => _showRejectDialog(context, gameId, gameTitle),
+                              child: Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  border: Border.all(color: Colors.redAccent),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 15),
+                              ),
+                            ),
+                          ] else ...[
+                            const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+                          ],
+                        ],
                       ),
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  void _openGameDetails(
+    String gameId,
+    Map<String, dynamic> slot,
+    String courtName,
+    String format,
+    String privacy,
+    String status,
+    String approvalStatus,
+    String gameTitle,
+    int currentPlayers,
+    int maxPlayers,
+    double entryFee,
+  ) {
+    if (gameId.isNotEmpty) {
+      if (Get.isRegistered<ManagerGamesController>()) {
+        final gamesCtrl = Get.find<ManagerGamesController>();
+        gamesCtrl.selectedGame.value = GameModel(
+          id: gameId,
+          title: gameTitle,
+          clubId: 'all_stars_arena_club',
+          clubName: 'All Stars Arena Turf',
+          courtId: slot['court_id'] ?? slot['courtId'] ?? 'court_1',
+          courtName: courtName,
+          matchDate: slot['match_date'] ?? DateTime.now().toIso8601String(),
+          startTime: slot['startTime'] ?? slot['start_time'] ?? '18:30',
+          endTime: slot['endTime'] ?? slot['end_time'] ?? '20:00',
+          status: status,
+          format: format,
+          perPlayerFee: entryFee,
+          maxPlayers: maxPlayers,
+          currentPlayers: currentPlayers,
+          skillRequirement: 'ALL',
+          privacy: privacy,
+          createdByPlayer: false,
+          teamAScore: int.tryParse(slot['team_a_score']?.toString() ?? '0') ?? 0,
+          teamBScore: int.tryParse(slot['team_b_score']?.toString() ?? '0') ?? 0,
+        );
+      }
+      Get.toNamed('/manager/games/details');
+    }
   }
 
   void _showRejectDialog(BuildContext context, String gameId, String gameTitle) {
@@ -529,20 +538,22 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
       AlertDialog(
         backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reject Match: $gameTitle'),
+        title: Text('Reject Match: $gameTitle', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textPrimaryDark : Colors.black87)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Enter rejection reason for player host:',
-                style: TextStyle(fontSize: 12)),
+            Text('Enter rejection reason for player host:',
+                style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? AppColors.textSecondaryDark : Colors.grey.shade700)),
             const SizedBox(height: 10),
             TextField(
               controller: reasonController,
               maxLines: 2,
-              decoration: const InputDecoration(
+              style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textPrimaryDark : Colors.black87),
+              decoration: InputDecoration(
                 hintText: 'e.g. Court time slot conflict',
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textSecondaryDark : Colors.grey.shade400),
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -568,118 +579,49 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
     );
   }
 
-  void _showCancelDialog(BuildContext context, String gameId, String gameTitle) {
-    final reasonController = TextEditingController();
+  Widget _buildDateChip(BuildContext context, String key, String label, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Obx(() {
+      final currentFilter = controller.selectedDateFilter.value;
+      final isSelected = currentFilter == key || (key == 'CUSTOM' && !['ALL', 'TODAY', 'TOMORROW'].contains(currentFilter));
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Match: $gameTitle'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Enter cancellation reason (Full refunds will be processed to joined players):',
-                style: TextStyle(fontSize: 12)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: reasonController,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'e.g. Rain / Pitch Maintenance',
-                border: OutlineInputBorder(),
-              ),
+      String displayLabel = label;
+      if (key == 'CUSTOM') {
+        if (controller.customSelectedDate.value != null) {
+          displayLabel = controller.customSelectedDate.value!.toIso8601String().split('T')[0];
+        } else {
+          displayLabel = 'Select Date';
+        }
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: ChoiceChip(
+          avatar: Icon(
+            icon,
+            size: 14,
+            color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppColors.primary),
+          ),
+          label: Text(
+            displayLabel,
+            style: TextStyle(
+              color: isSelected ? Colors.white : (isDark ? AppColors.textPrimaryDark : Colors.black87),
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Back'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+          selected: isSelected,
+          selectedColor: AppColors.primary,
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
             ),
-            onPressed: () {
-              final reason = reasonController.text.trim();
-              Get.back();
-              controller.cancelMatchWithRefunds(gameId, reason.isNotEmpty ? reason : 'Cancelled by club manager');
-            },
-            child: const Text('Cancel Match & Refund', style: TextStyle(color: Colors.white)),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditGameDialog(BuildContext context, Map<String, dynamic> slot) {
-    final String gameId = (slot['gameId'] ?? slot['id'] ?? '').toString();
-    final titleController = TextEditingController(text: (slot['gameTitle'] ?? slot['title'] ?? '').toString());
-    final entryFeeController = TextEditingController(text: (slot['entryFee'] ?? slot['entry_fee'] ?? '200').toString());
-    final maxPlayersController = TextEditingController(text: (slot['maxPlayers'] ?? slot['max_players'] ?? '22').toString());
-
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Match Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Match Title',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: entryFeeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Entry Fee per Player (₹)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: maxPlayersController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Max Capacity Players',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
+          onSelected: (_) => controller.changeDateFilter(key),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
-              final newTitle = titleController.text.trim();
-              final fee = double.tryParse(entryFeeController.text.trim()) ?? 0.0;
-              final players = int.tryParse(maxPlayersController.text.trim()) ?? 22;
-
-              Get.back();
-              controller.updateGame(gameId, {
-                if (newTitle.isNotEmpty) 'title': newTitle,
-                'entryFee': fee,
-                'maxPlayers': players,
-              });
-            },
-            child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+      );
+    });
   }
 }
