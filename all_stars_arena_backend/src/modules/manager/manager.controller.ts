@@ -5,6 +5,7 @@ import { CourtsService } from '../courts/courts.service.js';
 import { ApiResponse, ApiError } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AuthenticatedRequest } from '../../types/index.js';
+import { uploadProfileImageToS3, deleteS3Object } from '../../services/storage.service.js';
 
 export const getDashboardController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
@@ -316,4 +317,40 @@ export const getClubHistoryController = asyncHandler(async (req: AuthenticatedRe
 
   const history = await ManagerRepository.getClubHistoryMatches(club.id, limit, offset, status, court);
   res.status(200).json(ApiResponse.success('Club history matches retrieved', history));
+});
+
+export const getManagerProfileController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw new ApiError(401, 'Unauthorized');
+
+  const profile = await ManagerRepository.getManagerProfile(userId);
+  res.status(200).json(ApiResponse.success('Manager profile retrieved', profile));
+});
+
+export const uploadManagerAvatarController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw new ApiError(401, 'Unauthorized');
+
+  if (!req.file) {
+    throw new ApiError(400, 'No image file uploaded');
+  }
+
+  const currentProfile = await ManagerRepository.getManagerProfile(userId);
+  if (currentProfile?.profile_image_url && currentProfile.profile_image_url.includes('players/')) {
+    try {
+      const oldKey = currentProfile.profile_image_url.substring(currentProfile.profile_image_url.indexOf('players/'));
+      await deleteS3Object(oldKey);
+    } catch (_) {}
+  }
+
+  const extension = req.file.mimetype.split('/')[1] || 'jpg';
+  const { publicUrl } = await uploadProfileImageToS3(
+    userId,
+    req.file.buffer,
+    req.file.mimetype,
+    extension
+  );
+
+  const updatedProfile = await ManagerRepository.updateAvatar(userId, publicUrl);
+  res.status(200).json(ApiResponse.success('Manager avatar uploaded successfully to S3', updatedProfile));
 });

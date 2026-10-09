@@ -1239,7 +1239,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           }).toList(),
         ),
       ],
-    );//book pitch
+    ); //book pitch
   }
 
   /// Refer & Earn Ad Banner (Light Mode vs Dark Mode asset)

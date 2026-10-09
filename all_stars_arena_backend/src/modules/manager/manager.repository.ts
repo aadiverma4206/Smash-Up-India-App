@@ -429,8 +429,8 @@ export class ManagerRepository {
 
     const query = `
       SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,
+             u.city, u.bio,
              pd.position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,
-             pd.city, pd.bio,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.user_id = u.id) as matches_played
       FROM public.users u
       LEFT JOIN public.player_details pd ON pd.user_id = u.id
@@ -500,5 +500,27 @@ export class ManagerRepository {
       roster: playersRes.rows,
       recording: recordingRes.rows[0] || null,
     };
+  }
+
+  static async getManagerProfile(userId: string) {
+    const query = `
+      SELECT u.id, u.name, u.email, u.phone, u.role_id, u.profile_image_url,
+             'All Stars Arena Turf' as club_name, 'VIP Road, Raipur' as club_address, 'Raipur' as club_city
+      FROM public.users u
+      WHERE u.id = $1;
+    `;
+    const res = await dbPool.query(query, [userId]);
+    return res.rows[0] || null;
+  }
+
+  static async updateAvatar(userId: string, avatarUrl: string) {
+    const query = `
+      UPDATE public.users
+      SET profile_image_url = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING id, name, email, phone, role_id, profile_image_url;
+    `;
+    const res = await dbPool.query(query, [avatarUrl, userId]);
+    return res.rows[0];
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../app/routes/app_routes.dart';
 import '../controllers/manager_dashboard_controller.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../../data/models/slot_request_model.dart';
@@ -217,15 +218,15 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
                             const Spacer(),
 
-                            // Action Icons (Refresh, Bookings, Logout Avatar)
+                            // Action Icons (Notification, Profile Avatar, Logout)
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildRefreshButton(context),
+                                _buildNotificationButton(context),
                                 const SizedBox(width: 8),
-                                _buildBookingsButton(context),
+                                _buildProfileAvatar(context),
                                 const SizedBox(width: 8),
-                                _buildLogoutAvatar(context),
+                                _buildLogoutButton(context),
                               ],
                             ),
                           ],
@@ -270,11 +271,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                       Get.toNamed('/manager/courts');
                     }
                     if (index == 2) {
-                      controller.selectCourt(1);
-                      Get.toNamed('/manager/courts');
+                      Get.toNamed(Routes.createGame);
                     }
-                    if (index == 3) Get.toNamed('/manager/history');
-                    if (index == 4) Get.toNamed('/manager/players');
+                    if (index == 3) Get.toNamed('/manager/players');
+                    if (index == 4) Get.toNamed('/manager/history');
                   },
                   type: BottomNavigationBarType.fixed,
                   backgroundColor: Theme.of(context).cardColor,
@@ -304,24 +304,25 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                           ],
                         ),
                       ),
-                      label: 'Control',
+                      label: 'Home',
                     ),
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.stadium_rounded, size: 22),
                       label: 'Court 1',
                     ),
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.stadium_outlined, size: 22),
-                      label: 'Court 2',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.history_rounded, size: 22),
-                      label: 'History',
+                      icon: Icon(Icons.add_circle_outline_rounded, size: 22),
+                      label: 'Create',
                     ),
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.people_alt_rounded, size: 22),
                       label: 'Players',
                     ),
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.history_rounded, size: 22),
+                      label: 'History',
+                    ),
+
                   ],
                 ),
               ),
@@ -348,11 +349,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                   Get.toNamed('/manager/courts');
                 }
                 if (index == 2) {
-                  controller.selectCourt(1);
-                  Get.toNamed('/manager/courts');
+                  Get.toNamed(Routes.createGame);
                 }
-                if (index == 3) Get.toNamed('/manager/history');
-                if (index == 4) Get.toNamed('/manager/players');
+                if (index == 3) Get.toNamed('/manager/players');
+                if (index == 4) Get.toNamed('/manager/history');
               },
               labelType: NavigationRailLabelType.all,
               selectedIconTheme: const IconThemeData(color: Color(0xFF00C853)),
@@ -375,12 +375,11 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.stadium_rounded), label: Text('Court 1')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.stadium_outlined), label: Text('Court 2')),
-                NavigationRailDestination(
-                    icon: Icon(Icons.history_rounded),
-                    label: Text('History')),
+                    icon: Icon(Icons.add_circle_outline_rounded), label: Text('Create')),
                 NavigationRailDestination(
                     icon: Icon(Icons.people_alt_rounded), label: Text('Players')),
+                NavigationRailDestination(
+                    icon: Icon(Icons.history_rounded), label: Text('History')),
               ],
             ),
           ),
@@ -603,7 +602,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
   Widget _buildTitleWidget(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(
-      'Manager Control Center',
+      'All Stars Arena',
       style: TextStyle(
         color: isDark ? AppColors.textPrimaryDark : const Color(0xFF2D1B69),
         fontSize: 17,
@@ -615,9 +614,71 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  Widget _buildRefreshButton(BuildContext context) {
+  Widget _buildNotificationButton(BuildContext context) {
+    return Obx(() {
+      final totalPending = controller.pendingPlayerGames.length + controller.pendingRequests.length;
+
+      return InkWell(
+        onTap: () => Get.toNamed(Routes.managerNotifications),
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  totalPending > 0 ? Icons.notifications_active_rounded : Icons.notifications_outlined,
+                  color: totalPending > 0 ? AppColors.primary : Colors.black87,
+                  size: 20,
+                ),
+              ),
+            ),
+            if (totalPending > 0)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Center(
+                    child: Text(
+                      totalPending > 9 ? '9+' : '$totalPending',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildProfileAvatar(BuildContext context) {
+    final user = AuthService.to.currentUser.value;
+    final avatarUrl = user?.profileImageUrl ?? '';
+
     return InkWell(
-      onTap: controller.loadManagerData,
+      onTap: () => Get.toNamed(Routes.managerProfile),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 38,
@@ -625,51 +686,37 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+          border: Border.all(color: AppColors.primary, width: 1.8),
           boxShadow: const [
             BoxShadow(
                 color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
           ],
         ),
-        child: const Center(
-          child: Icon(
-            Icons.refresh_rounded,
-            color: Colors.black87,
-            size: 20,
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: avatarUrl.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  width: 38,
+                  height: 38,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => const Icon(
+                    Icons.person_rounded,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                )
+              : const Icon(
+                  Icons.person_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
         ),
       ),
     );
   }
 
-  Widget _buildBookingsButton(BuildContext context) {
-    return InkWell(
-      onTap: () => Get.toNamed('/manager/bookings'),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-          boxShadow: const [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.receipt_long_outlined,
-            color: Colors.black87,
-            size: 20,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutAvatar(BuildContext context) {
+  Widget _buildLogoutButton(BuildContext context) {
     return InkWell(
       onTap: () => _confirmLogout(context),
       borderRadius: BorderRadius.circular(20),
@@ -692,6 +739,31 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             size: 18,
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        title: const Text('Manager Log Out'),
+        content: const Text(
+            'Are you sure you want to log out of the Manager Control Center?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Get.back();
+              await AuthService.to.logout();
+            },
+            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -775,13 +847,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         'title': 'Match History',
         'onTap': () => Get.toNamed('/manager/history')
       },
-
     ];
 
     return _buildActionRow(context, row1);
   }
-
-
 
   Widget _buildActionRow(
       BuildContext context, List<Map<String, dynamic>> actions) {
@@ -1111,9 +1180,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                   style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : Colors.black87),
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1138,17 +1206,15 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           Text(
             '${game.courtName} • ${AppDateUtils.formatDate(game.matchDate)} (${AppDateUtils.formatTime(game.startTime)})',
             style: TextStyle(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
                 fontSize: 12),
           ),
           Text(
             'Roster: ${game.currentPlayers}/${game.maxPlayers} • Entry Fee: ₹${game.perPlayerFee.toStringAsFixed(0)}',
             style: TextStyle(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
                 fontSize: 11),
           ),
           const SizedBox(height: 12),
@@ -1588,10 +1654,14 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             ),
             TextButton.icon(
               onPressed: () => Get.toNamed('/manager/courts'),
-              icon: const Icon(Icons.tune_rounded, size: 16, color: AppColors.primary),
+              icon: const Icon(Icons.tune_rounded,
+                  size: 16, color: AppColors.primary),
               label: const Text(
                 'Court Control',
-                style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -1659,7 +1729,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                       color: badgeColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.stadium_rounded, color: badgeColor, size: 20),
+                    child: Icon(Icons.stadium_rounded,
+                        color: badgeColor, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -1667,13 +1738,15 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: badgeColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -1691,20 +1764,22 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             ],
           ),
           const SizedBox(height: 12),
-
           if (games.isEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 20),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E142B) : const Color(0xFFF8FAFC),
+                color:
+                    isDark ? const Color(0xFF1E142B) : const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
                 child: Text(
                   'No games scheduled on $courtName',
                   style: TextStyle(
-                    color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade600,
                     fontSize: 12,
                   ),
                 ),
@@ -1712,7 +1787,9 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             )
           else
             Column(
-              children: games.map((game) => _buildCourtGameCard(context, game)).toList(),
+              children: games
+                  .map((game) => _buildCourtGameCard(context, game))
+                  .toList(),
             ),
         ],
       ),
@@ -1793,7 +1870,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             ],
           ),
           const SizedBox(height: 6),
-
           Wrap(
             spacing: 8,
             runSpacing: 4,
@@ -1801,13 +1877,19 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isPlayerCreated ? Colors.amber.withValues(alpha: 0.15) : Colors.blue.withValues(alpha: 0.15),
+                  color: isPlayerCreated
+                      ? Colors.amber.withValues(alpha: 0.15)
+                      : Colors.blue.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  isPlayerCreated ? 'Created By: Player' : 'Created By: Manager',
+                  isPlayerCreated
+                      ? 'Created By: Player'
+                      : 'Created By: Manager',
                   style: TextStyle(
-                    color: isPlayerCreated ? Colors.amber.shade800 : Colors.blue.shade800,
+                    color: isPlayerCreated
+                        ? Colors.amber.shade800
+                        : Colors.blue.shade800,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1861,30 +1943,37 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             ],
           ),
           const SizedBox(height: 6),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 '${AppDateUtils.formatDate(game.matchDate)} @ ${AppDateUtils.formatTime(game.startTime)}',
                 style: TextStyle(
-                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade600,
                   fontSize: 11,
                 ),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6)),
                 ),
                 onPressed: () {
                   Get.find<ManagerGamesController>().selectedGame.value = game;
                   Get.toNamed('/games/details');
                 },
-                child: const Text('Manage', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                child: const Text('Manage',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -1991,7 +2080,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             Expanded(
               child: Text(game.title,
                   style: TextStyle(
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                       fontWeight: FontWeight.bold,
                       fontSize: 14),
                   maxLines: 1,
@@ -2113,16 +2203,16 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         'color': const Color(0xFF7B1FA2)
       },
       {
-        'icon': Icons.videocam_rounded,
-        'title': 'CCTV Cameras',
-        'route': '/manager/cctv',
-        'color': const Color(0xFFE65100)
-      },
-      {
         'icon': Icons.people_alt_rounded,
         'title': 'All Players',
         'route': '/manager/players',
         'color': const Color(0xFF2E7D32)
+      },
+      {
+        'icon': Icons.videocam_rounded,
+        'title': 'CCTV Cameras',
+        'route': '/manager/cctv',
+        'color': const Color(0xFFE65100)
       },
     ];
 
@@ -2213,31 +2303,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             return const SizedBox.shrink();
           },
         ),
-      ),
-    );
-  }
-
-  void _confirmLogout(BuildContext context) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        title: const Text('Manager Log Out'),
-        content: const Text(
-            'Are you sure you want to log out of the Manager Control Center?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () async {
-              Get.back();
-              await AuthService.to.logout();
-            },
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

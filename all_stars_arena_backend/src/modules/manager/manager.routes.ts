@@ -28,7 +28,10 @@ import {
   getMatchRecordingController,
   stopMatchRecordingController,
   getGameDetailsController,
+  getManagerProfileController,
+  uploadManagerAvatarController,
 } from './manager.controller.js';
+import { uploadAvatarMiddleware } from '../../middlewares/upload.middleware.js';
 import { validateRequest } from '../../middlewares/validate.middleware.js';
 import {
   createCourtSchema,
@@ -86,5 +89,9 @@ router.get('/bookings', getManagerBookingsController);
 router.get('/players', getAllPlayersController);
 router.post('/players/:id/block', blockPlayerController);
 router.post('/players/:id/unblock', unblockPlayerController);
+
+// Manager Profile & AWS S3 Avatar Upload
+router.get('/profile', getManagerProfileController);
+router.post('/profile/avatar', uploadAvatarMiddleware, uploadManagerAvatarController);
 
 export default router;

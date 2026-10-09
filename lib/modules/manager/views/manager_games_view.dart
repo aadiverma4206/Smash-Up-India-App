@@ -269,8 +269,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                 return RefreshIndicator(
                   onRefresh: controller.fetchClubGames,
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     itemCount: displayList.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
@@ -295,7 +295,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
     final isCompleted = statusUpper == 'COMPLETED';
     final isCancelled = statusUpper == 'CANCELLED';
 
-    final slotsLeft = (game.maxPlayers - game.currentPlayers).clamp(0, game.maxPlayers);
+    final slotsLeft =
+        (game.maxPlayers - game.currentPlayers).clamp(0, game.maxPlayers);
 
     Color statusColor;
     String statusLabel = statusUpper;
@@ -341,12 +342,15 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
               // Left Box: Time & Status Badge
               Container(
                 width: 80,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkInputBg : const Color(0xFFF1F5F9),
+                  color:
+                      isDark ? AppColors.darkInputBg : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                   ),
                 ),
                 child: Column(
@@ -359,7 +363,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        color:
+                            isDark ? AppColors.textPrimaryDark : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -448,7 +453,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        color:
+                            isDark ? AppColors.textPrimaryDark : Colors.black87,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -532,7 +538,9 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
             ],
           ),
 
-          Divider(color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE), height: 18),
+          Divider(
+              color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+              height: 18),
 
           // Bottom Action Buttons Bar matching Screenshot 3
           SingleChildScrollView(
@@ -569,7 +577,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                 if (!isCompleted && !isCancelled) ...[
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isOngoing ? Colors.orange : AppColors.primary,
+                      backgroundColor:
+                          isOngoing ? Colors.orange : AppColors.primary,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20)),
                       padding: const EdgeInsets.symmetric(
@@ -591,8 +600,7 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                             : Icons.play_arrow_rounded,
                         color: Colors.white,
                         size: 14),
-                    label: Text(
-                        isOngoing ? 'Live Score' : 'Start Match',
+                    label: Text(isOngoing ? 'Live Score' : 'Start Match',
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

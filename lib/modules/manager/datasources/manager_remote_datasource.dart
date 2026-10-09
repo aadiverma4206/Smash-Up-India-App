@@ -69,7 +69,8 @@ class ManagerRemoteDataSource {
     );
   }
 
-  Future<ApiResponseModel<List<GameModel>>> getClubGames({String? court, String? tab}) async {
+  Future<ApiResponseModel<List<GameModel>>> getClubGames(
+      {String? court, String? tab}) async {
     final response = await dioClient.dio.get(
       '/manager/games',
       queryParameters: {
@@ -184,7 +185,8 @@ class ManagerRemoteDataSource {
   }
 
   Future<ApiResponseModel<List<Map<String, dynamic>>>> getCourtSlots(
-      String courtId, {String? date}) async {
+      String courtId,
+      {String? date}) async {
     final response = await dioClient.dio.get(
       '/manager/courts/$courtId/slots',
       queryParameters: date != null ? {'date': date} : null,
@@ -217,8 +219,7 @@ class ManagerRemoteDataSource {
 
   Future<ApiResponseModel<Map<String, dynamic>>> approvePlayerGame(
       String gameId) async {
-    final response =
-        await dioClient.dio.post('/manager/games/$gameId/approve');
+    final response = await dioClient.dio.post('/manager/games/$gameId/approve');
     return ApiResponseParser.parse<Map<String, dynamic>>(
       response.data,
       (json) => json as Map<String, dynamic>,
@@ -254,9 +255,7 @@ class ManagerRemoteDataSource {
     );
     return ApiResponseParser.parse<List<Map<String, dynamic>>>(
       response.data,
-      (json) => (json as List)
-          .map((e) => e as Map<String, dynamic>)
-          .toList(),
+      (json) => (json as List).map((e) => e as Map<String, dynamic>).toList(),
     );
   }
 
@@ -283,7 +282,8 @@ class ManagerRemoteDataSource {
   }
 
   Future<ApiResponseModel<Map<String, dynamic>>> submitMatchScore(
-      String gameId, int teamAScore, int teamBScore, {bool isFinal = true}) async {
+      String gameId, int teamAScore, int teamBScore,
+      {bool isFinal = true}) async {
     final response = await dioClient.dio.post(
       '/manager/games/$gameId/score',
       data: {

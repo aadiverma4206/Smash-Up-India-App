@@ -67,9 +67,7 @@ class ManagerDashboardModel {
         ? rawRevenue.toDouble()
         : double.tryParse(rawRevenue.toString()) ?? 0.0;
 
-    final rawBookings = json['totalBookings'] ??
-        stats?['totalBookings'] ??
-        0;
+    final rawBookings = json['totalBookings'] ?? stats?['totalBookings'] ?? 0;
     final int bookings = rawBookings is num
         ? rawBookings.toInt()
         : int.tryParse(rawBookings.toString()) ?? 0;

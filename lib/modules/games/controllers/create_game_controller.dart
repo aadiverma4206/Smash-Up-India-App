@@ -190,7 +190,8 @@ class CreateGameController extends GetxController {
     availableCourts.assignAll([court1, court2]);
 
     if (selectedCourt.value == null ||
-        (selectedCourt.value!.id != 'court_1' && selectedCourt.value!.id != 'court_2')) {
+        (selectedCourt.value!.id != 'court_1' &&
+            selectedCourt.value!.id != 'court_2')) {
       selectedCourt.value = court1;
     }
   }

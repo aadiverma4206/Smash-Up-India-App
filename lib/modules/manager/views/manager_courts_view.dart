@@ -14,7 +14,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final searchController = TextEditingController(text: controller.searchQuery.value);
+    final searchController =
+        TextEditingController(text: controller.searchQuery.value);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -23,9 +24,11 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
           if (controller.courts.isEmpty) {
             return const Text('Court Matches');
           }
-          final selectedIndex = controller.selectedCourtIndex.value.clamp(0, controller.courts.length - 1);
+          final selectedIndex = controller.selectedCourtIndex.value
+              .clamp(0, controller.courts.length - 1);
           final courtName = controller.courts[selectedIndex].name;
-          return Text('$courtName Matches', style: const TextStyle(fontWeight: FontWeight.bold));
+          return Text('$courtName Matches',
+              style: const TextStyle(fontWeight: FontWeight.bold));
         }),
         actions: [
           IconButton(
@@ -34,7 +37,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
               if (controller.courts.isNotEmpty) {
                 final selectedIndex = controller.selectedCourtIndex.value;
                 final courtId = controller.courts[selectedIndex].id;
-                controller.fetchCourtSlots(courtId, courtIndex: selectedIndex + 1);
+                controller.fetchCourtSlots(courtId,
+                    courtIndex: selectedIndex + 1);
               } else {
                 controller.loadManagerData();
               }
@@ -48,7 +52,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
             padding: EdgeInsets.all(16.0),
             child: Column(
               children: [
-                SkeletonContainer(width: double.infinity, height: 48, borderRadius: 12),
+                SkeletonContainer(
+                    width: double.infinity, height: 48, borderRadius: 12),
                 SizedBox(height: 16),
                 Row(
                   children: [
@@ -74,8 +79,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
           );
         }
 
-        final selectedIndex = controller.selectedCourtIndex.value.clamp(
-            0, controller.courts.length - 1);
+        final selectedIndex = controller.selectedCourtIndex.value
+            .clamp(0, controller.courts.length - 1);
         final selectedCourt = controller.courts[selectedIndex];
         final matchesList = controller.filteredCourtSlots;
 
@@ -96,67 +101,85 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                       controller: searchController,
                       onChanged: (val) => controller.searchQuery.value = val,
                       style: TextStyle(
-                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        color:
+                            isDark ? AppColors.textPrimaryDark : Colors.black87,
                         fontSize: 14,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Search by player name, time, status...',
                         hintStyle: TextStyle(
-                          color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : Colors.grey.shade400,
                           fontSize: 13,
                         ),
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
-                        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.clear_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black54),
-                                onPressed: () {
-                                  searchController.clear();
-                                  controller.searchQuery.value = '';
-                                },
-                              )
-                            : const SizedBox.shrink()),
+                        prefixIcon: const Icon(Icons.search_rounded,
+                            color: AppColors.primary),
+                        suffixIcon:
+                            Obx(() => controller.searchQuery.value.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.clear_rounded,
+                                        size: 18,
+                                        color: isDark
+                                            ? Colors.white70
+                                            : Colors.black54),
+                                    onPressed: () {
+                                      searchController.clear();
+                                      controller.searchQuery.value = '';
+                                    },
+                                  )
+                                : const SizedBox.shrink()),
                         filled: true,
                         fillColor: Theme.of(context).cardColor,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                          borderSide: const BorderSide(
+                              color: AppColors.primary, width: 1.5),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildDateChip(context, 'ALL', 'All Dates', Icons.calendar_today_rounded),
-                          _buildDateChip(context, 'TODAY', 'Today', Icons.today_rounded),
-                          _buildDateChip(context, 'TOMORROW', 'Tomorrow', Icons.upcoming_rounded),
-                          _buildDateChip(context, 'CUSTOM', 'Select Date', Icons.date_range_rounded),
+                          _buildDateChip(context, 'ALL', 'All Dates',
+                              Icons.calendar_today_rounded),
+                          _buildDateChip(
+                              context, 'TODAY', 'Today', Icons.today_rounded),
+                          _buildDateChip(context, 'TOMORROW', 'Tomorrow',
+                              Icons.upcoming_rounded),
+                          _buildDateChip(context, 'CUSTOM', 'Select Date',
+                              Icons.date_range_rounded),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     Text(
                       'Matches (${matchesList.length})',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        color:
+                            isDark ? AppColors.textPrimaryDark : Colors.black87,
                       ),
                     ),
                   ],
@@ -174,7 +197,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                               child: Text(
                                 'No games scheduled on ${selectedCourt.name} matching your filter.',
                                 style: TextStyle(
-                                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : Colors.grey.shade600,
                                   fontSize: 13,
                                 ),
                                 textAlign: TextAlign.center,
@@ -184,11 +209,13 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                         : Scrollbar(
                             thumbVisibility: true,
                             child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: matchesList.length,
                               itemBuilder: (context, index) {
                                 final slot = matchesList[index];
-                                return _buildMatchCard(context, slot, selectedCourt.name);
+                                return _buildMatchCard(
+                                    context, slot, selectedCourt.name);
                               },
                             ),
                           ),
@@ -200,17 +227,20 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
     );
   }
 
-  Widget _buildMatchCard(BuildContext context, Map<String, dynamic> slot, String courtName) {
+  Widget _buildMatchCard(
+      BuildContext context, Map<String, dynamic> slot, String courtName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String gameId = (slot['gameId'] ?? slot['id'] ?? '').toString();
-    
-    String startTime = (slot['startTime'] ?? slot['start_time'] ?? '18:30').toString();
+
+    String startTime =
+        (slot['startTime'] ?? slot['start_time'] ?? '18:30').toString();
     if (startTime.length > 5) {
       startTime = startTime.substring(0, 5);
     }
 
     final String format = (slot['format'] ?? '1v1').toString().toUpperCase();
-    final String privacy = (slot['privacy'] ?? 'PUBLIC').toString().toUpperCase();
+    final String privacy =
+        (slot['privacy'] ?? 'PUBLIC').toString().toUpperCase();
     final String approvalStatus = (slot['approvalStatus'] ??
             slot['approval_status'] ??
             slot['status'] ??
@@ -221,9 +251,11 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
         (slot['status'] ?? 'SCHEDULED').toString().toUpperCase();
     final String gameTitle =
         (slot['gameTitle'] ?? slot['title'] ?? 'Court Match').toString();
-    final String hostName =
-        (slot['hostName'] ?? slot['host_name'] ?? slot['host'] ?? 'Player Singh')
-            .toString();
+    final String hostName = (slot['hostName'] ??
+            slot['host_name'] ??
+            slot['host'] ??
+            'Player Singh')
+        .toString();
     final int currentPlayers = int.tryParse(
             (slot['currentPlayers'] ?? slot['current_players_count'])
                     ?.toString() ??
@@ -235,13 +267,15 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
     final double entryFee = double.tryParse(
             (slot['entryFee'] ?? slot['entry_fee'])?.toString() ?? '100') ??
         100.0;
-    
-    final String matchDateRaw = (slot['matchDate'] ?? slot['match_date'] ?? '').toString();
+
+    final String matchDateRaw =
+        (slot['matchDate'] ?? slot['match_date'] ?? '').toString();
     String formattedDate = 'Thu, 08 Oct';
     if (matchDateRaw.isNotEmpty) {
       try {
         final parsedDate = DateTime.parse(matchDateRaw);
-        formattedDate = AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
+        formattedDate =
+            AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
       } catch (_) {
         formattedDate = matchDateRaw.split('T')[0];
       }
@@ -250,7 +284,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
     Color statusColor;
     String displayStatusBadge = approvalStatus;
 
-    final bool isPending = approvalStatus.contains('PENDING') || status.contains('PENDING');
+    final bool isPending =
+        approvalStatus.contains('PENDING') || status.contains('PENDING');
 
     if (isPending) {
       statusColor = Colors.amber;
@@ -263,7 +298,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
       displayStatusBadge = 'COMPLETED';
     } else if (status == 'CANCELLED' || approvalStatus == 'REJECTED') {
       statusColor = Colors.redAccent;
-      displayStatusBadge = approvalStatus == 'REJECTED' ? 'REJECTED' : 'CANCELLED';
+      displayStatusBadge =
+          approvalStatus == 'REJECTED' ? 'REJECTED' : 'CANCELLED';
     } else {
       statusColor = AppColors.primary;
       displayStatusBadge = 'APPROVED';
@@ -289,7 +325,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () {
-          _openGameDetails(gameId, slot, courtName, format, privacy, status, approvalStatus, gameTitle, currentPlayers, maxPlayers, entryFee);
+          _openGameDetails(gameId, slot, courtName, format, privacy, status,
+              approvalStatus, gameTitle, currentPlayers, maxPlayers, entryFee);
         },
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -302,7 +339,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded, size: 14, color: Colors.green),
+                      const Icon(Icons.access_time_rounded,
+                          size: 14, color: Colors.green),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
@@ -310,7 +348,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : Colors.black87,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -323,7 +363,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                     formattedDate,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : Colors.grey.shade600,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -331,7 +373,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.group_rounded, size: 13, color: Colors.green),
+                      const Icon(Icons.group_rounded,
+                          size: 13, color: Colors.green),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
@@ -339,7 +382,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : Colors.grey.shade700,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -366,28 +411,43 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                     runSpacing: 3,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(format, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 10)),
+                        child: Text(format,
+                            style: const TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10)),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.amber.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(privacy, style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 10)),
+                        child: Text(privacy,
+                            style: const TextStyle(
+                                color: Colors.amber,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10)),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: statusColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(displayStatusBadge, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10)),
+                        child: Text(displayStatusBadge,
+                            style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10)),
                       ),
                     ],
                   ),
@@ -400,7 +460,10 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                         backgroundColor: Colors.green.withValues(alpha: 0.2),
                         child: Text(
                           hostName.isNotEmpty ? hostName[0].toUpperCase() : 'P',
-                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
+                          style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -411,7 +474,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : Colors.black87,
                             ),
                             children: [
                               TextSpan(
@@ -419,7 +484,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.normal,
-                                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : Colors.grey.shade600,
                                 ),
                               ),
                             ],
@@ -436,13 +503,19 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.currency_rupee_rounded, size: 14, color: Colors.green),
+                          const Icon(Icons.currency_rupee_rounded,
+                              size: 14, color: Colors.green),
                           Text(
                             entryFee.toStringAsFixed(0),
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green),
+                            style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green),
                           ),
                           const SizedBox(width: 4),
-                          const Text('Fee', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          const Text('Fee',
+                              style:
+                                  TextStyle(fontSize: 11, color: Colors.grey)),
                         ],
                       ),
                       Row(
@@ -457,24 +530,30 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                                   color: Colors.green,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(Icons.check_rounded, color: Colors.white, size: 15),
+                                child: const Icon(Icons.check_rounded,
+                                    color: Colors.white, size: 15),
                               ),
                             ),
                             const SizedBox(width: 8),
                             InkWell(
-                              onTap: () => _showRejectDialog(context, gameId, gameTitle),
+                              onTap: () =>
+                                  _showRejectDialog(context, gameId, gameTitle),
                               child: Container(
                                 padding: const EdgeInsets.all(7),
                                 decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  color: isDark
+                                      ? const Color(0xFF1E293B)
+                                      : Colors.white,
                                   border: Border.all(color: Colors.redAccent),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 15),
+                                child: const Icon(Icons.close_rounded,
+                                    color: Colors.redAccent, size: 15),
                               ),
                             ),
                           ] else ...[
-                            const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+                            const Icon(Icons.chevron_right_rounded,
+                                color: Colors.grey, size: 20),
                           ],
                         ],
                       ),
@@ -523,36 +602,53 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
           skillRequirement: 'ALL',
           privacy: privacy,
           createdByPlayer: false,
-          teamAScore: int.tryParse(slot['team_a_score']?.toString() ?? '0') ?? 0,
-          teamBScore: int.tryParse(slot['team_b_score']?.toString() ?? '0') ?? 0,
+          teamAScore:
+              int.tryParse(slot['team_a_score']?.toString() ?? '0') ?? 0,
+          teamBScore:
+              int.tryParse(slot['team_b_score']?.toString() ?? '0') ?? 0,
         );
       }
       Get.toNamed('/manager/games/details');
     }
   }
 
-  void _showRejectDialog(BuildContext context, String gameId, String gameTitle) {
+  void _showRejectDialog(
+      BuildContext context, String gameId, String gameTitle) {
     final reasonController = TextEditingController();
 
     Get.dialog(
       AlertDialog(
         backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reject Match: $gameTitle', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textPrimaryDark : Colors.black87)),
+        title: Text('Reject Match: $gameTitle',
+            style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.textPrimaryDark
+                    : Colors.black87)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Enter rejection reason for player host:',
-                style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? AppColors.textSecondaryDark : Colors.grey.shade700)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade700)),
             const SizedBox(height: 10),
             TextField(
               controller: reasonController,
               maxLines: 2,
-              style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textPrimaryDark : Colors.black87),
+              style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.textPrimaryDark
+                      : Colors.black87),
               decoration: InputDecoration(
                 hintText: 'e.g. Court time slot conflict',
-                hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? AppColors.textSecondaryDark : Colors.grey.shade400),
+                hintStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade400),
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -572,23 +668,29 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
               Get.back();
               controller.rejectPlayerGame(gameId, reason);
             },
-            child: const Text('Confirm Reject', style: TextStyle(color: Colors.white)),
+            child: const Text('Confirm Reject',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDateChip(BuildContext context, String key, String label, IconData icon) {
+  Widget _buildDateChip(
+      BuildContext context, String key, String label, IconData icon) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Obx(() {
       final currentFilter = controller.selectedDateFilter.value;
-      final isSelected = currentFilter == key || (key == 'CUSTOM' && !['ALL', 'TODAY', 'TOMORROW'].contains(currentFilter));
+      final isSelected = currentFilter == key ||
+          (key == 'CUSTOM' &&
+              !['ALL', 'TODAY', 'TOMORROW'].contains(currentFilter));
 
       String displayLabel = label;
       if (key == 'CUSTOM') {
         if (controller.customSelectedDate.value != null) {
-          displayLabel = controller.customSelectedDate.value!.toIso8601String().split('T')[0];
+          displayLabel = controller.customSelectedDate.value!
+              .toIso8601String()
+              .split('T')[0];
         } else {
           displayLabel = 'Select Date';
         }
@@ -600,12 +702,16 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
           avatar: Icon(
             icon,
             size: 14,
-            color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppColors.primary),
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : AppColors.primary),
           ),
           label: Text(
             displayLabel,
             style: TextStyle(
-              color: isSelected ? Colors.white : (isDark ? AppColors.textPrimaryDark : Colors.black87),
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? AppColors.textPrimaryDark : Colors.black87),
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -616,7 +722,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(
-              color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+              color: isSelected
+                  ? AppColors.primary
+                  : (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
             ),
           ),
           onSelected: (_) => controller.changeDateFilter(key),

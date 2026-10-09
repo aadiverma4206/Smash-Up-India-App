@@ -129,8 +129,8 @@ class CreateGameView extends StatelessWidget {
       final selectedCourt = controller.selectedCourt.value;
 
       final List<Widget> courtButtons = courts.map<Widget>((court) {
-        final isSelected = selectedCourt?.id == court.id ||
-            selectedCourt?.name == court.name;
+        final isSelected =
+            selectedCourt?.id == court.id || selectedCourt?.name == court.name;
         return InkWell(
           onTap: () {
             controller.selectedCourt.value = court;
@@ -170,8 +170,8 @@ class CreateGameView extends StatelessWidget {
           InputDecorator(
             decoration: InputDecoration(
               labelText: 'Club Name *',
-              prefixIcon: const Icon(Icons.business_rounded,
-                  color: AppColors.primary),
+              prefixIcon:
+                  const Icon(Icons.business_rounded, color: AppColors.primary),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               border: OutlineInputBorder(
@@ -180,8 +180,7 @@ class CreateGameView extends StatelessWidget {
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    BorderSide(color: context.borderColor, width: 1.2),
+                borderSide: BorderSide(color: context.borderColor, width: 1.2),
               ),
             ),
             child: Text(
@@ -258,7 +257,8 @@ class CreateGameView extends StatelessWidget {
                       label: Text(
                         fmt,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : context.textPrimary,
+                          color:
+                              isSelected ? Colors.white : context.textPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),

@@ -43,6 +43,9 @@ import '../../modules/manager/views/manager_courts_view.dart';
 import '../../modules/manager/views/manager_bookings_view.dart';
 import '../../modules/manager/views/manager_players_view.dart';
 import '../../modules/manager/views/manager_history_view.dart';
+import '../../modules/manager/views/manager_history_detail_view.dart';
+import '../../modules/manager/views/manager_notifications_view.dart';
+import '../../modules/manager/views/manager_profile_view.dart';
 import '../../modules/cctv/bindings/cctv_binding.dart';
 import '../../modules/cctv/views/cctv_list_view.dart';
 import '../../modules/cctv/views/add_cctv_view.dart';
@@ -248,6 +251,21 @@ class AppPages {
     GetPage(
       name: Routes.managerHistory,
       page: () => const ManagerHistoryView(),
+      binding: ManagerBinding(),
+    ),
+    GetPage(
+      name: Routes.managerHistoryDetails,
+      page: () => ManagerHistoryDetailView(),
+      binding: ManagerBinding(),
+    ),
+    GetPage(
+      name: Routes.managerNotifications,
+      page: () => const ManagerNotificationsView(),
+      binding: ManagerBinding(),
+    ),
+    GetPage(
+      name: Routes.managerProfile,
+      page: () => const ManagerProfileView(),
       binding: ManagerBinding(),
     ),
     GetPage(

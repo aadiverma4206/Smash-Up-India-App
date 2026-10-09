@@ -48,7 +48,9 @@ class FindGamesController extends GetxController {
     errorMessage.value = '';
     try {
       final isMyGames = selectedCourt.value == 'MY_GAMES';
-      final courtParam = (selectedCourt.value == 'ALL' || isMyGames) ? null : selectedCourt.value;
+      final courtParam = (selectedCourt.value == 'ALL' || isMyGames)
+          ? null
+          : selectedCourt.value;
       final list = await repository.getGames(
         city: selectedCity.value,
         format: selectedFormat.value,
@@ -154,137 +156,133 @@ class _FindGamesViewState extends State<FindGamesView> {
                     // Search & Filters Header Section
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child:
-                          _buildSearchAndFiltersHeader(context, controller),
+                      child: _buildSearchAndFiltersHeader(context, controller),
                     ),
                     const SizedBox(height: 16),
 
-                      // Open Matches List or Error State
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _buildGamesListSection(context),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    // Open Matches List or Error State
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildGamesListSection(context),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
+          ),
 
-            // 2. Seamless Morphing Floating Top App Bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ValueListenableBuilder<double>(
-                valueListenable: _headerProgress,
-                builder: (context, progress, child) {
-                  final Color currentBgColor = Color.lerp(
-                    Colors.transparent,
-                    solidHeaderColor,
-                    progress,
-                  )!;
+          // 2. Seamless Morphing Floating Top App Bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _headerProgress,
+              builder: (context, progress, child) {
+                final Color currentBgColor = Color.lerp(
+                  Colors.transparent,
+                  solidHeaderColor,
+                  progress,
+                )!;
 
-                  final Color currentBorderColor = Color.lerp(
-                    Colors.transparent,
-                    borderColor,
-                    progress,
-                  )!;
+                final Color currentBorderColor = Color.lerp(
+                  Colors.transparent,
+                  borderColor,
+                  progress,
+                )!;
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: currentBgColor,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: currentBorderColor,
-                          width: 1,
-                        ),
+                return Container(
+                  decoration: BoxDecoration(
+                    color: currentBgColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: currentBorderColor,
+                        width: 1,
                       ),
-                      boxShadow: progress > 0.05
-                          ? [
-                              BoxShadow(
-                                color: Colors.black
-                                    .withValues(alpha: 0.12 * progress),
-                                blurRadius: 8 * progress,
-                                offset: Offset(0, 2 * progress),
-                              ),
-                            ]
-                          : null,
                     ),
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Row(
-                          children: [
-                            // Back Button
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                                  size: 20),
+                    boxShadow: progress > 0.05
+                        ? [
+                            BoxShadow(
+                              color: Colors.black
+                                  .withValues(alpha: 0.12 * progress),
+                              blurRadius: 8 * progress,
+                              offset: Offset(0, 2 * progress),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          // Back Button
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                                size: 20),
+                            color: progress > 0.5
+                                ? (isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87)
+                                : Colors.white,
+                            onPressed: () => Get.back(),
+                          ),
+                          const SizedBox(width: 4),
+
+                          // Header Title ("Find Games")
+                          Text(
+                            'Find Games',
+                            style: TextStyle(
                               color: progress > 0.5
                                   ? (isDark
                                       ? AppColors.textPrimaryDark
-                                      : Colors.black87)
+                                      : const Color(0xFF2D1B69))
                                   : Colors.white,
-                              onPressed: () => Get.back(),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.3,
                             ),
-                            const SizedBox(width: 4),
+                          ),
 
-                            // Header Title ("Find Games")
-                            Text(
-                              'Find Games',
-                              style: TextStyle(
-                                color: progress > 0.5
-                                    ? (isDark
-                                        ? AppColors.textPrimaryDark
-                                        : const Color(0xFF2D1B69))
-                                    : Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
+                          const Spacer(),
 
-                            const Spacer(),
+                          // Refresh Button
+                          IconButton(
+                            icon: const Icon(Icons.refresh_rounded),
+                            color: progress > 0.5
+                                ? (isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87)
+                                : Colors.white,
+                            tooltip: 'Refresh Matches',
+                            onPressed: controller.fetchGames,
+                          ),
 
-                            // Refresh Button
-                            IconButton(
-                              icon: const Icon(Icons.refresh_rounded),
-                              color: progress > 0.5
-                                  ? (isDark
-                                      ? AppColors.textPrimaryDark
-                                      : Colors.black87)
-                                  : Colors.white,
-                              tooltip: 'Refresh Matches',
-                              onPressed: controller.fetchGames,
-                            ),
-
-                            // Host / Create Game Button
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_rounded,
-                                  color: AppColors.primary, size: 28),
-                              tooltip: 'Create Game',
-                              onPressed: () async {
-                                final result =
-                                    await Get.toNamed('/games/create');
-                                if (result == true) controller.fetchGames();
-                              },
-                            ),
-                          ],
-                        ),
+                          // Host / Create Game Button
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_rounded,
+                                color: AppColors.primary, size: 28),
+                            tooltip: 'Create Game',
+                            onPressed: () async {
+                              final result = await Get.toNamed('/games/create');
+                              if (result == true) controller.fetchGames();
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
-
-
 
   /// Stadium Asset Background Image at Top of ScrollView (find_Games/dark.png & light.png)
   Widget _buildHeaderBackground(BuildContext context) {
@@ -401,10 +399,26 @@ class _FindGamesViewState extends State<FindGamesView> {
           Obx(() {
             final selectedCourt = controller.selectedCourt.value;
             final courts = [
-              {'key': 'ALL', 'label': 'All Courts', 'icon': Icons.stadium_rounded},
-              {'key': 'COURT_1', 'label': 'Court 1', 'icon': Icons.sports_soccer_rounded},
-              {'key': 'COURT_2', 'label': 'Court 2', 'icon': Icons.sports_soccer_rounded},
-              {'key': 'MY_GAMES', 'label': 'My Games', 'icon': Icons.person_rounded},
+              {
+                'key': 'ALL',
+                'label': 'All Courts',
+                'icon': Icons.stadium_rounded
+              },
+              {
+                'key': 'COURT_1',
+                'label': 'Court 1',
+                'icon': Icons.sports_soccer_rounded
+              },
+              {
+                'key': 'COURT_2',
+                'label': 'Court 2',
+                'icon': Icons.sports_soccer_rounded
+              },
+              {
+                'key': 'MY_GAMES',
+                'label': 'My Games',
+                'icon': Icons.person_rounded
+              },
             ];
 
             return SingleChildScrollView(
@@ -429,7 +443,8 @@ class _FindGamesViewState extends State<FindGamesView> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : context.textPrimary,
+                          color:
+                              isSelected ? Colors.white : context.textPrimary,
                         ),
                       ),
                       selected: isSelected,
@@ -438,7 +453,9 @@ class _FindGamesViewState extends State<FindGamesView> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
-                          color: isSelected ? AppColors.primary : context.borderColor,
+                          color: isSelected
+                              ? AppColors.primary
+                              : context.borderColor,
                         ),
                       ),
                       onSelected: (_) {

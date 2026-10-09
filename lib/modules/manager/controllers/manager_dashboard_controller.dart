@@ -9,7 +9,8 @@ import '../../../data/models/game_model.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
 
-class ManagerDashboardController extends GetxController with WidgetsBindingObserver {
+class ManagerDashboardController extends GetxController
+    with WidgetsBindingObserver {
   final ManagerRepository repository = Get.find<ManagerRepository>();
 
   final Rxn<ManagerDashboardModel> dashboard = Rxn<ManagerDashboardModel>();
@@ -21,12 +22,15 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
   final RxList<GameModel> pendingPlayerGames = <GameModel>[].obs;
   final RxList<Map<String, dynamic>> court1Slots = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> court2Slots = <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> currentCourtSlots = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> currentCourtSlots =
+      <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> playersList = <Map<String, dynamic>>[].obs;
 
   final RxInt selectedCourtIndex = 0.obs;
-  final RxString selectedMatchTab = 'TODAY'.obs; // TODAY, UPCOMING, ONGOING, CANCELLED
-  final RxString selectedDateFilter = 'ALL'.obs; // ALL, TODAY, TOMORROW, or YYYY-MM-DD
+  final RxString selectedMatchTab =
+      'TODAY'.obs; // TODAY, UPCOMING, ONGOING, CANCELLED
+  final RxString selectedDateFilter =
+      'ALL'.obs; // ALL, TODAY, TOMORROW, or YYYY-MM-DD
   final Rxn<DateTime> customSelectedDate = Rxn<DateTime>();
   final RxBool isLoading = false.obs;
   final RxBool isSlotsLoading = false.obs;
@@ -45,11 +49,19 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     if (searchQuery.value.trim().isNotEmpty) {
       final q = searchQuery.value.trim().toLowerCase();
       list = list.where((slot) {
-        final title = (slot['title'] ?? slot['gameTitle'] ?? '').toString().toLowerCase();
-        final host = (slot['hostName'] ?? slot['host_name'] ?? '').toString().toLowerCase();
-        final status = (slot['status'] ?? slot['approvalStatus'] ?? '').toString().toLowerCase();
+        final title =
+            (slot['title'] ?? slot['gameTitle'] ?? '').toString().toLowerCase();
+        final host = (slot['hostName'] ?? slot['host_name'] ?? '')
+            .toString()
+            .toLowerCase();
+        final status = (slot['status'] ?? slot['approvalStatus'] ?? '')
+            .toString()
+            .toLowerCase();
         final format = (slot['format'] ?? '').toString().toLowerCase();
-        return title.contains(q) || host.contains(q) || status.contains(q) || format.contains(q);
+        return title.contains(q) ||
+            host.contains(q) ||
+            status.contains(q) ||
+            format.contains(q);
       }).toList();
     }
     return list;
@@ -63,17 +75,26 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
       return DateTime.now().toIso8601String().split('T')[0];
     }
     if (selectedDateFilter.value == 'TOMORROW') {
-      return DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T')[0];
+      return DateTime.now()
+          .add(const Duration(days: 1))
+          .toIso8601String()
+          .split('T')[0];
     }
     return selectedDateFilter.value;
   }
 
   Future<void> changeDateFilter(String filter) async {
     if (filter == 'CUSTOM') {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final initial = (customSelectedDate.value != null && !customSelectedDate.value!.isBefore(today))
+          ? customSelectedDate.value!
+          : today;
+
       final picked = await showDatePicker(
         context: Get.context!,
-        initialDate: customSelectedDate.value ?? DateTime.now(),
-        firstDate: DateTime(2025),
+        initialDate: initial,
+        firstDate: today, // Disables all past dates before today
         lastDate: DateTime(2030),
       );
       if (picked != null) {
@@ -81,7 +102,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
         selectedDateFilter.value = picked.toIso8601String().split('T')[0];
         if (courts.isNotEmpty) {
           final clamped = selectedCourtIndex.value.clamp(0, courts.length - 1);
-          await fetchCourtSlots(courts[clamped].id, courtIndex: clamped + 1, date: formattedQueryDate);
+          await fetchCourtSlots(courts[clamped].id,
+              courtIndex: clamped + 1, date: formattedQueryDate);
         }
       }
       return;
@@ -90,7 +112,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     selectedDateFilter.value = filter;
     if (courts.isNotEmpty) {
       final clamped = selectedCourtIndex.value.clamp(0, courts.length - 1);
-      await fetchCourtSlots(courts[clamped].id, courtIndex: clamped + 1, date: formattedQueryDate);
+      await fetchCourtSlots(courts[clamped].id,
+          courtIndex: clamped + 1, date: formattedQueryDate);
     }
   }
 
@@ -99,7 +122,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     final clamped = index.clamp(0, courts.length - 1);
     selectedCourtIndex.value = clamped;
     final courtId = courts[clamped].id;
-    await fetchCourtSlots(courtId, courtIndex: clamped + 1, date: formattedQueryDate);
+    await fetchCourtSlots(courtId,
+        courtIndex: clamped + 1, date: formattedQueryDate);
   }
 
   List<GameModel> get court1Games {
@@ -168,7 +192,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
       }
 
       courts.assignAll(crts);
-      AppLogger.info('[ManagerCourt] loaded courts count: ${courts.length}, IDs: ${courts.map((c) => c.id).toList()}');
+      AppLogger.info(
+          '[ManagerCourt] loaded courts count: ${courts.length}, IDs: ${courts.map((c) => c.id).toList()}');
 
       final bkgs = await repository.getClubBookings();
       bookings.assignAll(bkgs);
@@ -176,9 +201,11 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
       await fetchPendingPlayerGames();
 
       if (courts.isNotEmpty) {
-        final clampedIndex = selectedCourtIndex.value.clamp(0, courts.length - 1);
+        final clampedIndex =
+            selectedCourtIndex.value.clamp(0, courts.length - 1);
         final courtId = courts[clampedIndex].id;
-        await fetchCourtSlots(courtId, courtIndex: clampedIndex + 1, date: formattedQueryDate);
+        await fetchCourtSlots(courtId,
+            courtIndex: clampedIndex + 1, date: formattedQueryDate);
       }
     } catch (e) {
       AppLogger.warning('Manager dashboard error: $e');
@@ -198,9 +225,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     }
   }
 
-
-
-  Future<void> fetchCourtSlots(String courtId, {int courtIndex = 1, String? date}) async {
+  Future<void> fetchCourtSlots(String courtId,
+      {int courtIndex = 1, String? date}) async {
     isSlotsLoading.value = true;
     try {
       final slots = await repository.getCourtSlots(courtId, date: date);
@@ -332,7 +358,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
 
   Future<void> fetchAllPlayers({String? search, String? status}) async {
     try {
-      final list = await repository.getAllPlayers(search: search, status: status);
+      final list =
+          await repository.getAllPlayers(search: search, status: status);
       playersList.assignAll(list);
     } catch (e) {
       AppLogger.warning('Error fetching players: $e');
@@ -344,7 +371,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     try {
       await repository.blockPlayer(playerId, reason);
       await fetchAllPlayers();
-      ErrorHandler.showSuccessSnackBar('Player Blocked', 'Player access has been restricted');
+      ErrorHandler.showSuccessSnackBar(
+          'Player Blocked', 'Player access has been restricted');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Block Error', e);
     } finally {
@@ -357,7 +385,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     try {
       await repository.unblockPlayer(playerId);
       await fetchAllPlayers();
-      ErrorHandler.showSuccessSnackBar('Player Unblocked', 'Player access restored');
+      ErrorHandler.showSuccessSnackBar(
+          'Player Unblocked', 'Player access restored');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Unblock Error', e);
     } finally {
@@ -365,12 +394,15 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     }
   }
 
-  Future<void> submitMatchScore(String gameId, int teamAScore, int teamBScore, {bool isFinal = true}) async {
+  Future<void> submitMatchScore(String gameId, int teamAScore, int teamBScore,
+      {bool isFinal = true}) async {
     isActionLoading.value = true;
     try {
-      await repository.submitMatchScore(gameId, teamAScore, teamBScore, isFinal: isFinal);
+      await repository.submitMatchScore(gameId, teamAScore, teamBScore,
+          isFinal: isFinal);
       await loadManagerData();
-      ErrorHandler.showSuccessSnackBar('Score Recorded', 'Official match result has been published');
+      ErrorHandler.showSuccessSnackBar(
+          'Score Recorded', 'Official match result has been published');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Score Submission Error', e);
     } finally {
@@ -382,7 +414,8 @@ class ManagerDashboardController extends GetxController with WidgetsBindingObser
     isActionLoading.value = true;
     try {
       await repository.stopMatchRecording(gameId);
-      ErrorHandler.showSuccessSnackBar('Recording Stopped', 'CCTV recording stopped and stored to AWS S3');
+      ErrorHandler.showSuccessSnackBar(
+          'Recording Stopped', 'CCTV recording stopped and stored to AWS S3');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Stop Recording Error', e);
     } finally {

@@ -19,6 +19,9 @@ abstract class Routes {
   static const courts = '/courts';
   static const managerPlayers = '/manager/players';
   static const managerHistory = '/manager/history';
+  static const managerHistoryDetails = '/manager/history/details';
+  static const managerNotifications = '/manager/notifications';
+  static const managerProfile = '/manager/profile';
   static const cctvDashboard = '/manager/cctv';
   static const adminDashboard = '/admin/dashboard';
 }

@@ -157,7 +157,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ),
               const SizedBox(height: 16),
 
-              // 🛡️ MANAGER CONTROLS PANEL (Single Score Entry Option / Locked Notice)
+              // 🛡️ MANAGER CONTROLS PANEL (Active Court Match Controls)
               _buildManagerControlsPanel(context, game),
               const SizedBox(height: 20),
 
@@ -273,7 +273,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// 🛡️ MANAGER CONTROLS PANEL Widget (Single Score Entry Option)
+  /// 🛡️ MANAGER CONTROLS PANEL Widget (Active Court Matches)
   Widget _buildManagerControlsPanel(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusUpper = game.status.toUpperCase();
@@ -299,15 +299,21 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
         children: [
           Row(
             children: [
-              Icon(isCompleted ? Icons.check_circle_rounded : Icons.sports_score_rounded,
-                  color: isCompleted ? Colors.green : AppColors.primary, size: 20),
+              Icon(
+                  isCompleted
+                      ? Icons.check_circle_rounded
+                      : Icons.shield_outlined,
+                  color: isCompleted ? Colors.green : Colors.amber,
+                  size: 20),
               const SizedBox(width: 8),
               Text(
-                isCompleted ? 'MATCH COMPLETED & SCORE LOCKED' : 'MATCH SCORE ENTRY',
+                isCompleted
+                    ? 'MATCH COMPLETED & SCORE LOCKED'
+                    : 'MANAGER CONTROLS (CLUB_MANAGER)',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: isCompleted ? Colors.green : AppColors.primary,
+                  color: isCompleted ? Colors.green : Colors.amber.shade800,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -328,34 +334,132 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 children: [
                   const Text(
                     'Score has been submitted and locked.',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.green),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                        color: Colors.green),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Final Score: Team A ${game.teamAScore} - ${game.teamBScore} Team B\nNote: Once added, scores can only be modified by an Administrator.',
-                    style: TextStyle(fontSize: 11.5, color: context.textSecondary),
+                    style:
+                        TextStyle(fontSize: 11.5, color: context.textSecondary),
                   ),
                 ],
               ),
             ),
           ] else if (isCancelled) ...[
-            const Text('This match has been cancelled.', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            const Text('This match has been cancelled.',
+                style: TextStyle(
+                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ] else ...[
-            // Single option for score entry / finish match
+            // Row 1: ▶ Start Match
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
                   elevation: 2,
                 ),
-                onPressed: () => _showScoreDialog(context, game, isFinish: true),
-                icon: const Icon(Icons.sports_score_rounded, color: Colors.white, size: 20),
+                onPressed: () => controller.startGame(game.id),
+                icon: const Icon(Icons.play_arrow_rounded,
+                    color: Colors.white, size: 22),
+                label: Text(
+                  'Start Match (${game.currentPlayers}/${game.maxPlayers} Joined)',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Row 2: Finish Match & Live Score
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                            color: isDark ? Colors.white38 : Colors.grey.shade400,
+                            width: 1.2),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        backgroundColor: Theme.of(context).cardColor,
+                      ),
+                      onPressed: () =>
+                          _showScoreDialog(context, game, isFinish: true),
+                      icon: Icon(Icons.check_circle_outline_rounded,
+                          color: isDark ? Colors.white : Colors.black87,
+                          size: 18),
+                      label: Text(
+                        'Finish Match',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber.shade700,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        elevation: 2,
+                      ),
+                      onPressed: () =>
+                          _showScoreDialog(context, game, isFinish: false),
+                      icon: const Icon(Icons.emoji_events_outlined,
+                          color: Colors.white, size: 18),
+                      label: const Text(
+                        'Live Score',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Row 3: Cancel Match (No Edit Match as requested)
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
+                  elevation: 2,
+                ),
+                onPressed: () => _confirmCancelMatch(context, game),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Colors.white, size: 20),
                 label: const Text(
-                  'Submit Final Match Score',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                  'Cancel Match',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -567,7 +671,9 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 return Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                    color: isDark
+                        ? AppColors.darkInputBg
+                        : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: context.borderColor),
                   ),
@@ -575,10 +681,16 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                        backgroundColor:
+                            AppColors.primary.withValues(alpha: 0.2),
                         child: Text(
-                          player.name.isNotEmpty ? player.name[0].toUpperCase() : 'P',
-                          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                          player.name.isNotEmpty
+                              ? player.name[0].toUpperCase()
+                              : 'P',
+                          style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -588,24 +700,32 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           children: [
                             Text(
                               player.name,
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: context.textPrimary),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: context.textPrimary),
                             ),
                             Text(
                               'Position: ${player.position} • OVR: ${player.ovr}',
-                              style: TextStyle(fontSize: 11, color: context.textSecondary),
+                              style: TextStyle(
+                                  fontSize: 11, color: context.textSecondary),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.green.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           player.team,
-                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 10),
+                          style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10),
                         ),
                       ),
                     ],
@@ -618,16 +738,19 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     );
   }
 
-  void _showScoreDialog(BuildContext context, GameModel game, {required bool isFinish}) {
+  void _showScoreDialog(BuildContext context, GameModel game,
+      {required bool isFinish}) {
     Get.dialog(
       AlertDialog(
         backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Submit Match Score: ${game.title}', style: TextStyle(color: context.textPrimary)),
+        title: Text('Submit Match Score: ${game.title}',
+            style: TextStyle(color: context.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Enter final match score:', style: TextStyle(fontSize: 12)),
+            const Text('Enter final match score:',
+                style: TextStyle(fontSize: 12)),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -656,14 +779,45 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
             onPressed: () {
               final a = int.tryParse(teamAController.text.trim()) ?? 0;
               final b = int.tryParse(teamBController.text.trim()) ?? 0;
               Get.back();
               controller.submitMatchScore(game.id, a, b, isFinal: isFinish);
             },
-            child: const Text('Submit Score', style: TextStyle(color: Colors.white)),
+            child: const Text('Submit Score',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmCancelMatch(BuildContext context, GameModel game) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: context.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Cancel Match: ${game.title}',
+            style: TextStyle(color: context.textPrimary)),
+        content: const Text(
+            'Are you sure you want to cancel this match? Full wallet refunds will be processed to joined players.',
+            style: TextStyle(fontSize: 12)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Back'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              Get.back();
+              controller.cancelMatchWithRefunds(game.id, 'Cancelled by manager');
+            },
+            child: const Text('Confirm Cancel',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

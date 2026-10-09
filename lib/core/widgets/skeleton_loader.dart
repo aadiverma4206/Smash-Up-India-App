@@ -43,7 +43,8 @@ class _SkeletonContainerState extends State<SkeletonContainer>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+    final baseColor =
+        isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
 
     return AnimatedBuilder(
       animation: _animation,
@@ -123,7 +124,8 @@ class SkeletonMatchCard extends StatelessWidget {
                   children: [
                     SkeletonContainer(width: 20, height: 20, borderRadius: 10),
                     SizedBox(width: 8),
-                    Expanded(child: SkeletonContainer(height: 14, borderRadius: 4)),
+                    Expanded(
+                        child: SkeletonContainer(height: 14, borderRadius: 4)),
                   ],
                 ),
                 SizedBox(height: 12),

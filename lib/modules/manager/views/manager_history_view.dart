@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../app/routes/app_routes.dart';
 import '../controllers/manager_games_controller.dart';
 import '../repositories/manager_repository.dart';
 import '../../../data/models/game_model.dart';
@@ -50,7 +51,8 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
   }
 
   void _onScroll() {
-    if (scrollController.position.pixels >= scrollController.position.maxScrollExtent - 200) {
+    if (scrollController.position.pixels >=
+        scrollController.position.maxScrollExtent - 200) {
       if (!isLoadingMore.value && hasMore.value) {
         fetchHistory(isRefresh: false);
       }
@@ -95,7 +97,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
         final title = game.title.toLowerCase();
         final court = game.courtName.toLowerCase();
         final format = game.format.toLowerCase();
-        if (!title.contains(query) && !court.contains(query) && !format.contains(query)) {
+        if (!title.contains(query) &&
+            !court.contains(query) &&
+            !format.contains(query)) {
           return false;
         }
       }
@@ -133,19 +137,26 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                     controller: searchController,
                     onChanged: (_) => setState(() {}),
                     style: TextStyle(
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search completed or cancelled matches...',
                       hintStyle: TextStyle(
-                        color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : Colors.grey.shade400,
                         fontSize: 13,
                       ),
-                      prefixIcon: const Icon(Icons.history_rounded, color: AppColors.primary),
+                      prefixIcon: const Icon(Icons.history_rounded,
+                          color: AppColors.primary),
                       suffixIcon: searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: Icon(Icons.clear_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black54),
+                              icon: Icon(Icons.clear_rounded,
+                                  size: 18,
+                                  color:
+                                      isDark ? Colors.white70 : Colors.black54),
                               onPressed: () {
                                 searchController.clear();
                                 setState(() {});
@@ -154,22 +165,28 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                           : null,
                       filled: true,
                       fillColor: Theme.of(context).cardColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                        borderSide: const BorderSide(
+                            color: AppColors.primary, width: 1.5),
                       ),
                     ),
                   ),
@@ -190,7 +207,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                                 style: TextStyle(
                                   color: isSelected
                                       ? Colors.white
-                                      : (isDark ? AppColors.textPrimaryDark : Colors.black87),
+                                      : (isDark
+                                          ? AppColors.textPrimaryDark
+                                          : Colors.black87),
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -203,7 +222,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                                 side: BorderSide(
                                   color: isSelected
                                       ? AppColors.primary
-                                      : (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                                      : (isDark
+                                          ? AppColors.darkBorder
+                                          : const Color(0xFFE2E8F0)),
                                 ),
                               ),
                               onSelected: (_) {
@@ -224,7 +245,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : Colors.black87,
                         ),
                       )),
                 ],
@@ -235,7 +258,8 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
             Expanded(
               child: Obx(() {
                 if (isLoadingMore.value && historyGames.isEmpty) {
-                  return const AppLoader(message: 'Loading match history records...');
+                  return const AppLoader(
+                      message: 'Loading match history records...');
                 }
 
                 final displayList = filteredHistoryGames;
@@ -260,7 +284,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         if (index == displayList.length) {
                           return const Padding(
                             padding: EdgeInsets.symmetric(vertical: 16.0),
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            child: Center(
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2)),
                           );
                         }
                         final game = displayList[index];
@@ -287,7 +313,8 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
     String formattedDate = 'Thu, 08 Oct';
     try {
       final parsedDate = DateTime.parse(game.matchDate);
-      formattedDate = AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
+      formattedDate =
+          AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
     } catch (_) {
       formattedDate = game.matchDate.split('T')[0];
     }
@@ -317,7 +344,7 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
           borderRadius: BorderRadius.circular(14),
           onTap: () {
             gamesController.selectedGame.value = game;
-            Get.toNamed('/manager/games/details');
+            Get.toNamed(Routes.managerHistoryDetails);
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -333,7 +360,11 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.access_time_rounded, size: 14, color: isCompleted ? Colors.green : Colors.redAccent),
+                          Icon(Icons.access_time_rounded,
+                              size: 14,
+                              color: isCompleted
+                                  ? Colors.green
+                                  : Colors.redAccent),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
@@ -341,7 +372,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -354,7 +387,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         formattedDate,
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : Colors.grey.shade600,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -362,7 +397,8 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.group_rounded, size: 13, color: Colors.green),
+                          const Icon(Icons.group_rounded,
+                              size: 13, color: Colors.green),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
@@ -370,7 +406,9 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : Colors.grey.shade700,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -400,28 +438,48 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         runSpacing: 3,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(game.format, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 10)),
+                            child: Text(game.format,
+                                style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10)),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.amber.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(game.privacy, style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 10)),
+                            child: Text(game.privacy,
+                                style: const TextStyle(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10)),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: (isCompleted ? Colors.green : Colors.redAccent).withValues(alpha: 0.15),
+                              color: (isCompleted
+                                      ? Colors.green
+                                      : Colors.redAccent)
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(game.status.toUpperCase(), style: TextStyle(color: isCompleted ? Colors.green : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 10)),
+                            child: Text(game.status.toUpperCase(),
+                                style: TextStyle(
+                                    color: isCompleted
+                                        ? Colors.green
+                                        : Colors.redAccent,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10)),
                           ),
                         ],
                       ),
@@ -432,17 +490,31 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         children: [
                           CircleAvatar(
                             radius: 11,
-                            backgroundColor: (isCompleted ? Colors.green : Colors.redAccent).withValues(alpha: 0.2),
+                            backgroundColor:
+                                (isCompleted ? Colors.green : Colors.redAccent)
+                                    .withValues(alpha: 0.2),
                             child: Text(
-                              game.title.isNotEmpty ? game.title[0].toUpperCase() : 'M',
-                              style: TextStyle(color: isCompleted ? Colors.green : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 11),
+                              game.title.isNotEmpty
+                                  ? game.title[0].toUpperCase()
+                                  : 'M',
+                              style: TextStyle(
+                                  color: isCompleted
+                                      ? Colors.green
+                                      : Colors.redAccent,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               '${game.title} • ${game.courtName}',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : Colors.black87),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -456,28 +528,41 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         children: [
                           if (isCompleted)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.green.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 'Score: A ${game.teamAScore} - ${game.teamBScore} B',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green),
                               ),
                             )
                           else
-                            const Text('Cancelled', style: TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.bold)),
-
+                            const Text('Cancelled',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.redAccent,
+                                    fontWeight: FontWeight.bold)),
                           Row(
                             children: [
-                              const Icon(Icons.currency_rupee_rounded, size: 13, color: Colors.green),
+                              const Icon(Icons.currency_rupee_rounded,
+                                  size: 13, color: Colors.green),
                               Text(
                                 game.perPlayerFee.toStringAsFixed(0),
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                                style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green),
                               ),
                               const SizedBox(width: 2),
-                              const Text('Fee', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                              const Text('Fee',
+                                  style: TextStyle(
+                                      fontSize: 10, color: Colors.grey)),
                             ],
                           ),
                         ],

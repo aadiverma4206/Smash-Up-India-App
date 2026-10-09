@@ -1,4 +1,5 @@
 import { getSocketIO, SOCKET_EVENTS } from '../config/socket.config.js';
+import { dbPool } from '../config/db.config.js';
 import { env } from '../config/env.config.js';
 import { logger } from '../utils/logger.js';
 
@@ -24,6 +25,23 @@ export const sendUserNotification = (userId: string, notification: NotificationP
 
     io.to(`user:${userId}`).emit(SOCKET_EVENTS.NOTIFICATION, payload);
     logger.info(`[Real-Time] Notification sent to user:${userId} - ${notification.title}`);
+
+    // Persist to database asynchronously so it appears in notification screens
+    dbPool.query(
+      `INSERT INTO public.notifications (
+         user_id, title, body, message, type, data, is_read
+       ) VALUES ($1, $2, $3, $4, $5, $6, false);`,
+      [
+        userId,
+        notification.title,
+        notification.message,
+        notification.message,
+        notification.type || 'SYSTEM',
+        JSON.stringify(notification.data || {}),
+      ]
+    ).catch((dbErr: any) => {
+      logger.warn(`Failed to persist notification to DB for user:${userId}: ${dbErr.message}`);
+    });
   } catch (err: any) {
     logger.error(`Failed to send real-time notification to user:${userId}:`, err.message);
   }

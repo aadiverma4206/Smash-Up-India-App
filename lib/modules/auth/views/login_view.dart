@@ -526,7 +526,8 @@ class _LoginViewState extends State<LoginView> {
                       color: Colors.purple.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: Colors.purple.withValues(alpha: 0.5), width: 1),
+                          color: Colors.purple.withValues(alpha: 0.5),
+                          width: 1),
                     ),
                     child: const Icon(
                       Icons.shield_rounded,

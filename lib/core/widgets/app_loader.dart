@@ -5,14 +5,13 @@ class AppLoader extends StatefulWidget {
   final String? message;
 
   const AppLoader({super.key, this.message});
-
   @override
   State<AppLoader> createState() => _AppLoaderState();
 }
 
-class _AppLoaderState extends State<AppLoader> with SingleTickerProviderStateMixin {
+class _AppLoaderState extends State<AppLoader>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-
   @override
   void initState() {
     super.initState();

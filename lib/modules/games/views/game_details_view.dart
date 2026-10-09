@@ -942,7 +942,8 @@ class GameDetailsView extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'CCTV recording is processed automatically during the match and saved upon completion.',
-                    style: TextStyle(color: context.textSecondary, fontSize: 12),
+                    style:
+                        TextStyle(color: context.textSecondary, fontSize: 12),
                   ),
                 ),
               ],
