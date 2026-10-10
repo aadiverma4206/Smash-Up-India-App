@@ -90,7 +90,8 @@ class WalletController extends GetxController {
             : (amountRupees * 100).toInt(),
         'name': 'ALL STARS ARENA',
         'description': 'Player Wallet Topup',
-        'order_id': order.orderId,
+        if (order.orderId.isNotEmpty && !order.orderId.startsWith('rzp_order_mock_'))
+          'order_id': order.orderId,
         'prefill': {
           'contact': '+919876543210',
           'email': 'player@allstarsarena.com',

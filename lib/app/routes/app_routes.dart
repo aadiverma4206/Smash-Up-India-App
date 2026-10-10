@@ -29,6 +29,9 @@ abstract class Routes {
   static const adminManagers = '/admin/managers';
   static const adminUserDetail = '/admin/user-detail';
   static const adminAuditLogs = '/admin/audit-logs';
+  static const notificationDetail = '/notifications/detail';
+  static const adminNotifications = '/admin/notifications';
+  static const playerNotifications = '/player/notifications';
   static const faq = '/support/faq';
   static const chatSupport = '/support/chat';
   static const callSupport = '/support/call';

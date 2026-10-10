@@ -8,6 +8,8 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/slot_request_model.dart';
+import '../../../data/models/notification_model.dart';
+import '../../notifications/views/notification_detail_view.dart';
 
 /// Unified representation for manager notification / alert cards
 class ManagerAlertItem {
@@ -680,9 +682,23 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
+      child: InkWell(
+        onTap: () {
+          Get.to(() => NotificationDetailView(
+                notification: NotificationModel(
+                  id: item.id,
+                  title: item.title,
+                  body: item.subtitle,
+                  type: item.category,
+                  isRead: !item.isUnread,
+                  createdAt: item.dateTime.toIso8601String(),
+                ),
+              ));
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -883,8 +899,9 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   String _formatItemTime(DateTime dt) {
     final now = DateTime.now();

@@ -59,6 +59,9 @@ import '../../modules/admin/views/admin_user_detail_view.dart';
 import '../../modules/admin/views/admin_audit_logs_view.dart';
 import '../../modules/admin/views/admin_create_manager_view.dart';
 import '../../modules/admin/views/admin_profile_view.dart';
+import '../../modules/notifications/views/notification_detail_view.dart';
+import '../../modules/notifications/views/admin_notifications_view.dart';
+import '../../modules/notifications/views/player_notifications_view.dart';
 import '../../modules/support/views/faq_view.dart';
 import '../../modules/support/views/chat_support_view.dart';
 import '../../modules/support/views/call_support_view.dart';
@@ -156,6 +159,21 @@ class AppPages {
     GetPage(
       name: '/notifications',
       page: () => const NotificationsView(),
+      binding: PlayerBinding(),
+    ),
+    GetPage(
+      name: Routes.notificationDetail,
+      page: () => const NotificationDetailView(),
+      binding: PlayerBinding(),
+    ),
+    GetPage(
+      name: Routes.adminNotifications,
+      page: () => AdminNotificationsView(),
+      binding: PlayerBinding(),
+    ),
+    GetPage(
+      name: Routes.playerNotifications,
+      page: () => PlayerNotificationsView(),
       binding: PlayerBinding(),
     ),
     GetPage(

@@ -316,8 +316,19 @@ export const initDbTables = async () => {
 
           v_amount_rupees := (v_amount_paise::NUMERIC / 100.0);
 
-          -- 3. Record in authoritative transactions ledger
-          -- trg_apply_transaction automatically locks player_details FOR UPDATE and credits wallet_balance
+          -- 3. Ensure player_details row exists
+          INSERT INTO public.player_details (user_id, wallet_balance)
+          VALUES (v_user_id, 0.00)
+          ON CONFLICT (user_id) DO NOTHING;
+
+          -- 4. ATOMICALLY LOCK & CREDIT PLAYER WALLET BALANCE
+          UPDATE public.player_details
+          SET wallet_balance = COALESCE(wallet_balance, 0.00) + v_amount_rupees,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = v_user_id
+          RETURNING wallet_balance INTO v_new_balance;
+
+          -- 5. Record in authoritative transactions ledger
           INSERT INTO public.transactions (
               user_id,
               type,
@@ -330,13 +341,13 @@ export const initDbTables = async () => {
               v_user_id,
               'WALLET_TOPUP',
               v_amount_rupees,
-              0,
+              v_new_balance,
               'SUCCESS',
               'Wallet Top-Up via Razorpay',
               p_payment_order_id
-          ) RETURNING id, balance_after INTO v_tx_id, v_new_balance;
+          ) RETURNING id INTO v_tx_id;
 
-          -- 4. Keep wallet_transactions in sync
+          -- 6. Keep wallet_transactions in sync
           INSERT INTO public.wallet_transactions (
               id,
               user_id,
@@ -357,9 +368,9 @@ export const initDbTables = async () => {
               'SUCCESS',
               p_payment_order_id,
               p_provider_payment_id
-          ) ON CONFLICT (id) DO NOTHING;
+          ) ON CONFLICT (id) DO UPDATE SET balance_after = EXCLUDED.balance_after;
 
-          -- 5. Mark payment_order as PAID (valid status in payment_orders_status_check constraint)
+          -- 7. Mark payment_order as PAID (valid status in payment_orders_status_check constraint)
           UPDATE public.payment_orders
           SET status = 'PAID',
               paid_at = CURRENT_TIMESTAMP,
@@ -368,6 +379,40 @@ export const initDbTables = async () => {
           WHERE id = p_payment_order_id;
 
           RETURN v_tx_id;
+      END;
+      $$;
+
+      CREATE OR REPLACE FUNCTION public.get_wallet_transaction_history(
+          p_user_id VARCHAR(64),
+          p_limit INT DEFAULT 50,
+          p_offset INT DEFAULT 0
+      ) RETURNS TABLE (
+          id VARCHAR(64),
+          user_id VARCHAR(64),
+          transaction_type VARCHAR(32),
+          amount NUMERIC(10,2),
+          balance_after NUMERIC(10,2),
+          description TEXT,
+          status VARCHAR(32),
+          reference_id VARCHAR(64),
+          created_at TIMESTAMP WITH TIME ZONE
+      ) LANGUAGE plpgsql AS $$
+      BEGIN
+          RETURN QUERY
+          SELECT
+              t.id,
+              t.user_id,
+              t.type as transaction_type,
+              t.amount,
+              t.balance_after,
+              t.description,
+              t.status,
+              t.reference_id,
+              t.created_at
+          FROM public.transactions t
+          WHERE t.user_id = p_user_id
+          ORDER BY t.created_at DESC
+          LIMIT p_limit OFFSET p_offset;
       END;
       $$;
 
