@@ -537,7 +537,18 @@ export class GamesService {
       }
 
       // Check match start time: Cannot cancel once start time has arrived or passed!
-      const matchStart = new Date(`${game.match_date}T${game.start_time}`);
+      let datePart = '';
+      if (game.match_date instanceof Date) {
+        const year = game.match_date.getFullYear();
+        const month = String(game.match_date.getMonth() + 1).padStart(2, '0');
+        const day = String(game.match_date.getDate()).padStart(2, '0');
+        datePart = `${year}-${month}-${day}`;
+      } else {
+        datePart = String(game.match_date).slice(0, 10);
+      }
+      const timeStr = String(game.start_time).length === 5 ? `${game.start_time}:00` : String(game.start_time);
+      const parsedStartTime = new Date(`${datePart}T${timeStr}`);
+      const matchStart = !isNaN(parsedStartTime.getTime()) ? parsedStartTime : new Date();
       const now = new Date();
 
       if (now >= matchStart) {
@@ -552,6 +563,14 @@ export class GamesService {
         `UPDATE public.games SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
         [gameId]
       );
+
+      // Cancel any CCTV recording associated with this game
+      try {
+        await client.query(
+          `UPDATE public.cctv_recordings SET status = 'CANCELLED', recording_status = 'CANCELLED', actual_stopped_at = CURRENT_TIMESTAMP WHERE game_id = $1;`,
+          [gameId]
+        );
+      } catch (_) {}
 
       // Refund all successfully paid players with idempotency via immutable ledger (excluding free host)
       const entryFee = parseFloat(game.entry_fee || '0.00');

@@ -13,6 +13,9 @@ import {
   leaveWaitlistController,
   updateGameScoreController,
   getGameVideosController,
+  getGameRecordingController,
+  stopGameRecordingController,
+  extendGameRecordingController,
 } from './games.controller.js';
 import { authenticateToken, requireRole } from '../../middlewares/auth.middleware.js';
 
@@ -36,6 +39,11 @@ router.post('/:id/cancel', requireRole([3]), cancelPlayerGameController);
 router.post('/:id/waitlist', requireRole([3]), joinWaitlistController);
 router.delete('/:id/waitlist', requireRole([3]), leaveWaitlistController);
 router.post('/:id/score', requireRole([1, 2, 3]), updateGameScoreController);
+
+// Match Videos & CCTV Recording Lifecycle
 router.get('/:id/videos', requireRole([1, 2, 3]), getGameVideosController);
+router.get('/:id/recording', requireRole([1, 2, 3]), getGameRecordingController);
+router.post('/:id/recording/stop', requireRole([1, 2]), stopGameRecordingController);
+router.post('/:id/recording/extend', requireRole([1, 2]), extendGameRecordingController);
 
 export default router;

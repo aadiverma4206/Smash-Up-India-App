@@ -339,8 +339,106 @@ export class ManagerRepository {
   }
 
   static async getCourtSlots(courtId: string, date?: string | null) {
+    // Auto-cancel any unapproved game past its start time & issue refunds
+    try {
+      const expired = await dbPool.query(
+        `SELECT g.id, g.title FROM public.games g
+         WHERE g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
+           AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP;`
+      );
+      for (const game of expired.rows) {
+        await dbPool.query(
+          `UPDATE public.games
+           SET status = 'CANCELLED', approval_status = 'REJECTED',
+               rejection_reason = 'Auto-cancelled: Not approved by start time',
+               cancellation_reason = 'Auto-cancelled: Not approved by start time',
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1;`,
+          [game.id]
+        );
+        const paidPlayers = await dbPool.query(
+          `SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount
+           FROM public.game_players gp
+           JOIN public.games g ON g.id = gp.game_id
+           WHERE gp.game_id = $1 AND gp.payment_status = 'PAID';`,
+          [game.id]
+        );
+        for (const player of paidPlayers.rows) {
+          const amt = Number(player.refund_amount);
+          if (amt > 0) {
+            await dbPool.query(
+              `INSERT INTO public.wallets (user_id, balance) VALUES ($1, $2)
+               ON CONFLICT (user_id) DO UPDATE SET balance = public.wallets.balance + $2, updated_at = CURRENT_TIMESTAMP;`,
+              [player.user_id, amt]
+            );
+            await dbPool.query(
+              `INSERT INTO public.wallet_transactions (wallet_id, user_id, type, amount, status, description)
+               VALUES ((SELECT id FROM public.wallets WHERE user_id = $1), $1, 'REFUND', $2, 'SUCCESS', $3);`,
+              [player.user_id, amt, `Auto refund: Match "${game.title}" unapproved by start time`]
+            );
+            await dbPool.query(
+              `UPDATE public.game_players SET payment_status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE game_id = $1 AND user_id = $2;`,
+              [game.id, player.user_id]
+            );
+          }
+        }
+      }
+
+      // Auto-start approved games past scheduled start time
+      const autoStartGames = await dbPool.query(
+        `SELECT g.id, g.club_id, g.title, crt.name as court_name
+         FROM public.games g
+         LEFT JOIN public.courts crt ON crt.id = g.court_id
+         WHERE g.approval_status = 'APPROVED'
+           AND g.status IN ('OPEN_FOR_JOINING', 'FULL', 'SCHEDULED')
+           AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP
+           AND (g.match_date + g.end_time) > CURRENT_TIMESTAMP;`
+      );
+
+      for (const game of autoStartGames.rows) {
+        await dbPool.query(
+          `UPDATE public.games SET status = 'ONGOING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+          [game.id]
+        );
+
+        const managers = await dbPool.query(
+          `SELECT user_id FROM public.club_managers WHERE club_id = $1;`,
+          [game.club_id]
+        );
+        for (const mgr of managers.rows) {
+          await dbPool.query(
+            `INSERT INTO public.notifications (user_id, title, body, message, type, data)
+             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);`,
+            [
+              mgr.user_id,
+              '⚽ Match Auto-Started',
+              `Match "${game.title}" on ${game.court_name || 'Court'} auto-started at scheduled start time!`,
+              JSON.stringify({ gameId: game.id, route: '/manager/games/details' }),
+            ]
+          );
+        }
+
+        const players = await dbPool.query(
+          `SELECT user_id FROM public.game_players WHERE game_id = $1;`,
+          [game.id]
+        );
+        for (const ply of players.rows) {
+          await dbPool.query(
+            `INSERT INTO public.notifications (user_id, title, body, message, type, data)
+             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);`,
+            [
+              ply.user_id,
+              '⚽ Kick-off! Match Started',
+              `Your match "${game.title}" on ${game.court_name || 'Court'} has officially started! Good luck!`,
+              JSON.stringify({ gameId: game.id, route: '/games/details' }),
+            ]
+          );
+        }
+      }
+    } catch (_) {}
+
     const normalizedCourtId = (courtId && courtId.includes('2')) ? 'court_2' : 'court_1';
-    const conditions: string[] = ['g.court_id = $1', "g.status <> 'CANCELLED'"];
+    const conditions: string[] = ['g.court_id = $1', "g.status NOT IN ('CANCELLED', 'COMPLETED')"];
     const values: any[] = [normalizedCourtId];
     let idx = 2;
 

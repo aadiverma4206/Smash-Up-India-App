@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { CctvService } from './cctv.service.js';
+import { CctvRecordingService } from '../../services/cctvRecording.service.js';
 import { ApiResponse, ApiError } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AuthenticatedRequest } from '../../types/index.js';
@@ -8,15 +9,18 @@ export const addCamera = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const managerId = req.user?.id || 'SYS';
     const managerName = req.user?.email || 'Manager';
-    const { clubId, courtId, name, rtspUrl, ipAddress, port } = req.body;
+    const userRole = req.user?.roleId || 2;
+    const { clubId, courtId, name, rtspUrl, ipAddress, port, serialNumber, protocol } = req.body;
 
-    const camera = await CctvService.addCamera(managerId, managerName, {
+    const camera = await CctvService.addCamera(managerId, managerName, userRole, {
       clubId,
       courtId,
       name,
       rtspUrl,
       ipAddress,
       port,
+      serialNumber,
+      protocol,
     });
 
     res.status(201).json(ApiResponse.success('CCTV Camera added successfully', camera));
@@ -27,15 +31,18 @@ export const editCamera = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const managerId = req.user?.id || 'SYS';
     const managerName = req.user?.email || 'Manager';
+    const userRole = req.user?.roleId || 2;
     const { cameraId } = req.params;
-    const { name, courtId, rtspUrl, ipAddress, port, isEnabled } = req.body;
+    const { name, courtId, rtspUrl, ipAddress, port, isEnabled, serialNumber, protocol } = req.body;
 
-    const updated = await CctvService.editCamera(managerId, managerName, cameraId, {
+    const updated = await CctvService.editCamera(managerId, managerName, userRole, cameraId, {
       name,
       courtId,
       rtspUrl,
       ipAddress,
       port,
+      serialNumber,
+      protocol,
       isEnabled,
     });
 
@@ -43,20 +50,48 @@ export const editCamera = asyncHandler(
   }
 );
 
+export const toggleCamera = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const managerId = req.user?.id || 'SYS';
+    const managerName = req.user?.email || 'Manager';
+    const userRole = req.user?.roleId || 2;
+    const { cameraId } = req.params;
+    const { isEnabled } = req.body;
+
+    const updated = await CctvService.toggleCamera(
+      managerId,
+      managerName,
+      userRole,
+      cameraId,
+      Boolean(isEnabled)
+    );
+
+    res.status(200).json(ApiResponse.success('Camera state updated', updated));
+  }
+);
+
 export const testCameraConnection = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const { cameraId } = req.params;
-    const result = await CctvService.testCameraConnection(cameraId);
+    const result = await CctvService.testCameraConnection(
+      cameraId,
+      req.user?.id,
+      req.user?.roleId
+    );
     res.status(200).json(ApiResponse.success('Camera connection test complete', result));
   }
 );
 
 export const getClubCameras = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    const { clubId } = req.params;
-    if (!clubId) throw new ApiError(400, 'Club ID is required');
+    const clubId = (req.params.clubId || req.query.clubId) as string;
+    if (!clubId) throw new ApiError(400, 'Club ID is required', 'MISSING_CLUB_ID');
 
-    const cameras = await CctvService.getClubCameras(clubId);
+    const cameras = await CctvService.getClubCameras(
+      clubId,
+      req.user?.id,
+      req.user?.roleId
+    );
     res.status(200).json(ApiResponse.success('Club cameras retrieved', cameras));
   }
 );
@@ -65,11 +100,13 @@ export const startRecording = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const managerId = req.user?.id || 'SYS';
     const managerName = req.user?.email || 'Manager';
+    const userRole = req.user?.roleId || 2;
     const { gameId, cameraId } = req.body;
 
     const result = await CctvService.startMatchRecording(
       managerId,
       managerName,
+      userRole,
       gameId,
       cameraId
     );
@@ -82,12 +119,16 @@ export const stopRecording = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const managerId = req.user?.id || 'SYS';
     const managerName = req.user?.email || 'Manager';
+    const userRole = req.user?.roleId || 2;
     const { recordingId } = req.params;
+    const { reason } = req.body || {};
 
     const result = await CctvService.stopMatchRecording(
       managerId,
       managerName,
-      recordingId
+      userRole,
+      recordingId,
+      reason
     );
 
     res.status(200).json(ApiResponse.success('CCTV Recording stopped', result));
@@ -98,12 +139,14 @@ export const extendRecording = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const managerId = req.user?.id || 'SYS';
     const managerName = req.user?.email || 'Manager';
+    const userRole = req.user?.roleId || 2;
     const { recordingId } = req.params;
     const { additionalMinutes } = req.body;
 
     const result = await CctvService.extendRecording(
       managerId,
       managerName,
+      userRole,
       recordingId,
       Number(additionalMinutes)
     );
@@ -112,12 +155,50 @@ export const extendRecording = asyncHandler(
   }
 );
 
+export const getGameRecording = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { gameId } = req.params;
+    if (!gameId) throw new ApiError(400, 'Game ID is required');
+
+    const result = await CctvService.getGameRecording(
+      gameId,
+      req.user?.id || '',
+      req.user?.roleId || 3
+    );
+
+    res.status(200).json(ApiResponse.success('Match recording details retrieved', result));
+  }
+);
+
 export const getPlaybackUrl = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const { gameId } = req.params;
     if (!gameId) throw new ApiError(400, 'Game ID is required');
 
-    const result = await CctvService.getMatchVideoPlaybackUrl(gameId);
+    const result = await CctvService.getMatchVideoPlaybackUrl(
+      gameId,
+      req.user?.id,
+      req.user?.roleId || 3
+    );
     res.status(200).json(ApiResponse.success('Signed playback URL generated', result));
+  }
+);
+
+export const getRecordingFailures = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const clubId = (req.query.clubId as string) || undefined;
+    const failures = await CctvService.getRecordingFailures(
+      req.user?.id || '',
+      req.user?.roleId || 2,
+      clubId
+    );
+    res.status(200).json(ApiResponse.success('Recording failures retrieved', failures));
+  }
+);
+
+export const getFfmpegHealth = asyncHandler(
+  async (_req: AuthenticatedRequest, res: Response) => {
+    const health = await CctvRecordingService.checkFfmpeg();
+    res.status(200).json(ApiResponse.success('FFmpeg status', health));
   }
 );

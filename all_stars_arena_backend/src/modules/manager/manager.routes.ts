@@ -27,10 +27,22 @@ import {
   submitMatchScoreController,
   getMatchRecordingController,
   stopMatchRecordingController,
+  extendMatchRecordingController,
+  getManagerCamerasController,
   getGameDetailsController,
   getManagerProfileController,
   uploadManagerAvatarController,
 } from './manager.controller.js';
+import {
+  addCamera,
+  editCamera,
+  testCameraConnection,
+} from '../cctv/cctv.controller.js';
+import {
+  createCctvCameraSchema,
+  updateCctvCameraSchema,
+  testCameraSchema,
+} from '../cctv/cctv.schema.js';
 import { uploadAvatarMiddleware } from '../../middlewares/upload.middleware.js';
 import { validateRequest } from '../../middlewares/validate.middleware.js';
 import {
@@ -71,9 +83,16 @@ router.post('/games/:id/complete', completeGameController);
 router.post('/games/:id/cancel', cancelGameController);
 router.post('/games/:id/score', submitMatchScoreController);
 
+// CCTV & Camera Management
+router.get('/cameras', getManagerCamerasController);
+router.post('/cameras', validateRequest(createCctvCameraSchema), addCamera);
+router.patch('/cameras/:cameraId', validateRequest(updateCctvCameraSchema), editCamera);
+router.post('/cameras/:cameraId/test', validateRequest(testCameraSchema), testCameraConnection);
+
 // CCTV & Recording Management for Match
 router.get('/games/:id/recording', getMatchRecordingController);
 router.post('/games/:id/recording/stop', stopMatchRecordingController);
+router.post('/games/:id/recording/extend', extendMatchRecordingController);
 
 // Slot Requests (Player waitlist & slot invites)
 router.get('/requests', getPendingRequestsController);

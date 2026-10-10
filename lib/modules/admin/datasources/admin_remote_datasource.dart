@@ -17,11 +17,13 @@ class AdminRemoteDataSource {
   }
 
   Future<ApiResponseModel<List<AdminUserModel>>> getUsers(
-      {String? search, int page = 1}) async {
+      {String? search, int? roleId, int limit = 50, int page = 1}) async {
     final response = await dioClient.dio.get(
       '/admin/users',
       queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
+        if (roleId != null) 'role_id': roleId,
+        'limit': limit,
         'page': page,
       },
     );
@@ -35,9 +37,12 @@ class AdminRemoteDataSource {
 
   Future<ApiResponseModel<Map<String, dynamic>>> suspendUser(
       String userId, String reason) async {
-    final response = await dioClient.dio.post(
+    final response = await dioClient.dio.patch(
       '/admin/users/$userId/suspend',
-      data: {'reason': reason},
+      data: {
+        'suspend': true,
+        'reason': reason,
+      },
     );
     return ApiResponseParser.parse<Map<String, dynamic>>(
       response.data,
@@ -47,7 +52,12 @@ class AdminRemoteDataSource {
 
   Future<ApiResponseModel<Map<String, dynamic>>> unsuspendUser(
       String userId) async {
-    final response = await dioClient.dio.post('/admin/users/$userId/unsuspend');
+    final response = await dioClient.dio.patch(
+      '/admin/users/$userId/suspend',
+      data: {
+        'suspend': false,
+      },
+    );
     return ApiResponseParser.parse<Map<String, dynamic>>(
       response.data,
       (json) => json as Map<String, dynamic>,
@@ -74,6 +84,23 @@ class AdminRemoteDataSource {
     return ApiResponseParser.parse<Map<String, dynamic>>(
       response.data,
       (json) => json as Map<String, dynamic>,
+    );
+  }
+
+  Future<ApiResponseModel<List<AuditLogModel>>> getAuditLogs(
+      {int page = 1, int limit = 40}) async {
+    final response = await dioClient.dio.get(
+      '/admin/audit-logs',
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+      },
+    );
+    return ApiResponseParser.parse<List<AuditLogModel>>(
+      response.data,
+      (json) => (json as List)
+          .map((e) => AuditLogModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

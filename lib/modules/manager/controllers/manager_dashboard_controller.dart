@@ -40,10 +40,11 @@ class ManagerDashboardController extends GetxController
 
   List<Map<String, dynamic>> get filteredCourtSlots {
     List<Map<String, dynamic>> list = List.from(currentCourtSlots);
-    // Exclude completed matches from court matches view (they appear in History view)
+    // Exclude COMPLETED and CANCELLED matches from active court matches view (they appear in History view)
     list = list.where((slot) {
       final status = (slot['status'] ?? '').toString().toUpperCase();
-      return status != 'COMPLETED';
+      final approvalStatus = (slot['approvalStatus'] ?? slot['approval_status'] ?? '').toString().toUpperCase();
+      return status != 'COMPLETED' && status != 'CANCELLED' && approvalStatus != 'REJECTED';
     }).toList();
 
     if (searchQuery.value.trim().isNotEmpty) {

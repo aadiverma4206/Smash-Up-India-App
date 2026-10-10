@@ -6,6 +6,8 @@ import { ApiResponse, ApiError } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AuthenticatedRequest } from '../../types/index.js';
 import { uploadProfileImageToS3, deleteS3Object } from '../../services/storage.service.js';
+import { CctvService } from '../cctv/cctv.service.js';
+import { CctvRepository } from '../cctv/cctv.repository.js';
 
 export const getDashboardController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
@@ -291,6 +293,45 @@ export const stopMatchRecordingController = asyncHandler(async (req: Authenticat
 
   const result = await ManagerService.stopMatchRecording(managerId, managerName, gameId);
   res.status(200).json(ApiResponse.success('Match recording stopped successfully', result));
+});
+
+export const extendMatchRecordingController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const managerId = req.user?.id || '';
+  const managerName = req.user?.email || 'Manager';
+  const { id: gameId } = req.params;
+  const { additionalMinutes } = req.body || {};
+
+  const rec = await CctvRepository.getRecordingByGame(gameId);
+  if (!rec) {
+    throw new ApiError(404, 'No active recording found for this game', 'RECORDING_NOT_FOUND');
+  }
+
+  const result = await CctvService.extendRecording(
+    managerId,
+    managerName,
+    req.user?.roleId || 2,
+    rec.id,
+    Number(additionalMinutes || 15)
+  );
+  res.status(200).json(ApiResponse.success('Match recording extended successfully', result));
+});
+
+export const getManagerCamerasController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw new ApiError(401, 'Unauthorized');
+
+  let clubId = req.query.clubId as string;
+  if (!clubId) {
+    const club = await ManagerRepository.getManagerClub(userId);
+    clubId = club?.id;
+  }
+
+  if (!clubId) {
+    return res.status(200).json(ApiResponse.success('Cameras retrieved', []));
+  }
+
+  const cameras = await CctvService.getClubCameras(clubId, userId, req.user?.roleId || 2);
+  res.status(200).json(ApiResponse.success('Cameras retrieved', cameras));
 });
 
 export const getGameDetailsController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {

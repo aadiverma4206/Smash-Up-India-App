@@ -1,7 +1,10 @@
 import cron from 'node-cron';
 import { dbPool } from '../config/db.config.js';
+import { env } from '../config/env.config.js';
 import { getSocketIO } from '../config/socket.config.js';
 import { logger } from '../utils/logger.js';
+import { CctvService } from '../modules/cctv/cctv.service.js';
+import { CctvRecordingService } from '../services/cctvRecording.service.js';
 
 /**
  * Single Reconciliation & Lifecycle Execution Pass (Restart-Safe & Idempotent)
@@ -9,6 +12,93 @@ import { logger } from '../utils/logger.js';
 export const runLifecycleCycle = async () => {
   const client = await dbPool.connect();
   try {
+    // -------------------------------------------------------------
+    // PHASE 0: AUTOMATIC UNAPPROVED MATCH CANCELLATION & WALLET REFUNDS
+    // -------------------------------------------------------------
+    await client.query('BEGIN');
+
+    // Ensure cancellation_reason column exists on public.games
+    await client.query('ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;');
+
+    const unapprovedGames = await client.query(
+      `SELECT g.id, g.creator_id, g.title, g.entry_fee, g.match_date, g.start_time
+       FROM public.games g
+       WHERE g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
+         AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP
+       FOR UPDATE OF g SKIP LOCKED;`
+    );
+
+    for (const game of unapprovedGames.rows) {
+      await client.query(
+        `UPDATE public.games
+         SET status = 'CANCELLED',
+             approval_status = 'REJECTED',
+             rejection_reason = 'Auto-cancelled: Game was not approved by manager before scheduled start time',
+             cancellation_reason = 'Auto-cancelled: Game was not approved by manager before scheduled start time',
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1;`,
+        [game.id]
+      );
+
+      logger.info(`🚫 [LifecycleWorker] Auto-cancelled unapproved game ${game.id} ("${game.title}") past scheduled start time`);
+
+      const paidPlayers = await client.query(
+        `SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount
+         FROM public.game_players gp
+         JOIN public.games g ON g.id = gp.game_id
+         WHERE gp.game_id = $1 AND gp.payment_status = 'PAID';`,
+        [game.id]
+      );
+
+      for (const player of paidPlayers.rows) {
+        const refundAmt = Number(player.refund_amount);
+        if (refundAmt > 0) {
+          await client.query(
+            `INSERT INTO public.wallets (user_id, balance)
+             VALUES ($1, $2)
+             ON CONFLICT (user_id)
+             DO UPDATE SET balance = public.wallets.balance + $2, updated_at = CURRENT_TIMESTAMP;`,
+            [player.user_id, refundAmt]
+          );
+
+          await client.query(
+            `INSERT INTO public.wallet_transactions (
+               wallet_id, user_id, type, amount, status, description
+             ) VALUES (
+               (SELECT id FROM public.wallets WHERE user_id = $1),
+               $1, 'REFUND', $2, 'SUCCESS',
+               $3
+             );`,
+            [
+              player.user_id,
+              refundAmt,
+              `Automated refund: Match "${game.title}" was auto-cancelled due to manager non-approval`,
+            ]
+          );
+
+          await client.query(
+            `UPDATE public.game_players
+             SET payment_status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP
+             WHERE game_id = $1 AND user_id = $2;`,
+            [game.id, player.user_id]
+          );
+
+          logger.info(`💰 [LifecycleWorker] Refunded ₹${refundAmt} to user ${player.user_id} for auto-cancelled game ${game.id}`);
+        }
+      }
+
+      try {
+        const io = getSocketIO();
+        io.emit('match:cancelled', {
+          gameId: game.id,
+          status: 'CANCELLED',
+          reason: 'Auto-cancelled: Not approved before scheduled start time',
+        });
+      } catch (_) {}
+    }
+
+    await client.query('COMMIT');
+
     // -------------------------------------------------------------
     // PHASE 12 & 31: AUTOMATIC MATCH START + CCTV RECORDING START
     // -------------------------------------------------------------
@@ -24,6 +114,8 @@ export const runLifecycleCycle = async () => {
        FOR UPDATE OF g SKIP LOCKED;`
     );
 
+    const gamesToRecord: Array<{ gameId: string; cameraId: string }> = [];
+
     for (const game of startingGames.rows) {
       // 1. Update Game to ONGOING (STARTED)
       await client.query(
@@ -35,7 +127,7 @@ export const runLifecycleCycle = async () => {
 
       logger.info(`⚽ [LifecycleWorker] Auto-started match ${game.id} ("${game.title}") to ONGOING`);
 
-      // 2. Trigger CCTV Recording if Camera Configured for Court/Club
+      // 2. Identify Camera for Court/Club
       try {
         const camRes = await client.query(
           `SELECT id, is_enabled FROM public.cctv_cameras
@@ -56,34 +148,57 @@ export const runLifecycleCycle = async () => {
           );
 
           if (existingRec.rows.length === 0) {
-            const s3Key = `recordings/${game.club_id}/${game.id}_${Date.now()}.mp4`;
-            await client.query(
-              `INSERT INTO public.cctv_recordings (
-                game_id, club_id, court_id, camera_id,
-                start_time, started_at,
-                scheduled_match_end, scheduled_match_end_at,
-                stop_deadline, post_match_stop_at,
-                s3_object_key, storage_object_key,
-                status, recording_status
-              ) VALUES (
-                $1, $2, $3, $4,
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-                ($5::date + $6::time), ($5::date + $6::time),
-                ($5::date + $6::time + INTERVAL '10 minutes'), ($5::date + $6::time + INTERVAL '10 minutes'),
-                $7, $7,
-                'RECORDING', 'RECORDING'
-              ) ON CONFLICT DO NOTHING;`,
-              [game.id, game.club_id, game.court_id, camera.id, game.match_date, game.end_time, s3Key]
-            );
-
-            logger.info(`📹 [LifecycleWorker] Auto-triggered CCTV recording for Match ${game.id} on Court ${game.court_id}`);
+            gamesToRecord.push({ gameId: game.id, cameraId: camera.id });
           }
         }
       } catch (cctvErr: any) {
-        logger.error({ cctvErr }, `Failed to initialize CCTV for game ${game.id}`);
+        logger.error({ cctvErr }, `Failed to query camera for game ${game.id}`);
       }
 
-      // 3. Emit Real-time Socket Event
+      // 3. Create Notifications for Manager and Roster Players
+      try {
+        const courtName = game.court_id === 'court_2' ? 'Court 2' : 'Court 1';
+
+        // Notify managers
+        const managers = await client.query(
+          `SELECT user_id FROM public.club_managers WHERE club_id = $1;`,
+          [game.club_id]
+        );
+        for (const mgr of managers.rows) {
+          await client.query(
+            `INSERT INTO public.notifications (user_id, title, body, message, type, data)
+             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);`,
+            [
+              mgr.user_id,
+              '⚽ Match Auto-Started',
+              `Match "${game.title}" on ${courtName} has auto-started at scheduled start time!`,
+              JSON.stringify({ gameId: game.id, route: '/manager/games/details' }),
+            ]
+          );
+        }
+
+        // Notify roster players
+        const players = await client.query(
+          `SELECT user_id FROM public.game_players WHERE game_id = $1;`,
+          [game.id]
+        );
+        for (const ply of players.rows) {
+          await client.query(
+            `INSERT INTO public.notifications (user_id, title, body, message, type, data)
+             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);`,
+            [
+              ply.user_id,
+              '⚽ Kick-off! Match Started',
+              `Your match "${game.title}" on ${courtName} has officially started! Good luck!`,
+              JSON.stringify({ gameId: game.id, route: '/games/details' }),
+            ]
+          );
+        }
+      } catch (notifErr: any) {
+        logger.error({ notifErr }, `Failed to create auto-start notifications for game ${game.id}`);
+      }
+
+      // 4. Emit Real-time Socket Event
       try {
         const io = getSocketIO();
         io.to(`game:${game.id}`).emit('match:started', {
@@ -103,6 +218,22 @@ export const runLifecycleCycle = async () => {
 
     await client.query('COMMIT');
 
+    // Trigger real CCTV recordings now that games are committed as ONGOING
+    for (const item of gamesToRecord) {
+      try {
+        await CctvService.startMatchRecording(
+          'SYSTEM_WORKER',
+          'Auto Lifecycle Worker',
+          1,
+          item.gameId,
+          item.cameraId
+        );
+        logger.info(`📹 [LifecycleWorker] Auto-triggered CCTV recording for Match ${item.gameId}`);
+      } catch (cctvStartErr: any) {
+        logger.error({ cctvStartErr }, `[LifecycleWorker] Could not start CCTV recording for game ${item.gameId}`);
+      }
+    }
+
     // -------------------------------------------------------------
     // PHASE 13 & 32: AUTOMATIC MATCH END
     // -------------------------------------------------------------
@@ -116,6 +247,8 @@ export const runLifecycleCycle = async () => {
        FOR UPDATE OF g SKIP LOCKED;`
     );
 
+    const postMatchMinutes = env.RECORDING_POST_MATCH_MINUTES || 15;
+
     for (const game of endingGames.rows) {
       await client.query(
         `UPDATE public.games
@@ -126,12 +259,14 @@ export const runLifecycleCycle = async () => {
 
       logger.info(`🏁 [LifecycleWorker] Auto-completed match ${game.id} ("${game.title}") to COMPLETED`);
 
-      // Switch active CCTV recording to POST_MATCH (recording up to end + 10 mins)
+      // Switch active CCTV recording to POST_MATCH (recording up to end + 15 mins)
       await client.query(
         `UPDATE public.cctv_recordings
-         SET recording_status = 'POST_MATCH'
+         SET recording_status = 'POST_MATCH',
+             stop_deadline = CURRENT_TIMESTAMP + ($2 || ' minutes')::interval,
+             post_match_stop_at = CURRENT_TIMESTAMP + ($2 || ' minutes')::interval
          WHERE game_id = $1 AND (status = 'RECORDING' OR recording_status = 'RECORDING');`,
-        [game.id]
+        [game.id, postMatchMinutes]
       );
 
       try {
@@ -152,13 +287,12 @@ export const runLifecycleCycle = async () => {
     await client.query('COMMIT');
 
     // -------------------------------------------------------------
-    // PHASE 32 & 40: CCTV AUTO-STOP AT MATCH_END + 10 MINUTES
+    // PHASE 32 & 40: CCTV AUTO-STOP AT MATCH_END + 15 MINUTES
     // -------------------------------------------------------------
     await client.query('BEGIN');
 
     const expiredRecordings = await client.query(
-      `SELECT rec.id, rec.game_id, rec.club_id, rec.court_id, rec.s3_object_key,
-              COALESCE(rec.storage_object_key, rec.s3_object_key) as final_s3_key
+      `SELECT rec.id, rec.game_id
        FROM public.cctv_recordings rec
        WHERE (rec.status = 'RECORDING' OR rec.recording_status IN ('RECORDING', 'POST_MATCH'))
          AND (
@@ -168,43 +302,21 @@ export const runLifecycleCycle = async () => {
        FOR UPDATE SKIP LOCKED;`
     );
 
-    for (const rec of expiredRecordings.rows) {
-      logger.info(`🛑 [LifecycleWorker] CCTV Auto-stopping recording ${rec.id} for Game ${rec.game_id} (10-min window expired)`);
-
-      await client.query(
-        `UPDATE public.cctv_recordings
-         SET status = 'COMPLETED', recording_status = 'COMPLETED',
-             actual_stop_time = CURRENT_TIMESTAMP, actual_stopped_at = CURRENT_TIMESTAMP
-         WHERE id = $1;`,
-        [rec.id]
-      );
-
-      // Save metadata into game_videos
-      await client.query(
-        `INSERT INTO public.game_videos (game_id, club_id, court_id, title, video_url, status)
-         VALUES ($1, $2, $3, $4, $5, 'AVAILABLE')
-         ON CONFLICT DO NOTHING;`,
-        [rec.game_id, rec.club_id, rec.court_id, `Match Recording - Game ${rec.game_id}`, rec.final_s3_key]
-      );
-
-      // Audit log
-      await client.query(
-        `INSERT INTO public.audit_logs (admin_name, action, target, details)
-         VALUES ('SYSTEM_LIFECYCLE_WORKER', 'AUTO_STOP_CCTV', $1, $2);`,
-        [`Recording:${rec.id}`, `Auto-stopped CCTV recording after 10-minute post-match window expired`]
-      );
-
-      try {
-        const io = getSocketIO();
-        io.to(`game:${rec.game_id}`).emit('recording:available', {
-          gameId: rec.game_id,
-          status: 'AVAILABLE',
-          title: `Match Recording - Game ${rec.game_id}`,
-        });
-      } catch (sockErr) {}
-    }
-
+    const recsToStop = expiredRecordings.rows;
     await client.query('COMMIT');
+
+    for (const rec of recsToStop) {
+      logger.info(`🛑 [LifecycleWorker] CCTV Auto-stopping recording ${rec.id} for Game ${rec.game_id} (15-min post-match window expired)`);
+      try {
+        await CctvRecordingService.stopRecording(rec.id, {
+          userId: 'SYSTEM_LIFECYCLE_WORKER',
+          reason: 'LIFECYCLE_POST_MATCH_DEADLINE_EXPIRED',
+          manualStop: false,
+        });
+      } catch (stopErr: any) {
+        logger.error({ stopErr }, `Failed to auto-stop recording ${rec.id}`);
+      }
+    }
   } catch (err: any) {
     await client.query('ROLLBACK').catch(() => {});
     logger.error({ err }, 'Error executing Match Lifecycle & CCTV Worker cycle');

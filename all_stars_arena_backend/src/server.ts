@@ -5,6 +5,7 @@ import { dbPool, initDbTables } from './config/db.config.js';
 import { initSocket } from './config/socket.config.js';
 import { logger } from './utils/logger.js';
 import { startMatchLifecycleWorker, startPaymentExpiryJob, startPaymentReconciliationJob } from './jobs/index.js';
+import { CctvRecordingService } from './services/cctvRecording.service.js';
 
 // Catch unhandled synchronous exceptions
 process.on('uncaughtException', (err: Error) => {
@@ -25,26 +26,43 @@ const httpServer = createServer(app);
 // Initialize Socket.io Real-Time Football Engine
 initSocket(httpServer);
 
-// Verify / Initialize DB Tables with robust error catch
-initDbTables().catch((err) => {
-  logger.error({ err }, '❌ Database table initialization failed on startup');
-});
-
 const PORT = env.PORT;
 
-const server = httpServer.listen(PORT, () => {
-  logger.info(`⚽ ALL STARS ARENA Server running in ${env.NODE_ENV} mode on port ${PORT}`);
-  logger.info(`⚡ Socket.io Real-Time engine active on ws://localhost:${PORT}`);
-
-  // Start Background Workers & Schedulers
+const startServer = async () => {
+  // 1. Verify / Initialize DB Tables with robust error catch
   try {
-    startMatchLifecycleWorker();
-    startPaymentExpiryJob();
-    startPaymentReconciliationJob();
-  } catch (workerErr: any) {
-    logger.error({ workerErr }, 'Failed to start background worker jobs');
+    await initDbTables();
+  } catch (err) {
+    logger.error({ err }, '❌ Database table initialization failed on startup');
   }
-});
+
+  // 2. Start HTTP server
+  const server = httpServer.listen(PORT, () => {
+    logger.info(`⚽ ALL STARS ARENA Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+    logger.info(`⚡ Socket.io Real-Time engine active on ws://localhost:${PORT}`);
+
+    // Start Background Workers & Schedulers
+    try {
+      startMatchLifecycleWorker();
+      startPaymentExpiryJob();
+      startPaymentReconciliationJob();
+
+      // Verify FFmpeg & reconcile active CCTV recordings on boot
+      CctvRecordingService.checkFfmpeg().catch((err) => {
+        logger.warn({ err }, 'FFmpeg startup check returned warning');
+      });
+      CctvRecordingService.reconcileOnBoot().catch((err) => {
+        logger.error({ err }, 'CCTV boot reconciliation failed');
+      });
+    } catch (workerErr: any) {
+      logger.error({ workerErr }, 'Failed to start background worker jobs');
+    }
+  });
+
+  return server;
+};
+
+const server = await startServer();
 
 // Graceful Shutdown Handler
 const handleGracefulShutdown = (signal: string) => {

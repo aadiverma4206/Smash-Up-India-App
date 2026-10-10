@@ -9,6 +9,7 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../support/widgets/support_legal_cards.dart';
 
 class ManagerProfileView extends StatefulWidget {
   const ManagerProfileView({super.key});
@@ -361,6 +362,10 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // ❓ HELP & SUPPORT AND LEGAL SECTION
+                    const SupportAndLegalSection(),
                     const SizedBox(height: 24),
 
                     // 🚪 LOGOUT BUTTON

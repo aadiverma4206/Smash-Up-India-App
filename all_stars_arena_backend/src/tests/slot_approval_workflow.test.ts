@@ -87,20 +87,27 @@ describe('Slot Approval & Match Workflow Unit Tests', () => {
       .send({ identifier: testManagerEmail, password: testPassword });
     managerToken = mLogin.body.data.accessToken;
 
-    // Get club & court
-    const clubRes = await dbPool.query(`SELECT id FROM public.clubs LIMIT 1;`);
-    testClubId = clubRes.rows[0]?.id;
+    // Create dedicated test club & court to prevent flakiness
+    const clubRes = await dbPool.query(
+      `INSERT INTO public.clubs (name, address, city, status)
+       VALUES ('Workflow Arena Club', 'Ring Road, Raipur', 'Raipur', 'ACTIVE')
+       RETURNING id;`
+    );
+    testClubId = clubRes.rows[0].id;
 
-    const courtRes = await dbPool.query(`SELECT id FROM public.courts WHERE club_id = $1 LIMIT 1;`, [testClubId]);
-    testCourtId = courtRes.rows[0]?.id;
+    const courtRes = await dbPool.query(
+      `INSERT INTO public.courts (club_id, name, base_price, status)
+       VALUES ($1, 'Workflow Pitch 1', 1000.00, 'AVAILABLE')
+       RETURNING id;`,
+      [testClubId]
+    );
+    testCourtId = courtRes.rows[0].id;
 
     // Assign manager to club
-    if (managerUserId && testClubId) {
-      await dbPool.query(
-        `INSERT INTO public.club_managers (club_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
-        [testClubId, managerUserId]
-      );
-    }
+    await dbPool.query(
+      `INSERT INTO public.club_managers (club_id, user_id) VALUES ($1, $2), ('all_stars_arena_club', $2) ON CONFLICT DO NOTHING;`,
+      [testClubId, managerUserId]
+    );
   });
 
   it('Player should create a football game successfully', async () => {

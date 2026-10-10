@@ -84,6 +84,14 @@ describe('ALL STARS ARENA Manager, Admin & CCTV Management Production Tests', ()
       [clubId, courtId, managerId]
     );
     gameId = gmRes.rows[0].id;
+
+    // Enroll player into match roster so they are an authorized participant
+    const playerId = plLogin.body.data.user.id;
+    await dbPool.query(
+      `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
+       VALUES ($1, $2, 'TEAM_A', 'MID', 'PAID') ON CONFLICT DO NOTHING;`,
+      [gameId, playerId]
+    );
   });
 
   afterAll(async () => {

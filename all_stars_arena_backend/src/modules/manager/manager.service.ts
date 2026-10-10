@@ -1,6 +1,7 @@
 import { ManagerRepository } from './manager.repository.js';
 import { CctvService } from '../cctv/cctv.service.js';
 import { CctvRepository } from '../cctv/cctv.repository.js';
+import { CctvRecordingService } from '../../services/cctvRecording.service.js';
 import { GamesRepository } from '../games/games.repository.js';
 import { updateLiveMatchScore } from '../../services/match.service.js';
 import { getSignedPlaybackUrl } from '../../services/storage.service.js';
@@ -657,15 +658,17 @@ export class ManagerService {
       );
 
       // Stop CCTV recording if active
+      let activeRecordingId: string | null = null;
       try {
         const recRes = await client.query(
-          `SELECT id FROM public.cctv_recordings WHERE game_id = $1 AND status = 'RECORDING';`,
+          `SELECT id FROM public.cctv_recordings WHERE game_id = $1 AND (status = 'RECORDING' OR recording_status = 'RECORDING');`,
           [gameId]
         );
         if (recRes.rows.length > 0) {
+          activeRecordingId = recRes.rows[0].id;
           await client.query(
-            `UPDATE public.cctv_recordings SET recording_status = 'STOPPED', actual_stopped_at = CURRENT_TIMESTAMP WHERE id = $1;`,
-            [recRes.rows[0].id]
+            `UPDATE public.cctv_recordings SET status = 'CANCELLED', recording_status = 'CANCELLED', actual_stopped_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+            [activeRecordingId]
           );
         }
       } catch (_) {}
@@ -759,7 +762,30 @@ export class ManagerService {
         [managerUserId, managerName, gameId, cancellationReason]
       );
 
+      if (refundNotifications.length > 0) {
+        await client.query(
+          `INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)
+           VALUES ($1, $2, 'WALLET_REFUND_PROCESSED', $3, $4);`,
+          [
+            managerUserId,
+            managerName,
+            gameId,
+            `Refunds credited to ${refundNotifications.length} player wallets for cancelled match "${game.title || gameId}" (Reason: ${cancellationReason})`,
+          ]
+        );
+      }
+
       await client.query('COMMIT');
+
+      if (activeRecordingId) {
+        try {
+          await CctvRecordingService.stopRecording(activeRecordingId, {
+            userId: managerUserId,
+            reason: `MATCH_CANCELLED: ${cancellationReason}`,
+            manualStop: true,
+          });
+        } catch (_) {}
+      }
 
       // Emit notifications after successful database commit
       for (const item of refundNotifications) {
@@ -1061,7 +1087,18 @@ export class ManagerService {
     }
 
     // Verify scheduled end time: Manager cannot stop recording before match end! (Phase 32)
-    const matchEndTime = new Date(`${game.match_date}T${game.end_time}`);
+    let datePart = '';
+    if (game.match_date instanceof Date) {
+      const year = game.match_date.getFullYear();
+      const month = String(game.match_date.getMonth() + 1).padStart(2, '0');
+      const day = String(game.match_date.getDate()).padStart(2, '0');
+      datePart = `${year}-${month}-${day}`;
+    } else {
+      datePart = String(game.match_date).slice(0, 10);
+    }
+    const timeStr = String(game.end_time).length === 5 ? `${game.end_time}:00` : String(game.end_time);
+    const parsedEndTime = new Date(`${datePart}T${timeStr}`);
+    const matchEndTime = !isNaN(parsedEndTime.getTime()) ? parsedEndTime : new Date();
     const now = new Date();
     if (now < matchEndTime && game.status !== 'COMPLETED') {
       throw new ApiError(

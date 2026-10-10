@@ -24,4 +24,15 @@ abstract class Routes {
   static const managerProfile = '/manager/profile';
   static const cctvDashboard = '/manager/cctv';
   static const adminDashboard = '/admin/dashboard';
+  static const adminProfile = '/admin/profile';
+  static const adminPlayers = '/admin/players';
+  static const adminManagers = '/admin/managers';
+  static const adminUserDetail = '/admin/user-detail';
+  static const adminAuditLogs = '/admin/audit-logs';
+  static const faq = '/support/faq';
+  static const chatSupport = '/support/chat';
+  static const callSupport = '/support/call';
+  static const termsConditions = '/support/terms';
+  static const privacyPolicy = '/support/privacy';
+  static const riskDisclosure = '/support/risk-disclosure';
 }

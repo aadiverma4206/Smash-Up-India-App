@@ -10,5 +10,7 @@ router.use(authenticateToken);
 
 router.get('/:id', validateRequest(getVideoMetadataSchema), getVideoMetadata);
 router.get('/:id/playback-url', validateRequest(getVideoPlaybackUrlSchema), getVideoPlaybackUrl);
+router.get('/:id/playback', validateRequest(getVideoPlaybackUrlSchema), getVideoPlaybackUrl);
+router.post('/:id/playback', validateRequest(getVideoPlaybackUrlSchema), getVideoPlaybackUrl);
 
 export default router;

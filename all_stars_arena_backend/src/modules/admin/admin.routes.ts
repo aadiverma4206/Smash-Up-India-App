@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAdminDashboardController,
   getUsersController,
+  getUserDetailsController,
   suspendUserController,
   createManagerController,
   createAdminController,
@@ -20,6 +21,7 @@ router.use(requireRole([1])); // Exclusively for ADMIN (Role ID 1)
 
 router.get('/dashboard', getAdminDashboardController);
 router.get('/users', getUsersController);
+router.get('/users/:id', getUserDetailsController);
 router.patch('/users/:id/suspend', suspendUserController);
 
 router.post('/managers', createManagerController);

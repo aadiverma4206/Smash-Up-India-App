@@ -53,7 +53,18 @@ import '../../modules/cctv/views/cctv_details_view.dart';
 import '../../modules/admin/bindings/admin_binding.dart';
 import '../../modules/admin/views/admin_dashboard_view.dart';
 import '../../modules/admin/views/admin_users_view.dart';
+import '../../modules/admin/views/admin_players_view.dart';
+import '../../modules/admin/views/admin_managers_view.dart';
+import '../../modules/admin/views/admin_user_detail_view.dart';
+import '../../modules/admin/views/admin_audit_logs_view.dart';
 import '../../modules/admin/views/admin_create_manager_view.dart';
+import '../../modules/admin/views/admin_profile_view.dart';
+import '../../modules/support/views/faq_view.dart';
+import '../../modules/support/views/chat_support_view.dart';
+import '../../modules/support/views/call_support_view.dart';
+import '../../modules/support/views/terms_conditions_view.dart';
+import '../../modules/support/views/privacy_policy_view.dart';
+import '../../modules/support/views/risk_disclosure_view.dart';
 import '../../modules/videos/controllers/video_player_controller.dart';
 import '../../modules/videos/views/video_player_view.dart';
 import '../../core/widgets/app_loader.dart';
@@ -290,13 +301,62 @@ class AppPages {
     ),
     GetPage(
       name: '/admin/users',
-      page: () => AdminUsersView(),
+      page: () => const AdminUsersView(),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminPlayers,
+      page: () => AdminPlayersView(showAppBar: true),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminManagers,
+      page: () => AdminManagersView(showAppBar: true),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminUserDetail,
+      page: () => const AdminUserDetailView(),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminAuditLogs,
+      page: () => const AdminAuditLogsView(),
       binding: AdminBinding(),
     ),
     GetPage(
       name: '/admin/managers/create',
       page: () => AdminCreateManagerView(),
       binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminProfile,
+      page: () => const AdminProfileView(),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.faq,
+      page: () => const FaqView(),
+    ),
+    GetPage(
+      name: Routes.chatSupport,
+      page: () => const ChatSupportView(),
+    ),
+    GetPage(
+      name: Routes.callSupport,
+      page: () => const CallSupportView(),
+    ),
+    GetPage(
+      name: Routes.termsConditions,
+      page: () => const TermsConditionsView(),
+    ),
+    GetPage(
+      name: Routes.privacyPolicy,
+      page: () => const PrivacyPolicyView(),
+    ),
+    GetPage(
+      name: Routes.riskDisclosure,
+      page: () => const RiskDisclosureView(),
     ),
     GetPage(
       name: '/videos/player',

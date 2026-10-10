@@ -5,9 +5,11 @@ export const createCctvCameraSchema = z.object({
     clubId: z.string().min(1, 'Club ID is required'),
     courtId: z.string().optional(),
     name: z.string().min(2, 'Camera name is required'),
-    rtspUrl: z.string().url('Invalid RTSP / HTTP camera stream URL'),
+    rtspUrl: z.string().min(5, 'Camera stream URL is required'),
     ipAddress: z.string().optional(),
     port: z.number().int().optional().default(554),
+    serialNumber: z.string().optional(),
+    protocol: z.string().optional().default('rtsp'),
   }),
 });
 
@@ -18,10 +20,21 @@ export const updateCctvCameraSchema = z.object({
   body: z.object({
     name: z.string().optional(),
     courtId: z.string().optional(),
-    rtspUrl: z.string().url().optional(),
+    rtspUrl: z.string().min(5).optional(),
     ipAddress: z.string().optional(),
     port: z.number().int().optional(),
+    serialNumber: z.string().optional(),
+    protocol: z.string().optional(),
     isEnabled: z.boolean().optional(),
+  }),
+});
+
+export const toggleCameraSchema = z.object({
+  params: z.object({
+    cameraId: z.string().min(1, 'Camera ID is required'),
+  }),
+  body: z.object({
+    isEnabled: z.boolean(),
   }),
 });
 
@@ -40,7 +53,7 @@ export const getClubCamerasSchema = z.object({
 export const startRecordingSchema = z.object({
   body: z.object({
     gameId: z.string().min(1, 'Game ID is required'),
-    cameraId: z.string().min(1, 'Camera ID is required'),
+    cameraId: z.string().optional(),
   }),
 });
 
@@ -48,6 +61,11 @@ export const stopRecordingSchema = z.object({
   params: z.object({
     recordingId: z.string().min(1, 'Recording ID is required'),
   }),
+  body: z
+    .object({
+      reason: z.string().optional(),
+    })
+    .optional(),
 });
 
 export const extendRecordingSchema = z.object({

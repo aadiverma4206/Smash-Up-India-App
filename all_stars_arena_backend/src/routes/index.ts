@@ -36,6 +36,7 @@ router.use('/community', communityRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/videos', videosRoutes);
+router.use('/game-videos', videosRoutes);
 router.use('/matches', matchRoutes);
 router.use('/realtime', realtimeRoutes);
 router.use('/cctv', cctvRoutes);

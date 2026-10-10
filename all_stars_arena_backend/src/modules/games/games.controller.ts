@@ -5,6 +5,8 @@ import { updateLiveMatchScore } from '../../services/match.service.js';
 import { ApiResponse, ApiError } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AuthenticatedRequest } from '../../types/index.js';
+import { CctvService } from '../cctv/cctv.service.js';
+import { CctvRepository } from '../cctv/cctv.repository.js';
 
 export const getGamesController = asyncHandler(async (req: Request, res: Response) => {
   let skillFilter: string | undefined = undefined;
@@ -246,3 +248,51 @@ export const cancelPlayerGameController = asyncHandler(async (req: Authenticated
   const result = await GamesService.cancelPlayerGame(userId, gameId, cancellationReason);
   res.status(200).json(ApiResponse.success('Match cancelled by host player and refunds processed', result));
 });
+
+export const getGameRecordingController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id || '';
+  const userRole = req.user?.roleId || 3;
+  const { id: gameId } = req.params;
+
+  const result = await CctvService.getGameRecording(gameId, userId, userRole);
+  res.status(200).json(ApiResponse.success('Match recording retrieved', result));
+});
+
+export const stopGameRecordingController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const managerId = req.user?.id || '';
+  const managerName = req.user?.email || 'Manager';
+  const userRole = req.user?.roleId || 2;
+  const { id: gameId } = req.params;
+  const { reason } = req.body || {};
+
+  const rec = await CctvRepository.getRecordingByGame(gameId);
+  if (!rec) {
+    throw new ApiError(404, 'No active recording found for this game', 'RECORDING_NOT_FOUND');
+  }
+
+  const result = await CctvService.stopMatchRecording(managerId, managerName, userRole, rec.id, reason);
+  res.status(200).json(ApiResponse.success('CCTV Recording stopped successfully', result));
+});
+
+export const extendGameRecordingController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const managerId = req.user?.id || '';
+  const managerName = req.user?.email || 'Manager';
+  const userRole = req.user?.roleId || 2;
+  const { id: gameId } = req.params;
+  const { additionalMinutes } = req.body || {};
+
+  const rec = await CctvRepository.getRecordingByGame(gameId);
+  if (!rec) {
+    throw new ApiError(404, 'No active recording found for this game', 'RECORDING_NOT_FOUND');
+  }
+
+  const result = await CctvService.extendRecording(
+    managerId,
+    managerName,
+    userRole,
+    rec.id,
+    Number(additionalMinutes || 15)
+  );
+  res.status(200).json(ApiResponse.success('CCTV Recording extended successfully', result));
+});
+

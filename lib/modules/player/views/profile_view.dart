@@ -6,6 +6,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/theme_service.dart';
 import '../../../core/storage/database_service.dart';
 import '../../../core/widgets/app_loader.dart';
+import '../../support/widgets/support_legal_cards.dart';
 
 class ProfileView extends GetView<PlayerController> {
   const ProfileView({super.key});
@@ -101,9 +102,13 @@ class ProfileView extends GetView<PlayerController> {
                     context, 'Preferences & Cache', Icons.sd_storage_outlined),
                 const SizedBox(height: 10),
                 _buildPreferencesAndStorageCard(context),
+                const SizedBox(height: 20),
+
+                // 6. Help & Support and Legal Section
+                const SupportAndLegalSection(),
                 const SizedBox(height: 24),
 
-                // 6. Prominent Logout Action Button
+                // 7. Prominent Logout Action Button
                 _buildLogoutCard(context),
                 const SizedBox(height: 32),
 

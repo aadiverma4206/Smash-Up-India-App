@@ -24,6 +24,21 @@ void main() {
       expect(admin.onlineCameras, 16);
     });
 
+    test('AdminDashboardModel deserializes production backend payload correctly', () {
+      final json = {
+        'totalUsers': 12,
+        'totalClubs': 3,
+        'totalGames': 45,
+        'totalRevenueRupees': 15000.0,
+      };
+
+      final admin = AdminDashboardModel.fromJson(json);
+      expect(admin.totalUsers, 12);
+      expect(admin.totalClubs, 3);
+      expect(admin.totalRevenue, 15000.0);
+      expect(admin.activeRecordings, 45);
+    });
+
     test('AdminUserModel deserializes user roles and statuses', () {
       final json = {
         'id': 'usr_m201',
@@ -42,6 +57,41 @@ void main() {
       expect(user.status, 'ACTIVE');
     });
 
+    test('AdminUserModel deserializes production backend DB row without roleName', () {
+      final json = {
+        'id': '9948293',
+        'name': 'John Doe',
+        'email': 'john@example.com',
+        'phone': '+919876543210',
+        'role_id': 2,
+        'status': 'ACTIVE',
+        'created_at': '2026-09-28T18:00:00.000Z',
+      };
+
+      final user = AdminUserModel.fromJson(json);
+      expect(user.id, '9948293');
+      expect(user.roleId, 2);
+      expect(user.roleName, 'MANAGER');
+      expect(user.createdAt, '2026-09-28T18:00:00.000Z');
+    });
+
+    test('AuditLogModel deserializes system audit events correctly', () {
+      final json = {
+        'id': 'log_101',
+        'user_id': 'admin_01',
+        'action': 'USER_SUSPENDED',
+        'details': 'User account suspended by Admin',
+        'ip_address': '192.168.1.1',
+        'created_at': '2026-09-28T20:00:00Z',
+      };
+
+      final log = AuditLogModel.fromJson(json);
+      expect(log.id, 'log_101');
+      expect(log.action, 'USER_SUSPENDED');
+      expect(log.userId, 'admin_01');
+      expect(log.ipAddress, '192.168.1.1');
+    });
+
     test('VideoModel deserializes short-lived signed S3 playback URL securely', () {
       final json = {
         'id': 'vid_501',
@@ -50,7 +100,8 @@ void main() {
         'clubName': 'All Stars Turf Raipur',
         'courtName': 'Pitch 1',
         'matchDate': '2026-09-28',
-        'playbackUrl': 'https://all-stars-arena-recordings.s3.ap-south-1.amazonaws.com/recordings/test.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA...',
+        'playbackUrl':
+            'https://all-stars-arena-recordings.s3.ap-south-1.amazonaws.com/recordings/test.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA...',
         'durationSeconds': 5400,
       };
 

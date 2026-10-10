@@ -22,6 +22,9 @@ class DatabaseService {
         ''');
       },
     );
+
+    // Prune expired cache records older than 5 days on DB initialization
+    await pruneExpiredCache();
   }
 
   Future<void> cacheData(String key, String jsonPayload) async {
@@ -48,6 +51,42 @@ class DatabaseService {
       return results.first['payload'] as String?;
     }
     return null;
+  }
+
+  Future<String?> getValidCachedData(String key, {Duration maxAge = const Duration(days: 5)}) async {
+    try {
+      final results = await _db.query(
+        'cached_data',
+        where: 'key = ?',
+        whereArgs: [key],
+        limit: 1,
+      );
+
+      if (results.isNotEmpty) {
+        final updatedAtStr = results.first['updated_at'] as String?;
+        if (updatedAtStr != null) {
+          final updatedAt = DateTime.tryParse(updatedAtStr);
+          if (updatedAt != null) {
+            final difference = DateTime.now().difference(updatedAt);
+            if (difference <= maxAge) {
+              return results.first['payload'] as String?;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> pruneExpiredCache({Duration maxAge = const Duration(days: 5)}) async {
+    try {
+      final expiryCutoff = DateTime.now().subtract(maxAge).toIso8601String();
+      await _db.delete(
+        'cached_data',
+        where: 'updated_at < ?',
+        whereArgs: [expiryCutoff],
+      );
+    } catch (_) {}
   }
 
   Future<void> clearCache() async {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
+import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/services/auth_service.dart';
@@ -103,10 +105,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                             _buildCircularActionsGrid(context),
                             const SizedBox(height: 20),
 
-                            // Platform Overview Highlight Card
-                            _buildPlatformHighlightSection(context),
-                            const SizedBox(height: 16),
-
                             // Platform Metrics Overview Grid
                             _buildMetricsSection(context),
                             const SizedBox(height: 20),
@@ -194,13 +192,13 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
 
                             const Spacer(),
 
-                            // Action Icons (Refresh, User Search, Logout Avatar)
+                            // Action Icons (Notifications, Profile, Logout Avatar)
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildRefreshButton(context),
+                                _buildNotificationButton(context),
                                 const SizedBox(width: 8),
-                                _buildUsersButton(context),
+                                _buildProfileButton(context),
                                 const SizedBox(width: 8),
                                 _buildLogoutAvatar(context),
                               ],
@@ -238,14 +236,13 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   ],
                 ),
                 child: BottomNavigationBar(
-                  currentIndex: controller.selectedNavIndex.value,
+                  currentIndex: controller.selectedNavIndex.value.clamp(0, 3),
                   onTap: (index) {
                     controller.changeNavIndex(index);
                     if (index == 0) controller.loadDashboard();
-                    if (index == 1) Get.toNamed('/admin/users');
-                    if (index == 2) Get.toNamed('/admin/managers/create');
-                    if (index == 3) Get.toNamed('/manager/cctv');
-                    if (index == 4) _confirmLogout(context);
+                    if (index == 1) Get.toNamed('/manager/cctv');
+                    if (index == 2) Get.toNamed(Routes.adminProfile);
+                    if (index == 3) _confirmLogout(context);
                   },
                   type: BottomNavigationBarType.fixed,
                   backgroundColor: Theme.of(context).cardColor,
@@ -278,32 +275,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       label: 'Dashboard',
                     ),
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.people_alt_rounded, size: 22),
-                      label: 'Users',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Stack(
-                        children: [
-                          const Icon(Icons.person_add_rounded, size: 22),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      label: 'Create Mgr',
-                    ),
-                    const BottomNavigationBarItem(
                       icon: Icon(Icons.videocam_rounded, size: 22),
                       label: 'CCTV',
+                    ),
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.person_rounded, size: 22),
+                      label: 'Profile',
                     ),
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.logout_rounded, size: 22),
@@ -326,14 +303,13 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           Obx(
             () => NavigationRail(
               backgroundColor: Theme.of(context).cardColor,
-              selectedIndex: controller.selectedNavIndex.value,
+              selectedIndex: controller.selectedNavIndex.value.clamp(0, 3),
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
                 if (index == 0) controller.loadDashboard();
-                if (index == 1) Get.toNamed('/admin/users');
-                if (index == 2) Get.toNamed('/admin/managers/create');
-                if (index == 3) Get.toNamed('/manager/cctv');
-                if (index == 4) _confirmLogout(context);
+                if (index == 1) Get.toNamed('/manager/cctv');
+                if (index == 2) Get.toNamed(Routes.adminProfile);
+                if (index == 3) _confirmLogout(context);
               },
               labelType: NavigationRailLabelType.all,
               selectedIconTheme: const IconThemeData(color: Color(0xFF00C853)),
@@ -354,12 +330,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.apps_rounded), label: Text('Dashboard')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.people_alt_rounded), label: Text('Users')),
-                NavigationRailDestination(
-                    icon: Icon(Icons.person_add_rounded),
-                    label: Text('Create Mgr')),
-                NavigationRailDestination(
                     icon: Icon(Icons.videocam_rounded), label: Text('CCTV')),
+                NavigationRailDestination(
+                    icon: Icon(Icons.person_rounded), label: Text('Profile')),
                 NavigationRailDestination(
                     icon: Icon(Icons.logout_rounded), label: Text('Logout')),
               ],
@@ -411,6 +384,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       const SizedBox(width: 10),
                       const AppShimmer(width: 120, height: 18, borderRadius: 6),
                       const Spacer(),
+                      const AppShimmer(
+                        width: 38,
+                        height: 38,
+                        shape: BoxShape.circle,
+                      ),
+                      const SizedBox(width: 8),
                       const AppShimmer(
                         width: 38,
                         height: 38,
@@ -626,9 +605,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  Widget _buildRefreshButton(BuildContext context) {
+  Widget _buildNotificationButton(BuildContext context) {
     return InkWell(
-      onTap: controller.loadDashboard,
+      onTap: () => Get.toNamed('/notifications'),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 38,
@@ -644,7 +623,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         ),
         child: const Center(
           child: Icon(
-            Icons.refresh_rounded,
+            Icons.notifications_none_rounded,
             color: Colors.black87,
             size: 20,
           ),
@@ -653,31 +632,50 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  Widget _buildUsersButton(BuildContext context) {
-    return InkWell(
-      onTap: () => Get.toNamed('/admin/users'),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-          boxShadow: const [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.people_alt_outlined,
-            color: Colors.black87,
-            size: 20,
+  Widget _buildProfileButton(BuildContext context) {
+    return Obx(() {
+      final user = AuthService.to.currentUser.value;
+      final avatarUrl = user?.profileImageUrl ?? '';
+
+      return InkWell(
+        onTap: () => Get.toNamed(Routes.adminProfile),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF7E57C2), width: 1.5),
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+            ],
+          ),
+          child: ClipOval(
+            child: avatarUrl.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: avatarUrl,
+                    width: 38,
+                    height: 38,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => const Icon(
+                      Icons.person_rounded,
+                      color: Color(0xFF7E57C2),
+                      size: 20,
+                    ),
+                  )
+                : const Center(
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: Color(0xFF7E57C2),
+                      size: 20,
+                    ),
+                  ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildLogoutAvatar(BuildContext context) {
@@ -707,7 +705,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// Dark Pill Admin Action Bar
+  /// Dark Pill Admin Action Bar - Single Audit Logs Pill
   Widget _buildAdminPillBar(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -725,7 +723,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed('/admin/users'),
+          onTap: () => Get.toNamed(Routes.adminAuditLogs),
           borderRadius: BorderRadius.circular(30),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
@@ -738,12 +736,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.admin_panel_settings_rounded,
+                  child: const Icon(Icons.security_rounded,
                       color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  'User Management & System Controls',
+                  'System Security & Audit Logs',
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -762,24 +760,24 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final actions = [
       {
-        'icon': Icons.people_alt_rounded,
-        'title': 'User Management',
-        'route': '/admin/users'
+        'icon': Icons.sports_soccer_rounded,
+        'title': 'Player Mgmt',
+        'route': Routes.adminPlayers,
+      },
+      {
+        'icon': Icons.badge_rounded,
+        'title': 'Manager Mgmt',
+        'route': Routes.adminManagers,
       },
       {
         'icon': Icons.person_add_rounded,
         'title': 'Create Manager',
-        'route': '/admin/managers/create'
+        'route': '/admin/managers/create',
       },
       {
         'icon': Icons.videocam_rounded,
         'title': 'CCTV Network',
-        'route': '/manager/cctv'
-      },
-      {
-        'icon': Icons.refresh_rounded,
-        'title': 'Refresh Data',
-        'action': () => controller.loadDashboard()
+        'route': '/manager/cctv',
       },
     ];
 
@@ -864,144 +862,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// Platform Overview Highlight Card
-  Widget _buildPlatformHighlightSection(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final d = controller.dashboard.value;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Platform Status',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                'LIVE',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-            boxShadow: const [
-              BoxShadow(
-                  color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-            ],
-          ),
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('PLATFORM PERFORMANCE',
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11)),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text('System OK',
-                        style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Total Revenue',
-                          style: TextStyle(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : Colors.grey.shade600,
-                              fontSize: 11)),
-                      Text('₹${d?.totalRevenue.toStringAsFixed(0) ?? "0"}',
-                          style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : Colors.black87)),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('Active Managers',
-                          style: TextStyle(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : Colors.grey.shade600,
-                              fontSize: 11)),
-                      Text('${d?.totalManagers ?? 0}',
-                          style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                  ),
-                  onPressed: () => Get.toNamed('/admin/users'),
-                  child: const Text('View All Users & Accounts',
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   /// Platform Metrics Overview Grid
   Widget _buildMetricsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1051,7 +911,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               children: [
                 _buildSmallStatCard(context, 'Turf Clubs',
                     '${d?.totalClubs ?? 0}', Icons.stadium_outlined),
-                _buildSmallStatCard(context, 'Active CCTV',
+                _buildSmallStatCard(context, 'Active Games',
                     '${d?.activeRecordings ?? 0}', Icons.videocam_outlined),
                 _buildSmallStatCard(
                     context,
@@ -1072,34 +932,50 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
 
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE)),
+              color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+              width: 1),
           boxShadow: const [
             BoxShadow(
-                color: Colors.black12, blurRadius: 2, offset: Offset(0, 1)),
+                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: AppColors.primary),
+            Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(height: 4),
-            Text(value,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
                 style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color:
-                        isDark ? AppColors.textPrimaryDark : Colors.black87)),
-            Text(label,
+                    color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 3),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
                 style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                     color: isDark
                         ? AppColors.textSecondaryDark
-                        : Colors.grey.shade600)),
+                        : Colors.grey.shade600),
+              ),
+            ),
           ],
         ),
       ),
@@ -1111,28 +987,28 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [
       {
-        'icon': Icons.people_alt_rounded,
-        'title': 'User Mgmt',
-        'route': '/admin/users',
+        'icon': Icons.sports_soccer_rounded,
+        'title': 'Players',
+        'route': Routes.adminPlayers,
         'color': AppColors.primary
+      },
+      {
+        'icon': Icons.admin_panel_settings_rounded,
+        'title': 'Managers',
+        'route': Routes.adminManagers,
+        'color': const Color(0xFF0288D1)
       },
       {
         'icon': Icons.person_add_rounded,
         'title': 'Create Mgr',
         'route': '/admin/managers/create',
-        'color': const Color(0xFF0288D1)
-      },
-      {
-        'icon': Icons.videocam_rounded,
-        'title': 'CCTV Stream',
-        'route': '/manager/cctv',
         'color': const Color(0xFF7B1FA2)
       },
       {
-        'icon': Icons.logout_rounded,
-        'title': 'Log Out',
-        'action': () => _confirmLogout(context),
-        'color': const Color(0xFFE65100)
+        'icon': Icons.security_rounded,
+        'title': 'Audit Logs',
+        'route': Routes.adminAuditLogs,
+        'color': const Color(0xFF2E7D32)
       },
     ];
 

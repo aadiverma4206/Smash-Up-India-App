@@ -17,13 +17,48 @@ const envSchema = z.object({
   RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(''),
   RESEND_API_KEY: z.string().optional().default(''),
   EMAIL_FROM: z.string().default('ALL STARS ARENA <no-reply@allstarsarena.com>'),
+
+  // Static Camera Configuration (Optional default camera)
+  CAMERA_HOST: z.string().optional().default(''),
+  CAMERA_RTSP_PORT: z.coerce.number().default(554),
+  CAMERA_USERNAME: z.string().optional().default(''),
+  CAMERA_PASSWORD: z.string().optional().default(''),
+  CAMERA_RTSP_PATH: z.string().optional().default(''),
+  CAMERA_PROTOCOL: z.string().default('rtsp'),
+
+  // Camera Security & Networking
+  CAMERA_CREDENTIAL_ENCRYPTION_KEY: z
+    .string()
+    .default(
+      process.env.CCTV_CREDENTIAL_ENCRYPTION_KEY ||
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    ),
   CCTV_CREDENTIAL_ENCRYPTION_KEY: z
     .string()
-    .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
-  AWS_S3_REGION: z.string().default('ap-south-1'),
-  AWS_S3_BUCKET_NAME: z.string().default('all-stars-arena-recordings'),
-  AWS_S3_ACCESS_KEY_ID: z.string().optional().default(''),
-  AWS_S3_SECRET_ACCESS_KEY: z.string().optional().default(''),
+    .default(
+      process.env.CAMERA_CREDENTIAL_ENCRYPTION_KEY ||
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    ),
+  CAMERA_CONNECTION_TIMEOUT_MS: z.coerce.number().default(5000),
+  CAMERA_RECONNECT_INTERVAL_MS: z.coerce.number().default(5000),
+
+  // Recording Lifecycle & Storage Parameters
+  RECORDING_POST_MATCH_MINUTES: z.coerce.number().default(15),
+  RECORDING_SEGMENT_SECONDS: z.coerce.number().default(300),
+  RECORDING_MAX_RETRIES: z.coerce.number().default(3),
+  RECORDING_MAX_CONCURRENT: z.coerce.number().default(5),
+  RECORDING_TEMP_DIR: z.string().default('temp_recordings'),
+  FFMPEG_PATH: z.string().default('ffmpeg'),
+
+  // AWS S3 Storage
+  AWS_REGION: z.string().default(process.env.AWS_S3_REGION || 'ap-south-1'),
+  AWS_S3_REGION: z.string().default(process.env.AWS_REGION || 'ap-south-1'),
+  AWS_S3_BUCKET: z.string().default(process.env.AWS_S3_BUCKET_NAME || 'all-stars-arena-recordings'),
+  AWS_S3_BUCKET_NAME: z.string().default(process.env.AWS_S3_BUCKET || 'all-stars-arena-recordings'),
+  AWS_ACCESS_KEY_ID: z.string().optional().default(process.env.AWS_S3_ACCESS_KEY_ID || ''),
+  AWS_SECRET_ACCESS_KEY: z.string().optional().default(process.env.AWS_S3_SECRET_ACCESS_KEY || ''),
+  AWS_S3_ACCESS_KEY_ID: z.string().optional().default(process.env.AWS_ACCESS_KEY_ID || ''),
+  AWS_S3_SECRET_ACCESS_KEY: z.string().optional().default(process.env.AWS_SECRET_ACCESS_KEY || ''),
   AWS_S3_ENDPOINT: z.string().optional().default(''),
 });
 

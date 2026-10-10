@@ -5,25 +5,33 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import { env } from '../config/env.config.js';
 import { logger } from '../utils/logger.js';
 
-const s3Client = new S3Client({
-  region: env.AWS_S3_REGION,
+const s3Region = env.AWS_REGION || env.AWS_S3_REGION || 'ap-south-1';
+const s3Bucket = env.AWS_S3_BUCKET || env.AWS_S3_BUCKET_NAME || 'all-stars-arena-recordings';
+const s3AccessKey = env.AWS_ACCESS_KEY_ID || env.AWS_S3_ACCESS_KEY_ID;
+const s3SecretKey = env.AWS_SECRET_ACCESS_KEY || env.AWS_S3_SECRET_ACCESS_KEY;
+
+export const s3Client = new S3Client({
+  region: s3Region,
   endpoint: env.AWS_S3_ENDPOINT || undefined,
   forcePathStyle: Boolean(env.AWS_S3_ENDPOINT), // Required for MinIO / Local S3
   credentials:
-    env.AWS_S3_ACCESS_KEY_ID && env.AWS_S3_SECRET_ACCESS_KEY
+    s3AccessKey && s3SecretKey
       ? {
-          accessKeyId: env.AWS_S3_ACCESS_KEY_ID,
-          secretAccessKey: env.AWS_S3_SECRET_ACCESS_KEY,
+          accessKeyId: s3AccessKey,
+          secretAccessKey: s3SecretKey,
         }
       : undefined,
 });
 
 /**
  * Generate short-lived signed URL for private S3 objects (e.g. CCTV recordings or private profile images)
+ * Never exposes AWS credentials or keeps buckets public
  */
 export const getSignedPlaybackUrl = async (
   objectKey: string,
@@ -31,7 +39,7 @@ export const getSignedPlaybackUrl = async (
 ): Promise<string> => {
   try {
     const command = new GetObjectCommand({
-      Bucket: env.AWS_S3_BUCKET_NAME,
+      Bucket: s3Bucket,
       Key: objectKey,
     });
 
@@ -43,7 +51,7 @@ export const getSignedPlaybackUrl = async (
 };
 
 /**
- * Upload recording file stream/buffer to S3 bucket
+ * Upload recording file stream/buffer to S3 bucket with server-side encryption (AES256)
  */
 export const uploadRecordingToS3 = async (
   objectKey: string,
@@ -52,18 +60,100 @@ export const uploadRecordingToS3 = async (
 ) => {
   try {
     const command = new PutObjectCommand({
-      Bucket: env.AWS_S3_BUCKET_NAME,
+      Bucket: s3Bucket,
       Key: objectKey,
       Body: body,
       ContentType: contentType,
+      ServerSideEncryption: 'AES256',
     });
 
     await s3Client.send(command);
     logger.info(`Successfully uploaded recording to S3: ${objectKey}`);
-    return { objectKey, bucket: env.AWS_S3_BUCKET_NAME };
+    return { objectKey, bucket: s3Bucket };
   } catch (err: any) {
     logger.error(`Error uploading recording to S3 key ${objectKey}:`, err);
     throw err;
+  }
+};
+
+/**
+ * Upload a finalized local recording file to S3 with exponential retry handling
+ * and server-side encryption.
+ */
+export const uploadLocalFileToS3 = async (
+  localFilePath: string,
+  objectKey: string,
+  options?: { contentType?: string; maxRetries?: number }
+): Promise<{ objectKey: string; bucket: string; sizeBytes: number }> => {
+  if (!fs.existsSync(localFilePath)) {
+    throw new Error(`Local file not found for S3 upload: ${localFilePath}`);
+  }
+
+  const stats = await fs.promises.stat(localFilePath);
+  if (stats.size === 0) {
+    throw new Error(`Local recording file is empty: ${localFilePath}`);
+  }
+
+  const maxRetries = options?.maxRetries ?? env.RECORDING_MAX_RETRIES ?? 3;
+  const contentType = options?.contentType ?? 'video/mp4';
+
+  let attempt = 0;
+  let lastError: any = null;
+
+  while (attempt < maxRetries) {
+    attempt++;
+    try {
+      const fileBuffer = await fs.promises.readFile(localFilePath);
+      const command = new PutObjectCommand({
+        Bucket: s3Bucket,
+        Key: objectKey,
+        Body: fileBuffer,
+        ContentType: contentType,
+        ServerSideEncryption: 'AES256',
+      });
+
+      await s3Client.send(command);
+      logger.info(
+        `[S3 Upload] Successfully uploaded recording (${stats.size} bytes) to s3://${s3Bucket}/${objectKey} on attempt ${attempt}`
+      );
+      return { objectKey, bucket: s3Bucket, sizeBytes: stats.size };
+    } catch (err: any) {
+      lastError = err;
+      logger.warn(
+        `[S3 Upload] Attempt ${attempt}/${maxRetries} failed for ${objectKey}: ${err.message}`
+      );
+      if (attempt < maxRetries) {
+        // Exponential backoff
+        await new Promise((res) => setTimeout(res, 500 * Math.pow(2, attempt)));
+      }
+    }
+  }
+
+  logger.error(
+    { lastError },
+    `[S3 Upload] Failed to upload ${localFilePath} to ${objectKey} after ${maxRetries} attempts`
+  );
+  throw lastError || new Error(`Failed to upload ${objectKey} after ${maxRetries} attempts`);
+};
+
+/**
+ * Safely removes local temporary recording file only after verified database & S3 upload persistence
+ */
+export const safeDeleteLocalFile = async (filePath: string): Promise<void> => {
+  try {
+    if (filePath && fs.existsSync(filePath)) {
+      await fs.promises.unlink(filePath);
+      logger.info(`[Cleanup] Deleted local temporary recording file: ${filePath}`);
+
+      // If directory is empty, remove it too
+      const dir = path.dirname(filePath);
+      const remaining = await fs.promises.readdir(dir);
+      if (remaining.length === 0) {
+        await fs.promises.rmdir(dir);
+      }
+    }
+  } catch (err: any) {
+    logger.warn({ err }, `[Cleanup] Non-fatal error cleaning up local file: ${filePath}`);
   }
 };
 
@@ -82,10 +172,11 @@ export const uploadProfileImageToS3 = async (
 
   try {
     const command = new PutObjectCommand({
-      Bucket: env.AWS_S3_BUCKET_NAME,
+      Bucket: s3Bucket,
       Key: objectKey,
       Body: buffer,
       ContentType: mimeType,
+      ServerSideEncryption: 'AES256',
     });
 
     await s3Client.send(command);
@@ -93,9 +184,9 @@ export const uploadProfileImageToS3 = async (
 
     let publicUrl = '';
     if (env.AWS_S3_ENDPOINT) {
-      publicUrl = `${env.AWS_S3_ENDPOINT}/${env.AWS_S3_BUCKET_NAME}/${objectKey}`;
+      publicUrl = `${env.AWS_S3_ENDPOINT}/${s3Bucket}/${objectKey}`;
     } else {
-      publicUrl = `https://${env.AWS_S3_BUCKET_NAME}.s3.${env.AWS_S3_REGION}.amazonaws.com/${objectKey}`;
+      publicUrl = `https://${s3Bucket}.s3.${s3Region}.amazonaws.com/${objectKey}`;
     }
 
     return { objectKey, publicUrl };
@@ -112,7 +203,7 @@ export const deleteS3Object = async (objectKey: string) => {
   if (!objectKey) return;
   try {
     const command = new DeleteObjectCommand({
-      Bucket: env.AWS_S3_BUCKET_NAME,
+      Bucket: s3Bucket,
       Key: objectKey,
     });
     await s3Client.send(command);

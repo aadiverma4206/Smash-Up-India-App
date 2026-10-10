@@ -32,6 +32,7 @@ export const initDbTables = async () => {
 
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS approval_status VARCHAR(32) DEFAULT 'APPROVED';
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+      ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS manager_id VARCHAR(64) REFERENCES public.users(id) ON DELETE SET NULL;
       ALTER TABLE public.games DROP CONSTRAINT IF EXISTS games_approval_status_check;
       ALTER TABLE public.games ADD CONSTRAINT games_approval_status_check CHECK (approval_status IN ('PENDING_APPROVAL', 'APPROVED', 'REJECTED'));
@@ -121,6 +122,42 @@ export const initDbTables = async () => {
       ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
       ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS actual_stopped_at TIMESTAMP WITH TIME ZONE;
       ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 5400;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS error_code VARCHAR(64);
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS error_message TEXT;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS retry_count INT DEFAULT 0;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS ffmpeg_pid INT;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS local_temp_path VARCHAR(512);
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS manual_stop BOOLEAN DEFAULT false;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS playback_status VARCHAR(32) DEFAULT 'PROCESSING';
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS actual_stop_time TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS scheduled_match_end TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS stop_deadline TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS s3_object_key VARCHAR(512);
+
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS serial_number VARCHAR(128);
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS protocol VARCHAR(32) DEFAULT 'rtsp';
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS last_error TEXT;
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS last_connection_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS last_successful_connection TIMESTAMP WITH TIME ZONE;
+
+      CREATE TABLE IF NOT EXISTS public.cctv_recording_segments (
+          id VARCHAR(64) PRIMARY KEY DEFAULT ('seg_' || SUBSTR(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT), 1, 16)),
+          recording_id VARCHAR(64) NOT NULL REFERENCES public.cctv_recordings(id) ON DELETE CASCADE,
+          game_id VARCHAR(64) NOT NULL REFERENCES public.games(id) ON DELETE CASCADE,
+          segment_order INT NOT NULL DEFAULT 1,
+          s3_object_key VARCHAR(512) NOT NULL,
+          local_file_path VARCHAR(512),
+          start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          end_time TIMESTAMP WITH TIME ZONE,
+          duration_seconds NUMERIC(10,2) DEFAULT 0 NOT NULL,
+          file_size_bytes BIGINT DEFAULT 0 NOT NULL,
+          status VARCHAR(32) DEFAULT 'QUEUED' NOT NULL,
+          error_message TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+      );
 
       CREATE TABLE IF NOT EXISTS public.cctv_recording_events (
           id VARCHAR(64) PRIMARY KEY DEFAULT ('ev_' || SUBSTR(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT), 1, 16)),
@@ -603,8 +640,48 @@ export const initDbTables = async () => {
       INSERT INTO public.club_managers (club_id, user_id)
       SELECT 'all_stars_arena_club', id FROM public.users WHERE role_id = 2 OR role_id = 1
       ON CONFLICT DO NOTHING;
+
+      -- 5. Performance Indexes for users search & pagination scaling (10,000+ users)
+      CREATE INDEX IF NOT EXISTS idx_users_role_name_asc ON public.users(role_id, name ASC);
+      CREATE INDEX IF NOT EXISTS idx_users_name_lower ON public.users(LOWER(name));
+      CREATE INDEX IF NOT EXISTS idx_users_email_lower ON public.users(LOWER(email));
+      CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users(phone);
+
+      DO $$
+      BEGIN
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        CREATE INDEX IF NOT EXISTS idx_users_name_trgm ON public.users USING gin (name gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_users_email_trgm ON public.users USING gin (email gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_users_phone_trgm ON public.users USING gin (phone gin_trgm_ops);
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
+
+      -- 6. Audit Logs Table Definition & Indexes
+      CREATE TABLE IF NOT EXISTS public.audit_logs (
+          id VARCHAR(64) PRIMARY KEY DEFAULT ('log_' || SUBSTR(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT), 1, 16)),
+          user_id VARCHAR(64) REFERENCES public.users(id) ON DELETE SET NULL,
+          admin_id VARCHAR(64) REFERENCES public.users(id) ON DELETE SET NULL,
+          admin_name VARCHAR(150),
+          action VARCHAR(100) NOT NULL,
+          target VARCHAR(150),
+          details TEXT,
+          ip_address VARCHAR(64) DEFAULT '127.0.0.1',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS user_id VARCHAR(64);
+      ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS admin_id VARCHAR(64);
+      ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS admin_name VARCHAR(150);
+      ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS action VARCHAR(100);
+      ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS target VARCHAR(150);
+      ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS details TEXT;
+      ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(64);
+
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.audit_logs(action);
     `);
-    logger.info('Database Schema & Stored Functions Synchronized Successfully');
+    logger.info('Database Schema, Indexes & Stored Functions Synchronized Successfully');
   } catch (error) {
     logger.error({ error }, 'Database initialization error');
   }
