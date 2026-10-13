@@ -17,8 +17,6 @@ const dbPool = new pg.Pool({
   connectionString:
     process.env.DATABASE_URL || 'postgresql://postgres:system@localhost:5432/all_stars_arena',
 });
-
-// Configure AWS S3 / MinIO Client
 const s3Region = process.env.AWS_S3_REGION || process.env.AWS_REGION || 'ap-south-1';
 const s3Bucket = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'all-stars-arena-recordings';
 const s3AccessKey = process.env.AWS_S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
@@ -43,9 +41,6 @@ logger.info(`📹 Default CCTV Host: ${process.env.CAMERA_HOST || '192.168.1.2'}
 
 const activeSessions = new Map();
 
-/**
- * Decrypts AES-256-GCM encrypted RTSP credentials
- */
 const decryptSecret = (encryptedText) => {
   if (!encryptedText) return '';
   const keyHex =
@@ -75,9 +70,6 @@ const decryptSecret = (encryptedText) => {
   return decrypted;
 };
 
-/**
- * Constructs a default Dahua / XVR RTSP URL from environment configuration
- */
 const getDefaultRtspUrl = (channel = 1, subtype = 0) => {
   const host = process.env.CAMERA_HOST || '192.168.1.2';
   const port = process.env.CAMERA_RTSP_PORT || 554;

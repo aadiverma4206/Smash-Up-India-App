@@ -53,6 +53,7 @@ import '../../modules/cctv/bindings/cctv_binding.dart';
 import '../../modules/cctv/views/cctv_list_view.dart';
 import '../../modules/cctv/views/add_cctv_view.dart';
 import '../../modules/cctv/views/cctv_details_view.dart';
+import '../../modules/cctv/views/cctv_live_view.dart';
 import '../../modules/admin/bindings/admin_binding.dart';
 import '../../modules/admin/views/admin_dashboard_view.dart';
 import '../../modules/admin/views/admin_users_view.dart';
@@ -320,6 +321,11 @@ class AppPages {
     GetPage(
       name: '/manager/cctv',
       page: () => const CctvListView(),
+      binding: CctvBinding(),
+    ),
+    GetPage(
+      name: Routes.cctvLive,
+      page: () => const CctvLiveView(),
       binding: CctvBinding(),
     ),
     GetPage(

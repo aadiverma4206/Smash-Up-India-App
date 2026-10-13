@@ -8,6 +8,7 @@ import '../../manager/controllers/manager_games_controller.dart';
 import '../../cctv/datasources/cctv_remote_datasource.dart';
 import '../../cctv/repositories/cctv_repository.dart';
 import '../../cctv/controllers/cctv_controller.dart';
+import '../../cctv/controllers/cctv_live_controller.dart';
 import '../../../core/network/dio_client.dart';
 
 class AdminBinding extends Bindings {
@@ -62,6 +63,12 @@ class AdminBinding extends Bindings {
     if (!Get.isRegistered<CctvController>()) {
       Get.lazyPut<CctvController>(
         () => CctvController(),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<CctvLiveController>()) {
+      Get.lazyPut<CctvLiveController>(
+        () => CctvLiveController(),
         fenix: true,
       );
     }

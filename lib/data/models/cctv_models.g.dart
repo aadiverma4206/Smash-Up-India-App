@@ -71,3 +71,57 @@ Map<String, dynamic> _$CctvRecordingModelToJson(CctvRecordingModel instance) =>
       'actualStopTime': instance.actualStopTime,
       'manualStop': instance.manualStop,
     };
+
+CctvLiveCameraOptionModel _$CctvLiveCameraOptionModelFromJson(
+        Map<String, dynamic> json) =>
+    CctvLiveCameraOptionModel(
+      id: json['id'] as String,
+      channel: (json['channel'] as num).toInt(),
+      name: json['name'] as String,
+      courtName: json['courtName'] as String?,
+      status: json['status'] as String? ?? 'ONLINE',
+      healthStatus: json['healthStatus'] as String? ?? 'ONLINE',
+      ipAddress: json['ipAddress'] as String?,
+      port: (json['port'] as num?)?.toInt() ?? 554,
+      protocol: json['protocol'] as String? ?? 'rtsp',
+    );
+
+Map<String, dynamic> _$CctvLiveCameraOptionModelToJson(
+        CctvLiveCameraOptionModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'channel': instance.channel,
+      'name': instance.name,
+      'courtName': instance.courtName,
+      'status': instance.status,
+      'healthStatus': instance.healthStatus,
+      'ipAddress': instance.ipAddress,
+      'port': instance.port,
+      'protocol': instance.protocol,
+    };
+
+CctvLiveSessionModel _$CctvLiveSessionModelFromJson(
+        Map<String, dynamic> json) =>
+    CctvLiveSessionModel(
+      sessionId: json['sessionId'] as String,
+      channel: (json['channel'] as num).toInt(),
+      cameraName: json['cameraName'] as String,
+      streamType: json['streamType'] as String? ?? 'main',
+      status: json['status'] as String,
+      latencyMs: (json['latencyMs'] as num?)?.toInt() ?? 0,
+      rtspUrl: json['rtspUrl'] as String,
+      expiresAt: json['expiresAt'] as String,
+    );
+
+Map<String, dynamic> _$CctvLiveSessionModelToJson(
+        CctvLiveSessionModel instance) =>
+    <String, dynamic>{
+      'sessionId': instance.sessionId,
+      'channel': instance.channel,
+      'cameraName': instance.cameraName,
+      'streamType': instance.streamType,
+      'status': instance.status,
+      'latencyMs': instance.latencyMs,
+      'rtspUrl': instance.rtspUrl,
+      'expiresAt': instance.expiresAt,
+    };

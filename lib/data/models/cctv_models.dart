@@ -75,3 +75,59 @@ class CctvRecordingModel {
       _$CctvRecordingModelFromJson(json);
   Map<String, dynamic> toJson() => _$CctvRecordingModelToJson(this);
 }
+
+@JsonSerializable()
+class CctvLiveCameraOptionModel {
+  final String id;
+  final int channel;
+  final String name;
+  final String? courtName;
+  final String status; // ONLINE, OFFLINE, CONNECTING, FAILED
+  final String healthStatus;
+  final String? ipAddress;
+  final int port;
+  final String protocol;
+
+  CctvLiveCameraOptionModel({
+    required this.id,
+    required this.channel,
+    required this.name,
+    this.courtName,
+    this.status = 'ONLINE',
+    this.healthStatus = 'ONLINE',
+    this.ipAddress,
+    this.port = 554,
+    this.protocol = 'rtsp',
+  });
+
+  factory CctvLiveCameraOptionModel.fromJson(Map<String, dynamic> json) =>
+      _$CctvLiveCameraOptionModelFromJson(json);
+  Map<String, dynamic> toJson() => _$CctvLiveCameraOptionModelToJson(this);
+}
+
+@JsonSerializable()
+class CctvLiveSessionModel {
+  final String sessionId;
+  final int channel;
+  final String cameraName;
+  final String streamType; // main, sub
+  final String status; // ONLINE, OFFLINE
+  final int latencyMs;
+  final String rtspUrl;
+  final String expiresAt;
+
+  CctvLiveSessionModel({
+    required this.sessionId,
+    required this.channel,
+    required this.cameraName,
+    this.streamType = 'main',
+    required this.status,
+    this.latencyMs = 0,
+    required this.rtspUrl,
+    required this.expiresAt,
+  });
+
+  factory CctvLiveSessionModel.fromJson(Map<String, dynamic> json) =>
+      _$CctvLiveSessionModelFromJson(json);
+  Map<String, dynamic> toJson() => _$CctvLiveSessionModelToJson(this);
+}

@@ -86,3 +86,16 @@ export const getPlaybackUrlSchema = z.object({
     gameId: z.string().min(1, 'Game ID is required'),
   }),
 });
+
+export const createLiveStreamSessionSchema = z.object({
+  body: z.object({
+    channel: z.coerce.number().int().min(1).max(4, 'Channel must be between 1 and 4'),
+    streamType: z.enum(['main', 'sub']).optional().default('main'),
+  }),
+});
+
+export const getLiveCameraStatusSchema = z.object({
+  params: z.object({
+    channel: z.coerce.number().int().min(1).max(4, 'Channel must be between 1 and 4'),
+  }),
+});

@@ -42,4 +42,7 @@ class ApiConstants {
   // CCTV
   static const String cctvCameras = '/cctv/cameras';
   static const String cctvPlayback = '/cctv/playback';
+  static const String cctvLiveCameras = '/cctv/live/cameras';
+  static const String cctvLiveSession = '/cctv/live/session';
+  static const String cctvLiveStatus = '/cctv/live/status';
 }

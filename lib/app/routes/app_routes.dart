@@ -26,6 +26,7 @@ abstract class Routes {
   static const managerNotifications = '/manager/notifications';
   static const managerProfile = '/manager/profile';
   static const cctvDashboard = '/manager/cctv';
+  static const cctvLive = '/manager/cctv/live';
   static const adminDashboard = '/admin/dashboard';
   static const adminProfile = '/admin/profile';
   static const adminPlayers = '/admin/players';

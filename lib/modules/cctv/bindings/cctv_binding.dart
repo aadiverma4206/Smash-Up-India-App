@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../datasources/cctv_remote_datasource.dart';
 import '../repositories/cctv_repository.dart';
 import '../controllers/cctv_controller.dart';
+import '../controllers/cctv_live_controller.dart';
 import '../../../core/network/dio_client.dart';
 
 class CctvBinding extends Bindings {
@@ -15,6 +16,9 @@ class CctvBinding extends Bindings {
     );
     Get.lazyPut<CctvController>(
       () => CctvController(),
+    );
+    Get.lazyPut<CctvLiveController>(
+      () => CctvLiveController(),
     );
   }
 }

@@ -51,4 +51,35 @@ class CctvRepository {
     }
     return response.data!;
   }
+
+  // --- Live CCTV Streaming Methods ---
+  Future<List<CctvLiveCameraOptionModel>> getLiveCameras() async {
+    final response = await remoteDataSource.getLiveCameras();
+    return response.data ?? [];
+  }
+
+  Future<CctvLiveSessionModel> createLiveSession({
+    required int channel,
+    String streamType = 'main',
+  }) async {
+    final response = await remoteDataSource.createLiveSession(
+      channel: channel,
+      streamType: streamType,
+    );
+    if (response.data == null) {
+      throw AppException('Could not initialize live CCTV stream session.');
+    }
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> getLiveChannelStatus(int channel) async {
+    final response = await remoteDataSource.getLiveChannelStatus(channel);
+    return response.data ?? {};
+  }
+
+  Future<void> releaseLiveSession(String sessionId) async {
+    try {
+      await remoteDataSource.releaseLiveSession(sessionId);
+    } catch (_) {}
+  }
 }

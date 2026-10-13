@@ -12,6 +12,10 @@ import {
   getGameRecording,
   getRecordingFailures,
   getFfmpegHealth,
+  getLiveCameras,
+  createLiveSession,
+  getLiveChannelStatus,
+  releaseLiveSession,
 } from './cctv.controller.js';
 import { validateRequest } from '../../middlewares/validate.middleware.js';
 import {
@@ -23,6 +27,8 @@ import {
   stopRecordingSchema,
   extendRecordingSchema,
   getPlaybackUrlSchema,
+  createLiveStreamSessionSchema,
+  getLiveCameraStatusSchema,
 } from './cctv.schema.js';
 import { authenticateToken, requireRole } from '../../middlewares/auth.middleware.js';
 
@@ -32,6 +38,29 @@ router.use(authenticateToken);
 
 // Health & Capability Check
 router.get('/health', getFfmpegHealth);
+
+// Live CCTV Streaming Routes (Authorized Admin & Manager Only: Roles 1 & 2)
+router.get('/live/cameras', requireRole([1, 2]), getLiveCameras);
+
+router.post(
+  '/live/session',
+  requireRole([1, 2]),
+  validateRequest(createLiveStreamSessionSchema),
+  createLiveSession
+);
+
+router.get(
+  '/live/status/:channel',
+  requireRole([1, 2]),
+  validateRequest(getLiveCameraStatusSchema),
+  getLiveChannelStatus
+);
+
+router.post(
+  '/live/session/:sessionId/release',
+  requireRole([1, 2]),
+  releaseLiveSession
+);
 
 // Manager & Admin CCTV Camera Management Routes (Role 1=ADMIN, Role 2=MANAGER)
 router.post(

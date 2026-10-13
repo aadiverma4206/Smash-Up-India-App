@@ -204,3 +204,50 @@ export const getFfmpegHealth = asyncHandler(
     res.status(200).json(ApiResponse.success('FFmpeg status', health));
   }
 );
+
+export const getLiveCameras = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const cameras = await CctvService.getLiveCameras(
+      req.user?.id || '',
+      req.user?.roleId || 2
+    );
+    res.status(200).json(ApiResponse.success('Live CCTV camera channels retrieved', cameras));
+  }
+);
+
+export const createLiveSession = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { channel, streamType } = req.body;
+    const session = await CctvService.createLiveSession(
+      req.user?.id || '',
+      req.user?.roleId || 2,
+      Number(channel),
+      streamType || 'main'
+    );
+    res.status(200).json(ApiResponse.success('Authorized live stream session generated', session));
+  }
+);
+
+export const getLiveChannelStatus = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const channel = Number(req.params.channel);
+    const status = await CctvService.getLiveChannelStatus(
+      channel,
+      req.user?.id || '',
+      req.user?.roleId || 2
+    );
+    res.status(200).json(ApiResponse.success('Camera channel status retrieved', status));
+  }
+);
+
+export const releaseLiveSession = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { sessionId } = req.params;
+    const result = await CctvService.releaseLiveSession(
+      sessionId,
+      req.user?.id || '',
+      req.user?.roleId || 2
+    );
+    res.status(200).json(ApiResponse.success('Live stream session released', result));
+  }
+);

@@ -5,7 +5,7 @@ import { getSignedPlaybackUrl } from '../../services/storage.service.js';
 import { ApiError } from '../../utils/apiResponse.js';
 import { logger } from '../../utils/logger.js';
 import { dbPool } from '../../config/db.config.js';
-import { env } from '../../config/env.config.js';
+import { env, getDefaultRtspUrl } from '../../config/env.config.js';
 
 function formatRecordingResponse(rec: any) {
   if (!rec) return null;
@@ -645,5 +645,148 @@ export class CctvService {
     }
 
     return await CctvRepository.getRecordingFailures(clubId);
+  }
+
+  /**
+   * Get Live CCTV Camera Options (Authorized Admin & Manager Only)
+   */
+  static async getLiveCameras(userId: string, userRole: number) {
+    if (userRole === 3) {
+      throw new ApiError(403, 'Forbidden: Live CCTV is only accessible to Managers and Admins', 'FORBIDDEN_LIVE_CCTV_ROLE');
+    }
+
+    const host = env.CAMERA_HOST || '192.168.1.2';
+    const port = env.CAMERA_RTSP_PORT || 554;
+
+    const testResult = await CctvRecordingService.testCameraConnection({
+      id: 'dahua_dvr_host',
+      ip_address: host,
+      port,
+      rtsp_url_encrypted: '',
+    });
+
+    const isHostOnline = testResult.status === 'ONLINE';
+
+    const channels = [
+      { channel: 1, name: 'Camera 1 (Main Pitch)', courtName: 'Court 1' },
+      { channel: 2, name: 'Camera 2 (Side Pitch)', courtName: 'Court 2' },
+      { channel: 3, name: 'Camera 3 (Goal View A)', courtName: 'Court 1' },
+      { channel: 4, name: 'Camera 4 (Goal View B)', courtName: 'Court 2' },
+    ];
+
+    return channels.map((c) => ({
+      id: `live_cam_channel_${c.channel}`,
+      channel: c.channel,
+      name: c.name,
+      courtName: c.courtName,
+      status: isHostOnline ? 'ONLINE' : 'OFFLINE',
+      healthStatus: isHostOnline ? 'ONLINE' : 'OFFLINE',
+      ipAddress: host,
+      port,
+      protocol: 'rtsp',
+      supportedSubtypes: ['main', 'sub'],
+    }));
+  }
+
+  /**
+   * Request Authorized Live Stream Session (Server-side Credentials Management)
+   */
+  static async createLiveSession(
+    userId: string,
+    userRole: number,
+    channel: number,
+    streamType: 'main' | 'sub' = 'main'
+  ) {
+    if (userRole === 3) {
+      throw new ApiError(403, 'Forbidden: Live CCTV is only accessible to Managers and Admins', 'FORBIDDEN_LIVE_CCTV_ROLE');
+    }
+
+    if (channel < 1 || channel > 4) {
+      throw new ApiError(400, 'Invalid channel. Camera channel must be between 1 and 4', 'INVALID_CAMERA_CHANNEL');
+    }
+
+    const subtype = streamType === 'sub' ? 1 : 0;
+    const rtspUrl = getDefaultRtspUrl(channel, subtype);
+
+    if (!rtspUrl) {
+      throw new ApiError(500, 'CCTV RTSP configuration is missing on server', 'RTSP_CONFIG_MISSING');
+    }
+
+    const host = env.CAMERA_HOST || '192.168.1.2';
+    const port = env.CAMERA_RTSP_PORT || 554;
+
+    const connTest = await CctvRecordingService.testCameraConnection({
+      id: `dahua_ch_${channel}`,
+      ip_address: host,
+      port,
+      rtsp_url_encrypted: '',
+    });
+
+    const sessionId = `live_sess_${channel}_${Date.now()}`;
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+
+    await CctvRepository.logAudit({
+      adminId: userId,
+      adminName: `User:${userId}`,
+      action: 'LIVE_CCTV_SESSION_CREATED',
+      target: `Channel:${channel}`,
+      details: `Created Live Stream Session '${sessionId}' for Channel ${channel} (${streamType} stream)`,
+    });
+
+    return {
+      sessionId,
+      channel,
+      cameraName: `Camera ${channel}`,
+      streamType,
+      status: connTest.status,
+      latencyMs: connTest.latencyMs || 0,
+      rtspUrl,
+      expiresAt,
+    };
+  }
+
+  /**
+   * Probe Live Camera Channel Status
+   */
+  static async getLiveChannelStatus(channel: number, userId: string, userRole: number) {
+    if (userRole === 3) {
+      throw new ApiError(403, 'Forbidden', 'FORBIDDEN_ROLE');
+    }
+
+    const host = env.CAMERA_HOST || '192.168.1.2';
+    const port = env.CAMERA_RTSP_PORT || 554;
+
+    const testResult = await CctvRecordingService.testCameraConnection({
+      id: `dahua_ch_${channel}`,
+      ip_address: host,
+      port,
+      rtsp_url_encrypted: '',
+    });
+
+    return {
+      channel,
+      status: testResult.status,
+      message: testResult.message,
+      latencyMs: testResult.latencyMs || 0,
+    };
+  }
+
+  /**
+   * Release Live CCTV Stream Session
+   */
+  static async releaseLiveSession(sessionId: string, userId: string, userRole: number) {
+    if (userRole === 3) {
+      throw new ApiError(403, 'Forbidden', 'FORBIDDEN_ROLE');
+    }
+
+    await CctvRepository.logAudit({
+      adminId: userId,
+      adminName: `User:${userId}`,
+      action: 'LIVE_CCTV_SESSION_RELEASED',
+      target: `Session:${sessionId}`,
+      details: `Released Live Stream Session '${sessionId}'`,
+    });
+
+    return { sessionId, released: true };
   }
 }
