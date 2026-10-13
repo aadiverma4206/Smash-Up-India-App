@@ -347,7 +347,9 @@ class ProfileView extends GetView<PlayerController> {
             style: TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : const Color(0xFF475569),
             ),
           ),
           const SizedBox(width: 16),

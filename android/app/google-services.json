@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "246194507604",
+    "project_id": "all-stars-arena",
+    "storage_bucket": "all-stars-arena.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:246194507604:android:5a222a70f60fd5f3e6c2c1",
+        "android_client_info": {
+          "package_name": "com.example.all_stars_arena"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5owclfhh04GXawIjWhwrBNO_kukGyLhI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

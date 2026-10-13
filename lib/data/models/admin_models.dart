@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 class AdminUserModel {
   final String id;
   final String name;
@@ -64,7 +66,7 @@ class AdminUserModel {
       roleName: parsedRoleName,
       status: (json['status'] ?? 'ACTIVE').toString(),
       city: json['city']?.toString(),
-      profileImageUrl: rawImage?.toString(),
+      profileImageUrl: rawImage?.toString().sanitizedNetworkUrl,
       createdAt: (json['createdAt'] ?? json['created_at'] ?? '').toString(),
     );
   }

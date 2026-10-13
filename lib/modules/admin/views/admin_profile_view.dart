@@ -281,10 +281,10 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                               radius: 52,
                               backgroundColor: const Color(0xFF7E57C2)
                                   .withValues(alpha: 0.15),
-                              backgroundImage: avatarUrl.isNotEmpty
+                              backgroundImage: avatarUrl.isValidNetworkUrl
                                   ? CachedNetworkImageProvider(avatarUrl)
                                   : null,
-                              child: avatarUrl.isEmpty
+                              child: !avatarUrl.isValidNetworkUrl
                                   ? Text(
                                       name.isNotEmpty
                                           ? name[0].toUpperCase()

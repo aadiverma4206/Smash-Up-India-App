@@ -68,11 +68,13 @@ class PlayerRepository {
     return response.data ?? [];
   }
 
-  Future<List<GameModel>> getHistory({int limit = 20, int offset = 0, String? status}) async {
+  Future<List<GameModel>> getHistory(
+      {int limit = 20, int offset = 0, String? status}) async {
     final cacheKey = 'player_history_${status ?? 'ALL'}_$offset';
 
     try {
-      final response = await remoteDataSource.getHistory(limit: limit, offset: offset);
+      final response =
+          await remoteDataSource.getHistory(limit: limit, offset: offset);
       final list = response.data ?? [];
 
       // 💾 Save fresh player history to local SQLite DB with 3-day retention
@@ -118,5 +120,9 @@ class PlayerRepository {
 
   Future<void> markNotificationRead(String notificationId) async {
     await remoteDataSource.markNotificationRead(notificationId);
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await remoteDataSource.markAllNotificationsRead();
   }
 }

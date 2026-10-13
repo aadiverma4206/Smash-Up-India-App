@@ -1,7 +1,9 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import { env } from './env.config.js';
 import { logger } from '../utils/logger.js';
+import { UserPayload } from '../types/index.js';
 
 let io: Server | null = null;
 
@@ -28,14 +30,59 @@ export const initSocket = (httpServer: HttpServer): Server => {
     transports: ['websocket', 'polling'],
   });
 
-  io.on(SOCKET_EVENTS.CONNECT, (socket: Socket) => {
-    logger.info(`⚡ [Real-Time Football Socket Connected]: ID=${socket.id}`);
+  // JWT Middleware for Socket Connections
+  io.use((socket: Socket, next) => {
+    try {
+      const authHeader =
+        socket.handshake.auth?.token ||
+        socket.handshake.headers?.authorization;
 
-    // Join specific user notification room
-    socket.on(SOCKET_EVENTS.JOIN_USER_ROOM, (userId: string) => {
-      if (userId) {
-        socket.join(`user:${userId}`);
-        logger.info(`Socket ${socket.id} joined user room: user:${userId}`);
+      if (!authHeader) {
+        // Allow unauthenticated socket connection for public match live streams if needed,
+        // but mark user data as null
+        socket.data.user = null;
+        return next();
+      }
+
+      const token = authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : authHeader;
+
+      if (token) {
+        const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
+        socket.data.user = decoded;
+      }
+      next();
+    } catch (err: any) {
+      logger.warn(`Socket authentication notice: ${err.message}`);
+      socket.data.user = null;
+      next();
+    }
+  });
+
+  io.on(SOCKET_EVENTS.CONNECT, (socket: Socket) => {
+    const authUser = socket.data.user as UserPayload | null;
+    logger.info(
+      `⚡ [Real-Time Socket Connected]: ID=${socket.id}, User=${authUser ? authUser.id : 'ANONYMOUS'}`
+    );
+
+    // Join specific user notification room (Protected: Users can only join their own room or Admins)
+    socket.on(SOCKET_EVENTS.JOIN_USER_ROOM, (targetUserId: string) => {
+      if (!targetUserId) return;
+
+      if (authUser && (authUser.id === targetUserId || authUser.roleId === 1)) {
+        socket.join(`user:${targetUserId}`);
+        logger.info(`Socket ${socket.id} joined authenticated user room: user:${targetUserId}`);
+      } else {
+        logger.warn(
+          `Unauthorized socket room join attempt by socket ${socket.id} for user:${targetUserId}`
+        );
+        socket.emit(SOCKET_EVENTS.NOTIFICATION, {
+          title: '⚠️ Unauthorized Room Access',
+          message: 'You can only subscribe to your own private notification channel.',
+          type: 'WARNING',
+          timestamp: new Date().toISOString(),
+        });
       }
     });
 
@@ -44,11 +91,6 @@ export const initSocket = (httpServer: HttpServer): Server => {
       if (gameId) {
         socket.join(`game:${gameId}`);
         logger.info(`Socket ${socket.id} joined match room: game:${gameId}`);
-        socket.emit(SOCKET_EVENTS.NOTIFICATION, {
-          title: '⚽ Match Room Joined',
-          message: `Listening to live score stream for game ${gameId}`,
-          timestamp: new Date().toISOString(),
-        });
       }
     });
 

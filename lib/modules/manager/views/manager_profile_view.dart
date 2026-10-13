@@ -245,10 +245,10 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                               radius: 50,
                               backgroundColor:
                                   AppColors.primary.withValues(alpha: 0.15),
-                              backgroundImage: avatarUrl.isNotEmpty
+                              backgroundImage: avatarUrl.isValidNetworkUrl
                                   ? CachedNetworkImageProvider(avatarUrl)
                                   : null,
-                              child: avatarUrl.isEmpty
+                              child: !avatarUrl.isValidNetworkUrl
                                   ? Text(
                                       name.isNotEmpty
                                           ? name[0].toUpperCase()

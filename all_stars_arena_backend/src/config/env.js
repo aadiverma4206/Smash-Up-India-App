@@ -17,13 +17,54 @@ const envSchema = z.object({
   RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(''),
   RESEND_API_KEY: z.string().optional().default(''),
   EMAIL_FROM: z.string().default('ALL STARS ARENA <no-reply@allstarsarena.com>'),
+
+  // CCTV Camera Configuration
+  CAMERA_HOST: z.string().optional().default('192.168.1.2'),
+  CAMERA_RTSP_PORT: z.coerce.number().default(554),
+  CAMERA_TCP_PORT: z.coerce.number().default(37777),
+  CAMERA_HTTP_PORT: z.coerce.number().default(80),
+  CAMERA_USERNAME: z.string().optional().default('admin'),
+  CAMERA_PASSWORD: z.string().optional().default('admin@123'),
+  CAMERA_RTSP_PATH: z.string().optional().default('/cam/realmonitor?channel=1&subtype=0'),
+  CAMERA_PROTOCOL: z.string().default('rtsp'),
+  CAMERA_SERIAL_NUMBER: z.string().optional().default('3L04789PAZ01138'),
+  CAMERA_DEVICE_NAME: z.string().optional().default('Botivate'),
+
+  // CCTV Security & Networking
   CCTV_CREDENTIAL_ENCRYPTION_KEY: z
     .string()
-    .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
-  AWS_S3_REGION: z.string().default('ap-south-1'),
-  AWS_S3_BUCKET_NAME: z.string().default('all-stars-arena-recordings'),
-  AWS_S3_ACCESS_KEY_ID: z.string().optional().default(''),
-  AWS_S3_SECRET_ACCESS_KEY: z.string().optional().default(''),
+    .default(
+      process.env.CAMERA_CREDENTIAL_ENCRYPTION_KEY ||
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    ),
+  CAMERA_CREDENTIAL_ENCRYPTION_KEY: z
+    .string()
+    .default(
+      process.env.CCTV_CREDENTIAL_ENCRYPTION_KEY ||
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    ),
+  CAMERA_CONNECTION_TIMEOUT_MS: z.coerce.number().default(5000),
+  CAMERA_RECONNECT_INTERVAL_MS: z.coerce.number().default(5000),
+
+  // Recording
+  RECORDING_OUTPUT_DIR: z.string().default('./recordings'),
+  RECORDING_TEMP_DIR: z.string().default('temp_recordings'),
+  RECORDING_DURATION_MINUTES: z.coerce.number().default(120),
+  RECORDING_POST_MATCH_MINUTES: z.coerce.number().default(15),
+  RECORDING_SEGMENT_SECONDS: z.coerce.number().default(300),
+  RECORDING_MAX_RETRIES: z.coerce.number().default(3),
+  RECORDING_MAX_CONCURRENT: z.coerce.number().default(5),
+  FFMPEG_PATH: z.string().default('ffmpeg'),
+
+  // AWS S3
+  AWS_REGION: z.string().default(process.env.AWS_S3_REGION || 'ap-south-1'),
+  AWS_S3_REGION: z.string().default(process.env.AWS_REGION || 'ap-south-1'),
+  AWS_S3_BUCKET: z.string().default(process.env.AWS_S3_BUCKET_NAME || 'all-stars-arena-recordings'),
+  AWS_S3_BUCKET_NAME: z.string().default(process.env.AWS_S3_BUCKET || 'all-stars-arena-recordings'),
+  AWS_ACCESS_KEY_ID: z.string().optional().default(process.env.AWS_S3_ACCESS_KEY_ID || ''),
+  AWS_SECRET_ACCESS_KEY: z.string().optional().default(process.env.AWS_S3_SECRET_ACCESS_KEY || ''),
+  AWS_S3_ACCESS_KEY_ID: z.string().optional().default(process.env.AWS_ACCESS_KEY_ID || ''),
+  AWS_S3_SECRET_ACCESS_KEY: z.string().optional().default(process.env.AWS_SECRET_ACCESS_KEY || ''),
   AWS_S3_ENDPOINT: z.string().optional().default(''),
 });
 
@@ -35,3 +76,24 @@ if (!parsedEnv.success) {
 }
 
 export const env = parsedEnv.data;
+
+export const getDefaultRtspUrl = (channel = 1, subtype = 0) => {
+  if (!env.CAMERA_HOST) return '';
+  const username = env.CAMERA_USERNAME || 'admin';
+  const rawPass = env.CAMERA_PASSWORD || '';
+  const encodedPass = encodeURIComponent(rawPass);
+  const auth = username ? `${username}:${encodedPass}@` : '';
+  const host = env.CAMERA_HOST || '192.168.1.2';
+  const port = env.CAMERA_RTSP_PORT || 554;
+
+  let pathStr = env.CAMERA_RTSP_PATH || `/cam/realmonitor?channel=${channel}&subtype=${subtype}`;
+  if (pathStr.includes('channel=')) {
+    pathStr = pathStr.replace(/channel=\d+/, `channel=${channel}`);
+  }
+  if (pathStr.includes('subtype=')) {
+    pathStr = pathStr.replace(/subtype=\d+/, `subtype=${subtype}`);
+  }
+
+  const formattedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${env.CAMERA_PROTOCOL || 'rtsp'}://${auth}${host}:${port}${formattedPath}`;
+};

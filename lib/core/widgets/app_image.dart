@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/theme/app_colors.dart';
+import '../utils/image_utils.dart';
 
 class AppImage extends StatelessWidget {
   final String imageUrl;
@@ -22,7 +23,7 @@ class AppImage extends StatelessWidget {
     final fallbackBg = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
     final fallbackIconColor = isDark ? Colors.white54 : Colors.grey.shade500;
 
-    if (imageUrl.isEmpty || !imageUrl.startsWith('http')) {
+    if (!imageUrl.isValidNetworkUrl) {
       return Container(
         width: width,
         height: height,
@@ -32,7 +33,7 @@ class AppImage extends StatelessWidget {
     }
 
     return CachedNetworkImage(
-      imageUrl: imageUrl,
+      imageUrl: imageUrl.trim(),
       width: width,
       height: height,
       fit: fit,

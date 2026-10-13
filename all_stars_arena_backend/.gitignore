@@ -9,3 +9,7 @@ yarn-error.log*
 uploads/
 temp_recordings/
 recordings/
+
+# Firebase Admin SDK Private Service Account Keys
+all-stars-arena-e3074093f9e3.json
+*-firebase-adminsdk-*.json

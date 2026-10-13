@@ -67,9 +67,15 @@ export const decryptSecret = (encryptedText: string): string => {
 export const redactRtspUrl = (rawUrl: string): string => {
   if (!rawUrl) return '';
   try {
-    // Regex matches protocol://username:password@host...
+    const schemeIndex = rawUrl.indexOf('://');
+    const atIndex = rawUrl.lastIndexOf('@');
+    if (schemeIndex !== -1 && atIndex !== -1 && atIndex > schemeIndex) {
+      const scheme = rawUrl.slice(0, schemeIndex + 3);
+      const hostAndPath = rawUrl.slice(atIndex + 1);
+      return `${scheme}***:***@${hostAndPath}`;
+    }
     return rawUrl.replace(
-      /^([a-zA-Z0-9+.-]+:\/\/)([^:]+):([^@]+)@(.*)$/,
+      /^([a-zA-Z0-9+.-]+:\/\/)([^:]+):(.*)@([^@]+)$/,
       '$1***:***@$4'
     );
   } catch (_) {

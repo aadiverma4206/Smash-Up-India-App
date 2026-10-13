@@ -133,4 +133,8 @@ class PlayerRemoteDataSource {
   Future<void> markNotificationRead(String notificationId) async {
     await dioClient.dio.patch('/notifications/$notificationId/read');
   }
+
+  Future<void> markAllNotificationsRead() async {
+    await dioClient.dio.patch('/notifications/read-all');
+  }
 }

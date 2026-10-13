@@ -195,22 +195,50 @@ export class AuthRepository {
    * Upsert Device FCM Token
    */
   static async upsertDeviceToken(userId: string, token: string, platform = 'ANDROID', deviceInfo?: string) {
-    await dbPool.query(
-      `INSERT INTO public.user_device_tokens (user_id, device_token, device_type, is_active)
-       VALUES ($1, $2, $3, true)
-       ON CONFLICT (user_id, device_token)
-       DO UPDATE SET is_active = true, updated_at = CURRENT_TIMESTAMP;`,
-      [userId, token, platform]
-    );
+    try {
+      // 1. Clear any existing entry for this token if assigned to another user
+      await dbPool.query(
+        `DELETE FROM public.user_device_tokens WHERE device_token = $1 AND user_id <> $2;`,
+        [token, userId]
+      );
+
+      // 2. Upsert token for current user
+      await dbPool.query(
+        `INSERT INTO public.user_device_tokens (user_id, device_token, device_type, is_active)
+         VALUES ($1, $2, $3, true)
+         ON CONFLICT (user_id, device_token)
+         DO UPDATE SET is_active = true, device_type = EXCLUDED.device_type, updated_at = CURRENT_TIMESTAMP;`,
+        [userId, token, platform]
+      );
+    } catch (err: any) {
+      // Fallback if the ON CONFLICT constraint specification is missing in DB schema
+      try {
+        await dbPool.query(
+          `UPDATE public.user_device_tokens SET is_active = true, device_type = $3, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $1 AND device_token = $2;`,
+          [userId, token, platform]
+        );
+        await dbPool.query(
+          `INSERT INTO public.user_device_tokens (user_id, device_token, device_type, is_active)
+           SELECT $1, $2, $3, true
+           WHERE NOT EXISTS (
+             SELECT 1 FROM public.user_device_tokens WHERE user_id = $1 AND device_token = $2
+           );`,
+          [userId, token, platform]
+        );
+      } catch (_) {}
+    }
   }
 
   /**
    * Delete Device FCM Token
    */
   static async deleteDeviceToken(userId: string, token: string) {
-    await dbPool.query(
-      `DELETE FROM public.user_device_tokens WHERE user_id = $1 AND device_token = $2;`,
-      [userId, token]
-    );
+    try {
+      await dbPool.query(
+        `DELETE FROM public.user_device_tokens WHERE user_id = $1 AND device_token = $2;`,
+        [userId, token]
+      );
+    } catch (_) {}
   }
 }

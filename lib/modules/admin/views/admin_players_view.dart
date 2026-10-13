@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
 import '../../../data/models/admin_models.dart';
 import '../../../core/responsive/responsive_builder.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../app/theme/app_colors.dart';
@@ -305,8 +306,7 @@ class AdminPlayersView extends GetView<AdminController> {
                   ),
                 ),
                 child: ClipOval(
-                  child: (user.profileImageUrl != null &&
-                          user.profileImageUrl!.isNotEmpty)
+                  child: user.profileImageUrl.isValidNetworkUrl
                       ? CachedNetworkImage(
                           imageUrl: user.profileImageUrl!,
                           width: 44,

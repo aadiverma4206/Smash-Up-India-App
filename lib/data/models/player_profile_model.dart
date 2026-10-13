@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/image_utils.dart';
 
 part 'player_profile_model.g.dart';
 
@@ -99,9 +100,11 @@ class PlayerProfileModel {
       city: (json['city'] ?? 'Raipur') as String,
       bio: json['bio'] as String?,
       avatarUrl: (json['avatarUrl'] ??
-          json['avatar_url'] ??
-          json['profile_image_url'] ??
-          json['profileImageUrl']) as String?,
+              json['avatar_url'] ??
+              json['profile_image_url'] ??
+              json['profileImageUrl'])
+          ?.toString()
+          .sanitizedNetworkUrl,
       dateOfBirth: (json['dateOfBirth'] ?? json['date_of_birth']) as String?,
       position: rawPos,
       secondaryPosition: rawSec,

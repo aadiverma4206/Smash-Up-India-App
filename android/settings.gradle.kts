@@ -17,9 +17,26 @@ pluginManagement {
     }
 }
 
+// Fix for AGP conflict when both ANDROID_PREFS_ROOT and ANDROID_USER_HOME environment variables are set
+try {
+    val processEnvironment = Class.forName("java.lang.ProcessEnvironment")
+    val fields = arrayOf("theEnvironment", "theUnmodifiableEnvironment")
+    for (fieldName in fields) {
+        try {
+            val field = processEnvironment.getDeclaredField(fieldName)
+            field.isAccessible = true
+            val map = field.get(null) as? MutableMap<String, String>
+            map?.remove("ANDROID_PREFS_ROOT")
+        } catch (_: Exception) {}
+    }
+} catch (_: Exception) {}
+
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.9.1" apply false
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services") version "4.4.2" apply false
+    // END: FlutterFire Configuration
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
 }
 

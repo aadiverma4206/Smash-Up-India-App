@@ -64,4 +64,26 @@ class NotificationsController extends GetxController {
       ErrorHandler.showErrorSnackBar('Error', e);
     }
   }
+
+  Future<void> markAllRead() async {
+    try {
+      await repository.markAllNotificationsRead();
+      for (int i = 0; i < notifications.length; i++) {
+        final item = notifications[i];
+        if (!item.isRead) {
+          notifications[i] = NotificationModel(
+            id: item.id,
+            title: item.title,
+            body: item.body,
+            type: item.type,
+            data: item.data,
+            isRead: true,
+            createdAt: item.createdAt,
+          );
+        }
+      }
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar('Error', e);
+    }
+  }
 }

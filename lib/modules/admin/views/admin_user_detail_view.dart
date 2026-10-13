@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
 import '../../../data/models/admin_models.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/image_utils.dart';
 
 class AdminUserDetailView extends StatefulWidget {
   final AdminUserModel? userModel;
@@ -165,8 +166,7 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                           ),
                         ),
                         child: ClipOval(
-                          child: (user.profileImageUrl != null &&
-                                  user.profileImageUrl!.isNotEmpty)
+                          child: user.profileImageUrl.isValidNetworkUrl
                               ? CachedNetworkImage(
                                   imageUrl: user.profileImageUrl!,
                                   fit: BoxFit.cover,

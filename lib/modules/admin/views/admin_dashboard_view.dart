@@ -9,6 +9,7 @@ import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
 
 class AdminDashboardView extends StatefulWidget {
@@ -76,9 +77,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            const ManagerHistoryView(),   // Index 1: Match History & Records (Exact same view!)
-            const CctvListView(),          // Index 2: CCTV Cameras
-            const AdminProfileView(),     // Index 3: Profile
+            const ManagerHistoryView(), // Index 1: Match History & Records (Exact same view!)
+            const CctvListView(), // Index 2: CCTV Cameras
+            const AdminProfileView(), // Index 3: Profile
           ],
         );
       }),
@@ -671,7 +672,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             ],
           ),
           child: ClipOval(
-            child: avatarUrl.isNotEmpty
+            child: avatarUrl.isValidNetworkUrl
                 ? CachedNetworkImage(
                     imageUrl: avatarUrl,
                     width: 38,

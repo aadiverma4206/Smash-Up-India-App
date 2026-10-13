@@ -3,7 +3,7 @@ import net from 'net';
 import path from 'path';
 import fs from 'fs';
 import { dbPool } from '../config/db.config.js';
-import { env } from '../config/env.config.js';
+import { env, getDefaultRtspUrl } from '../config/env.config.js';
 import { logger } from '../utils/logger.js';
 import { decryptSecret, redactRtspUrl } from '../utils/crypto.utils.js';
 import { uploadLocalFileToS3, safeDeleteLocalFile } from './storage.service.js';
@@ -120,7 +120,7 @@ export class CctvRecordingService {
     } catch (_) {}
 
     if (!host) {
-      host = '127.0.0.1';
+      host = env.CAMERA_HOST || '192.168.1.2';
     }
 
     const timeoutMs = env.CAMERA_CONNECTION_TIMEOUT_MS || 5000;
@@ -262,14 +262,24 @@ export class CctvRecordingService {
 
     let rtspUrl = '';
     try {
-      rtspUrl = decryptSecret(camera.rtsp_url_encrypted);
+      if (camera?.rtsp_url_encrypted) {
+        rtspUrl = decryptSecret(camera.rtsp_url_encrypted);
+      }
     } catch (err: any) {
-      logger.error({ err }, `Failed to decrypt RTSP credentials for camera ${camera.id}`);
+      logger.warn({ err: err.message }, `Could not decrypt camera RTSP URL for camera ${camera?.id}`);
+    }
+
+    if (!rtspUrl) {
+      rtspUrl = getDefaultRtspUrl();
+    }
+
+    if (!rtspUrl) {
+      logger.error(`No valid RTSP URL or camera host configured for recording ${recordingId}`);
       await dbPool.query(
         `UPDATE public.cctv_recordings
          SET status = 'FAILED', recording_status = 'FAILED',
-             error_code = 'DECRYPTION_FAILED',
-             error_message = 'Failed to decrypt camera credentials'
+             error_code = 'NO_RTSP_URL',
+             error_message = 'No valid RTSP URL or camera host configured'
          WHERE id = $1;`,
         [recordingId]
       );

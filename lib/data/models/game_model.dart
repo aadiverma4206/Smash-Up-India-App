@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/image_utils.dart';
 
 part 'game_model.g.dart';
 
@@ -64,8 +65,11 @@ class GameRosterPlayerModel {
     return GameRosterPlayerModel(
       userId: (json['userId'] ?? json['user_id'] ?? '').toString(),
       name: (json['name'] ?? 'Player').toString(),
-      profileImageUrl: json['profileImageUrl']?.toString() ??
-          json['profile_image_url']?.toString(),
+      profileImageUrl: (json['profileImageUrl'] ??
+              json['profile_image_url'] ??
+              json['avatar_url'])
+          ?.toString()
+          .sanitizedNetworkUrl,
       team: (json['team'] ?? 'TEAM_A').toString(),
       position:
           (json['position'] ?? json['player_position'] ?? 'ST').toString(),

@@ -151,7 +151,7 @@ export class NotificationService {
       data: jsonPayload,
       timestamp: new Date(row.created_at).toISOString(),
     };
-    sendUserNotification(params.userId, socketPayload);
+    sendUserNotification(params.userId, socketPayload, { skipDbInsert: true });
 
     return {
       id: row.id,

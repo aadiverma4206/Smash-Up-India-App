@@ -18,13 +18,25 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional().default(''),
   EMAIL_FROM: z.string().default('ALL STARS ARENA <no-reply@allstarsarena.com>'),
 
-  // Static Camera Configuration (Optional default camera)
-  CAMERA_HOST: z.string().optional().default(''),
+  // Firebase Admin Credentials (Optional)
+  GOOGLE_APPLICATION_CREDENTIALS: z
+    .string()
+    .optional()
+    .default('./all-stars-arena-e3074093f9e3.json'),
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional().default(''),
+  FIREBASE_PROJECT_ID: z.string().optional().default('all-stars-arena'),
+
+  // CCTV Camera Configuration (Confirmed Dahua XVR / DVR settings)
+  CAMERA_HOST: z.string().optional().default('192.168.1.2'),
   CAMERA_RTSP_PORT: z.coerce.number().default(554),
-  CAMERA_USERNAME: z.string().optional().default(''),
-  CAMERA_PASSWORD: z.string().optional().default(''),
-  CAMERA_RTSP_PATH: z.string().optional().default(''),
+  CAMERA_TCP_PORT: z.coerce.number().default(37777),
+  CAMERA_HTTP_PORT: z.coerce.number().default(80),
+  CAMERA_USERNAME: z.string().optional().default('admin'),
+  CAMERA_PASSWORD: z.string().optional().default('admin@123'),
+  CAMERA_RTSP_PATH: z.string().optional().default('/cam/realmonitor?channel=1&subtype=0'),
   CAMERA_PROTOCOL: z.string().default('rtsp'),
+  CAMERA_SERIAL_NUMBER: z.string().optional().default('3L04789PAZ01138'),
+  CAMERA_DEVICE_NAME: z.string().optional().default('Botivate'),
 
   // Camera Security & Networking
   CAMERA_CREDENTIAL_ENCRYPTION_KEY: z
@@ -43,11 +55,13 @@ const envSchema = z.object({
   CAMERA_RECONNECT_INTERVAL_MS: z.coerce.number().default(5000),
 
   // Recording Lifecycle & Storage Parameters
+  RECORDING_OUTPUT_DIR: z.string().default('./recordings'),
+  RECORDING_TEMP_DIR: z.string().default('temp_recordings'),
+  RECORDING_DURATION_MINUTES: z.coerce.number().default(120),
   RECORDING_POST_MATCH_MINUTES: z.coerce.number().default(15),
   RECORDING_SEGMENT_SECONDS: z.coerce.number().default(300),
   RECORDING_MAX_RETRIES: z.coerce.number().default(3),
   RECORDING_MAX_CONCURRENT: z.coerce.number().default(5),
-  RECORDING_TEMP_DIR: z.string().default('temp_recordings'),
   FFMPEG_PATH: z.string().default('ffmpeg'),
 
   // AWS S3 Storage
@@ -70,3 +84,28 @@ if (!parsedEnv.success) {
 }
 
 export const env = parsedEnv.data;
+
+/**
+ * Constructs Dahua RTSP stream URL with safe password URL-encoding
+ * Format: rtsp://username:encodedPassword@host:port/cam/realmonitor?channel=N&subtype=M
+ */
+export const getDefaultRtspUrl = (channel = 1, subtype = 0): string => {
+  if (!env.CAMERA_HOST) return '';
+  const username = env.CAMERA_USERNAME || 'admin';
+  const rawPass = env.CAMERA_PASSWORD || '';
+  const encodedPass = encodeURIComponent(rawPass);
+  const auth = username ? `${username}:${encodedPass}@` : '';
+  const host = env.CAMERA_HOST || '192.168.1.2';
+  const port = env.CAMERA_RTSP_PORT || 554;
+
+  let pathStr = env.CAMERA_RTSP_PATH || `/cam/realmonitor?channel=${channel}&subtype=${subtype}`;
+  if (pathStr.includes('channel=')) {
+    pathStr = pathStr.replace(/channel=\d+/, `channel=${channel}`);
+  }
+  if (pathStr.includes('subtype=')) {
+    pathStr = pathStr.replace(/subtype=\d+/, `subtype=${subtype}`);
+  }
+
+  const formattedPath = pathStr.startsWith('/') ? pathStr : `/${pathStr}`;
+  return `${env.CAMERA_PROTOCOL || 'rtsp'}://${auth}${host}:${port}${formattedPath}`;
+};

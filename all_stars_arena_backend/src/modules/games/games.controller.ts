@@ -7,6 +7,9 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AuthenticatedRequest } from '../../types/index.js';
 import { CctvService } from '../cctv/cctv.service.js';
 import { CctvRepository } from '../cctv/cctv.repository.js';
+import { sendUserNotification } from '../../services/realtime.service.js';
+import { dbPool } from '../../config/db.config.js';
+import { logger } from '../../utils/logger.js';
 
 export const getGamesController = asyncHandler(async (req: Request, res: Response) => {
   let skillFilter: string | undefined = undefined;
@@ -102,6 +105,37 @@ export const requestSlotController = asyncHandler(async (req: AuthenticatedReque
     actionType: 'SLOT_REQUESTED',
     details: `Player requested slot in position ${position}`,
   });
+
+  // Notify Game Creator & Club Managers
+  try {
+    if (game.creator_id && game.creator_id !== userId) {
+      sendUserNotification(game.creator_id, {
+        title: '🙋 New Slot Request Received',
+        message: `A player has requested a slot in "${game.title}".`,
+        type: 'INFO',
+        data: { gameId, requestId: slotReq.id, route: '/manager/notifications' },
+      });
+    }
+
+    if (game.club_id) {
+      const mgrs = await dbPool.query(
+        `SELECT user_id FROM public.club_managers WHERE club_id = $1;`,
+        [game.club_id]
+      );
+      for (const mgr of mgrs.rows) {
+        if (mgr.user_id !== game.creator_id && mgr.user_id !== userId) {
+          sendUserNotification(mgr.user_id, {
+            title: '🙋 New Player Join Request',
+            message: `A player requested a slot in "${game.title}".`,
+            type: 'INFO',
+            data: { gameId, requestId: slotReq.id, route: '/manager/notifications' },
+          });
+        }
+      }
+    }
+  } catch (notifErr: any) {
+    logger.warn(`Failed to dispatch slot request notification for game ${gameId}: ${notifErr.message}`);
+  }
 
   res.status(200).json(ApiResponse.success(
     reqStatus === 'WAITLISTED' ? 'Match is full. Added to waitlist!' : 'Slot request submitted for manager approval',

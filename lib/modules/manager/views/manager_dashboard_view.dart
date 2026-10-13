@@ -13,6 +13,7 @@ import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/utils/app_date_utils.dart';
 
@@ -715,7 +716,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: avatarUrl.isNotEmpty
+          child: avatarUrl.isValidNetworkUrl
               ? CachedNetworkImage(
                   imageUrl: avatarUrl,
                   width: 38,
@@ -1422,7 +1423,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: req.playerImage != null && req.playerImage!.isNotEmpty
+                child: req.playerImage.isValidNetworkUrl
                     ? CachedNetworkImage(
                         imageUrl: req.playerImage!,
                         width: 44,

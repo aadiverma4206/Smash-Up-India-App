@@ -8,6 +8,8 @@ import '../../core/services/theme_service.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/analytics_service.dart';
 import '../../core/services/crashlytics_service.dart';
+import '../../core/services/notification_service.dart';
+import '../../modules/notifications/services/socket_notification_service.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -46,6 +48,12 @@ class InitialBinding extends Bindings {
     }
     if (!Get.isRegistered<CrashlyticsService>()) {
       Get.put(CrashlyticsService(), permanent: true);
+    }
+    if (!Get.isRegistered<NotificationService>()) {
+      Get.put(NotificationService(), permanent: true);
+    }
+    if (!Get.isRegistered<SocketNotificationService>()) {
+      Get.put(SocketNotificationService(), permanent: true);
     }
   }
 }

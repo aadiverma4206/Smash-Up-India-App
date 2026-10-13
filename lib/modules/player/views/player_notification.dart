@@ -415,6 +415,7 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     for (int i = 0; i < _localItems.length; i++) {
       _localItems[i] = _localItems[i].copyWith(isRead: true);
     }
+    _controller.markAllRead();
     Get.snackbar(
       'Marked as Read',
       'All notifications marked as read',

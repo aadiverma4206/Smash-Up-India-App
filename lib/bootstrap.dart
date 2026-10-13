@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'app/bindings/initial_binding.dart';
@@ -6,9 +7,22 @@ import 'core/storage/preferences_service.dart';
 import 'core/storage/database_service.dart';
 import 'core/services/auth_service.dart';
 import 'core/utils/app_logger.dart';
+import 'firebase_options.dart';
 
 Future<void> bootstrap({String envFile = '.env.dev'}) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase (safely)
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      AppLogger.info('🔥 Firebase initialized successfully during bootstrap.');
+    }
+  } catch (e) {
+    AppLogger.warning('Firebase initialization skipped or failed during bootstrap: $e');
+  }
 
   try {
     await EnvConfig.init(envFile: envFile);
@@ -35,7 +49,11 @@ Future<void> bootstrap({String envFile = '.env.dev'}) async {
   }
 
   // Register remaining core dependencies
-  InitialBinding().dependencies();
+  try {
+    InitialBinding().dependencies();
+  } catch (e) {
+    AppLogger.error('Failed to initialize InitialBinding dependencies', e);
+  }
 
   // Initialize AuthService (checks persisted login token)
   try {

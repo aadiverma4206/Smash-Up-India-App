@@ -221,6 +221,47 @@ export class GamesService {
       type: 'SUCCESS',
     });
 
+    // Notify Manager(s) whenever a Player hosts/creates a match on the turf
+    if (isPlayerCreator) {
+      try {
+        const mgrRes = await dbPool.query(
+          `SELECT DISTINCT u.id as user_id
+           FROM public.users u
+           LEFT JOIN public.club_managers cm ON cm.user_id = u.id
+           WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
+              OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
+          [newGame.club_id || 'all_stars_arena_club']
+        );
+        for (const mgr of mgrRes.rows) {
+          sendUserNotification(mgr.user_id, {
+            title: '⚽ New Player Match Hosted',
+            message: `A player hosted match "${newGame.title}" on turf for ${newGame.match_date} (${newGame.start_time}).`,
+            type: 'INFO',
+            data: { gameId: newGame.id, route: '/manager/notifications' },
+          });
+        }
+      } catch (mgrErr: any) {
+        logger.warn(`Failed to notify managers for player match ${newGame.id}: ${mgrErr.message}`);
+      }
+    } else if (newGame.approval_status === 'PENDING_APPROVAL' && newGame.club_id) {
+      try {
+        const mgrRes = await dbPool.query(
+          `SELECT user_id FROM public.club_managers WHERE club_id = $1;`,
+          [newGame.club_id]
+        );
+        for (const mgr of mgrRes.rows) {
+          sendUserNotification(mgr.user_id, {
+            title: '📋 New Match Awaiting Approval',
+            message: `Match "${newGame.title}" created on turf requires manager approval.`,
+            type: 'WARNING',
+            data: { gameId: newGame.id, route: '/manager/notifications' },
+          });
+        }
+      } catch (mgrErr: any) {
+        logger.warn(`Failed to notify managers for pending match ${newGame.id}: ${mgrErr.message}`);
+      }
+    }
+
     return newGame;
   }
 

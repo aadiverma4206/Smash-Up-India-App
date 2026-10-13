@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 double _parseDouble(dynamic value, [double defaultValue = 0.0]) {
   if (value == null) return defaultValue;
   if (value is num) return value.toDouble();
@@ -74,9 +76,11 @@ class SlotRequestModel {
       userId: (json['userId'] ?? json['user_id'] ?? '').toString(),
       playerName:
           json['playerName']?.toString() ?? json['player_name']?.toString(),
-      playerImage: json['playerImage']?.toString() ??
-          json['player_image']?.toString() ??
-          json['profile_image_url']?.toString(),
+      playerImage: (json['playerImage'] ??
+              json['player_image'] ??
+              json['profile_image_url'])
+          ?.toString()
+          .sanitizedNetworkUrl,
       playerPosition: json['playerPosition']?.toString() ??
           json['player_position']?.toString(),
       skillLevel:

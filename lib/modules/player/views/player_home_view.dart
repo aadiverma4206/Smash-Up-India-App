@@ -10,6 +10,7 @@ import 'match_history_view.dart';
 import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/utils/app_date_utils.dart';
 
@@ -728,9 +729,9 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             ],
           ),
           child: ClipOval(
-            child: (p?.avatarUrl != null && p!.avatarUrl!.isNotEmpty)
+            child: p?.avatarUrl.isValidNetworkUrl == true
                 ? CachedNetworkImage(
-                    imageUrl: p.avatarUrl!,
+                    imageUrl: p!.avatarUrl!,
                     width: 38,
                     height: 38,
                     fit: BoxFit.cover,

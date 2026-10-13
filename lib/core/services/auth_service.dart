@@ -4,6 +4,7 @@ import '../storage/secure_storage_service.dart';
 import '../storage/database_service.dart';
 import '../storage/preferences_service.dart';
 import '../utils/app_logger.dart';
+import 'notification_service.dart';
 import '../../modules/auth/repositories/auth_repository.dart';
 import '../../modules/player/controllers/player_controller.dart';
 import '../../app/routes/app_routes.dart';
@@ -29,6 +30,12 @@ class AuthService extends GetxService {
     isLoggedIn.value = true;
     _secureStorage.saveTokens(
         accessToken: accessToken, refreshToken: refreshToken);
+
+    if (Get.isRegistered<NotificationService>()) {
+      try {
+        Get.find<NotificationService>().registerFcmTokenWithBackend();
+      } catch (_) {}
+    }
   }
 
   /// Comprehensive logout: invalidates server session, deletes tokens from secure storage,
@@ -42,6 +49,15 @@ class AuthService extends GetxService {
     if (Get.isDialogOpen ?? false) {
       Get.back();
       await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    // 0.5. Unregister FCM token from backend before clearing credentials
+    if (Get.isRegistered<NotificationService>()) {
+      try {
+        await Get.find<NotificationService>().unregisterFcmTokenFromBackend();
+      } catch (e) {
+        AppLogger.warning('FCM token unregistration failed during logout: $e');
+      }
     }
 
     // 1. Invalidate server session if AuthRepository is available

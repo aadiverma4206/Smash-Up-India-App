@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/manager_dashboard_controller.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/empty_state.dart';
 
@@ -257,9 +258,9 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(22),
-                child: avatarUrl != null && avatarUrl.isNotEmpty
+                child: avatarUrl.isValidNetworkUrl
                     ? CachedNetworkImage(
-                        imageUrl: avatarUrl,
+                        imageUrl: avatarUrl!,
                         width: 44,
                         height: 44,
                         fit: BoxFit.cover,
