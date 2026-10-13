@@ -859,31 +859,121 @@ class GameDetailsView extends StatelessWidget {
 
   Widget _buildVideoSection(
       BuildContext context, GameDetailsController controller, GameModel game) {
-    final videoUrl = game.videoPlaybackUrl ??
-        (controller.matchVideos.isNotEmpty
-            ? controller.matchVideos.first.playbackUrl
-            : null);
+    return Obx(() {
+      final videos = controller.matchVideos;
+      final selectedVid = controller.selectedVideo.value ??
+          (videos.isNotEmpty ? videos.first : null);
+      final videoUrl =
+          (selectedVid != null && selectedVid.playbackUrl.isNotEmpty)
+              ? selectedVid.playbackUrl
+              : game.videoPlaybackUrl;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.videocam_rounded,
-                color: AppColors.primary, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              'CCTV Recorded Match Footage',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: context.textPrimary,
+      if (videoUrl == null || videoUrl.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      final cameraName = selectedVid?.cameraName ?? 'Camera 1';
+      final showMultiCam = controller.isManagerOrAdmin && videos.length > 1;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.videocam_rounded,
+                      color: AppColors.primary, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'CCTV Recorded Match Footage',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: context.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              if (showMultiCam)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${videos.length} CAMERAS',
+                    style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Only Admin and Manager get the multi-camera switcher options!
+          if (showMultiCam) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: List.generate(videos.length, (index) {
+                  final vid = videos[index];
+                  final isSelected = selectedVid?.id == vid.id ||
+                      (selectedVid == null && index == 0);
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8, bottom: 8),
+                    child: InkWell(
+                      onTap: () => controller.selectCamera(vid),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : context.cardColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : context.borderColor,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.videocam_rounded,
+                                size: 14,
+                                color: isSelected ? Colors.white : Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              vid.cameraName,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : context.textPrimary,
+                                fontSize: 11,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ),
             ),
+            const SizedBox(height: 6),
           ],
-        ),
-        const SizedBox(height: 10),
-        if (videoUrl != null && videoUrl.isNotEmpty) ...[
+
           Container(
             width: double.infinity,
             height: 190,
@@ -900,7 +990,10 @@ class GameDetailsView extends StatelessWidget {
                   onPressed: () {
                     Get.toNamed('/videos/player', arguments: {
                       'videoUrl': videoUrl,
-                      'title': game.title,
+                      'title': '${game.title} - $cameraName',
+                      'cameras': videos.map((v) => v.toJson()).toList(),
+                      'initialIndex':
+                          videos.indexWhere((v) => v.id == selectedVid?.id),
                     });
                   },
                 ),
@@ -916,7 +1009,7 @@ class GameDetailsView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '${game.courtName} • Auto-recorded CCTV Video',
+                      '${game.courtName} • $cameraName • Auto-recorded CCTV Video',
                       style: const TextStyle(color: Colors.white, fontSize: 11),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -926,31 +1019,36 @@ class GameDetailsView extends StatelessWidget {
               ],
             ),
           ),
-        ] else ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: context.cardColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: context.borderColor),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline_rounded,
-                    color: AppColors.primary, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'CCTV recording is processed automatically during the match and saved upon completion.',
-                    style:
-                        TextStyle(color: context.textSecondary, fontSize: 12),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Get.toNamed('/videos/player', arguments: {
+                  'videoUrl': videoUrl,
+                  'title': '${game.title} - $cameraName',
+                  'cameras': videos.map((v) => v.toJson()).toList(),
+                  'initialIndex':
+                      videos.indexWhere((v) => v.id == selectedVid?.id),
+                });
+              },
+              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+              label: Text(
+                controller.isManagerOrAdmin
+                    ? 'Watch Recorded Match Video ($cameraName)'
+                    : 'Watch Recorded Match Video',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
-      ],
-    );
+      );
+    });
   }
 }

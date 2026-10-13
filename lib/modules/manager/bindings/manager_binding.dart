@@ -3,23 +3,70 @@ import '../datasources/manager_remote_datasource.dart';
 import '../repositories/manager_repository.dart';
 import '../controllers/manager_dashboard_controller.dart';
 import '../controllers/manager_games_controller.dart';
+import '../../cctv/datasources/cctv_remote_datasource.dart';
+import '../../cctv/repositories/cctv_repository.dart';
+import '../../cctv/controllers/cctv_controller.dart';
+import '../../games/datasources/games_remote_datasource.dart';
+import '../../games/repositories/games_repository.dart';
 import '../../../core/network/dio_client.dart';
 
 class ManagerBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<ManagerRemoteDataSource>(
-      () => ManagerRemoteDataSource(dioClient: Get.find<DioClient>()),
-    );
-    Get.lazyPut<ManagerRepository>(
-      () => ManagerRepository(
-          remoteDataSource: Get.find<ManagerRemoteDataSource>()),
-    );
+    if (!Get.isRegistered<GamesRemoteDataSource>()) {
+      Get.lazyPut<GamesRemoteDataSource>(
+        () => GamesRemoteDataSource(dioClient: Get.find<DioClient>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<GamesRepository>()) {
+      Get.lazyPut<GamesRepository>(
+        () => GamesRepository(
+            remoteDataSource: Get.find<GamesRemoteDataSource>()),
+        fenix: true,
+      );
+    }
+
+    if (!Get.isRegistered<ManagerRemoteDataSource>()) {
+      Get.lazyPut<ManagerRemoteDataSource>(
+        () => ManagerRemoteDataSource(dioClient: Get.find<DioClient>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<ManagerRepository>()) {
+      Get.lazyPut<ManagerRepository>(
+        () => ManagerRepository(
+            remoteDataSource: Get.find<ManagerRemoteDataSource>()),
+        fenix: true,
+      );
+    }
+
     Get.lazyPut<ManagerDashboardController>(
       () => ManagerDashboardController(),
+      fenix: true,
     );
     Get.lazyPut<ManagerGamesController>(
       () => ManagerGamesController(),
+      fenix: true,
+    );
+
+    // CCTV dependencies for Bottom Nav CCTV Tab
+    if (!Get.isRegistered<CctvRemoteDataSource>()) {
+      Get.lazyPut<CctvRemoteDataSource>(
+        () => CctvRemoteDataSource(dioClient: Get.find<DioClient>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<CctvRepository>()) {
+      Get.lazyPut<CctvRepository>(
+        () =>
+            CctvRepository(remoteDataSource: Get.find<CctvRemoteDataSource>()),
+        fenix: true,
+      );
+    }
+    Get.lazyPut<CctvController>(
+      () => CctvController(),
+      fenix: true,
     );
   }
 }

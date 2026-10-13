@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
+import '../../manager/views/manager_history_view.dart';
+import '../../cctv/views/cctv_list_view.dart';
+import 'admin_profile_view.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
@@ -63,159 +66,24 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
 
   Widget _buildMobileLayout(BuildContext context, {bool showBottomNav = true}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color solidHeaderColor =
-        isDark ? const Color(0xFF130722) : Theme.of(context).cardColor;
-    final Color borderColor =
-        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Obx(() {
-        if (controller.isLoading.value && controller.dashboard.value == null) {
-          return _buildHomeSkeletonView(context);
-        }
-        return Stack(
+        final currentIndex = controller.selectedNavIndex.value.clamp(0, 3);
+
+        return IndexedStack(
+          index: currentIndex,
           children: [
-            // 1. Scrollable Main Content Body
-            NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: RefreshIndicator(
-                onRefresh: controller.loadDashboard,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Integrated Header Background Image
-                      _buildHeaderBackground(context),
-                      const SizedBox(height: 16),
-
-                      // Main Content Body
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Main Action Pill Bar
-                            _buildAdminPillBar(context),
-                            const SizedBox(height: 18),
-
-                            // 4 Circular Action Buttons Grid
-                            _buildCircularActionsGrid(context),
-                            const SizedBox(height: 20),
-
-                            // Platform Metrics Overview Grid
-                            _buildMetricsSection(context),
-                            const SizedBox(height: 20),
-
-                            // Quick Modules Navigation Grid
-                            _buildQuickModulesGrid(context),
-                            const SizedBox(height: 20),
-
-                            // Admin Info / Promo Ad Banner
-                            _buildReferAdBanner(context),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // 2. Seamless Morphing Header Bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ValueListenableBuilder<double>(
-                valueListenable: _headerProgress,
-                builder: (context, progress, child) {
-                  final Color currentBgColor = Color.lerp(
-                    Colors.transparent,
-                    solidHeaderColor,
-                    progress,
-                  )!;
-
-                  final Color currentBorderColor = Color.lerp(
-                    Colors.transparent,
-                    borderColor,
-                    progress,
-                  )!;
-
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: currentBgColor,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: currentBorderColor,
-                          width: 1,
-                        ),
-                      ),
-                      boxShadow: progress > 0.05
-                          ? [
-                              BoxShadow(
-                                color: Colors.black
-                                    .withValues(alpha: 0.12 * progress),
-                                blurRadius: 8 * progress,
-                                offset: Offset(0, 2 * progress),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Row(
-                          children: [
-                            // App Logo
-                            _buildLogoWidget(context),
-
-                            // Flexible Morphing Title ("All Stars Arena - Admin")
-                            ClipRect(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                widthFactor: progress,
-                                child: Opacity(
-                                  opacity: progress,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: _buildTitleWidget(context),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const Spacer(),
-
-                            // Action Icons (Notifications, Profile, Logout Avatar)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildNotificationButton(context),
-                                const SizedBox(width: 8),
-                                _buildProfileButton(context),
-                                const SizedBox(width: 8),
-                                _buildLogoutAvatar(context),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+            _buildMobileHomeTab(context),
+            const ManagerHistoryView(),   // Index 1: Match History & Records (Exact same view!)
+            const CctvListView(),          // Index 2: CCTV Cameras
+            const AdminProfileView(),     // Index 3: Profile
           ],
         );
       }),
 
-      // Bottom Navigation Bar (Hidden in Landscape)
+      // Bottom Navigation Bar
       bottomNavigationBar: showBottomNav
           ? Obx(
               () => Container(
@@ -240,9 +108,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   onTap: (index) {
                     controller.changeNavIndex(index);
                     if (index == 0) controller.loadDashboard();
-                    if (index == 1) Get.toNamed('/manager/cctv');
-                    if (index == 2) Get.toNamed(Routes.adminProfile);
-                    if (index == 3) _confirmLogout(context);
                   },
                   type: BottomNavigationBarType.fixed,
                   backgroundColor: Theme.of(context).cardColor,
@@ -275,6 +140,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       label: 'Dashboard',
                     ),
                     const BottomNavigationBarItem(
+                      icon: Icon(Icons.history_rounded, size: 22),
+                      label: 'History',
+                    ),
+                    const BottomNavigationBarItem(
                       icon: Icon(Icons.videocam_rounded, size: 22),
                       label: 'CCTV',
                     ),
@@ -282,16 +151,165 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       icon: Icon(Icons.person_rounded, size: 22),
                       label: 'Profile',
                     ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.logout_rounded, size: 22),
-                      label: 'Logout',
-                    ),
                   ],
                 ),
               ),
             )
           : null,
     );
+  }
+
+  Widget _buildMobileHomeTab(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color solidHeaderColor =
+        isDark ? const Color(0xFF130722) : Theme.of(context).cardColor;
+    final Color borderColor =
+        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE);
+
+    return Obx(() {
+      if (controller.isLoading.value && controller.dashboard.value == null) {
+        return _buildHomeSkeletonView(context);
+      }
+      return Stack(
+        children: [
+          // 1. Scrollable Main Content Body
+          NotificationListener<ScrollNotification>(
+            onNotification: _onScrollNotification,
+            child: RefreshIndicator(
+              onRefresh: controller.loadDashboard,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Integrated Header Background Image
+                    _buildHeaderBackground(context),
+                    const SizedBox(height: 16),
+
+                    // Main Content Body
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Main Action Pill Bar
+                          _buildAdminPillBar(context),
+                          const SizedBox(height: 18),
+
+                          // 4 Circular Action Buttons Grid
+                          _buildCircularActionsGrid(context),
+                          const SizedBox(height: 20),
+
+                          // Platform Metrics Overview Grid
+                          _buildMetricsSection(context),
+                          const SizedBox(height: 20),
+
+                          // Quick Modules Navigation Grid
+                          _buildQuickModulesGrid(context),
+                          const SizedBox(height: 20),
+
+                          // Admin Info / Promo Ad Banner
+                          _buildReferAdBanner(context),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 2. Seamless Morphing Header Bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _headerProgress,
+              builder: (context, progress, child) {
+                final Color currentBgColor = Color.lerp(
+                  Colors.transparent,
+                  solidHeaderColor,
+                  progress,
+                )!;
+
+                final Color currentBorderColor = Color.lerp(
+                  Colors.transparent,
+                  borderColor,
+                  progress,
+                )!;
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: currentBgColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: currentBorderColor,
+                        width: 1,
+                      ),
+                    ),
+                    boxShadow: progress > 0.05
+                        ? [
+                            BoxShadow(
+                              color: Colors.black
+                                  .withValues(alpha: 0.12 * progress),
+                              blurRadius: 8 * progress,
+                              offset: Offset(0, 2 * progress),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          // App Logo
+                          _buildLogoWidget(context),
+
+                          // Flexible Morphing Title ("All Stars Arena - Admin")
+                          ClipRect(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progress,
+                              child: Opacity(
+                                opacity: progress,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 10.0),
+                                  child: _buildTitleWidget(context),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const Spacer(),
+
+                          // Action Icons (Notifications, Profile, Logout Avatar)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildNotificationButton(context),
+                              const SizedBox(width: 8),
+                              _buildProfileButton(context),
+                              const SizedBox(width: 8),
+                              _buildLogoutAvatar(context),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildTabletDesktopLayout(BuildContext context) {
@@ -770,9 +788,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         'route': Routes.adminManagers,
       },
       {
-        'icon': Icons.person_add_rounded,
-        'title': 'Create Manager',
-        'route': '/admin/managers/create',
+        'icon': Icons.history_rounded,
+        'title': 'Match History',
+        'route': Routes.managerHistoryStandalone,
       },
       {
         'icon': Icons.videocam_rounded,

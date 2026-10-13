@@ -25,13 +25,17 @@ class TermsConditionsView extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.article_outlined, color: AppColors.primary, size: 28),
+                  const Icon(Icons.article_outlined,
+                      color: AppColors.primary, size: 28),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('All Stars Arena Terms of Service', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('Last updated: May 2024 • Version 1.2', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text('All Stars Arena Terms of Service',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('Last updated: May 2024 • Version 1.2',
+                          style: TextStyle(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
                 ],
@@ -39,7 +43,6 @@ class TermsConditionsView extends StatelessWidget {
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 12),
-
               _buildSection(
                 context,
                 title: '1. Acceptance of Terms',
@@ -83,7 +86,9 @@ class TermsConditionsView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade600,
                   ),
                 ),
               ),
@@ -95,7 +100,8 @@ class TermsConditionsView extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, {required String title, required String content}) {
+  Widget _buildSection(BuildContext context,
+      {required String title, required String content}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -117,7 +123,8 @@ class TermsConditionsView extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               height: 1.5,
-              color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+              color:
+                  isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
             ),
           ),
         ],

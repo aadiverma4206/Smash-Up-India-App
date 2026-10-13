@@ -60,7 +60,11 @@ class CallSupportView extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 'Enter your phone number and our team will call you within 15 minutes.',
-                style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade600),
               ),
               const SizedBox(height: 18),
               TextField(
@@ -68,8 +72,10 @@ class CallSupportView extends StatelessWidget {
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
                   labelText: 'Phone Number',
-                  prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.primary),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.phone_outlined,
+                      color: AppColors.primary),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -86,10 +92,14 @@ class CallSupportView extends StatelessWidget {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  icon: const Icon(Icons.phone_callback_rounded, color: Colors.white),
-                  label: const Text('Request Call Back', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  icon: const Icon(Icons.phone_callback_rounded,
+                      color: Colors.white),
+                  label: const Text('Request Call Back',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -130,7 +140,10 @@ class CallSupportView extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 3)),
                   ],
                 ),
                 child: Column(
@@ -141,21 +154,30 @@ class CallSupportView extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.phone_in_talk_rounded, color: Colors.white, size: 36),
+                      child: const Icon(Icons.phone_in_talk_rounded,
+                          color: Colors.white, size: 36),
                     ),
                     const SizedBox(height: 12),
                     const Text(
                       'Toll-Free Customer Care',
-                      style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 4),
                     const Text(
                       tollFreeNumber,
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2),
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.green.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(12),
@@ -163,7 +185,10 @@ class CallSupportView extends StatelessWidget {
                       ),
                       child: const Text(
                         'AVAILABLE 8:00 AM - 11:00 PM IST',
-                        style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 10),
+                        style: TextStyle(
+                            color: Colors.greenAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10),
                       ),
                     ),
                   ],
@@ -176,15 +201,20 @@ class CallSupportView extends StatelessWidget {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton.icon(
-                  onPressed: () => _copyToClipboard(context, tollFreeNumber, 'Toll-Free Number'),
+                  onPressed: () => _copyToClipboard(
+                      context, tollFreeNumber, 'Toll-Free Number'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                   icon: const Icon(Icons.call_rounded, color: Colors.white),
                   label: const Text(
                     'Call Support Now ($tollFreeNumber)',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14),
                   ),
                 ),
               ),
@@ -195,13 +225,19 @@ class CallSupportView extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _showCallbackModal(context),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary, width: 1.2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    side:
+                        const BorderSide(color: AppColors.primary, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
-                  icon: const Icon(Icons.phone_callback_rounded, color: AppColors.primary),
+                  icon: const Icon(Icons.phone_callback_rounded,
+                      color: AppColors.primary),
                   label: const Text(
                     'Request Immediate Call Back',
-                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14),
                   ),
                 ),
               ),
@@ -224,7 +260,8 @@ class CallSupportView extends StatelessWidget {
                 value: directPhone,
                 subtitle: 'Direct line for manager & arena inquiries',
                 icon: Icons.phone_android_rounded,
-                onTap: () => _copyToClipboard(context, directPhone, 'Phone Line'),
+                onTap: () =>
+                    _copyToClipboard(context, directPhone, 'Phone Line'),
               ),
               const SizedBox(height: 12),
 
@@ -234,7 +271,8 @@ class CallSupportView extends StatelessWidget {
                 value: supportEmail,
                 subtitle: 'Send detailed booking or dispute tickets',
                 icon: Icons.email_outlined,
-                onTap: () => _copyToClipboard(context, supportEmail, 'Support Email'),
+                onTap: () =>
+                    _copyToClipboard(context, supportEmail, 'Support Email'),
               ),
               const SizedBox(height: 12),
 
@@ -244,7 +282,8 @@ class CallSupportView extends StatelessWidget {
                 value: 'VIP Road, Near Airport Circle, Raipur, CG',
                 subtitle: 'Mon - Sat: 10:00 AM - 7:00 PM IST',
                 icon: Icons.location_on_outlined,
-                onTap: () => _copyToClipboard(context, 'VIP Road, Raipur', 'Office Address'),
+                onTap: () => _copyToClipboard(
+                    context, 'VIP Road, Raipur', 'Office Address'),
               ),
             ],
           ),
@@ -271,7 +310,8 @@ class CallSupportView extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+          border: Border.all(
+              color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
         ),
         child: Row(
           children: [
@@ -288,18 +328,21 @@ class CallSupportView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text(title,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   const SizedBox(height: 2),
                   Text(
                     value,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(subtitle,
+                      style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
               ),
             ),

@@ -20,6 +20,10 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Get.back(),
+        ),
         title: Obx(() {
           if (controller.courts.isEmpty) {
             return const Text('Court Matches');

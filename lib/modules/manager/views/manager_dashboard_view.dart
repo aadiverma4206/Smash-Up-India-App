@@ -4,6 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../app/routes/app_routes.dart';
 import '../controllers/manager_dashboard_controller.dart';
 import '../controllers/manager_games_controller.dart';
+import 'manager_players_view.dart';
+import 'manager_history_view.dart';
+import '../../games/views/create_game_view.dart';
+import '../../cctv/views/cctv_list_view.dart';
 import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
@@ -67,181 +71,25 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
   Widget _buildMobileLayout(BuildContext context, {bool showBottomNav = true}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color solidHeaderColor =
-        isDark ? const Color(0xFF130722) : Theme.of(context).cardColor;
-    final Color borderColor =
-        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Obx(() {
-        if (controller.isLoading.value && controller.dashboard.value == null) {
-          return _buildHomeSkeletonView(context);
-        }
-        final d = controller.dashboard.value;
+        final currentIndex = controller.selectedNavIndex.value;
 
-        return Stack(
+        return IndexedStack(
+          index: currentIndex,
           children: [
-            // 1. Scrollable Main Content Body
-            NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: RefreshIndicator(
-                onRefresh: controller.loadManagerData,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Integrated Header Background Image
-                      _buildHeaderBackground(context),
-                      const SizedBox(height: 16),
-
-                      // Main Content Body
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Manager Main Action Pill Bar
-                            _buildManagerPillBar(context),
-                            const SizedBox(height: 18),
-
-                            // Row 1 Circular Action Buttons (Court 1, Court 2, History, Players)
-                            _buildPrimaryActionsGrid(context),
-                            const SizedBox(height: 20),
-
-                            // Assigned Turf Club Header Banner
-                            _buildClubHeader(context, d),
-                            const SizedBox(height: 20),
-
-                            // Manager Key Metrics Overview
-                            _buildMetricsSection(context, d),
-                            const SizedBox(height: 20),
-
-                            // Pending Player Match Requests Section
-                            _buildPendingPlayerGamesSection(context),
-                            const SizedBox(height: 20),
-
-                            // Pending Player Slot Requests Section
-                            _buildPendingSlotRequestsSection(context),
-                            const SizedBox(height: 20),
-
-                            // Court 1 & Court 2 Games Section
-                            _buildCourtWiseGamesSection(context),
-                            const SizedBox(height: 20),
-
-                            // Club Matches Section (TODAY, UPCOMING, ONGOING, CANCELLED)
-                            _buildClubMatchesSection(context),
-                            const SizedBox(height: 20),
-
-                            // Quick Management Modules Grid
-                            _buildQuickModulesGrid(context),
-                            const SizedBox(height: 20),
-
-                            // Manager Ad / Promo Banner
-                            _buildReferAdBanner(context),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // 2. Seamless Morphing Header Bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ValueListenableBuilder<double>(
-                valueListenable: _headerProgress,
-                builder: (context, progress, child) {
-                  final Color currentBgColor = Color.lerp(
-                    Colors.transparent,
-                    solidHeaderColor,
-                    progress,
-                  )!;
-
-                  final Color currentBorderColor = Color.lerp(
-                    Colors.transparent,
-                    borderColor,
-                    progress,
-                  )!;
-
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: currentBgColor,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: currentBorderColor,
-                          width: 1,
-                        ),
-                      ),
-                      boxShadow: progress > 0.05
-                          ? [
-                              BoxShadow(
-                                color: Colors.black
-                                    .withValues(alpha: 0.12 * progress),
-                                blurRadius: 8 * progress,
-                                offset: Offset(0, 2 * progress),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Row(
-                          children: [
-                            // App Logo
-                            _buildLogoWidget(context),
-
-                            // Flexible Morphing Title ("Manager Control Center")
-                            ClipRect(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                widthFactor: progress,
-                                child: Opacity(
-                                  opacity: progress,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: _buildTitleWidget(context),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const Spacer(),
-
-                            // Action Icons (Notification, Profile Avatar, Logout)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildNotificationButton(context),
-                                const SizedBox(width: 8),
-                                _buildProfileAvatar(context),
-                                const SizedBox(width: 8),
-                                _buildLogoutButton(context),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+            _buildMobileHomeTab(context),
+            const CctvListView(),
+            const CreateGameView(),
+            const ManagerPlayersView(),
+            const ManagerHistoryView(),
           ],
         );
       }),
 
-      // Bottom Navigation Bar (History added instead of Bookings)
+      // Bottom Navigation Bar (Visible across all 5 dashboard tabs!)
       bottomNavigationBar: showBottomNav
           ? Obx(
               () => Container(
@@ -266,15 +114,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                   onTap: (index) {
                     controller.changeNavIndex(index);
                     if (index == 0) controller.loadManagerData();
-                    if (index == 1) {
-                      controller.selectCourt(0);
-                      Get.toNamed('/manager/courts');
-                    }
-                    if (index == 2) {
-                      Get.toNamed(Routes.createGame);
-                    }
-                    if (index == 3) Get.toNamed('/manager/players');
-                    if (index == 4) Get.toNamed('/manager/history');
                   },
                   type: BottomNavigationBarType.fixed,
                   backgroundColor: Theme.of(context).cardColor,
@@ -307,8 +146,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                       label: 'Home',
                     ),
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.stadium_rounded, size: 22),
-                      label: 'Court 1',
+                      icon: Icon(Icons.videocam_rounded, size: 22),
+                      label: 'CCTV',
                     ),
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.add_circle_outline_rounded, size: 22),
@@ -322,13 +161,187 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                       icon: Icon(Icons.history_rounded, size: 22),
                       label: 'History',
                     ),
-
                   ],
                 ),
               ),
             )
           : null,
     );
+  }
+
+  Widget _buildMobileHomeTab(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color solidHeaderColor =
+        isDark ? const Color(0xFF130722) : Theme.of(context).cardColor;
+    final Color borderColor =
+        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE);
+
+    return Obx(() {
+      if (controller.isLoading.value && controller.dashboard.value == null) {
+        return _buildHomeSkeletonView(context);
+      }
+      final d = controller.dashboard.value;
+
+      return Stack(
+        children: [
+          // 1. Scrollable Main Content Body
+          NotificationListener<ScrollNotification>(
+            onNotification: _onScrollNotification,
+            child: RefreshIndicator(
+              onRefresh: controller.loadManagerData,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Integrated Header Background Image
+                    _buildHeaderBackground(context),
+                    const SizedBox(height: 16),
+
+                    // Main Content Body
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Manager Main Action Pill Bar
+                          _buildManagerPillBar(context),
+                          const SizedBox(height: 18),
+
+                          // Row 1 Circular Action Buttons (Court 1, Court 2, History, Players)
+                          _buildPrimaryActionsGrid(context),
+                          const SizedBox(height: 20),
+
+                          // Assigned Turf Club Header Banner
+                          _buildClubHeader(context, d),
+                          const SizedBox(height: 20),
+
+                          // Manager Key Metrics Overview
+                          _buildMetricsSection(context, d),
+                          const SizedBox(height: 20),
+
+                          // Pending Player Match Requests Section
+                          _buildPendingPlayerGamesSection(context),
+                          const SizedBox(height: 20),
+
+                          // Pending Player Slot Requests Section
+                          _buildPendingSlotRequestsSection(context),
+                          const SizedBox(height: 20),
+
+                          // Court 1 & Court 2 Games Section
+                          _buildCourtWiseGamesSection(context),
+                          const SizedBox(height: 20),
+
+                          // Club Matches Section (TODAY, UPCOMING, ONGOING, CANCELLED)
+                          _buildClubMatchesSection(context),
+                          const SizedBox(height: 20),
+
+                          // Quick Management Modules Grid
+                          _buildQuickModulesGrid(context),
+                          const SizedBox(height: 20),
+
+                          // Manager Ad / Promo Banner
+                          _buildReferAdBanner(context),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 2. Seamless Morphing Header Bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _headerProgress,
+              builder: (context, progress, child) {
+                final Color currentBgColor = Color.lerp(
+                  Colors.transparent,
+                  solidHeaderColor,
+                  progress,
+                )!;
+
+                final Color currentBorderColor = Color.lerp(
+                  Colors.transparent,
+                  borderColor,
+                  progress,
+                )!;
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: currentBgColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: currentBorderColor,
+                        width: 1,
+                      ),
+                    ),
+                    boxShadow: progress > 0.05
+                        ? [
+                            BoxShadow(
+                              color: Colors.black
+                                  .withValues(alpha: 0.12 * progress),
+                              blurRadius: 8 * progress,
+                              offset: Offset(0, 2 * progress),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          // App Logo
+                          _buildLogoWidget(context),
+
+                          // Flexible Morphing Title ("Manager Control Center")
+                          ClipRect(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progress,
+                              child: Opacity(
+                                opacity: progress,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 10.0),
+                                  child: _buildTitleWidget(context),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const Spacer(),
+
+                          // Action Icons (Notification, Profile Avatar, Logout)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildNotificationButton(context),
+                              const SizedBox(width: 8),
+                              _buildProfileAvatar(context),
+                              const SizedBox(width: 8),
+                              _buildLogoutButton(context),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildTabletDesktopLayout(BuildContext context) {
@@ -375,9 +388,11 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.stadium_rounded), label: Text('Court 1')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.add_circle_outline_rounded), label: Text('Create')),
+                    icon: Icon(Icons.add_circle_outline_rounded),
+                    label: Text('Create')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.people_alt_rounded), label: Text('Players')),
+                    icon: Icon(Icons.people_alt_rounded),
+                    label: Text('Players')),
                 NavigationRailDestination(
                     icon: Icon(Icons.history_rounded), label: Text('History')),
               ],
@@ -616,7 +631,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
   Widget _buildNotificationButton(BuildContext context) {
     return Obx(() {
-      final totalPending = controller.pendingPlayerGames.length + controller.pendingRequests.length;
+      final totalPending = controller.pendingPlayerGames.length +
+          controller.pendingRequests.length;
 
       return InkWell(
         onTap: () => Get.toNamed(Routes.managerNotifications),
@@ -633,12 +649,16 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
                 boxShadow: const [
                   BoxShadow(
-                      color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2)),
                 ],
               ),
               child: Center(
                 child: Icon(
-                  totalPending > 0 ? Icons.notifications_active_rounded : Icons.notifications_outlined,
+                  totalPending > 0
+                      ? Icons.notifications_active_rounded
+                      : Icons.notifications_outlined,
                   color: totalPending > 0 ? AppColors.primary : Colors.black87,
                   size: 20,
                 ),
@@ -654,7 +674,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                     color: Colors.redAccent,
                     shape: BoxShape.circle,
                   ),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  constraints:
+                      const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Center(
                     child: Text(
                       totalPending > 9 ? '9+' : '$totalPending',
@@ -838,14 +859,9 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         }
       },
       {
-        'icon': Icons.videocam_rounded,
-        'title': 'CCTV Cameras',
-        'onTap': () => Get.toNamed('/manager/cctv')
-      },
-      {
         'icon': Icons.history_rounded,
         'title': 'Match History',
-        'onTap': () => Get.toNamed('/manager/history')
+        'onTap': () => Get.toNamed(Routes.managerHistoryStandalone)
       },
     ];
 

@@ -4,7 +4,6 @@ import '../controllers/player_controller.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/theme_service.dart';
-import '../../../core/storage/database_service.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../support/widgets/support_legal_cards.dart';
 
@@ -38,7 +37,6 @@ class ProfileView extends GetView<PlayerController> {
         }
 
         final p = controller.profile.value;
-        final s = controller.stats.value;
 
         if (p == null) {
           return Center(
@@ -79,27 +77,16 @@ class ProfileView extends GetView<PlayerController> {
                 _buildHeroHeader(context, p),
                 const SizedBox(height: 20),
 
-                // 2. Performance Stats Summary Grid
-                _buildStatsSummaryCard(context, s),
-                const SizedBox(height: 20),
-
-                // 3. Personal Attributes Card
+                // 2. Personal Attributes Card
                 _buildSectionHeader(
                     context, 'Player Attributes', Icons.badge_outlined),
                 const SizedBox(height: 10),
                 _buildAttributesCard(context, p),
                 const SizedBox(height: 20),
 
-                // 4. Quick Account & Navigation Settings
+                // 4. Preferences & Storage Management
                 _buildSectionHeader(
-                    context, 'Account & Navigation', Icons.tune_rounded),
-                const SizedBox(height: 10),
-                _buildAccountNavigationCard(context),
-                const SizedBox(height: 20),
-
-                // 5. Preferences & Storage Management
-                _buildSectionHeader(
-                    context, 'Preferences & Cache', Icons.sd_storage_outlined),
+                    context, 'Preferences & Theme', Icons.tune_rounded),
                 const SizedBox(height: 10),
                 _buildPreferencesAndStorageCard(context),
                 const SizedBox(height: 20),
@@ -324,124 +311,6 @@ class ProfileView extends GetView<PlayerController> {
     );
   }
 
-  /// 2. Performance Stats Summary Grid
-  Widget _buildStatsSummaryCard(BuildContext context, dynamic s) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Career Performance',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Win Rate: ${s?.winRatePercentage.toStringAsFixed(0) ?? 0}%',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                if (width > 360) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatBox(
-                            'Matches',
-                            '${s?.matchesPlayed ?? 0}',
-                            Icons.sports_soccer,
-                            Colors.blue),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildStatBox('Goals', '${s?.goalsScored ?? 0}',
-                            Icons.sports_score, AppColors.primary),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildStatBox('Assists', '${s?.assists ?? 0}',
-                            Icons.handshake, AppColors.secondary),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildStatBox('MOTM', '${s?.motmCount ?? 0}',
-                            Icons.star_rounded, Colors.orange),
-                      ),
-                    ],
-                  );
-                }
-                return GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  childAspectRatio: 1.8,
-                  children: [
-                    _buildStatBox('Matches', '${s?.matchesPlayed ?? 0}',
-                        Icons.sports_soccer, Colors.blue),
-                    _buildStatBox('Goals', '${s?.goalsScored ?? 0}',
-                        Icons.sports_score, AppColors.primary),
-                    _buildStatBox('Assists', '${s?.assists ?? 0}',
-                        Icons.handshake, AppColors.secondary),
-                    _buildStatBox('MOTM', '${s?.motmCount ?? 0}',
-                        Icons.star_rounded, Colors.orange),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatBox(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
   /// 3. Attributes List Card
   Widget _buildAttributesCard(BuildContext context, dynamic p) {
     return Card(
@@ -465,6 +334,8 @@ class ProfileView extends GetView<PlayerController> {
 
   Widget _buildInfoRow(
       BuildContext context, String label, String value, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -473,59 +344,24 @@ class ProfileView extends GetView<PlayerController> {
           const SizedBox(width: 12),
           Text(
             label,
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+              ),
               textAlign: TextAlign.end,
               softWrap: true,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 4. Account & Navigation Cards
-  Widget _buildAccountNavigationCard(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
-            title: const Text('Edit Player Profile'),
-            subtitle: const Text('Update city, position, foot, bio'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Get.toNamed('/player/profile/edit'),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.account_balance_wallet_outlined,
-                color: AppColors.secondary),
-            title: const Text('Wallet & Payments'),
-            subtitle: const Text('Manage coins & transactions'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Get.toNamed('/wallet'),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.devices_rounded, color: AppColors.accent),
-            title: const Text('Active Device Sessions'),
-            subtitle: const Text('View and revoke active login tokens'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Get.toNamed('/sessions'),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.notifications_active_outlined,
-                color: Colors.orange),
-            title: const Text('Match Notifications'),
-            subtitle: const Text('View match alerts & CCTV clip notifications'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Get.toNamed('/notifications'),
           ),
         ],
       ),
@@ -563,28 +399,6 @@ class ProfileView extends GetView<PlayerController> {
               ),
             );
           }),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading:
-                const Icon(Icons.cleaning_services_rounded, color: Colors.cyan),
-            title: const Text('Clear Local Database Cache'),
-            subtitle: const Text('Remove cached match records'),
-            trailing: OutlinedButton(
-              onPressed: () async {
-                if (Get.isRegistered<DatabaseService>()) {
-                  await Get.find<DatabaseService>().clearAllData();
-                  Get.snackbar(
-                    'Cache Purged',
-                    'SQLite local database cache has been successfully cleared.',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: AppColors.primary,
-                    colorText: Colors.white,
-                  );
-                }
-              },
-              child: const Text('Clear DB', style: TextStyle(fontSize: 12)),
-            ),
-          ),
         ],
       ),
     );

@@ -1,67 +1,133 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../repositories/player_repository.dart';
 import '../../../data/models/game_model.dart';
+import '../../../data/models/video_model.dart';
+import '../../games/repositories/games_repository.dart';
+import '../../../core/utils/app_logger.dart';
 
 class MatchHistoryController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
 
-  final RxList<GameModel> allHistoryList = <GameModel>[].obs;
-  final RxList<GameModel> filteredHistoryList = <GameModel>[].obs;
-  final RxBool isLoading = false.obs;
+  final ScrollController scrollController = ScrollController();
+  final TextEditingController searchController = TextEditingController();
 
-  final RxString selectedResultFilter = 'ALL'.obs; // ALL, WIN, LOSS, DRAW
-  final RxString selectedFormatFilter = 'ALL'.obs; // ALL, 5v5, 7v7, 11v11, etc.
+  final RxList<GameModel> historyGames = <GameModel>[].obs;
+  final Rxn<GameModel> selectedGame = Rxn<GameModel>();
+  final RxBool isLoadingMore = false.obs;
+  final RxBool isSearchingOrFiltering = false.obs;
+  final RxBool isOfflineMode = false.obs;
+  final RxBool hasMore = true.obs;
+  final RxString activeFilter = 'ALL'.obs; // ALL, COMPLETED, CANCELLED
+  final RxString selectedRosterTeamFilter = 'TEAM_A'.obs; // TEAM_A, TEAM_B
+  int currentOffset = 0;
+  final int limit = 20;
 
-  final resultFilters = ['ALL', 'WIN', 'LOSS', 'DRAW'];
-  final formatFilters = ['ALL', '5v5', '7v7', '11v11'];
+  // CCTV playback state for player history details
+  final RxnString cctvPlaybackUrl = RxnString();
+  final RxList<VideoModel> matchVideos = <VideoModel>[].obs;
+  final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();
+  final RxBool isLoadingVideos = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    fetchHistory();
+    fetchHistory(isRefresh: true);
+    scrollController.addListener(_onScroll);
   }
 
-  Future<void> fetchHistory() async {
-    isLoading.value = true;
+  @override
+  void onClose() {
+    scrollController.dispose();
+    searchController.dispose();
+    super.onClose();
+  }
+
+  void _onScroll() {
+    if (scrollController.position.pixels >=
+        scrollController.position.maxScrollExtent - 200) {
+      if (!isLoadingMore.value && hasMore.value) {
+        fetchHistory(isRefresh: false);
+      }
+    }
+  }
+
+  Future<void> fetchHistory({bool isRefresh = true}) async {
+    if (isRefresh) {
+      currentOffset = 0;
+      hasMore.value = true;
+      isSearchingOrFiltering.value = true;
+    }
+    if (!hasMore.value && !isRefresh) return;
+
+    isLoadingMore.value = true;
+
     try {
-      final list = await repository.getHistory(limit: 50, offset: 0);
-      allHistoryList.value = list;
-      applyFilters();
+      final list = await repository.getHistory(
+        limit: limit,
+        offset: currentOffset,
+        status: activeFilter.value,
+      );
+      if (list.length < limit) {
+        hasMore.value = false;
+      }
+      if (isRefresh) {
+        historyGames.assignAll(list);
+      } else {
+        historyGames.addAll(list);
+      }
+      currentOffset += list.length;
+      isOfflineMode.value = false;
     } catch (e) {
-      allHistoryList.clear();
-      filteredHistoryList.clear();
+      AppLogger.warning('Error fetching player history: $e');
+      if (historyGames.isNotEmpty) {
+        isOfflineMode.value = true;
+      }
     } finally {
-      isLoading.value = false;
+      isLoadingMore.value = false;
+      isSearchingOrFiltering.value = false;
     }
   }
 
-  void applyFilters() {
-    var result = List<GameModel>.from(allHistoryList);
-
-    if (selectedResultFilter.value != 'ALL') {
-      result = result
-          .where((g) => (g.winnerTeam ?? 'DRAW') == selectedResultFilter.value)
-          .toList();
-    }
-
-    if (selectedFormatFilter.value != 'ALL') {
-      result = result
-          .where((g) =>
-              g.format.toUpperCase() ==
-              selectedFormatFilter.value.toUpperCase())
-          .toList();
-    }
-
-    filteredHistoryList.value = result;
+  List<GameModel> get filteredHistoryGames {
+    final query = searchController.text.trim().toLowerCase();
+    return historyGames.where((game) {
+      if (query.isNotEmpty) {
+        final title = game.title.toLowerCase();
+        final court = game.courtName.toLowerCase();
+        final format = game.format.toLowerCase();
+        if (!title.contains(query) &&
+            !court.contains(query) &&
+            !format.contains(query)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
   }
 
-  void setResultFilter(String val) {
-    selectedResultFilter.value = val;
-    applyFilters();
+  Future<void> fetchMatchRecording(String gameId) async {
+    isLoadingVideos.value = true;
+    try {
+      if (Get.isRegistered<GamesRepository>()) {
+        final videos = await Get.find<GamesRepository>().getGameVideos(gameId);
+        matchVideos.assignAll(videos);
+        if (matchVideos.isNotEmpty) {
+          selectedVideo.value = matchVideos.first;
+          cctvPlaybackUrl.value = matchVideos.first.playbackUrl;
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Error fetching player match CCTV: $e');
+    } finally {
+      isLoadingVideos.value = false;
+    }
   }
 
-  void setFormatFilter(String val) {
-    selectedFormatFilter.value = val;
-    applyFilters();
+  void selectCamera(VideoModel video) {
+    selectedVideo.value = video;
+    if (video.playbackUrl.isNotEmpty) {
+      cctvPlaybackUrl.value = video.playbackUrl;
+    }
   }
 }

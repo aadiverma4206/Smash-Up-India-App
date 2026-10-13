@@ -494,10 +494,19 @@ export class GamesService {
     const videos = await GamesRepository.getGameVideos(gameId);
     const videoResults = [];
 
-    for (const vid of videos) {
+    for (let i = 0; i < videos.length; i++) {
+      const vid = videos[i];
       const signedPlaybackUrl = await getSignedPlaybackUrl(vid.video_url, 3600);
       videoResults.push({
         videoId: vid.id,
+        id: vid.id,
+        cctvId: vid.cctv_id || null,
+        cameraName: vid.camera_name || `Camera ${i + 1}`,
+        cameraType: vid.camera_type || 'RTSP_DOME',
+        cameraStatus: vid.camera_status || 'ONLINE',
+        courtId: vid.court_id || null,
+        courtName: vid.court_name || 'Court 1',
+        clubName: vid.club_name || 'All Stars Turf',
         title: vid.title,
         status: vid.status,
         durationSeconds: vid.duration_seconds || 5400,

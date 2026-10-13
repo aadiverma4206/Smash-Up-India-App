@@ -33,10 +33,15 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
 
   Color _getCategoryBgColor(String type, bool isDark) {
     final t = type.toUpperCase();
-    if (t.contains('SUCCESS') || t.contains('MATCH') || t.contains('CONFIRMED')) {
+    if (t.contains('SUCCESS') ||
+        t.contains('MATCH') ||
+        t.contains('CONFIRMED')) {
       return isDark ? const Color(0xFF132B1F) : const Color(0xFFE8F8F0);
     }
-    if (t.contains('WARNING') || t.contains('ALERT') || t.contains('REFUND') || t.contains('CANCEL')) {
+    if (t.contains('WARNING') ||
+        t.contains('ALERT') ||
+        t.contains('REFUND') ||
+        t.contains('CANCEL')) {
       return isDark ? const Color(0xFF2E1318) : const Color(0xFFFDE8E8);
     }
     if (t.contains('CCTV') || t.contains('VIDEO')) {
@@ -47,10 +52,15 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
 
   Color _getCategoryIconColor(String type) {
     final t = type.toUpperCase();
-    if (t.contains('SUCCESS') || t.contains('MATCH') || t.contains('CONFIRMED')) {
+    if (t.contains('SUCCESS') ||
+        t.contains('MATCH') ||
+        t.contains('CONFIRMED')) {
       return const Color(0xFF00C853);
     }
-    if (t.contains('WARNING') || t.contains('ALERT') || t.contains('REFUND') || t.contains('CANCEL')) {
+    if (t.contains('WARNING') ||
+        t.contains('ALERT') ||
+        t.contains('REFUND') ||
+        t.contains('CANCEL')) {
       return const Color(0xFFE53935);
     }
     if (t.contains('CCTV') || t.contains('VIDEO')) {
@@ -61,12 +71,18 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
 
   IconData _getCategoryIcon(String type) {
     final t = type.toUpperCase();
-    if (t.contains('MATCH') || t.contains('GAME')) return Icons.sports_soccer_rounded;
+    if (t.contains('MATCH') || t.contains('GAME')) {
+      return Icons.sports_soccer_rounded;
+    }
     if (t.contains('REFUND') || t.contains('WALLET') || t.contains('PAYMENT')) {
       return Icons.account_balance_wallet_outlined;
     }
-    if (t.contains('CCTV') || t.contains('VIDEO')) return Icons.videocam_outlined;
-    if (t.contains('WARNING') || t.contains('ALERT')) return Icons.warning_amber_rounded;
+    if (t.contains('CCTV') || t.contains('VIDEO')) {
+      return Icons.videocam_outlined;
+    }
+    if (t.contains('WARNING') || t.contains('ALERT')) {
+      return Icons.warning_amber_rounded;
+    }
     return Icons.notifications_active_outlined;
   }
 
@@ -88,11 +104,12 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
       ),
       body: ResponsiveBuilder(
         builder: (context, deviceType) {
-          final isTabletOrDesktop =
-              deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+          final isTabletOrDesktop = deviceType == DeviceType.tablet ||
+              deviceType == DeviceType.desktop;
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
             child: Column(
               children: [
                 // Filter Search Bar
@@ -100,9 +117,11 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                   label: '',
                   hint: 'Filter Notifications...',
                   controller: searchController,
-                  prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 20),
+                  prefixIcon: const Icon(Icons.search,
+                      color: AppColors.primary, size: 20),
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.clear_rounded, color: Colors.grey, size: 20),
+                    icon: const Icon(Icons.clear_rounded,
+                        color: Colors.grey, size: 20),
                     onPressed: () {
                       searchController.clear();
                       searchQuery.value = '';
@@ -117,7 +136,8 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                 // Notifications List
                 Expanded(
                   child: Obx(() {
-                    if (controller.isLoading.value && controller.notifications.isEmpty) {
+                    if (controller.isLoading.value &&
+                        controller.notifications.isEmpty) {
                       return _buildShimmerView(context, deviceType);
                     }
 
@@ -136,13 +156,17 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                             Icon(
                               Icons.notifications_off_outlined,
                               size: 48,
-                              color: isDark ? AppColors.textSecondaryDark : Colors.grey,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : Colors.grey,
                             ),
                             const SizedBox(height: 12),
                             Text(
                               'No notifications found.',
                               style: TextStyle(
-                                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : Colors.grey.shade700,
                                 fontSize: 15,
                               ),
                             ),
@@ -152,25 +176,31 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                     }
 
                     return RefreshIndicator(
-                      onRefresh: () async => controller.fetchNotifications(isRefresh: true),
+                      onRefresh: () async =>
+                          controller.fetchNotifications(isRefresh: true),
                       child: isTabletOrDesktop
                           ? GridView.builder(
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: deviceType == DeviceType.desktop ? 3 : 2,
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount:
+                                    deviceType == DeviceType.desktop ? 3 : 2,
                                 childAspectRatio: 2.8,
                                 crossAxisSpacing: 10,
                                 mainAxisSpacing: 8,
                               ),
                               itemCount: filtered.length,
                               itemBuilder: (context, index) {
-                                return _buildNotificationTile(context, filtered[index]);
+                                return _buildNotificationTile(
+                                    context, filtered[index]);
                               },
                             )
                           : ListView.separated(
                               itemCount: filtered.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
                               itemBuilder: (context, index) {
-                                return _buildNotificationTile(context, filtered[index]);
+                                return _buildNotificationTile(
+                                    context, filtered[index]);
                               },
                             ),
                     );
@@ -241,9 +271,13 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                           child: Text(
                             item.title,
                             style: TextStyle(
-                              fontWeight: item.isRead ? FontWeight.w600 : FontWeight.bold,
+                              fontWeight: item.isRead
+                                  ? FontWeight.w600
+                                  : FontWeight.bold,
                               fontSize: 14.5,
-                              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF111827),
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : const Color(0xFF111827),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -255,7 +289,9 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                             timeAgo,
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : Colors.grey.shade500,
                             ),
                           ),
                         ],
@@ -266,7 +302,9 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                       item.body,
                       style: TextStyle(
                         fontSize: 12.5,
-                        color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : Colors.grey.shade600,
                         height: 1.3,
                       ),
                       maxLines: 2,
@@ -296,7 +334,8 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
   }
 
   Widget _buildShimmerView(BuildContext context, DeviceType deviceType) {
-    final isGrid = deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+    final isGrid =
+        deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
     if (isGrid) {
       return GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -332,7 +371,8 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
       ),
       child: Row(
         children: [
-          const AppShimmer(width: 44, height: 44, shape: BoxShape.circle, enable3D: true),
+          const AppShimmer(
+              width: 44, height: 44, shape: BoxShape.circle, enable3D: true),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -342,12 +382,18 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
-                    AppShimmer(width: 130, height: 14, borderRadius: 4, enable3D: true),
-                    AppShimmer(width: 45, height: 11, borderRadius: 4, enable3D: true),
+                    AppShimmer(
+                        width: 130,
+                        height: 14,
+                        borderRadius: 4,
+                        enable3D: true),
+                    AppShimmer(
+                        width: 45, height: 11, borderRadius: 4, enable3D: true),
                   ],
                 ),
                 const SizedBox(height: 6),
-                const AppShimmer(width: 170, height: 11, borderRadius: 4, enable3D: true),
+                const AppShimmer(
+                    width: 170, height: 11, borderRadius: 4, enable3D: true),
               ],
             ),
           ),

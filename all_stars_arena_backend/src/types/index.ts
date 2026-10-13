@@ -3,6 +3,7 @@ import { Request } from 'express';
 export interface UserPayload {
   id: string;
   email: string;
+  name?: string;
   phone?: string;
   roleId: number;
   adminType?: 'SUPER_ADMIN' | 'OPS_ADMIN' | 'FINANCE_ADMIN' | null;

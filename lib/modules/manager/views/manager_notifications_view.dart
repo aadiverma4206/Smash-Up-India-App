@@ -92,15 +92,14 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
 
     // 1. REAL Pending Games from Manager Controller
     for (final game in controller.pendingPlayerGames) {
-      final parsedDate = AppDateUtils.parseMatchDateTime(
-              game.matchDate, game.startTime) ??
-          now;
+      final parsedDate =
+          AppDateUtils.parseMatchDateTime(game.matchDate, game.startTime) ??
+              now;
       items.add(
         ManagerAlertItem(
           id: 'game_${game.id}',
           title: 'New match awaiting approval',
-          subtitle:
-              '${game.title} · ${game.format} · ${game.courtName}',
+          subtitle: '${game.title} · ${game.format} · ${game.courtName}',
           badgeText: 'Pending',
           badgeBgColor: const Color(0xFFFEF3C7),
           badgeTextColor: const Color(0xFFD97706),
@@ -201,7 +200,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
         iconColor: const Color(0xFFDC2626),
         iconBgLight: const Color(0xFFFEE2E2),
         iconBgDark: const Color(0xFF3D1515),
-        dateTime: DateTime(yesterday.year, yesterday.month, yesterday.day, 18, 18),
+        dateTime:
+            DateTime(yesterday.year, yesterday.month, yesterday.day, 18, 18),
         isUnread: false,
       ),
       ManagerAlertItem(
@@ -214,7 +214,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
         iconColor: const Color(0xFF2563EB),
         iconBgLight: const Color(0xFFDBEAFE),
         iconBgDark: const Color(0xFF132B4A),
-        dateTime: DateTime(yesterday.year, yesterday.month, yesterday.day, 12, 31),
+        dateTime:
+            DateTime(yesterday.year, yesterday.month, yesterday.day, 12, 31),
         isUnread: false,
       ),
       ManagerAlertItem(
@@ -227,7 +228,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
         iconColor: const Color(0xFF9333EA),
         iconBgLight: const Color(0xFFF3E8FF),
         iconBgDark: const Color(0xFF2C1542),
-        dateTime: DateTime(yesterday.year, yesterday.month, yesterday.day, 11, 5),
+        dateTime:
+            DateTime(yesterday.year, yesterday.month, yesterday.day, 11, 5),
         isUnread: false,
       ),
       ManagerAlertItem(
@@ -240,7 +242,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
         iconColor: const Color(0xFF15803D),
         iconBgLight: const Color(0xFFDCFCE7),
         iconBgDark: const Color(0xFF0F331A),
-        dateTime: DateTime(twoDaysAgo.year, twoDaysAgo.month, twoDaysAgo.day, 20, 49),
+        dateTime:
+            DateTime(twoDaysAgo.year, twoDaysAgo.month, twoDaysAgo.day, 20, 49),
         isUnread: false,
       ),
     ];
@@ -250,7 +253,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     } else {
       // Append non-duplicate mock items for rich visual experience
       for (final m in mockAlerts) {
-        if (!items.any((existing) => existing.title == m.title && existing.subtitle == m.subtitle)) {
+        if (!items.any((existing) =>
+            existing.title == m.title && existing.subtitle == m.subtitle)) {
           items.add(m);
         }
       }
@@ -287,14 +291,16 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
       // Activity Category Filter
       if (activity != 'All activity') {
         if (activity == 'New matches' && item.category != 'MATCH') return false;
-        if (activity == 'Slot requests' && item.category != 'SLOT') return false;
+        if (activity == 'Slot requests' && item.category != 'SLOT') {
+          return false;
+        }
         if (activity == 'Payments' && item.category != 'PAYMENT') return false;
         if (activity == 'Refunds' && item.category != 'REFUND') return false;
       }
 
       // Date Filter
-      final itemDate = DateTime(
-          item.dateTime.year, item.dateTime.month, item.dateTime.day);
+      final itemDate =
+          DateTime(item.dateTime.year, item.dateTime.month, item.dateTime.day);
 
       if (dateFilter == 'Date: Today') {
         if (itemDate != today) return false;
@@ -325,8 +331,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
       ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
     for (final item in sorted) {
-      final itemDate = DateTime(
-          item.dateTime.year, item.dateTime.month, item.dateTime.day);
+      final itemDate =
+          DateTime(item.dateTime.year, item.dateTime.month, item.dateTime.day);
 
       String header;
       if (itemDate == today) {
@@ -699,209 +705,210 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left Circular Pastel Icon
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isDark ? item.iconBgDark : item.iconBgLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      item.icon,
-                      color: item.iconColor,
-                      size: 20,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left Circular Pastel Icon
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isDark ? item.iconBgDark : item.iconBgLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        item.icon,
+                        color: item.iconColor,
+                        size: 20,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                // Center Title, Subtitle, & Badge
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : const Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        item.subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : const Color(0xFF64748B),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (item.badgeText != null) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
+                  // Center Title, Subtitle, & Badge
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                             color: isDark
-                                ? (item.badgeBgColor?.withValues(alpha: 0.2) ??
-                                    Colors.grey)
-                                : (item.badgeBgColor ??
-                                    const Color(0xFFFEF3C7)),
-                            borderRadius: BorderRadius.circular(6),
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF0F172A),
                           ),
-                          child: Text(
-                            item.badgeText!,
-                            style: TextStyle(
-                              color: item.badgeTextColor ??
-                                  const Color(0xFFD97706),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : const Color(0xFF64748B),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (item.badgeText != null) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? (item.badgeBgColor
+                                          ?.withValues(alpha: 0.2) ??
+                                      Colors.grey)
+                                  : (item.badgeBgColor ??
+                                      const Color(0xFFFEF3C7)),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              item.badgeText!,
+                              style: TextStyle(
+                                color: item.badgeTextColor ??
+                                    const Color(0xFFD97706),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-
-                // Right Timestamp & Green Unread Dot
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      timeStr,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppColors.textMutedDark
-                            : const Color(0xFF94A3B8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (item.isUnread)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-
-            // Action Buttons for Real Pending Items
-            if (item.isPendingAction) ...[
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Reject Action
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.redAccent),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                    ),
-                    onPressed: () {
-                      if (item.originalGame != null) {
-                        controller.rejectPlayerGame(
-                          item.originalGame!.id,
-                          'Declined by manager',
-                        );
-                      } else if (item.originalSlot != null) {
-                        controller.rejectSlotRequest(
-                          item.originalSlot!.id,
-                          'Declined by manager',
-                        );
-                      }
-                    },
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.redAccent,
-                      size: 16,
-                    ),
-                    label: const Text(
-                      'Reject',
-                      style: TextStyle(
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
 
-                  // Approve Action
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  // Right Timestamp & Green Unread Dot
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.textMutedDark
+                              : const Color(0xFF94A3B8),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                    ),
-                    onPressed: () {
-                      if (item.originalGame != null) {
-                        controller.approvePlayerGame(item.originalGame!.id);
-                      } else if (item.originalSlot != null) {
-                        controller.approveSlotRequest(item.originalSlot!.id);
-                      }
-                    },
-                    icon: const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    label: Text(
-                      item.originalGame != null ? 'Approve Match' : 'Approve',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+                      const SizedBox(height: 8),
+                      if (item.isUnread)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
+
+              // Action Buttons for Real Pending Items
+              if (item.isPendingAction) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Reject Action
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                      ),
+                      onPressed: () {
+                        if (item.originalGame != null) {
+                          controller.rejectPlayerGame(
+                            item.originalGame!.id,
+                            'Declined by manager',
+                          );
+                        } else if (item.originalSlot != null) {
+                          controller.rejectSlotRequest(
+                            item.originalSlot!.id,
+                            'Declined by manager',
+                          );
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.redAccent,
+                        size: 16,
+                      ),
+                      label: const Text(
+                        'Reject',
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Approve Action
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                      ),
+                      onPressed: () {
+                        if (item.originalGame != null) {
+                          controller.approvePlayerGame(item.originalGame!.id);
+                        } else if (item.originalSlot != null) {
+                          controller.approveSlotRequest(item.originalSlot!.id);
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      label: Text(
+                        item.originalGame != null ? 'Approve Match' : 'Approve',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   String _formatItemTime(DateTime dt) {
     final now = DateTime.now();

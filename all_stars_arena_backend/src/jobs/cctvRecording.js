@@ -24,10 +24,10 @@ export const startCctvRecordingJob = () => {
 
         // Save metadata into game_videos
         await dbPool.query(
-          `INSERT INTO public.game_videos (game_id, club_id, court_id, title, video_url, status)
-           VALUES ($1, $2, $3, $4, $5, 'AVAILABLE')
+          `INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'AVAILABLE')
            ON CONFLICT DO NOTHING;`,
-          [rec.game_id, rec.club_id, rec.court_id, `Match Recording - Game ${rec.game_id}`, rec.s3_object_key]
+          [rec.game_id, rec.club_id, rec.court_id, rec.camera_id || null, `Match Recording - Game ${rec.game_id}`, rec.s3_object_key]
         );
 
         // Log audit

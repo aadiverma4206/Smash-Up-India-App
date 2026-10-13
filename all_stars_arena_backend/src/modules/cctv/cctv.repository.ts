@@ -276,14 +276,15 @@ export class CctvRepository {
     gameId: string;
     clubId: string;
     courtId?: string;
+    cctvId?: string;
     title: string;
     s3ObjectKey: string;
     uploadedById?: string;
   }) {
     const query = `
       INSERT INTO public.game_videos
-      (game_id, club_id, court_id, title, video_url, uploaded_by_id, status)
-      VALUES ($1, $2, $3, $4, $5, $6, 'AVAILABLE')
+      (game_id, club_id, court_id, cctv_id, title, video_url, uploaded_by_id, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')
       ON CONFLICT DO NOTHING
       RETURNING *;
     `;
@@ -291,6 +292,7 @@ export class CctvRepository {
       data.gameId,
       data.clubId,
       data.courtId || null,
+      data.cctvId || null,
       data.title,
       data.s3ObjectKey,
       data.uploadedById || null,

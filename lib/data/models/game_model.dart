@@ -138,6 +138,8 @@ class GameModel {
     this.videoPlaybackUrl,
   });
 
+  double get entryFee => perPlayerFee;
+
   factory GameModel.fromJson(Map<String, dynamic> json) {
     return GameModel(
       id: (json['id'] ?? json['game_id'] ?? '').toString(),
@@ -156,7 +158,12 @@ class GameModel {
       status: (json['status'] ?? 'OPEN_FOR_JOINING').toString(),
       format: (json['format'] ?? '11v11').toString(),
       perPlayerFee: _parseDouble(
-          json['perPlayerFee'] ?? json['entry_fee'] ?? json['per_player_fee'],
+          json['perPlayerFee'] ??
+              json['entry_fee'] ??
+              json['per_player_fee'] ??
+              json['my_entry_fee'] ??
+              json['entryFee'] ??
+              json['fee'],
           200.0),
       maxPlayers: _parseInt(json['maxPlayers'] ?? json['max_players'], 22),
       currentPlayers:

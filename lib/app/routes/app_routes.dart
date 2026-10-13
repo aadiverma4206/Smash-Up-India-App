@@ -14,11 +14,14 @@ abstract class Routes {
   static const myMatches = '/player/my-matches';
   static const myRequests = '/player/requests';
   static const matchHistory = '/player/match-history';
+  static const playerHistoryStandalone = '/player/match-history/standalone';
+  static const playerHistoryDetails = '/player/match-history/details';
   static const paymentHistory = '/player/payment-history';
   static const wallet = '/wallet';
   static const courts = '/courts';
   static const managerPlayers = '/manager/players';
   static const managerHistory = '/manager/history';
+  static const managerHistoryStandalone = '/manager/history/standalone';
   static const managerHistoryDetails = '/manager/history/details';
   static const managerNotifications = '/manager/notifications';
   static const managerProfile = '/manager/profile';

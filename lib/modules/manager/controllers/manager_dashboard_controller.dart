@@ -43,8 +43,13 @@ class ManagerDashboardController extends GetxController
     // Exclude COMPLETED and CANCELLED matches from active court matches view (they appear in History view)
     list = list.where((slot) {
       final status = (slot['status'] ?? '').toString().toUpperCase();
-      final approvalStatus = (slot['approvalStatus'] ?? slot['approval_status'] ?? '').toString().toUpperCase();
-      return status != 'COMPLETED' && status != 'CANCELLED' && approvalStatus != 'REJECTED';
+      final approvalStatus =
+          (slot['approvalStatus'] ?? slot['approval_status'] ?? '')
+              .toString()
+              .toUpperCase();
+      return status != 'COMPLETED' &&
+          status != 'CANCELLED' &&
+          approvalStatus != 'REJECTED';
     }).toList();
 
     if (searchQuery.value.trim().isNotEmpty) {
@@ -88,7 +93,8 @@ class ManagerDashboardController extends GetxController
     if (filter == 'CUSTOM') {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final initial = (customSelectedDate.value != null && !customSelectedDate.value!.isBefore(today))
+      final initial = (customSelectedDate.value != null &&
+              !customSelectedDate.value!.isBefore(today))
           ? customSelectedDate.value!
           : today;
 

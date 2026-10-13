@@ -1,5 +1,3 @@
-System.clearProperty("ANDROID_PREFS_ROOT")
-
 allprojects {
     repositories {
         google()

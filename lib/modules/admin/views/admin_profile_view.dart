@@ -114,7 +114,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
 
       if (response.statusCode == 200 && response.data != null) {
         final updated = response.data['data'] as Map<String, dynamic>?;
-        final newAvatarUrl = updated?['profile_image_url'] ?? updated?['avatarUrl'] ?? '';
+        final newAvatarUrl =
+            updated?['profile_image_url'] ?? updated?['avatarUrl'] ?? '';
 
         if (newAvatarUrl.isNotEmpty) {
           profileData['profile_image_url'] = newAvatarUrl;
@@ -184,12 +185,14 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                 ),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: const Icon(Icons.photo_camera_rounded, color: AppColors.primary),
+                  leading: const Icon(Icons.photo_camera_rounded,
+                      color: AppColors.primary),
                   title: const Text('Take Photo from Camera'),
                   onTap: () => _pickAndUploadImage(ImageSource.camera),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                  leading: const Icon(Icons.photo_library_rounded,
+                      color: AppColors.primary),
                   title: const Text('Choose Photo from Gallery'),
                   onTap: () => _pickAndUploadImage(ImageSource.gallery),
                 ),
@@ -225,24 +228,35 @@ class _AdminProfileViewState extends State<AdminProfileView> {
       body: SafeArea(
         child: Obx(() {
           if (isLoading.value && profileData.isEmpty) {
-            return const AppLoader(message: 'Loading administrator profile details...');
+            return const AppLoader(
+                message: 'Loading administrator profile details...');
           }
 
-          final name = profileData['name'] ?? user?.name ?? 'System Administrator';
-          final email = profileData['email'] ?? user?.email ?? 'admin@allstarsarena.com';
+          final name =
+              profileData['name'] ?? user?.name ?? 'System Administrator';
+          final email =
+              profileData['email'] ?? user?.email ?? 'admin@allstarsarena.com';
           final phone = profileData['phone'] ?? user?.phone ?? '+91 9999999999';
-          final avatarUrl = profileData['profile_image_url'] ?? user?.profileImageUrl ?? '';
-          final role = profileData['role_name'] ?? profileData['role'] ?? user?.roleName ?? 'SYSTEM ADMIN';
+          final avatarUrl =
+              profileData['profile_image_url'] ?? user?.profileImageUrl ?? '';
+          final role = profileData['role_name'] ??
+              profileData['role'] ??
+              user?.roleName ??
+              'SYSTEM ADMIN';
           final city = profileData['city'] ?? user?.city ?? 'Raipur';
-          final dashboard = Get.isRegistered<AdminController>() ? adminController.dashboard.value : null;
+          final dashboard = Get.isRegistered<AdminController>()
+              ? adminController.dashboard.value
+              : null;
 
           return RefreshIndicator(
             onRefresh: fetchAdminProfile,
             child: Scrollbar(
               thumbVisibility: true,
               child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 child: Column(
                   children: [
                     // 👤 AVATAR & HERO SECTION
@@ -254,18 +268,27 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF7E57C2), width: 3),
+                              border: Border.all(
+                                  color: const Color(0xFF7E57C2), width: 3),
                               boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
+                                BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 10,
+                                    offset: Offset(0, 4)),
                               ],
                             ),
                             child: CircleAvatar(
                               radius: 52,
-                              backgroundColor: const Color(0xFF7E57C2).withValues(alpha: 0.15),
-                              backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl) : null,
+                              backgroundColor: const Color(0xFF7E57C2)
+                                  .withValues(alpha: 0.15),
+                              backgroundImage: avatarUrl.isNotEmpty
+                                  ? CachedNetworkImageProvider(avatarUrl)
+                                  : null,
                               child: avatarUrl.isEmpty
                                   ? Text(
-                                      name.isNotEmpty ? name[0].toUpperCase() : 'A',
+                                      name.isNotEmpty
+                                          ? name[0].toUpperCase()
+                                          : 'A',
                                       style: const TextStyle(
                                         fontSize: 38,
                                         fontWeight: FontWeight.bold,
@@ -287,17 +310,22 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                   color: Color(0xFF7E57C2),
                                   shape: BoxShape.circle,
                                   boxShadow: [
-                                    BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                                    BoxShadow(
+                                        color: Colors.black26,
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2)),
                                   ],
                                 ),
-                                child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                                child: const Icon(Icons.camera_alt_rounded,
+                                    color: Colors.white, size: 18),
                               ),
                             ),
                           ),
                           if (isUploading.value)
                             const Positioned.fill(
                               child: Center(
-                                child: CircularProgressIndicator(color: Color(0xFF7E57C2)),
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFF7E57C2)),
                               ),
                             ),
                         ],
@@ -309,30 +337,40 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        color:
+                            isDark ? AppColors.textPrimaryDark : Colors.black87,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 5),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFF7E57C2), Color(0xFF512DA8)],
                         ),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2)),
                         ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 15),
+                          const Icon(Icons.admin_panel_settings_rounded,
+                              color: Colors.white, size: 15),
                           const SizedBox(width: 6),
                           Text(
                             role.toString().toUpperCase(),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.8),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                letterSpacing: 0.8),
                           ),
                         ],
                       ),
@@ -346,9 +384,15 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                        border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0)),
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -356,26 +400,34 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.analytics_rounded, color: Color(0xFF7E57C2), size: 20),
+                              const Icon(Icons.analytics_rounded,
+                                  color: Color(0xFF7E57C2), size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'System Summary Overview',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : Colors.black87,
                                 ),
                               ),
                             ],
                           ),
-                          Divider(color: isDark ? AppColors.darkBorder : Colors.grey.shade200, height: 20),
+                          Divider(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : Colors.grey.shade200,
+                              height: 20),
                           Row(
                             children: [
                               Expanded(
                                 child: _buildStatItem(
                                   context,
                                   label: 'Total Users',
-                                  value: '${dashboard?.totalUsers ?? profileData['total_users'] ?? '128+'}',
+                                  value:
+                                      '${dashboard?.totalUsers ?? profileData['total_users'] ?? '128+'}',
                                   icon: Icons.people_outline_rounded,
                                   color: Colors.blue,
                                 ),
@@ -384,7 +436,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                 child: _buildStatItem(
                                   context,
                                   label: 'Managers',
-                                  value: '${dashboard?.totalManagers ?? profileData['total_managers'] ?? '12'}',
+                                  value:
+                                      '${dashboard?.totalManagers ?? profileData['total_managers'] ?? '12'}',
                                   icon: Icons.badge_outlined,
                                   color: Colors.orange,
                                 ),
@@ -393,7 +446,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                 child: _buildStatItem(
                                   context,
                                   label: 'Courts',
-                                  value: '${profileData['total_courts'] ?? '2'}',
+                                  value:
+                                      '${profileData['total_courts'] ?? '2'}',
                                   icon: Icons.stadium_outlined,
                                   color: Colors.green,
                                 ),
@@ -412,9 +466,15 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                        border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0)),
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -422,26 +482,40 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.person_outline_rounded, color: Color(0xFF7E57C2), size: 20),
+                              const Icon(Icons.person_outline_rounded,
+                                  color: Color(0xFF7E57C2), size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Account Credentials & Info',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : Colors.black87,
                                 ),
                               ),
                             ],
                           ),
-                          Divider(color: isDark ? AppColors.darkBorder : Colors.grey.shade200, height: 20),
-                          _buildInfoRow(context, 'Full Name', name, Icons.badge_outlined),
+                          Divider(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : Colors.grey.shade200,
+                              height: 20),
+                          _buildInfoRow(
+                              context, 'Full Name', name, Icons.badge_outlined),
                           const SizedBox(height: 12),
-                          _buildInfoRow(context, 'Email Address', email, Icons.email_outlined),
+                          _buildInfoRow(context, 'Email Address', email,
+                              Icons.email_outlined),
                           const SizedBox(height: 12),
-                          _buildInfoRow(context, 'Phone Number', phone, Icons.phone_outlined),
+                          _buildInfoRow(context, 'Phone Number', phone,
+                              Icons.phone_outlined),
                           const SizedBox(height: 12),
-                          _buildInfoRow(context, 'City / Region', city.isNotEmpty ? city : 'Raipur, Chhattisgarh', Icons.location_on_outlined),
+                          _buildInfoRow(
+                              context,
+                              'City / Region',
+                              city.isNotEmpty ? city : 'Raipur, Chhattisgarh',
+                              Icons.location_on_outlined),
                         ],
                       ),
                     ),
@@ -454,9 +528,15 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                        border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0)),
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -464,26 +544,37 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.shield_outlined, color: Color(0xFF7E57C2), size: 20),
+                              const Icon(Icons.shield_outlined,
+                                  color: Color(0xFF7E57C2), size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Administrative Privileges',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : Colors.black87,
                                 ),
                               ),
                             ],
                           ),
-                          Divider(color: isDark ? AppColors.darkBorder : Colors.grey.shade200, height: 20),
-                          _buildPrivilegeBullet(context, 'Full User Access Control & Account Suspension'),
+                          Divider(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : Colors.grey.shade200,
+                              height: 20),
+                          _buildPrivilegeBullet(context,
+                              'Full User Access Control & Account Suspension'),
                           const SizedBox(height: 8),
-                          _buildPrivilegeBullet(context, 'Create & Manage Turf Club Manager Accounts'),
+                          _buildPrivilegeBullet(context,
+                              'Create & Manage Turf Club Manager Accounts'),
                           const SizedBox(height: 8),
-                          _buildPrivilegeBullet(context, 'Live CCTV Stream Monitoring & Recording Control'),
+                          _buildPrivilegeBullet(context,
+                              'Live CCTV Stream Monitoring & Recording Control'),
                           const SizedBox(height: 8),
-                          _buildPrivilegeBullet(context, 'Security Audit Log Surveillance & System Diagnostics'),
+                          _buildPrivilegeBullet(context,
+                              'Security Audit Log Surveillance & System Diagnostics'),
                         ],
                       ),
                     ),
@@ -496,9 +587,15 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                        border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0)),
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2)),
                         ],
                       ),
                       child: Column(
@@ -506,35 +603,48 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.settings_suggest_rounded, color: Color(0xFF7E57C2), size: 20),
+                              const Icon(Icons.settings_suggest_rounded,
+                                  color: Color(0xFF7E57C2), size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Preferences & Cache',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : Colors.black87,
                                 ),
                               ),
                             ],
                           ),
-                          Divider(color: isDark ? AppColors.darkBorder : Colors.grey.shade200, height: 16),
+                          Divider(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : Colors.grey.shade200,
+                              height: 16),
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7E57C2).withValues(alpha: 0.1),
+                                color: const Color(0xFF7E57C2)
+                                    .withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                                isDark
+                                    ? Icons.dark_mode_rounded
+                                    : Icons.light_mode_rounded,
                                 color: const Color(0xFF7E57C2),
                                 size: 20,
                               ),
                             ),
-                            title: const Text('App Theme Mode', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            subtitle: Text(isDark ? 'Dark Mode' : 'Light Mode', style: const TextStyle(fontSize: 11)),
+                            title: const Text('App Theme Mode',
+                                style: TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
+                            subtitle: Text(isDark ? 'Dark Mode' : 'Light Mode',
+                                style: const TextStyle(fontSize: 11)),
                             trailing: Switch(
                               value: isDark,
                               activeThumbColor: const Color(0xFF7E57C2),
@@ -552,15 +662,22 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                 color: Colors.amber.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.cleaning_services_rounded, color: Colors.amber, size: 20),
+                              child: const Icon(Icons.cleaning_services_rounded,
+                                  color: Colors.amber, size: 20),
                             ),
-                            title: const Text('Clear Local App Cache', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            subtitle: const Text('Purges temporary database entries', style: TextStyle(fontSize: 11)),
+                            title: const Text('Clear Local App Cache',
+                                style: TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
+                            subtitle: const Text(
+                                'Purges temporary database entries',
+                                style: TextStyle(fontSize: 11)),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete_sweep_rounded, color: Colors.amber),
+                              icon: const Icon(Icons.delete_sweep_rounded,
+                                  color: Colors.amber),
                               onPressed: () async {
                                 if (Get.isRegistered<DatabaseService>()) {
-                                  await Get.find<DatabaseService>().clearAllData();
+                                  await Get.find<DatabaseService>()
+                                      .clearAllData();
                                   ErrorHandler.showSuccessSnackBar(
                                     'Cache Cleared',
                                     'Local application cache purged successfully.',
@@ -584,15 +701,21 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       height: 48,
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.redAccent, width: 1.2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          side: const BorderSide(
+                              color: Colors.redAccent, width: 1.2),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24)),
                           backgroundColor: Theme.of(context).cardColor,
                         ),
                         onPressed: () => AuthService.to.logout(),
-                        icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 18),
+                        icon: const Icon(Icons.logout_rounded,
+                            color: Colors.redAccent, size: 18),
                         label: const Text(
                           'Log Out of Admin Portal',
-                          style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14),
                         ),
                       ),
                     ),
@@ -604,12 +727,19 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                         children: const [
                           Text(
                             'ALL STARS ARENA • ADMIN PORTAL v1.0.0',
-                            style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0),
                           ),
                           SizedBox(height: 4),
                           Text(
                             'ENTERPRISE SYSTEM CONTROL',
-                            style: TextStyle(fontSize: 10, color: Color(0xFF7E57C2), fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF7E57C2),
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -658,7 +788,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildInfoRow(
+      BuildContext context, String label, String value, IconData icon) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
@@ -672,12 +803,19 @@ class _AdminProfileViewState extends State<AdminProfileView> {
             children: [
               Text(
                 label,
-                style: TextStyle(fontSize: 11, color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade600),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.textPrimaryDark : Colors.black87),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -694,7 +832,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF7E57C2)),
+        const Icon(Icons.check_circle_rounded,
+            size: 16, color: Color(0xFF7E57C2)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(

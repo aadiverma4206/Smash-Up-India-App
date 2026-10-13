@@ -15,8 +15,12 @@ export class ApiResponse<T = any> {
     this.error = error;
   }
 
-  static success<T = any>(message: string, data: T = {} as T): ApiResponse<T> {
-    return new ApiResponse<T>(true, message, data, null);
+  static success<T = any>(message: string, data: T = {} as T, meta?: any): ApiResponse<T> {
+    const res = new ApiResponse<T>(true, message, data, null);
+    if (meta !== undefined) {
+      (res as any).meta = meta;
+    }
+    return res;
   }
 
   static error(message: string, code = 'INTERNAL_ERROR', details: any = {}): ApiResponse<null> {

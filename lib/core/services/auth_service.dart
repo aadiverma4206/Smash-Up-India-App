@@ -38,6 +38,12 @@ class AuthService extends GetxService {
     AppLogger.info(
         '🔑 Initiating complete user logout and local data purge...');
 
+    // 0. Close active GetX dialogs/overlays safely before navigation
+    if (Get.isDialogOpen ?? false) {
+      Get.back();
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
     // 1. Invalidate server session if AuthRepository is available
     if (Get.isRegistered<AuthRepository>()) {
       try {

@@ -125,9 +125,9 @@ class AdminDashboardModel {
           (json['totalRefunds'] ?? json['total_refunds'] ?? 0).toDouble(),
       pendingDisputes:
           (json['pendingDisputes'] ?? json['pending_disputes'] ?? 0) as int,
-      activeRecordings:
-          (json['activeRecordings'] ?? json['active_recordings'] ?? games)
-              as int,
+      activeRecordings: (json['activeRecordings'] ??
+          json['active_recordings'] ??
+          games) as int,
       onlineCameras:
           (json['onlineCameras'] ?? json['online_cameras'] ?? 0) as int,
     );

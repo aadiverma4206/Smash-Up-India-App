@@ -24,6 +24,11 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     throw new ApiError(404, 'Match not found');
   }
 
+  const game = gameRes.rows[0];
+  if (game.status === 'CANCELLED') {
+    throw new ApiError(400, 'Cannot submit or update scores for a cancelled match', 'CANCELLED_MATCH_SCORE_FORBIDDEN');
+  }
+
   // Insert into live_score_logs (DB trigger handles ELO rating & game completion if isFinal)
   const logRes = await dbPool.query(
     `INSERT INTO public.live_score_logs

@@ -169,6 +169,22 @@ export const initDbTables = async () => {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
 
+      ALTER TABLE public.games ADD COLUMN IF NOT EXISTS video_playback_url VARCHAR(512);
+      UPDATE public.games
+      SET video_playback_url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+      WHERE (video_playback_url IS NULL OR video_playback_url = '') AND UPPER(status::text) = 'COMPLETED';
+
+      INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
+      SELECT g.id, u.id,
+             CASE WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 2 = 1 THEN 'TEAM_A' ELSE 'TEAM_B' END,
+             CASE WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 3 = 0 THEN 'ST' WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 3 = 1 THEN 'MID' ELSE 'DEF' END,
+             'PAID'
+      FROM public.games g
+      CROSS JOIN public.users u
+      WHERE u.role_id = 3
+      AND NOT EXISTS (SELECT 1 FROM public.game_players gp WHERE gp.game_id = g.id)
+      ON CONFLICT DO NOTHING;
+
       CREATE TABLE IF NOT EXISTS public.game_slot_requests (
           id VARCHAR(64) PRIMARY KEY DEFAULT ('req_' || SUBSTR(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT), 1, 16)),
           game_id VARCHAR(64) NOT NULL REFERENCES public.games(id) ON DELETE CASCADE,
@@ -670,6 +686,25 @@ export const initDbTables = async () => {
 
       -- Clean up any non-canonical courts that are not court_1 or court_2
       DELETE FROM public.courts WHERE id NOT IN ('court_1', 'court_2');
+
+      -- Multi-camera CCTV cataloging: add cctv_id to game_videos
+      ALTER TABLE public.game_videos ADD COLUMN IF NOT EXISTS cctv_id VARCHAR(64) REFERENCES public.cctv_cameras(id) ON DELETE SET NULL;
+      CREATE INDEX IF NOT EXISTS idx_game_videos_cctv_id ON public.game_videos(cctv_id);
+      CREATE INDEX IF NOT EXISTS idx_game_videos_game_cctv ON public.game_videos(game_id, cctv_id);
+
+      -- Ensure canonical CCTV cameras exist for each court
+      INSERT INTO public.cctv_cameras (id, club_id, court_id, name, camera_type, connection_type, rtsp_url_encrypted, is_enabled, status, health_status)
+      VALUES 
+        ('cam_court_1_c1', 'all_stars_arena_club', 'court_1', 'Camera 1 (Main Dome)', 'RTSP_DOME', 'RTSP', 'a85be7a5d2c5ab215dc2c4fe5a4abdb0:090aef5f', true, 'ONLINE', 'ONLINE'),
+        ('cam_court_1_c2', 'all_stars_arena_club', 'court_1', 'Camera 2 (Sideline HD)', 'RTSP_DOME', 'RTSP', '7cd81c89947568ffe8fd52db19b6ee0a:741aa07c', true, 'ONLINE', 'ONLINE'),
+        ('cam_court_2_c1', 'all_stars_arena_club', 'court_2', 'Camera 1 (Main Dome)', 'RTSP_DOME', 'RTSP', '49f33db91e4007a53c608048539d974c:15158b0', true, 'ONLINE', 'ONLINE'),
+        ('cam_court_2_c2', 'all_stars_arena_club', 'court_2', 'Camera 2 (Goalpost HD)', 'RTSP_DOME', 'RTSP', '4e66febba6293e86a1c041d990cea66d:bb3018eb', true, 'ONLINE', 'ONLINE')
+      ON CONFLICT (id) DO UPDATE SET 
+        club_id = EXCLUDED.club_id,
+        court_id = EXCLUDED.court_id,
+        name = EXCLUDED.name,
+        status = 'ONLINE',
+        health_status = 'ONLINE';
 
       -- 3. Normalize all games strictly to all_stars_arena_club and court_1 / court_2
       UPDATE public.games

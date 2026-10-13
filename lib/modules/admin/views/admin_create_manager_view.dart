@@ -33,8 +33,8 @@ class AdminCreateManagerView extends GetView<AdminController> {
       ),
       body: ResponsiveBuilder(
         builder: (context, deviceType) {
-          final isTabletOrDesktop =
-              deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+          final isTabletOrDesktop = deviceType == DeviceType.tablet ||
+              deviceType == DeviceType.desktop;
 
           return Align(
             alignment: Alignment.topCenter,
@@ -56,7 +56,9 @@ class AdminCreateManagerView extends GetView<AdminController> {
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
                         boxShadow: const [
@@ -79,14 +81,18 @@ class AdminCreateManagerView extends GetView<AdminController> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Provision accounts for local turf managers. Required fields include full name, email, phone number, and a strong temporary password.',
                         style: TextStyle(
-                          color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : Colors.grey.shade700,
                           height: 1.4,
                           fontSize: 13,
                         ),
@@ -153,13 +159,16 @@ class AdminCreateManagerView extends GetView<AdminController> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : Colors.black87,
                             ),
                           ),
                           TextButton.icon(
                             onPressed: _generateStrongPassword,
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
@@ -186,7 +195,9 @@ class AdminCreateManagerView extends GetView<AdminController> {
                             color: AppColors.primary, size: 20),
                         validator: (v) {
                           if (v == null || v.isEmpty) return 'Enter Password';
-                          if (v.length < 8) return 'Minimum 8 characters required';
+                          if (v.length < 8) {
+                            return 'Minimum 8 characters required';
+                          }
                           final RegExp pwdRegex = RegExp(
                               r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$');
                           if (!pwdRegex.hasMatch(v)) {

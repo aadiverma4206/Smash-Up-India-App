@@ -25,13 +25,17 @@ class RiskDisclosureView extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 30),
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Colors.amber, size: 30),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('Sports & Physical Activity Risk Disclosure', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      Text('Safety Guidelines & Liability Awareness', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text('Sports & Physical Activity Risk Disclosure',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text('Safety Guidelines & Liability Awareness',
+                          style: TextStyle(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
                 ],
@@ -39,7 +43,6 @@ class RiskDisclosureView extends StatelessWidget {
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 12),
-
               _buildSection(
                 context,
                 title: '1. Assumption of Athletic Risk',
@@ -77,7 +80,9 @@ class RiskDisclosureView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade600,
                   ),
                 ),
               ),
@@ -89,7 +94,8 @@ class RiskDisclosureView extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, {required String title, required String content}) {
+  Widget _buildSection(BuildContext context,
+      {required String title, required String content}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -111,7 +117,8 @@ class RiskDisclosureView extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               height: 1.5,
-              color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+              color:
+                  isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
             ),
           ),
         ],

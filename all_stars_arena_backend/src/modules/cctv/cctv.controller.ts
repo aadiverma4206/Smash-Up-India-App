@@ -173,12 +173,14 @@ export const getGameRecording = asyncHandler(
 export const getPlaybackUrl = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const { gameId } = req.params;
+    const cctvId = (req.query.cctvId || req.query.cameraId) as string | undefined;
     if (!gameId) throw new ApiError(400, 'Game ID is required');
 
     const result = await CctvService.getMatchVideoPlaybackUrl(
       gameId,
       req.user?.id,
-      req.user?.roleId || 3
+      req.user?.roleId || 3,
+      cctvId
     );
     res.status(200).json(ApiResponse.success('Signed playback URL generated', result));
   }

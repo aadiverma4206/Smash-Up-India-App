@@ -16,6 +16,8 @@ import '../../modules/player/views/profile_view.dart';
 import '../../modules/player/views/edit_profile_view.dart';
 import '../../modules/player/views/my_requests_view.dart';
 import '../../modules/player/views/match_history_view.dart';
+import '../../modules/player/views/player_history_standalone_view.dart';
+import '../../modules/player/views/player_history_detail_view.dart';
 import '../../modules/notifications/views/notifications_view.dart';
 import '../../modules/games/views/games_list_view.dart';
 import '../../modules/games/views/find_games_view.dart';
@@ -43,6 +45,7 @@ import '../../modules/manager/views/manager_courts_view.dart';
 import '../../modules/manager/views/manager_bookings_view.dart';
 import '../../modules/manager/views/manager_players_view.dart';
 import '../../modules/manager/views/manager_history_view.dart';
+import '../../modules/manager/views/manager_history_standalone_view.dart';
 import '../../modules/manager/views/manager_history_detail_view.dart';
 import '../../modules/manager/views/manager_notifications_view.dart';
 import '../../modules/manager/views/manager_profile_view.dart';
@@ -149,6 +152,17 @@ class AppPages {
     GetPage(
       name: Routes.matchHistory,
       page: () => const MatchHistoryView(),
+      binding: PlayerBinding(),
+    ),
+    GetPage(
+      name: Routes.playerHistoryStandalone,
+      page: () => const PlayerHistoryStandaloneView(),
+      binding: PlayerBinding(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: Routes.playerHistoryDetails,
+      page: () => const PlayerHistoryDetailView(),
       binding: PlayerBinding(),
     ),
     GetPage(
@@ -281,6 +295,12 @@ class AppPages {
       name: Routes.managerHistory,
       page: () => const ManagerHistoryView(),
       binding: ManagerBinding(),
+    ),
+    GetPage(
+      name: Routes.managerHistoryStandalone,
+      page: () => const ManagerHistoryStandaloneView(),
+      binding: ManagerBinding(),
+      transition: Transition.cupertino,
     ),
     GetPage(
       name: Routes.managerHistoryDetails,

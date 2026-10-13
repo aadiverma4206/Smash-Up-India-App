@@ -21,8 +21,10 @@ class AdminUsersView extends GetView<AdminController> {
             indicatorColor: AppColors.primary,
             indicatorWeight: 3,
             labelColor: AppColors.primary,
-            unselectedLabelColor: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            unselectedLabelColor:
+                isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+            labelStyle:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             tabs: const [
               Tab(
                 icon: Icon(Icons.sports_soccer_rounded, size: 20),

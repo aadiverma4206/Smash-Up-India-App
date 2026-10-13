@@ -11,7 +11,12 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Match CCTV Video Playback'),
+        title: Obx(() => Text(
+              controller.title.value,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )),
         backgroundColor: Colors.black,
       ),
       body: SafeArea(
@@ -20,6 +25,70 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Multi-camera quick switcher inside player view
+              Obx(() {
+                if (controller.cameras.length <= 1)
+                  return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(controller.cameras.length, (idx) {
+                        final cam = controller.cameras[idx];
+                        final isSel =
+                            controller.selectedCameraIndex.value == idx;
+                        final name = (cam['cameraName'] ?? 'Camera ${idx + 1}')
+                            .toString();
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: InkWell(
+                            onTap: () => controller.switchCamera(idx),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSel
+                                    ? AppColors.primary
+                                    : const Color(0xFF222222),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSel
+                                      ? AppColors.primary
+                                      : Colors.grey.shade700,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.videocam_rounded,
+                                      size: 14,
+                                      color:
+                                          isSel ? Colors.white : Colors.grey),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    name,
+                                    style: TextStyle(
+                                      color:
+                                          isSel ? Colors.white : Colors.white70,
+                                      fontWeight: isSel
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                );
+              }),
+
               Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(minHeight: 220),
@@ -68,7 +137,7 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
               ),
               const SizedBox(height: 16),
               const Text(
-                '🔒 Playback URL is short-lived and authorized by backend.\nS3 credentials and RTSP streams are never exposed.',
+                '🔐 Playback URL is short-lived and authorized by backend.\nS3 credentials and RTSP streams are never exposed.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.4),
               ),

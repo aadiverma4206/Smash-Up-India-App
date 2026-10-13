@@ -16,7 +16,8 @@ class _ChatSupportViewState extends State<ChatSupportView> {
   final List<Map<String, dynamic>> _messages = [
     {
       'sender': 'agent',
-      'text': 'Hello! Welcome to All Stars Arena Support. How can we help you today?',
+      'text':
+          'Hello! Welcome to All Stars Arena Support. How can we help you today?',
       'time': 'Just now',
     },
   ];
@@ -62,9 +63,13 @@ class _ChatSupportViewState extends State<ChatSupportView> {
     final lower = input.toLowerCase();
     if (lower.contains('booking') || lower.contains('slot')) {
       return 'For booking inquiries, you can check your booking status under "My Requests". If a slot was charged but not confirmed, it will auto-refund to your wallet within 10 minutes.';
-    } else if (lower.contains('refund') || lower.contains('money') || lower.contains('wallet')) {
+    } else if (lower.contains('refund') ||
+        lower.contains('money') ||
+        lower.contains('wallet')) {
       return 'Wallet refunds are processed instantly for canceled slots. Bank refunds via Razorpay take 3-5 business days to reflect in your original payment source.';
-    } else if (lower.contains('turf') || lower.contains('location') || lower.contains('court')) {
+    } else if (lower.contains('turf') ||
+        lower.contains('location') ||
+        lower.contains('court')) {
       return 'All Stars Arena turfs are equipped with FIFA-approved turf grass and high-intensity LED floodlights. Directions are available on the Court Details screen.';
     } else {
       return 'Thank you for contacting us! A support specialist has received your query and will assist you shortly.';
@@ -104,19 +109,23 @@ class _ChatSupportViewState extends State<ChatSupportView> {
             CircleAvatar(
               radius: 18,
               backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-              child: const Icon(Icons.support_agent_rounded, color: AppColors.primary, size: 20),
+              child: const Icon(Icons.support_agent_rounded,
+                  color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                Text('Arena Support Bot', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text('Arena Support Bot',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 SizedBox(height: 2),
                 Row(
                   children: [
                     CircleAvatar(radius: 3, backgroundColor: Colors.green),
                     SizedBox(width: 4),
-                    Text('Online • Ready to help', style: TextStyle(fontSize: 11, color: Colors.green)),
+                    Text('Online • Ready to help',
+                        style: TextStyle(fontSize: 11, color: Colors.green)),
                   ],
                 ),
               ],
@@ -140,9 +149,14 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(
                         label: Text(suggestion),
-                        labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                        labelStyle: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary),
+                        backgroundColor:
+                            AppColors.primary.withValues(alpha: 0.1),
+                        side: BorderSide(
+                            color: AppColors.primary.withValues(alpha: 0.3)),
                         onPressed: () => _sendMessage(suggestion),
                       ),
                     );
@@ -162,15 +176,20 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                   final isUser = msg['sender'] == 'user';
 
                   return Align(
-                    alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isUser ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.78),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: isUser
                             ? AppColors.primary
-                            : (isDark ? const Color(0xFF1E1035) : Colors.grey.shade200),
+                            : (isDark
+                                ? const Color(0xFF1E1035)
+                                : Colors.grey.shade200),
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(16),
                           topRight: const Radius.circular(16),
@@ -178,18 +197,24 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                           bottomRight: Radius.circular(isUser ? 2 : 16),
                         ),
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1)),
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 1)),
                         ],
                       ),
                       child: Column(
-                        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        crossAxisAlignment: isUser
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
                         children: [
                           Text(
                             isUser ? userName : 'Arena Support',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: isUser ? Colors.white70 : AppColors.primary,
+                              color:
+                                  isUser ? Colors.white70 : AppColors.primary,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -199,7 +224,9 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                               fontSize: 13,
                               color: isUser
                                   ? Colors.white
-                                  : (isDark ? AppColors.textPrimaryDark : Colors.black87),
+                                  : (isDark
+                                      ? AppColors.textPrimaryDark
+                                      : Colors.black87),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -225,7 +252,8 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                 color: Theme.of(context).cardColor,
                 border: Border(
                   top: BorderSide(
-                    color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
                   ),
                 ),
               ),
@@ -239,8 +267,11 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                       decoration: InputDecoration(
                         hintText: 'Type your message...',
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF1E1035) : Colors.grey.shade100,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        fillColor: isDark
+                            ? const Color(0xFF1E1035)
+                            : Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
@@ -253,7 +284,8 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                     radius: 22,
                     backgroundColor: AppColors.primary,
                     child: IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                      icon: const Icon(Icons.send_rounded,
+                          color: Colors.white, size: 18),
                       onPressed: () => _sendMessage(_messageController.text),
                     ),
                   ),

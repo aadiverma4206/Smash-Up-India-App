@@ -53,7 +53,8 @@ class DatabaseService {
     return null;
   }
 
-  Future<String?> getValidCachedData(String key, {Duration maxAge = const Duration(days: 5)}) async {
+  Future<String?> getValidCachedData(String key,
+      {Duration maxAge = const Duration(days: 5)}) async {
     try {
       final results = await _db.query(
         'cached_data',
@@ -78,7 +79,8 @@ class DatabaseService {
     return null;
   }
 
-  Future<void> pruneExpiredCache({Duration maxAge = const Duration(days: 5)}) async {
+  Future<void> pruneExpiredCache(
+      {Duration maxAge = const Duration(days: 5)}) async {
     try {
       final expiryCutoff = DateTime.now().subtract(maxAge).toIso8601String();
       await _db.delete(

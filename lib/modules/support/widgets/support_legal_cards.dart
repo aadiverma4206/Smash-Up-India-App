@@ -11,8 +11,10 @@ class SupportAndLegalSection extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = Theme.of(context).cardColor;
     final borderColor = isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0);
-    final dividerColor = isDark ? AppColors.darkBorder : const Color(0xFFF1F5F9);
-    final textColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF1E293B);
+    final dividerColor =
+        isDark ? AppColors.darkBorder : const Color(0xFFF1F5F9);
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : const Color(0xFF1E293B);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +153,8 @@ class SupportAndLegalSection extends StatelessWidget {
                 Icon(
                   icon,
                   size: 20,
-                  color: isDark ? Colors.grey.shade300 : const Color(0xFF475569),
+                  color:
+                      isDark ? Colors.grey.shade300 : const Color(0xFF475569),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -160,7 +163,9 @@ class SupportAndLegalSection extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF1E293B),
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF1E293B),
                     ),
                   ),
                 ),
@@ -169,7 +174,9 @@ class SupportAndLegalSection extends StatelessWidget {
                     trailingText,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
+                      color: isDark
+                          ? Colors.grey.shade400
+                          : const Color(0xFF64748B),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -177,7 +184,8 @@ class SupportAndLegalSection extends StatelessWidget {
                 Icon(
                   Icons.chevron_right_rounded,
                   size: 20,
-                  color: isDark ? Colors.grey.shade500 : const Color(0xFF94A3B8),
+                  color:
+                      isDark ? Colors.grey.shade500 : const Color(0xFF94A3B8),
                 ),
               ],
             ),

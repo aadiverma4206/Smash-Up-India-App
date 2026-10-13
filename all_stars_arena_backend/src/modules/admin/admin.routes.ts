@@ -11,7 +11,7 @@ import {
   resolveDisputeController,
   getAuditLogsController,
 } from './admin.controller.js';
-import { cancelGameController } from '../manager/manager.controller.js';
+import { cancelGameController, submitMatchScoreController } from '../manager/manager.controller.js';
 import { authenticateToken, requireRole, requireOwner } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -32,6 +32,7 @@ router.post('/clubs/:id/assign-manager', assignManagerController);
 
 router.post('/disputes/:id/resolve', resolveDisputeController);
 router.post('/games/:id/cancel', cancelGameController);
+router.post('/games/:id/score', submitMatchScoreController);
 router.get('/audit-logs', getAuditLogsController);
 
 export default router;

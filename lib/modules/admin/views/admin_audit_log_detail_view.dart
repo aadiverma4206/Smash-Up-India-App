@@ -10,7 +10,8 @@ class AdminAuditLogDetailView extends StatefulWidget {
   const AdminAuditLogDetailView({super.key, this.auditLog});
 
   @override
-  State<AdminAuditLogDetailView> createState() => _AdminAuditLogDetailViewState();
+  State<AdminAuditLogDetailView> createState() =>
+      _AdminAuditLogDetailViewState();
 }
 
 class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
@@ -35,13 +36,19 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
 
   Color _getBadgeColor(String action) {
     final act = action.toLowerCase();
-    if (act.contains('approved') || act.contains('success') || act.contains('confirm')) {
+    if (act.contains('approved') ||
+        act.contains('success') ||
+        act.contains('confirm')) {
       return Colors.green;
     }
-    if (act.contains('refund') || act.contains('cancel') || act.contains('suspend')) {
+    if (act.contains('refund') ||
+        act.contains('cancel') ||
+        act.contains('suspend')) {
       return AppColors.error;
     }
-    if (act.contains('join') || act.contains('create') || act.contains('user')) {
+    if (act.contains('join') ||
+        act.contains('create') ||
+        act.contains('user')) {
       return Colors.purple;
     }
     return AppColors.primary;
@@ -49,11 +56,21 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
 
   IconData _getCategoryIcon(String action) {
     final act = action.toLowerCase();
-    if (act.contains('approved') || act.contains('confirm')) return Icons.check_circle_rounded;
-    if (act.contains('refund') || act.contains('payment')) return Icons.account_balance_wallet_rounded;
-    if (act.contains('cancel')) return Icons.cancel_rounded;
-    if (act.contains('score') || act.contains('match')) return Icons.emoji_events_rounded;
-    if (act.contains('join') || act.contains('user')) return Icons.person_add_rounded;
+    if (act.contains('approved') || act.contains('confirm')) {
+      return Icons.check_circle_rounded;
+    }
+    if (act.contains('refund') || act.contains('payment')) {
+      return Icons.account_balance_wallet_rounded;
+    }
+    if (act.contains('cancel')) {
+      return Icons.cancel_rounded;
+    }
+    if (act.contains('score') || act.contains('match')) {
+      return Icons.emoji_events_rounded;
+    }
+    if (act.contains('join') || act.contains('user')) {
+      return Icons.person_add_rounded;
+    }
     return Icons.security_rounded;
   }
 
@@ -71,8 +88,8 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
       ),
       body: ResponsiveBuilder(
         builder: (context, deviceType) {
-          final isTabletOrDesktop =
-              deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+          final isTabletOrDesktop = deviceType == DeviceType.tablet ||
+              deviceType == DeviceType.desktop;
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -95,7 +112,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                             width: 1,
                           ),
                           boxShadow: const [
@@ -118,7 +137,8 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                                 border: Border.all(color: badgeColor, width: 2),
                               ),
                               child: Center(
-                                child: Icon(iconData, color: badgeColor, size: 30),
+                                child:
+                                    Icon(iconData, color: badgeColor, size: 30),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -130,7 +150,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -138,15 +160,17 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                             // Event Time
                             if (log.createdAt.isNotEmpty)
                               Container(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: badgeColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   log.createdAt.length >= 19
-                                      ? log.createdAt.substring(0, 19).replaceAll('T', ' ')
+                                      ? log.createdAt
+                                          .substring(0, 19)
+                                          .replaceAll('T', ' ')
                                       : log.createdAt,
                                   style: TextStyle(
                                     color: badgeColor,
@@ -168,7 +192,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                             width: 1,
                           ),
                         ),
@@ -180,7 +206,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             const Divider(height: 20),
@@ -191,7 +219,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               style: TextStyle(
                                 fontSize: 14,
                                 height: 1.4,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                           ],
@@ -207,7 +237,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                             width: 1,
                           ),
                         ),
@@ -219,11 +251,14 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             const Divider(height: 20),
-                            _buildMetaRow(context, Icons.badge_outlined, 'Log ID', log.id),
+                            _buildMetaRow(context, Icons.badge_outlined,
+                                'Log ID', log.id),
                             _buildMetaRow(
                               context,
                               Icons.person_outline_rounded,
@@ -255,7 +290,8 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
     );
   }
 
-  Widget _buildMetaRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _buildMetaRow(
+      BuildContext context, IconData icon, String label, String value) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -273,7 +309,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                   label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade600,
                   ),
                 ),
                 const SizedBox(height: 2),

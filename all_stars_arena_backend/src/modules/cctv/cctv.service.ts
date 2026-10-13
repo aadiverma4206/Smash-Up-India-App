@@ -559,7 +559,7 @@ export class CctvService {
   /**
    * Get Short-Lived Signed Playback URL for Match Video
    */
-  static async getMatchVideoPlaybackUrl(gameId: string, userId?: string, userRole = 3) {
+  static async getMatchVideoPlaybackUrl(gameId: string, userId?: string, userRole = 3, cctvId?: string) {
     const gameRes = await dbPool.query('SELECT * FROM public.games WHERE id = $1;', [gameId]);
     if (gameRes.rows.length === 0) {
       throw new ApiError(404, 'Match not found', 'MATCH_NOT_FOUND');
@@ -582,10 +582,33 @@ export class CctvService {
       }
     }
 
-    const videoRes = await dbPool.query(
-      `SELECT * FROM public.game_videos WHERE game_id = $1 ORDER BY created_at DESC LIMIT 1;`,
-      [gameId]
-    );
+    let query = `
+      SELECT gv.*, cam.name as camera_name
+      FROM public.game_videos gv
+      LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id
+      WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'
+    `;
+    const params: any[] = [gameId];
+    if (cctvId) {
+      query += ` AND gv.cctv_id = $2 ORDER BY gv.created_at DESC LIMIT 1;`;
+      params.push(cctvId);
+    } else {
+      query += ` ORDER BY gv.created_at ASC LIMIT 1;`;
+    }
+
+    let videoRes = await dbPool.query(query, params);
+
+    // If specific camera had no video yet, fallback to any available video for the game
+    if (videoRes.rows.length === 0 && cctvId) {
+      videoRes = await dbPool.query(
+        `SELECT gv.*, cam.name as camera_name
+         FROM public.game_videos gv
+         LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id
+         WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'
+         ORDER BY gv.created_at ASC LIMIT 1;`,
+        [gameId]
+      );
+    }
 
     if (videoRes.rows.length === 0) {
       throw new ApiError(404, 'No recorded video available for this match', 'VIDEO_NOT_FOUND');
@@ -597,6 +620,8 @@ export class CctvService {
     return {
       gameId,
       videoId: video.id,
+      cctvId: video.cctv_id || null,
+      cameraName: video.camera_name || 'Camera 1',
       title: video.title,
       status: video.status,
       playbackUrl: signedUrl,

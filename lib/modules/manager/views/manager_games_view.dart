@@ -600,7 +600,7 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                             : Icons.play_arrow_rounded,
                         color: Colors.white,
                         size: 14),
-                    label: Text(isOngoing ? 'Live Score' : 'Start Match',
+                    label: Text(isOngoing ? 'Manage Match' : 'Start Match',
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

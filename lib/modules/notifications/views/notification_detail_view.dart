@@ -38,10 +38,15 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
 
   Color _getBadgeColor(String type) {
     final t = type.toUpperCase();
-    if (t.contains('SUCCESS') || t.contains('CONFIRMED') || t.contains('MATCH_START')) {
+    if (t.contains('SUCCESS') ||
+        t.contains('CONFIRMED') ||
+        t.contains('MATCH_START')) {
       return const Color(0xFF00C853);
     }
-    if (t.contains('WARNING') || t.contains('ALERT') || t.contains('REFUND') || t.contains('CANCEL')) {
+    if (t.contains('WARNING') ||
+        t.contains('ALERT') ||
+        t.contains('REFUND') ||
+        t.contains('CANCEL')) {
       return AppColors.error;
     }
     if (t.contains('CCTV') || t.contains('BOOKING')) {
@@ -52,12 +57,18 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
 
   IconData _getCategoryIcon(String type) {
     final t = type.toUpperCase();
-    if (t.contains('MATCH') || t.contains('GAME')) return Icons.sports_soccer_rounded;
+    if (t.contains('MATCH') || t.contains('GAME')) {
+      return Icons.sports_soccer_rounded;
+    }
     if (t.contains('REFUND') || t.contains('WALLET') || t.contains('PAYMENT')) {
       return Icons.account_balance_wallet_rounded;
     }
-    if (t.contains('CCTV') || t.contains('VIDEO')) return Icons.videocam_rounded;
-    if (t.contains('WARNING') || t.contains('ALERT')) return Icons.warning_amber_rounded;
+    if (t.contains('CCTV') || t.contains('VIDEO')) {
+      return Icons.videocam_rounded;
+    }
+    if (t.contains('WARNING') || t.contains('ALERT')) {
+      return Icons.warning_amber_rounded;
+    }
     return Icons.notifications_active_rounded;
   }
 
@@ -85,8 +96,8 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
       ),
       body: ResponsiveBuilder(
         builder: (context, deviceType) {
-          final isTabletOrDesktop =
-              deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+          final isTabletOrDesktop = deviceType == DeviceType.tablet ||
+              deviceType == DeviceType.desktop;
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -109,7 +120,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                             width: 1,
                           ),
                           boxShadow: const [
@@ -144,7 +157,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -176,13 +191,16 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                                   decoration: BoxDecoration(
                                     color: item.isRead
                                         ? Colors.grey.withValues(alpha: 0.15)
-                                        : AppColors.primary.withValues(alpha: 0.15),
+                                        : AppColors.primary
+                                            .withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
                                     item.isRead ? 'Read' : 'Unread',
                                     style: TextStyle(
-                                      color: item.isRead ? Colors.grey : AppColors.primary,
+                                      color: item.isRead
+                                          ? Colors.grey
+                                          : AppColors.primary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 11,
                                     ),
@@ -203,7 +221,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                             width: 1,
                           ),
                         ),
@@ -215,7 +235,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             const Divider(height: 20),
@@ -224,7 +246,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                               style: TextStyle(
                                 fontSize: 14.5,
                                 height: 1.5,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                           ],
@@ -240,7 +264,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : const Color(0xFFE2E8F0),
                             width: 1,
                           ),
                         ),
@@ -252,7 +278,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             const Divider(height: 20),
@@ -267,7 +295,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
-                                      color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                                      color: isDark
+                                          ? AppColors.textSecondaryDark
+                                          : Colors.grey.shade700,
                                     ),
                                   ),
                                 ),
@@ -290,7 +320,8 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                                   borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: () {
-                              final uri = Uri.parse(item.data!['link'].toString());
+                              final uri =
+                                  Uri.parse(item.data!['link'].toString());
                               DeepLinkService.handleUri(uri);
                             },
                             icon: const Icon(Icons.open_in_new_rounded,

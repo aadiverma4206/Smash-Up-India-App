@@ -52,137 +52,157 @@ class AdminManagersView extends GetView<AdminController> {
       body: SafeArea(
         top: !showAppBar,
         child: ResponsiveBuilder(
-        builder: (context, deviceType) {
-          final isTabletOrDesktop =
-              deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+          builder: (context, deviceType) {
+            final isTabletOrDesktop = deviceType == DeviceType.tablet ||
+                deviceType == DeviceType.desktop;
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
-            child: Column(
-              children: [
-                // Search Bar
-                AppTextField(
-                  label: '',
-                  hint: 'Search Manager Email, Phone or Name...',
-                  controller: searchController,
-                  prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 20),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.clear_rounded, color: Colors.grey, size: 20),
-                    onPressed: () {
-                      searchController.clear();
-                      controller.onManagerSearchChanged('');
+            return Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+              child: Column(
+                children: [
+                  // Search Bar
+                  AppTextField(
+                    label: '',
+                    hint: 'Search Manager Email, Phone or Name...',
+                    controller: searchController,
+                    prefixIcon: const Icon(Icons.search,
+                        color: AppColors.primary, size: 20),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear_rounded,
+                          color: Colors.grey, size: 20),
+                      onPressed: () {
+                        searchController.clear();
+                        controller.onManagerSearchChanged('');
+                      },
+                    ),
+                    onChanged: (val) {
+                      controller.onManagerSearchChanged(val);
+                    },
+                    onSubmitted: (val) {
+                      controller.onManagerSearchChanged(val);
                     },
                   ),
-                  onChanged: (val) {
-                    controller.onManagerSearchChanged(val);
-                  },
-                  onSubmitted: (val) {
-                    controller.onManagerSearchChanged(val);
-                  },
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // Managers Content View
-                Expanded(
-                  child: Obx(() {
-                    // 1. 3D Shimmer Loading Skeleton
-                    if (controller.isLoadingManagers.value && controller.managers.isEmpty) {
-                      return _buildShimmerView(context, deviceType);
-                    }
+                  // Managers Content View
+                  Expanded(
+                    child: Obx(() {
+                      // 1. 3D Shimmer Loading Skeleton
+                      if (controller.isLoadingManagers.value &&
+                          controller.managers.isEmpty) {
+                        return _buildShimmerView(context, deviceType);
+                      }
 
-                    // 2. Empty State View
-                    if (controller.managers.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.admin_panel_settings_rounded,
-                              size: 48,
-                              color: isDark ? AppColors.textSecondaryDark : Colors.grey,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No turf managers found.',
-                              style: TextStyle(
-                                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
-                                fontSize: 15,
+                      // 2. Empty State View
+                      if (controller.managers.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.admin_panel_settings_rounded,
+                                size: 48,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : Colors.grey,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: () => Get.toNamed('/admin/managers/create'),
-                              icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                              label: const Text('Create New Manager',
-                                  style: TextStyle(color: Colors.white)),
-                              style:
-                                  ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No turf managers found.',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : Colors.grey.shade700,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () =>
+                                    Get.toNamed('/admin/managers/create'),
+                                icon: const Icon(Icons.add,
+                                    size: 18, color: Colors.white),
+                                label: const Text('Create New Manager',
+                                    style: TextStyle(color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // 3. Responsive List / Grid View
+                      return RefreshIndicator(
+                        onRefresh: () async => controller.fetchManagers(),
+                        child: isTabletOrDesktop
+                            ? GridView.builder(
+                                controller: scrollController,
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount:
+                                      deviceType == DeviceType.desktop ? 3 : 2,
+                                  childAspectRatio: 2.8,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                ),
+                                itemCount: controller.managers.length +
+                                    (controller.hasMoreManagers.value ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index == controller.managers.length) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.primary),
+                                    );
+                                  }
+                                  return _buildCompactUserTile(
+                                      context, controller.managers[index]);
+                                },
+                              )
+                            : ListView.separated(
+                                controller: scrollController,
+                                itemCount: controller.managers.length +
+                                    (controller.hasMoreManagers.value ? 1 : 0),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  if (index == controller.managers.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12.0),
+                                      child: Center(
+                                        child: controller
+                                                .isLoadingMoreManagers.value
+                                            ? const CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppColors.primary)
+                                            : const SizedBox.shrink(),
+                                      ),
+                                    );
+                                  }
+                                  final manager = controller.managers[index];
+                                  return _buildCompactUserTile(
+                                      context, manager);
+                                },
+                              ),
                       );
-                    }
-
-                    // 3. Responsive List / Grid View
-                    return RefreshIndicator(
-                      onRefresh: () async => controller.fetchManagers(),
-                      child: isTabletOrDesktop
-                          ? GridView.builder(
-                              controller: scrollController,
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: deviceType == DeviceType.desktop ? 3 : 2,
-                                childAspectRatio: 2.8,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                              ),
-                              itemCount: controller.managers.length +
-                                  (controller.hasMoreManagers.value ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == controller.managers.length) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: AppColors.primary),
-                                  );
-                                }
-                                return _buildCompactUserTile(context, controller.managers[index]);
-                              },
-                            )
-                          : ListView.separated(
-                              controller: scrollController,
-                              itemCount: controller.managers.length +
-                                  (controller.hasMoreManagers.value ? 1 : 0),
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
-                              itemBuilder: (context, index) {
-                                if (index == controller.managers.length) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 12.0),
-                                    child: Center(
-                                      child: controller.isLoadingMoreManagers.value
-                                          ? const CircularProgressIndicator(
-                                              strokeWidth: 2, color: AppColors.primary)
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  );
-                                }
-                                final manager = controller.managers[index];
-                                return _buildCompactUserTile(context, manager);
-                              },
-                            ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          );
-        },
+                    }),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
-    ),
     );
   }
 
   /// 3D Animated Shimmer Loading Skeleton
   Widget _buildShimmerView(BuildContext context, DeviceType deviceType) {
-    final isGrid = deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+    final isGrid =
+        deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
     if (isGrid) {
       return GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -233,14 +253,21 @@ class AdminManagersView extends GetView<AdminController> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
-                    AppShimmer(width: 110, height: 14, borderRadius: 4, enable3D: true),
-                    AppShimmer(width: 45, height: 12, borderRadius: 4, enable3D: true),
+                    AppShimmer(
+                        width: 110,
+                        height: 14,
+                        borderRadius: 4,
+                        enable3D: true),
+                    AppShimmer(
+                        width: 45, height: 12, borderRadius: 4, enable3D: true),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const AppShimmer(width: 150, height: 12, borderRadius: 4, enable3D: true),
+                const AppShimmer(
+                    width: 150, height: 12, borderRadius: 4, enable3D: true),
                 const SizedBox(height: 6),
-                const AppShimmer(width: 90, height: 10, borderRadius: 4, enable3D: true),
+                const AppShimmer(
+                    width: 90, height: 10, borderRadius: 4, enable3D: true),
               ],
             ),
           ),
@@ -284,7 +311,8 @@ class AdminManagersView extends GetView<AdminController> {
                   ),
                 ),
                 child: ClipOval(
-                  child: (user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty)
+                  child: (user.profileImageUrl != null &&
+                          user.profileImageUrl!.isNotEmpty)
                       ? CachedNetworkImage(
                           imageUrl: user.profileImageUrl!,
                           width: 44,
@@ -296,7 +324,8 @@ class AdminManagersView extends GetView<AdminController> {
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ),
                           ),
@@ -321,7 +350,9 @@ class AdminManagersView extends GetView<AdminController> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : Colors.black87,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -330,7 +361,8 @@ class AdminManagersView extends GetView<AdminController> {
                         const SizedBox(width: 6),
                         // Compact Status Badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: isSuspended
                                 ? AppColors.error.withValues(alpha: 0.15)
@@ -340,7 +372,9 @@ class AdminManagersView extends GetView<AdminController> {
                           child: Text(
                             user.status,
                             style: TextStyle(
-                              color: isSuspended ? AppColors.error : Colors.green.shade700,
+                              color: isSuspended
+                                  ? AppColors.error
+                                  : Colors.green.shade700,
                               fontWeight: FontWeight.bold,
                               fontSize: 10,
                             ),
@@ -352,7 +386,9 @@ class AdminManagersView extends GetView<AdminController> {
                     Text(
                       user.email,
                       style: TextStyle(
-                        color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : Colors.grey.shade700,
                         fontSize: 12,
                       ),
                       maxLines: 1,
@@ -363,7 +399,9 @@ class AdminManagersView extends GetView<AdminController> {
                         Text(
                           user.phone,
                           style: TextStyle(
-                            color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : Colors.grey.shade600,
                             fontSize: 11,
                           ),
                         ),
@@ -371,7 +409,9 @@ class AdminManagersView extends GetView<AdminController> {
                           Text(
                             ' • ${user.city}',
                             style: TextStyle(
-                              color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : Colors.grey.shade600,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
@@ -386,7 +426,8 @@ class AdminManagersView extends GetView<AdminController> {
               const SizedBox(width: 8),
               Icon(
                 Icons.chevron_right_rounded,
-                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
                 size: 22,
               ),
             ],

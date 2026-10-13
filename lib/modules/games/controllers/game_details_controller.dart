@@ -36,6 +36,7 @@ class GameDetailsController extends GetxController {
   final RxList<GameRosterPlayerModel> teamBRoster =
       <GameRosterPlayerModel>[].obs;
   final RxList<VideoModel> matchVideos = <VideoModel>[].obs;
+  final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();
 
   final RxBool isLoading = false.obs;
   final RxBool isJoining = false.obs;
@@ -108,6 +109,7 @@ class GameDetailsController extends GetxController {
       try {
         final vids = await repository.getGameVideos(gameId);
         matchVideos.value = vids;
+        if (vids.isNotEmpty) selectedVideo.value = vids.first;
       } catch (_) {}
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Error', e);
@@ -127,6 +129,10 @@ class GameDetailsController extends GetxController {
     if (uid == null || game.value?.roster == null) return null;
     final match = game.value!.roster!.firstWhereOrNull((p) => p.userId == uid);
     return match?.team;
+  }
+
+  void selectCamera(VideoModel video) {
+    selectedVideo.value = video;
   }
 
   bool get isManagerOrAdmin {

@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../repositories/manager_repository.dart';
 import '../../../data/models/game_model.dart';
+import '../../../data/models/video_model.dart';
+import '../../games/repositories/games_repository.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/app_date_utils.dart';
@@ -18,9 +20,13 @@ class ManagerGamesController extends GetxController {
       .obs; // ALL, TODAY, TOMORROW, SELECT DATE, ONGOING, COMPLETED, CANCELLED
   final RxString selectedCourtFilter = 'ALL'.obs; // ALL, COURT_1, COURT_2
   final Rxn<DateTime> customSelectedDate = Rxn<DateTime>();
+  final RxString selectedRosterTeamFilter = 'TEAM_A'.obs; // TEAM_A, TEAM_B
 
-  // CCTV playback URL
+  // CCTV playback URL & Multi-camera video state
   final RxnString cctvPlaybackUrl = RxnString();
+  final RxList<VideoModel> matchVideos = <VideoModel>[].obs;
+  final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();
+  final RxBool isLoadingVideos = false.obs;
 
   @override
   void onInit() {
@@ -104,14 +110,58 @@ class ManagerGamesController extends GetxController {
   }
 
   Future<void> fetchMatchRecording(String gameId) async {
+    if (gameId.isEmpty) return;
+    isLoadingVideos.value = true;
     try {
       final res = await repository.getMatchRecording(gameId);
-      final url = res['playbackUrl'] ?? res['url'] ?? res['video_playback_url'];
-      if (url != null && url.toString().isNotEmpty) {
-        cctvPlaybackUrl.value = url.toString();
+      final List<dynamic>? vidsRaw = res['videos'] as List<dynamic>?;
+      final List<VideoModel> parsedVideos = [];
+
+      if (vidsRaw != null && vidsRaw.isNotEmpty) {
+        for (final v in vidsRaw) {
+          if (v is Map<String, dynamic>) {
+            parsedVideos.add(VideoModel.fromJson(v));
+          }
+        }
+      }
+
+      if (parsedVideos.isEmpty) {
+        try {
+          if (Get.isRegistered<GamesRepository>()) {
+            final fallbackVideos =
+                await Get.find<GamesRepository>().getGameVideos(gameId);
+            parsedVideos.addAll(fallbackVideos);
+          }
+        } catch (_) {}
+      }
+
+      matchVideos.assignAll(parsedVideos);
+
+      if (matchVideos.isNotEmpty) {
+        final currentId = selectedVideo.value?.id;
+        final matching = matchVideos.firstWhereOrNull((v) => v.id == currentId);
+        selectedVideo.value = matching ?? matchVideos.first;
+        cctvPlaybackUrl.value =
+            selectedVideo.value?.playbackUrl ?? matchVideos.first.playbackUrl;
+      } else {
+        selectedVideo.value = null;
+        final url =
+            res['playbackUrl'] ?? res['url'] ?? res['video_playback_url'];
+        if (url != null && url.toString().isNotEmpty) {
+          cctvPlaybackUrl.value = url.toString();
+        }
       }
     } catch (e) {
       AppLogger.warning('Error fetching match CCTV recording: $e');
+    } finally {
+      isLoadingVideos.value = false;
+    }
+  }
+
+  void selectCamera(VideoModel video) {
+    selectedVideo.value = video;
+    if (video.playbackUrl.isNotEmpty) {
+      cctvPlaybackUrl.value = video.playbackUrl;
     }
   }
 
@@ -188,7 +238,7 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Submit or update Live Score
+  /// Submit or update Match Score (Final Score)
   Future<void> submitMatchScore(String gameId, int scoreA, int scoreB,
       {bool isFinal = true}) async {
     isLoading.value = true;
@@ -197,11 +247,40 @@ class ManagerGamesController extends GetxController {
           isFinal: isFinal);
       await fetchClubGames();
       if (selectedGame.value != null && selectedGame.value!.id == gameId) {
-        final updated = await repository.getClubGames();
-        selectedGame.value = updated.firstWhereOrNull((g) => g.id == gameId);
+        final current = selectedGame.value!;
+        selectedGame.value = GameModel(
+          id: current.id,
+          title: current.title,
+          clubId: current.clubId,
+          clubName: current.clubName,
+          courtId: current.courtId,
+          courtName: current.courtName,
+          matchDate: current.matchDate,
+          startTime: current.startTime,
+          endTime: current.endTime,
+          status: current.status,
+          format: current.format,
+          perPlayerFee: current.perPlayerFee,
+          maxPlayers: current.maxPlayers,
+          currentPlayers: current.currentPlayers,
+          skillRequirement: current.skillRequirement,
+          privacy: current.privacy,
+          creatorId: current.creatorId,
+          creatorRoleName: current.creatorRoleName,
+          createdByPlayer: current.createdByPlayer,
+          teamAScore: scoreA,
+          teamBScore: scoreB,
+          winnerTeam: current.winnerTeam,
+          userTeam: current.userTeam,
+          userPosition: current.userPosition,
+          description: current.description,
+          waitlistPosition: current.waitlistPosition,
+          roster: current.roster,
+          videoPlaybackUrl: current.videoPlaybackUrl,
+        );
       }
       ErrorHandler.showSuccessSnackBar(
-          'Score Recorded', 'Live match score updated to $scoreA - $scoreB');
+          'Score Saved', 'Final match score updated to $scoreA - $scoreB');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Score Error', e);
     } finally {
@@ -220,11 +299,55 @@ class ManagerGamesController extends GetxController {
       fetchClubGames();
       await fetchMatchRecording(gameId);
       ErrorHandler.showSuccessSnackBar(
-          'Match Completed', 'Final Score: $teamAScore - $teamBScore');
+          'Match Completed', 'Match is finished and moved to Match History.');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Complete Error', e);
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Toggle Pause / Resume Match State
+  void togglePauseGame(String gameId) {
+    if (selectedGame.value == null) return;
+    final current = selectedGame.value!;
+    final isCurrentlyPaused = current.status.toUpperCase() == 'PAUSED';
+    final newStatus = isCurrentlyPaused ? 'ONGOING' : 'PAUSED';
+
+    selectedGame.value = GameModel(
+      id: current.id,
+      title: current.title,
+      clubId: current.clubId,
+      clubName: current.clubName,
+      courtId: current.courtId,
+      courtName: current.courtName,
+      matchDate: current.matchDate,
+      startTime: current.startTime,
+      endTime: current.endTime,
+      status: newStatus,
+      format: current.format,
+      perPlayerFee: current.perPlayerFee,
+      maxPlayers: current.maxPlayers,
+      currentPlayers: current.currentPlayers,
+      skillRequirement: current.skillRequirement,
+      privacy: current.privacy,
+      creatorId: current.creatorId,
+      creatorRoleName: current.creatorRoleName,
+      createdByPlayer: current.createdByPlayer,
+      teamAScore: current.teamAScore,
+      teamBScore: current.teamBScore,
+      winnerTeam: current.winnerTeam,
+      userTeam: current.userTeam,
+      userPosition: current.userPosition,
+      description: current.description,
+      waitlistPosition: current.waitlistPosition,
+      roster: current.roster,
+      videoPlaybackUrl: current.videoPlaybackUrl,
+    );
+
+    ErrorHandler.showSuccessSnackBar(
+      isCurrentlyPaused ? 'Match Resumed' : 'Match Paused',
+      isCurrentlyPaused ? 'Match gameplay active.' : 'Match gameplay paused.',
+    );
   }
 }

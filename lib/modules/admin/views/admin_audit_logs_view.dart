@@ -49,7 +49,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
     final Map<String, List<AuditLogModel>> grouped = {};
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
-    final yesterdayStr = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
+    final yesterdayStr =
+        DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
 
     for (final log in logs) {
       String dateHeader = 'Recent Activity';
@@ -90,10 +91,14 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
 
   Color _getCategoryBgColor(String action, bool isDark) {
     final act = action.toLowerCase();
-    if (act.contains('approved') || act.contains('success') || act.contains('confirm')) {
+    if (act.contains('approved') ||
+        act.contains('success') ||
+        act.contains('confirm')) {
       return isDark ? const Color(0xFF132B1F) : const Color(0xFFE8F8F0);
     }
-    if (act.contains('refund') || act.contains('cancel') || act.contains('suspend')) {
+    if (act.contains('refund') ||
+        act.contains('cancel') ||
+        act.contains('suspend')) {
       return isDark ? const Color(0xFF2E1318) : const Color(0xFFFDE8E8);
     }
     if (act.contains('join') || act.contains('user')) {
@@ -104,10 +109,14 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
 
   Color _getCategoryIconColor(String action) {
     final act = action.toLowerCase();
-    if (act.contains('approved') || act.contains('success') || act.contains('confirm')) {
+    if (act.contains('approved') ||
+        act.contains('success') ||
+        act.contains('confirm')) {
       return const Color(0xFF00C853);
     }
-    if (act.contains('refund') || act.contains('cancel') || act.contains('suspend')) {
+    if (act.contains('refund') ||
+        act.contains('cancel') ||
+        act.contains('suspend')) {
       return const Color(0xFFE53935);
     }
     if (act.contains('join') || act.contains('user')) {
@@ -118,11 +127,21 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
 
   IconData _getCategoryIcon(String action) {
     final act = action.toLowerCase();
-    if (act.contains('approved') || act.contains('confirm')) return Icons.check_circle_outline_rounded;
-    if (act.contains('refund') || act.contains('payment')) return Icons.account_balance_wallet_outlined;
-    if (act.contains('cancel') || act.contains('suspend')) return Icons.cancel_outlined;
-    if (act.contains('score') || act.contains('match')) return Icons.emoji_events_outlined;
-    if (act.contains('join') || act.contains('user')) return Icons.person_add_alt_1_rounded;
+    if (act.contains('approved') || act.contains('confirm')) {
+      return Icons.check_circle_outline_rounded;
+    }
+    if (act.contains('refund') || act.contains('payment')) {
+      return Icons.account_balance_wallet_outlined;
+    }
+    if (act.contains('cancel') || act.contains('suspend')) {
+      return Icons.cancel_outlined;
+    }
+    if (act.contains('score') || act.contains('match')) {
+      return Icons.emoji_events_outlined;
+    }
+    if (act.contains('join') || act.contains('user')) {
+      return Icons.person_add_alt_1_rounded;
+    }
     return Icons.security_rounded;
   }
 
@@ -154,11 +173,12 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
       ),
       body: ResponsiveBuilder(
         builder: (context, deviceType) {
-          final isTabletOrDesktop =
-              deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+          final isTabletOrDesktop = deviceType == DeviceType.tablet ||
+              deviceType == DeviceType.desktop;
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
             child: Column(
               children: [
                 // Filter Search Bar
@@ -166,9 +186,11 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                   label: '',
                   hint: 'Filter Audit Logs by Action or Details...',
                   controller: filterController,
-                  prefixIcon: const Icon(Icons.search, color: AppColors.primary, size: 20),
+                  prefixIcon: const Icon(Icons.search,
+                      color: AppColors.primary, size: 20),
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.clear_rounded, color: Colors.grey, size: 20),
+                    icon: const Icon(Icons.clear_rounded,
+                        color: Colors.grey, size: 20),
                     onPressed: () {
                       filterController.clear();
                       filterQuery.value = '';
@@ -184,7 +206,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                 Expanded(
                   child: Obx(() {
                     // 1. Shimmer Loading State
-                    if (controller.isLoadingLogs.value && controller.auditLogs.isEmpty) {
+                    if (controller.isLoadingLogs.value &&
+                        controller.auditLogs.isEmpty) {
                       return _buildShimmerView(context, deviceType);
                     }
 
@@ -192,9 +215,12 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                     final query = filterQuery.value;
                     final filteredLogs = controller.auditLogs.where((log) {
                       if (query.isEmpty) return true;
-                      final actionMatch = log.action.toLowerCase().contains(query);
-                      final detailsMatch = (log.details ?? '').toLowerCase().contains(query);
-                      final userMatch = (log.userId ?? '').toLowerCase().contains(query);
+                      final actionMatch =
+                          log.action.toLowerCase().contains(query);
+                      final detailsMatch =
+                          (log.details ?? '').toLowerCase().contains(query);
+                      final userMatch =
+                          (log.userId ?? '').toLowerCase().contains(query);
                       return actionMatch || detailsMatch || userMatch;
                     }).toList();
 
@@ -207,13 +233,17 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                             Icon(
                               Icons.security_rounded,
                               size: 48,
-                              color: isDark ? AppColors.textSecondaryDark : Colors.grey,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : Colors.grey,
                             ),
                             const SizedBox(height: 12),
                             Text(
                               'No audit logs found.',
                               style: TextStyle(
-                                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : Colors.grey.shade700,
                                 fontSize: 15,
                               ),
                             ),
@@ -238,21 +268,25 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                       onRefresh: () async => controller.fetchAuditLogs(),
                       child: ListView.builder(
                         controller: scrollController,
-                        itemCount: groupedLogs.length + (controller.hasMoreAuditLogs.value ? 1 : 0),
+                        itemCount: groupedLogs.length +
+                            (controller.hasMoreAuditLogs.value ? 1 : 0),
                         itemBuilder: (context, sectionIndex) {
                           if (sectionIndex == groupedLogs.length) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16.0),
                               child: Center(
                                 child: controller.isLoadingMoreAuditLogs.value
                                     ? const CircularProgressIndicator(
-                                        strokeWidth: 2, color: AppColors.primary)
+                                        strokeWidth: 2,
+                                        color: AppColors.primary)
                                     : const SizedBox.shrink(),
                               ),
                             );
                           }
 
-                          final dateHeader = groupedLogs.keys.elementAt(sectionIndex);
+                          final dateHeader =
+                              groupedLogs.keys.elementAt(sectionIndex);
                           final logsForDate = groupedLogs[dateHeader]!;
 
                           return Column(
@@ -260,13 +294,16 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                             children: [
                               // Date Group Header
                               Padding(
-                                padding: const EdgeInsets.only(top: 14.0, bottom: 8.0, left: 4.0),
+                                padding: const EdgeInsets.only(
+                                    top: 14.0, bottom: 8.0, left: 4.0),
                                 child: Text(
                                   dateHeader,
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: isDark ? AppColors.textPrimaryDark : const Color(0xFF1F2937),
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : const Color(0xFF1F2937),
                                   ),
                                 ),
                               ),
@@ -276,15 +313,20 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                                 GridView.builder(
                                   physics: const NeverScrollableScrollPhysics(),
                                   shrinkWrap: true,
-                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: deviceType == DeviceType.desktop ? 3 : 2,
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount:
+                                        deviceType == DeviceType.desktop
+                                            ? 3
+                                            : 2,
                                     childAspectRatio: 3.0,
                                     crossAxisSpacing: 10,
                                     mainAxisSpacing: 8,
                                   ),
                                   itemCount: logsForDate.length,
                                   itemBuilder: (context, index) {
-                                    return _buildAuditLogCard(context, logsForDate[index]);
+                                    return _buildAuditLogCard(
+                                        context, logsForDate[index]);
                                   },
                                 )
                               else
@@ -292,9 +334,11 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                                   physics: const NeverScrollableScrollPhysics(),
                                   shrinkWrap: true,
                                   itemCount: logsForDate.length,
-                                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 8),
                                   itemBuilder: (context, index) {
-                                    return _buildAuditLogCard(context, logsForDate[index]);
+                                    return _buildAuditLogCard(
+                                        context, logsForDate[index]);
                                   },
                                 ),
                             ],
@@ -372,7 +416,9 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14.5,
-                              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF111827),
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : const Color(0xFF111827),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -384,7 +430,9 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                             timeStr,
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : Colors.grey.shade500,
                             ),
                           ),
                         ],
@@ -398,7 +446,9 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                         log.details!,
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : Colors.grey.shade600,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -409,7 +459,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                     // Status Tag Badge if available
                     if (statusTag != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: bgColor,
                           borderRadius: BorderRadius.circular(6),
@@ -431,7 +482,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
               const SizedBox(width: 6),
               Icon(
                 Icons.chevron_right_rounded,
-                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
                 size: 20,
               ),
             ],
@@ -442,7 +494,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
   }
 
   Widget _buildShimmerView(BuildContext context, DeviceType deviceType) {
-    final isGrid = deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+    final isGrid =
+        deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
     if (isGrid) {
       return GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -478,7 +531,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
       ),
       child: Row(
         children: [
-          const AppShimmer(width: 44, height: 44, shape: BoxShape.circle, enable3D: true),
+          const AppShimmer(
+              width: 44, height: 44, shape: BoxShape.circle, enable3D: true),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -488,14 +542,21 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
-                    AppShimmer(width: 130, height: 14, borderRadius: 4, enable3D: true),
-                    AppShimmer(width: 45, height: 11, borderRadius: 4, enable3D: true),
+                    AppShimmer(
+                        width: 130,
+                        height: 14,
+                        borderRadius: 4,
+                        enable3D: true),
+                    AppShimmer(
+                        width: 45, height: 11, borderRadius: 4, enable3D: true),
                   ],
                 ),
                 const SizedBox(height: 6),
-                const AppShimmer(width: 160, height: 11, borderRadius: 4, enable3D: true),
+                const AppShimmer(
+                    width: 160, height: 11, borderRadius: 4, enable3D: true),
                 const SizedBox(height: 5),
-                const AppShimmer(width: 55, height: 12, borderRadius: 4, enable3D: true),
+                const AppShimmer(
+                    width: 55, height: 12, borderRadius: 4, enable3D: true),
               ],
             ),
           ),

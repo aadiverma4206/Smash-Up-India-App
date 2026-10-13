@@ -31,7 +31,8 @@ class AdminRepository {
     Function(List<AdminUserModel> cachedList)? onCachedData,
   }) async {
     final cleanSearch = search?.trim().toLowerCase() ?? '';
-    final cacheKey = 'admin_users_role_${roleId ?? 0}_q_${cleanSearch}_p_${page}_l_$limit';
+    final cacheKey =
+        'admin_users_role_${roleId ?? 0}_q_${cleanSearch}_p_${page}_l_$limit';
 
     // 1. Prune expired SQLite records older than 5 days
     try {
@@ -48,7 +49,9 @@ class AdminRepository {
         if (cachedJsonStr != null && cachedJsonStr.isNotEmpty) {
           final List<dynamic> decoded = jsonDecode(cachedJsonStr);
           final cachedList = _processUserList(
-            decoded.map((e) => AdminUserModel.fromJson(e as Map<String, dynamic>)).toList(),
+            decoded
+                .map((e) => AdminUserModel.fromJson(e as Map<String, dynamic>))
+                .toList(),
             limit: limit,
           );
           if (onCachedData != null && cachedList.isNotEmpty) {
@@ -75,7 +78,8 @@ class AdminRepository {
       // 4. Update SQLite local database with fresh server data for 5-day retention
       if (page == 1) {
         try {
-          final jsonToStore = jsonEncode(processedList.map((e) => e.toJson()).toList());
+          final jsonToStore =
+              jsonEncode(processedList.map((e) => e.toJson()).toList());
           await _dbService.cacheData(cacheKey, jsonToStore);
         } catch (e) {
           AppLogger.warning('SQLite cache write warning: $e');
@@ -91,7 +95,10 @@ class AdminRepository {
           if (fallbackJson != null) {
             final List<dynamic> decoded = jsonDecode(fallbackJson);
             return _processUserList(
-              decoded.map((e) => AdminUserModel.fromJson(e as Map<String, dynamic>)).toList(),
+              decoded
+                  .map(
+                      (e) => AdminUserModel.fromJson(e as Map<String, dynamic>))
+                  .toList(),
               limit: limit,
             );
           }
@@ -102,7 +109,8 @@ class AdminRepository {
   }
 
   /// Deduplicates by user ID, sorts alphabetically by name (A-Z), and enforces 50 item limit
-  List<AdminUserModel> _processUserList(List<AdminUserModel> list, {int limit = 50}) {
+  List<AdminUserModel> _processUserList(List<AdminUserModel> list,
+      {int limit = 50}) {
     final seenIds = <String>{};
     final uniqueList = <AdminUserModel>[];
 
@@ -114,7 +122,8 @@ class AdminRepository {
     }
 
     // Alphabetical sort by user name (A-Z)
-    uniqueList.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    uniqueList
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     if (uniqueList.length > limit) {
       return uniqueList.sublist(0, limit);
@@ -156,8 +165,10 @@ class AdminRepository {
     await clearUserCache();
   }
 
-  Future<List<AuditLogModel>> getAuditLogs({int page = 1, int limit = 40}) async {
-    final response = await remoteDataSource.getAuditLogs(page: page, limit: limit);
+  Future<List<AuditLogModel>> getAuditLogs(
+      {int page = 1, int limit = 40}) async {
+    final response =
+        await remoteDataSource.getAuditLogs(page: page, limit: limit);
     return response.data ?? [];
   }
 }

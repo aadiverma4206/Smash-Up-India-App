@@ -27,42 +27,50 @@ class _FaqViewState extends State<FaqView> {
     {
       'category': 'Bookings',
       'question': 'How do I book a turf slot on All Stars Arena?',
-      'answer': 'Navigate to the Courts tab or Game Finder, select your desired turf pitch, choose a date and time slot, and proceed to payment. Once confirmed, you will receive an instant booking pass.',
+      'answer':
+          'Navigate to the Courts tab or Game Finder, select your desired turf pitch, choose a date and time slot, and proceed to payment. Once confirmed, you will receive an instant booking pass.',
     },
     {
       'category': 'Bookings',
       'question': 'Can I cancel or reschedule my turf booking?',
-      'answer': 'Bookings can be canceled up to 4 hours before the slot time from "My Requests". Refunds will be credited to your Arena Wallet automatically as per club policy.',
+      'answer':
+          'Bookings can be canceled up to 4 hours before the slot time from "My Requests". Refunds will be credited to your Arena Wallet automatically as per club policy.',
     },
     {
       'category': 'Payments',
       'question': 'What payment methods are supported?',
-      'answer': 'We support UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, Net Banking, and Arena Wallet balances secured with Razorpay payment processing.',
+      'answer':
+          'We support UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, Net Banking, and Arena Wallet balances secured with Razorpay payment processing.',
     },
     {
       'category': 'Payments',
       'question': 'How does the Arena Wallet balance work?',
-      'answer': 'You can add funds to your wallet for instant checkout without needing OTPs for every game. Wallet refunds are processed instantly.',
+      'answer':
+          'You can add funds to your wallet for instant checkout without needing OTPs for every game. Wallet refunds are processed instantly.',
     },
     {
       'category': 'Rules',
       'question': 'What footwear is allowed on artificial turf courts?',
-      'answer': 'Only rubber studs (TF/Turf shoes) or standard non-marking sports sneakers are allowed. Metal studs and spiked shoes are strictly prohibited to prevent field damage and injury.',
+      'answer':
+          'Only rubber studs (TF/Turf shoes) or standard non-marking sports sneakers are allowed. Metal studs and spiked shoes are strictly prohibited to prevent field damage and injury.',
     },
     {
       'category': 'Rules',
       'question': 'Are CCTV live streams available for all matches?',
-      'answer': 'Live CCTV feeds and match highlights are available for registered tournament matches and selected booked grounds through the CCTV tab.',
+      'answer':
+          'Live CCTV feeds and match highlights are available for registered tournament matches and selected booked grounds through the CCTV tab.',
     },
     {
       'category': 'Account',
       'question': 'How is my player OVR and ELO rating calculated?',
-      'answer': 'Your OVR rating increases based on match attendance, goal contributions, match MVP awards, and win ratios updated after verified match score submissions.',
+      'answer':
+          'Your OVR rating increases based on match attendance, goal contributions, match MVP awards, and win ratios updated after verified match score submissions.',
     },
     {
       'category': 'Account',
       'question': 'How can I update my profile picture or account details?',
-      'answer': 'Go to your Profile tab, tap the camera icon overlay on your avatar to upload a photo, or edit your personal credentials from the Edit Profile section.',
+      'answer':
+          'Go to your Profile tab, tap the camera icon overlay on your avatar to upload a photo, or edit your personal credentials from the Edit Profile section.',
     },
   ];
 
@@ -77,9 +85,11 @@ class _FaqViewState extends State<FaqView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final filteredFaqs = _faqs.where((faq) {
-      final matchesCategory = _selectedCategory == 'All' || faq['category'] == _selectedCategory;
-      final matchesSearch = faq['question']!.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          faq['answer']!.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesCategory =
+          _selectedCategory == 'All' || faq['category'] == _selectedCategory;
+      final matchesSearch =
+          faq['question']!.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              faq['answer']!.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
 
@@ -102,7 +112,8 @@ class _FaqViewState extends State<FaqView> {
                 color: Theme.of(context).cardColor,
                 border: Border(
                   bottom: BorderSide(
-                    color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
                   ),
                 ),
               ),
@@ -113,7 +124,8 @@ class _FaqViewState extends State<FaqView> {
                     onChanged: (val) => setState(() => _searchQuery = val),
                     decoration: InputDecoration(
                       hintText: 'Search questions, rules, payments...',
-                      prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
+                      prefixIcon: const Icon(Icons.search_rounded,
+                          color: AppColors.primary),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear_rounded),
@@ -124,8 +136,11 @@ class _FaqViewState extends State<FaqView> {
                             )
                           : null,
                       filled: true,
-                      fillColor: isDark ? const Color(0xFF1E1035) : Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      fillColor: isDark
+                          ? const Color(0xFF1E1035)
+                          : Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -146,12 +161,19 @@ class _FaqViewState extends State<FaqView> {
                             selectedColor: AppColors.primary,
                             checkmarkColor: Colors.white,
                             labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? Colors.white70 : Colors.black87),
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               fontSize: 12,
                             ),
-                            backgroundColor: isDark ? const Color(0xFF1E1035) : Colors.grey.shade200,
-                            onSelected: (_) => setState(() => _selectedCategory = cat['name']!),
+                            backgroundColor: isDark
+                                ? const Color(0xFF1E1035)
+                                : Colors.grey.shade200,
+                            onSelected: (_) => setState(
+                                () => _selectedCategory = cat['name']!),
                           ),
                         );
                       }).toList(),
@@ -170,21 +192,25 @@ class _FaqViewState extends State<FaqView> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.search_off_rounded, size: 54, color: Colors.grey),
+                            const Icon(Icons.search_off_rounded,
+                                size: 54, color: Colors.grey),
                             const SizedBox(height: 12),
                             Text(
                               'No matching questions found',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             const SizedBox(height: 6),
                             const Text(
                               'Try searching with different keywords or contact our live support.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                           ],
                         ),
@@ -201,37 +227,46 @@ class _FaqViewState extends State<FaqView> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: BorderSide(
-                              color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : const Color(0xFFE2E8F0),
                             ),
                           ),
                           color: Theme.of(context).cardColor,
                           child: ExpansionTile(
-                            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            tilePadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 4),
                             leading: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.help_outline_rounded, color: AppColors.primary, size: 20),
+                              child: const Icon(Icons.help_outline_rounded,
+                                  color: AppColors.primary, size: 20),
                             ),
                             title: Text(
                               item['question']!,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : Colors.black87,
                               ),
                             ),
                             children: [
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                 child: Text(
                                   item['answer']!,
                                   style: TextStyle(
                                     fontSize: 13,
                                     height: 1.5,
-                                    color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                                    color: isDark
+                                        ? AppColors.textSecondaryDark
+                                        : Colors.grey.shade700,
                                   ),
                                 ),
                               ),
@@ -249,21 +284,26 @@ class _FaqViewState extends State<FaqView> {
                 color: Theme.of(context).cardColor,
                 border: Border(
                   top: BorderSide(
-                    color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
                   ),
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.headset_mic_rounded, color: AppColors.primary),
+                  const Icon(Icons.headset_mic_rounded,
+                      color: AppColors.primary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: const [
-                        Text('Still have questions?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        Text('Our support team is online 24/7', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text('Still have questions?',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Our support team is online 24/7',
+                            style: TextStyle(fontSize: 11, color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -271,10 +311,16 @@ class _FaqViewState extends State<FaqView> {
                     onPressed: () => Get.toNamed(Routes.chatSupport),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                     ),
-                    child: const Text('Chat Support', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: const Text('Chat Support',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
                   ),
                 ],
               ),

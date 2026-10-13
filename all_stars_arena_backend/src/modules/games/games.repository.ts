@@ -354,12 +354,22 @@ export class GamesRepository {
   static async getGameVideos(gameId: string) {
     const res = await dbPool.query(
       `SELECT gv.*,
-              COALESCE(rec.started_at, rec.created_at) as started_at,
-              COALESCE(rec.actual_stopped_at, rec.actual_stop_time, rec.created_at) as actual_stopped_at,
-              COALESCE(rec.duration_seconds, 0) as duration_seconds
+              gv.cctv_id,
+              COALESCE(cam.name, 'Camera ' || ROW_NUMBER() OVER(PARTITION BY gv.game_id ORDER BY gv.created_at ASC)) as camera_name,
+              COALESCE(cam.camera_type, 'RTSP_DOME') as camera_type,
+              COALESCE(cam.status, 'ONLINE') as camera_status,
+              COALESCE(crt.name, 'Court 1') as court_name,
+              COALESCE(clb.name, 'All Stars Turf') as club_name,
+              COALESCE(rec.started_at, rec.created_at, gv.created_at) as started_at,
+              COALESCE(rec.actual_stopped_at, rec.actual_stop_time, gv.created_at) as actual_stopped_at,
+              COALESCE(rec.duration_seconds, 5400) as duration_seconds
        FROM public.game_videos gv
-       LEFT JOIN public.cctv_recordings rec ON rec.game_id = gv.game_id
-       WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE';`,
+       LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id
+       LEFT JOIN public.courts crt ON crt.id = COALESCE(gv.court_id, cam.court_id)
+       LEFT JOIN public.clubs clb ON clb.id = gv.club_id
+       LEFT JOIN public.cctv_recordings rec ON (rec.game_id = gv.game_id AND (rec.camera_id = gv.cctv_id OR gv.cctv_id IS NULL))
+       WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'
+       ORDER BY gv.created_at ASC;`,
       [gameId]
     );
     return res.rows;

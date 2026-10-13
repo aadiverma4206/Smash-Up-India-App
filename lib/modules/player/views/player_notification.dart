@@ -174,7 +174,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
           iconColor: const Color(0xFFDC2626),
           iconBgLight: const Color(0xFFFEE2E2),
           iconBgDark: const Color(0xFF3D1515),
-          dateTime: DateTime(yesterday.year, yesterday.month, yesterday.day, 18, 18),
+          dateTime:
+              DateTime(yesterday.year, yesterday.month, yesterday.day, 18, 18),
           isRead: true,
         ),
         PlayerNotificationItem(
@@ -187,7 +188,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
           iconColor: const Color(0xFF2563EB),
           iconBgLight: const Color(0xFFDBEAFE),
           iconBgDark: const Color(0xFF132B4A),
-          dateTime: DateTime(yesterday.year, yesterday.month, yesterday.day, 12, 31),
+          dateTime:
+              DateTime(yesterday.year, yesterday.month, yesterday.day, 12, 31),
           isRead: true,
         ),
         PlayerNotificationItem(
@@ -200,7 +202,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
           iconColor: const Color(0xFF9333EA),
           iconBgLight: const Color(0xFFF3E8FF),
           iconBgDark: const Color(0xFF2C1542),
-          dateTime: DateTime(yesterday.year, yesterday.month, yesterday.day, 11, 5),
+          dateTime:
+              DateTime(yesterday.year, yesterday.month, yesterday.day, 11, 5),
           isRead: true,
         ),
         PlayerNotificationItem(
@@ -213,7 +216,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
           iconColor: const Color(0xFF15803D),
           iconBgLight: const Color(0xFFDCFCE7),
           iconBgDark: const Color(0xFF0F331A),
-          dateTime: DateTime(twoDaysAgo.year, twoDaysAgo.month, twoDaysAgo.day, 20, 49),
+          dateTime: DateTime(
+              twoDaysAgo.year, twoDaysAgo.month, twoDaysAgo.day, 20, 49),
           isRead: true,
         ),
       ]);
@@ -339,8 +343,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
       }
 
       // 3. Date Filter
-      final itemDate = DateTime(
-          item.dateTime.year, item.dateTime.month, item.dateTime.day);
+      final itemDate =
+          DateTime(item.dateTime.year, item.dateTime.month, item.dateTime.day);
 
       if (dateFilter == 'Date: Today') {
         if (itemDate != today) return false;
@@ -372,8 +376,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
       ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
     for (final item in sorted) {
-      final itemDate = DateTime(
-          item.dateTime.year, item.dateTime.month, item.dateTime.day);
+      final itemDate =
+          DateTime(item.dateTime.year, item.dateTime.month, item.dateTime.day);
 
       String header;
       if (itemDate == today) {
@@ -399,7 +403,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
 
     // Try server sync if real notification
     if (!item.id.startsWith('mock_')) {
-      final raw = _controller.notifications.firstWhereOrNull((n) => n.id == item.id);
+      final raw =
+          _controller.notifications.firstWhereOrNull((n) => n.id == item.id);
       if (raw != null) {
         _controller.markAsReadAndNavigate(raw);
       }
@@ -559,9 +564,7 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.darkInputBg
-                            : Colors.white,
+                        color: isDark ? AppColors.darkInputBg : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isDark
@@ -1048,21 +1051,22 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: ['All activity', 'Matches', 'Payments', 'Players', 'Refunds']
-                  .map((act) => Obx(() {
-                        final isSel = _selectedActivity.value == act;
-                        return ChoiceChip(
-                          label: Text(act),
-                          selected: isSel,
-                          selectedColor: AppColors.primary,
-                          labelStyle: TextStyle(
-                            color: isSel ? Colors.white : null,
-                            fontSize: 12,
-                          ),
-                          onSelected: (_) => _selectedActivity.value = act,
-                        );
-                      }))
-                  .toList(),
+              children:
+                  ['All activity', 'Matches', 'Payments', 'Players', 'Refunds']
+                      .map((act) => Obx(() {
+                            final isSel = _selectedActivity.value == act;
+                            return ChoiceChip(
+                              label: Text(act),
+                              selected: isSel,
+                              selectedColor: AppColors.primary,
+                              labelStyle: TextStyle(
+                                color: isSel ? Colors.white : null,
+                                fontSize: 12,
+                              ),
+                              onSelected: (_) => _selectedActivity.value = act,
+                            );
+                          }))
+                      .toList(),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -1104,8 +1108,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.done_all_rounded,
-                  color: AppColors.primary),
+              leading:
+                  const Icon(Icons.done_all_rounded, color: AppColors.primary),
               title: const Text('Mark all as read'),
               onTap: () {
                 Get.back();
@@ -1177,8 +1181,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                 ),
                 if (item.badgeText != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: item.badgeBgColor ?? Colors.amber.shade100,
                       borderRadius: BorderRadius.circular(6),

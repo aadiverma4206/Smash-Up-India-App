@@ -8,7 +8,8 @@ import '../utils/app_logger.dart';
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     await Firebase.initializeApp();
-    AppLogger.info('🔔 FCM Background Message: ${message.messageId} | ${message.notification?.title}');
+    AppLogger.info(
+        '🔔 FCM Background Message: ${message.messageId} | ${message.notification?.title}');
   } catch (e) {
     AppLogger.warning('FCM Background error: $e');
   }
@@ -31,7 +32,8 @@ class NotificationService extends GetxService {
 
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     } catch (e) {
-      AppLogger.warning('NotificationService init notice (Firebase config pending): $e');
+      AppLogger.warning(
+          'NotificationService init notice (Firebase config pending): $e');
     }
     return this;
   }
@@ -44,7 +46,8 @@ class NotificationService extends GetxService {
         sound: true,
         provisional: false,
       );
-      AppLogger.info('🔔 FCM Authorization Status: ${settings.authorizationStatus}');
+      AppLogger.info(
+          '🔔 FCM Authorization Status: ${settings.authorizationStatus}');
     } catch (e) {
       AppLogger.warning('Error requesting FCM permissions: $e');
     }
@@ -67,7 +70,8 @@ class NotificationService extends GetxService {
   void _setupForegroundAndOpenedAppListeners() {
     // 1. Foreground Message Received
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      AppLogger.info('🔔 FCM Foreground Message Received: ${message.notification?.title}');
+      AppLogger.info(
+          '🔔 FCM Foreground Message Received: ${message.notification?.title}');
       if (message.notification != null) {
         Get.snackbar(
           message.notification!.title ?? 'New Notification',
@@ -87,7 +91,8 @@ class NotificationService extends GetxService {
     // 3. App Opened From Terminated State via Notification Tap
     _fcm.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        AppLogger.info('🔔 Terminated App opened via notification: ${message.data}');
+        AppLogger.info(
+            '🔔 Terminated App opened via notification: ${message.data}');
         _handleNotificationClickData(message.data);
       }
     });

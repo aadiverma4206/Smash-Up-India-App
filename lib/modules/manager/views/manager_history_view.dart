@@ -5,8 +5,8 @@ import '../controllers/manager_games_controller.dart';
 import '../repositories/manager_repository.dart';
 import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../core/utils/app_logger.dart';
 
@@ -25,6 +25,8 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
 
   final RxList<GameModel> historyGames = <GameModel>[].obs;
   final RxBool isLoadingMore = false.obs;
+  final RxBool isSearchingOrFiltering = false.obs;
+  final RxBool isOfflineMode = false.obs;
   final RxBool hasMore = true.obs;
   final RxString activeFilter = 'ALL'.obs; // ALL, COMPLETED, CANCELLED
   int currentOffset = 0;
@@ -63,6 +65,7 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
     if (isRefresh) {
       currentOffset = 0;
       hasMore.value = true;
+      isSearchingOrFiltering.value = true;
     }
     if (!hasMore.value && !isRefresh) return;
 
@@ -83,10 +86,15 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
         historyGames.addAll(list);
       }
       currentOffset += list.length;
+      isOfflineMode.value = false;
     } catch (e) {
       AppLogger.warning('Error fetching history: $e');
+      if (historyGames.isNotEmpty) {
+        isOfflineMode.value = true;
+      }
     } finally {
       isLoadingMore.value = false;
+      isSearchingOrFiltering.value = false;
     }
   }
 
@@ -107,197 +115,349 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
     }).toList();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Map<String, List<GameModel>> _groupGamesByDate(List<GameModel> gamesList) {
+    final Map<String, List<GameModel>> grouped = {};
+    final now = DateTime.now();
+    final todayIso = AppDateUtils.formatIsoDate(now);
+    final yesterdayIso =
+        AppDateUtils.formatIsoDate(now.subtract(const Duration(days: 1)));
+
+    for (final game in gamesList) {
+      String rawDate = game.matchDate.split('T')[0].trim();
+      final isCancelled = game.status.toUpperCase() == 'CANCELLED';
+      final isFutureDate =
+          AppDateUtils.isMatchInFuture(rawDate, game.startTime);
+
+      // NO FUTURE DATES IN HISTORY: Any cancelled match or future-dated match defaults to TODAY / PAST
+      if (isCancelled || isFutureDate) {
+        rawDate = todayIso;
+      }
+
+      String headerKey;
+      if (rawDate == todayIso) {
+        headerKey =
+            'TODAY • ${AppDateUtils.formatDate(todayIso, format: "dd MMM yyyy")}';
+      } else if (rawDate == yesterdayIso) {
+        headerKey =
+            'YESTERDAY • ${AppDateUtils.formatDate(yesterdayIso, format: "dd MMM yyyy")}';
+      } else {
+        headerKey =
+            AppDateUtils.formatDate(rawDate, format: "EEE, dd MMM yyyy");
+      }
+
+      grouped.putIfAbsent(headerKey, () => []).add(game);
+    }
+
+    return grouped;
+  }
+
+  Widget _buildDateHeader(BuildContext context, String headerTitle, int count) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Match History & Records',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => fetchHistory(isRefresh: true),
+    // Clean display title matching screenshot format e.g. "Today, 12 Oct 2026", "Fri, 09 Oct 2026"
+    String displayTitle = headerTitle.replaceAll(' • ', ', ');
+    if (displayTitle.startsWith('TODAY')) {
+      displayTitle = displayTitle.replaceFirst('TODAY', 'Today');
+    } else if (displayTitle.startsWith('YESTERDAY')) {
+      displayTitle = displayTitle.replaceFirst('YESTERDAY', 'Yesterday');
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8, bottom: 6), // Tight, clean spacing!
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE8EEF4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_month_rounded,
+                size: 16,
+                color: isDark ? Colors.white70 : const Color(0xFF1E293B),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                displayTitle,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+                width: 0.8,
+              ),
+            ),
+            child: Text(
+              '$count ${count == 1 ? 'Match' : 'Matches'}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : const Color(0xFF1E293B),
+              ),
+            ),
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 🔍 Search Bar & Filter Chips
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: searchController,
-                    onChanged: (_) => setState(() {}),
-                    style: TextStyle(
-                      color:
-                          isDark ? AppColors.textPrimaryDark : Colors.black87,
-                      fontSize: 14,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search completed or cancelled matches...',
-                      hintStyle: TextStyle(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : Colors.grey.shade400,
-                        fontSize: 13,
-                      ),
-                      prefixIcon: const Icon(Icons.history_rounded,
-                          color: AppColors.primary),
-                      suffixIcon: searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear_rounded,
-                                  size: 18,
-                                  color:
-                                      isDark ? Colors.white70 : Colors.black54),
-                              onPressed: () {
-                                searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Theme.of(context).cardColor,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: AppColors.primary, width: 1.5),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+    );
+  }
 
-                  // Filter Chips (ALL, COMPLETED, CANCELLED)
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: ['ALL', 'COMPLETED', 'CANCELLED'].map((filter) {
-                        return Obx(() {
-                          final isSelected = activeFilter.value == filter;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: ChoiceChip(
-                              label: Text(
-                                filter,
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : (isDark
-                                          ? AppColors.textPrimaryDark
-                                          : Colors.black87),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              selected: isSelected,
-                              selectedColor: AppColors.primary,
-                              backgroundColor: Theme.of(context).cardColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : (isDark
-                                          ? AppColors.darkBorder
-                                          : const Color(0xFFE2E8F0)),
-                                ),
-                              ),
-                              onSelected: (_) {
-                                activeFilter.value = filter;
-                                fetchHistory(isRefresh: true);
-                              },
-                            ),
-                          );
-                        });
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+  Widget _buildSearchAndFiltersHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-                  // History Count Header
-                  Obx(() => Text(
-                        'History Records (${filteredHistoryGames.length})',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : Colors.black87,
-                        ),
-                      )),
-                ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: searchController,
+            onChanged: (_) => setState(() {}),
+            style: TextStyle(
+              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Search completed or cancelled matches...',
+              hintStyle: TextStyle(
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                fontSize: 13,
+              ),
+              prefixIcon:
+                  const Icon(Icons.history_rounded, color: AppColors.primary),
+              suffixIcon: searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear_rounded,
+                          size: 18,
+                          color: isDark ? Colors.white70 : Colors.black54),
+                      onPressed: () {
+                        searchController.clear();
+                        FocusScope.of(context).unfocus();
+                        setState(() {});
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: Theme.of(context).cardColor,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppColors.primary, width: 1.5),
               ),
             ),
+          ),
+          const SizedBox(height: 8),
 
-            // History List Body with Scrollbar & Infinite Scroll Pagination
-            Expanded(
-              child: Obx(() {
-                if (isLoadingMore.value && historyGames.isEmpty) {
-                  return const AppLoader(
-                      message: 'Loading match history records...');
-                }
-
-                final displayList = filteredHistoryGames;
-
-                if (displayList.isEmpty) {
-                  return const EmptyStateWidget(
-                    title: 'No Match History',
-                    subtitle: 'No completed or cancelled matches recorded yet.',
-                    icon: Icons.history_rounded,
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => fetchHistory(isRefresh: true),
-                  child: Scrollbar(
-                    thumbVisibility: true,
-                    child: ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: displayList.length + (hasMore.value ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == displayList.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16.0),
-                            child: Center(
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2)),
-                          );
-                        }
-                        final game = displayList[index];
-                        return _buildHistoryCard(context, game);
+          // Filter Chips (ALL, COMPLETED, CANCELLED)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: ['ALL', 'COMPLETED', 'CANCELLED'].map((filter) {
+                return Obx(() {
+                  final isSelected = activeFilter.value == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        filter,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : (isDark
+                                  ? AppColors.textPrimaryDark
+                                  : Colors.black87),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: AppColors.primary,
+                      backgroundColor: Theme.of(context).cardColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(
+                          color: isSelected
+                              ? AppColors.primary
+                              : (isDark
+                                  ? AppColors.darkBorder
+                                  : const Color(0xFFE2E8F0)),
+                        ),
+                      ),
+                      onSelected: (_) {
+                        activeFilter.value = filter;
+                        fetchHistory(isRefresh: true);
                       },
                     ),
+                  );
+                });
+              }).toList(),
+            ),
+          ),
+
+          // 📶 Offline SQLite Cache Indicator Pill
+          Obx(() {
+            if (!isOfflineMode.value) return const SizedBox.shrink();
+            return Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off_rounded, size: 14, color: Colors.amber),
+                  SizedBox(width: 6),
+                  Text(
+                    'Offline Mode • Showing 3-day SQLite local history',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                    ),
                   ),
-                );
-              }),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Match History & Records',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () => fetchHistory(isRefresh: true),
             ),
           ],
+        ),
+        body: SafeArea(
+          child: Obx(() {
+            final displayList = filteredHistoryGames;
+
+            final List<dynamic> flattenedItems = [
+              'SEARCH_HEADER', // Item 0: Search Bar + Chips Header right under AppBar!
+            ];
+
+            if (isSearchingOrFiltering.value ||
+                (isLoadingMore.value && historyGames.isEmpty)) {
+              // 🦴 Skeleton Shimmer Loading Placeholder Cards
+              flattenedItems.addAll([
+                'SKELETON_CARD',
+                'SKELETON_CARD',
+                'SKELETON_CARD',
+                'SKELETON_CARD',
+              ]);
+            } else if (displayList.isEmpty) {
+              flattenedItems.add('EMPTY_STATE');
+            } else {
+              final groupedMap = _groupGamesByDate(displayList);
+              for (final entry in groupedMap.entries) {
+                flattenedItems
+                    .add({'header': entry.key, 'count': entry.value.length});
+                flattenedItems.addAll(entry.value);
+              }
+            }
+
+            return RefreshIndicator(
+              onRefresh: () => fetchHistory(isRefresh: true),
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: ListView.builder(
+                  controller: scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: flattenedItems.length +
+                      (hasMore.value && !isSearchingOrFiltering.value ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == flattenedItems.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    }
+
+                    final item = flattenedItems[index];
+
+                    if (item == 'SEARCH_HEADER') {
+                      return _buildSearchAndFiltersHeader(context);
+                    } else if (item == 'SKELETON_CARD') {
+                      return const SkeletonMatchCard();
+                    } else if (item == 'EMPTY_STATE') {
+                      return const EmptyStateWidget(
+                        title: 'No Match History',
+                        subtitle:
+                            'No completed or cancelled matches recorded yet.',
+                        icon: Icons.history_rounded,
+                      );
+                    } else if (item is Map<String, dynamic>) {
+                      return _buildDateHeader(
+                        context,
+                        item['header'] as String,
+                        item['count'] as int,
+                      );
+                    } else if (item is GameModel) {
+                      return _buildHistoryCard(context, item);
+                    }
+
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -307,16 +467,26 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isCompleted = game.status.toUpperCase() == 'COMPLETED';
 
-    String startTime = game.startTime;
-    if (startTime.length > 5) startTime = startTime.substring(0, 5);
+    String startTime =
+        AppDateUtils.formatTime(game.startTime, format: 'h:mm a');
+    if (startTime.isEmpty) {
+      startTime = game.startTime;
+      if (startTime.length > 5) startTime = startTime.substring(0, 5);
+    }
 
-    String formattedDate = 'Thu, 08 Oct';
-    try {
-      final parsedDate = DateTime.parse(game.matchDate);
-      formattedDate =
-          AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
-    } catch (_) {
-      formattedDate = game.matchDate.split('T')[0];
+    String formattedDate = 'Today';
+    final rawDateStr = game.matchDate.split('T')[0].trim();
+    if (!isCompleted ||
+        AppDateUtils.isMatchInFuture(rawDateStr, game.startTime)) {
+      formattedDate = 'Cancelled';
+    } else {
+      try {
+        final parsedDate = DateTime.parse(rawDateStr);
+        formattedDate =
+            AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
+      } catch (_) {
+        formattedDate = rawDateStr;
+      }
     }
 
     return Container(
@@ -344,6 +514,7 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
           borderRadius: BorderRadius.circular(14),
           onTap: () {
             gamesController.selectedGame.value = game;
+            gamesController.fetchMatchRecording(game.id);
             Get.toNamed(Routes.managerHistoryDetails);
           },
           child: Padding(
@@ -353,7 +524,7 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
               children: [
                 // Left Column: Time, Date & Slots
                 SizedBox(
-                  width: 82,
+                  width: 96,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,

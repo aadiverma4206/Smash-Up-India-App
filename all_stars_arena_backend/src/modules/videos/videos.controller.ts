@@ -10,7 +10,13 @@ export const getVideoMetadata = asyncHandler(async (req: AuthenticatedRequest, r
   const userId = req.user?.id;
   const userRole = req.user?.roleId || 3;
 
-  const videoRes = await dbPool.query('SELECT * FROM public.game_videos WHERE id = $1;', [videoId]);
+  const videoRes = await dbPool.query(
+    `SELECT gv.*, cam.name as camera_name, cam.camera_type
+     FROM public.game_videos gv
+     LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id
+     WHERE gv.id = $1;`,
+    [videoId]
+  );
 
   if (videoRes.rows.length === 0) {
     throw new ApiError(404, 'Video recording not found', 'VIDEO_NOT_FOUND');
@@ -53,7 +59,13 @@ export const getVideoPlaybackUrl = asyncHandler(async (req: AuthenticatedRequest
   const userId = req.user?.id;
   const userRole = req.user?.roleId || 3;
 
-  const videoRes = await dbPool.query('SELECT * FROM public.game_videos WHERE id = $1;', [videoId]);
+  const videoRes = await dbPool.query(
+    `SELECT gv.*, cam.name as camera_name, cam.camera_type
+     FROM public.game_videos gv
+     LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id
+     WHERE gv.id = $1;`,
+    [videoId]
+  );
 
   if (videoRes.rows.length === 0) {
     throw new ApiError(404, 'Video recording not found', 'VIDEO_NOT_FOUND');

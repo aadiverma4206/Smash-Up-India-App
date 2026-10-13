@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
-import '../../../core/widgets/app_text_field.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 
@@ -56,7 +55,9 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       width: 1.5),
                   boxShadow: const [
                     BoxShadow(
-                        color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2)),
                   ],
                 ),
                 child: Column(
@@ -277,6 +278,10 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
   Widget _buildManagerControlsPanel(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusUpper = game.status.toUpperCase();
+    final isOngoing = statusUpper == 'ONGOING' ||
+        statusUpper == 'STARTED' ||
+        statusUpper == 'PAUSED';
+    final isPaused = statusUpper == 'PAUSED';
     final isCompleted = statusUpper == 'COMPLETED';
     final isCancelled = statusUpper == 'CANCELLED';
 
@@ -302,25 +307,32 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               Icon(
                   isCompleted
                       ? Icons.check_circle_rounded
-                      : Icons.shield_outlined,
-                  color: isCompleted ? Colors.green : Colors.amber,
+                      : (isOngoing
+                          ? Icons.sensors_rounded
+                          : Icons.shield_outlined),
+                  color: isCompleted
+                      ? Colors.green
+                      : (isOngoing ? Colors.green : Colors.amber),
                   size: 20),
               const SizedBox(width: 8),
               Text(
                 isCompleted
                     ? 'MATCH COMPLETED & SCORE LOCKED'
-                    : 'MANAGER CONTROLS (CLUB_MANAGER)',
+                    : (isOngoing
+                        ? 'ACTIVE MATCH CONTROLS'
+                        : 'MANAGER CONTROLS (CLUB_MANAGER)'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: isCompleted ? Colors.green : Colors.amber.shade800,
+                  color: isCompleted
+                      ? Colors.green
+                      : (isOngoing ? Colors.green : Colors.amber.shade800),
                   letterSpacing: 0.3,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-
           if (isCompleted) ...[
             Container(
               padding: const EdgeInsets.all(12),
@@ -333,7 +345,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Score has been submitted and locked.',
+                    'Match Completed',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12.5,
@@ -341,7 +353,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Final Score: Team A ${game.teamAScore} - ${game.teamBScore} Team B\nNote: Once added, scores can only be modified by an Administrator.',
+                    'Final Score: Team A ${game.teamAScore} - ${game.teamBScore} Team B\nNote: To add or edit final scores, please go to Match History.',
                     style:
                         TextStyle(fontSize: 11.5, color: context.textSecondary),
                   ),
@@ -352,8 +364,141 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             const Text('This match has been cancelled.',
                 style: TextStyle(
                     color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ] else if (isOngoing) ...[
+            // 🟢 MATCH IS ONGOING / PAUSED
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: (isPaused ? Colors.amber : Colors.green)
+                    .withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isPaused ? Colors.amber : Colors.green,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isPaused
+                        ? Icons.pause_circle_filled_rounded
+                        : Icons.sensors_rounded,
+                    color: isPaused ? Colors.amber.shade800 : Colors.green,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isPaused
+                          ? 'Match is currently PAUSED'
+                          : 'Match is ONGOING & LIVE',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isPaused ? Colors.amber.shade800 : Colors.green,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Pause / Resume & Stop Match Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isPaused
+                              ? AppColors.primary
+                              : Colors.amber.shade700,
+                          width: 1.2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        backgroundColor: Theme.of(context).cardColor,
+                      ),
+                      onPressed: () => controller.togglePauseGame(game.id),
+                      icon: Icon(
+                        isPaused
+                            ? Icons.play_arrow_rounded
+                            : Icons.pause_rounded,
+                        color: isPaused
+                            ? AppColors.primary
+                            : Colors.amber.shade700,
+                        size: 20,
+                      ),
+                      label: Text(
+                        isPaused ? 'Resume' : 'Pause',
+                        style: TextStyle(
+                          color: isPaused
+                              ? AppColors.primary
+                              : Colors.amber.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        elevation: 2,
+                      ),
+                      onPressed: () => _confirmStopMatch(context, game),
+                      icon: const Icon(Icons.stop_rounded,
+                          color: Colors.white, size: 20),
+                      label: const Text(
+                        'Stop Match',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Cancel Match option
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.redAccent, width: 1),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
+                ),
+                onPressed: () => _confirmCancelMatch(context, game),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Colors.redAccent, size: 18),
+                label: const Text(
+                  'Cancel Match',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
           ] else ...[
-            // Row 1: ▶ Start Match
+            // ▶ NOT STARTED YET (OPEN_FOR_JOINING / SCHEDULED)
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -378,68 +523,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             ),
             const SizedBox(height: 12),
 
-            // Row 2: Finish Match & Live Score
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                            color: isDark ? Colors.white38 : Colors.grey.shade400,
-                            width: 1.2),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                        backgroundColor: Theme.of(context).cardColor,
-                      ),
-                      onPressed: () =>
-                          _showScoreDialog(context, game, isFinish: true),
-                      icon: Icon(Icons.check_circle_outline_rounded,
-                          color: isDark ? Colors.white : Colors.black87,
-                          size: 18),
-                      label: Text(
-                        'Finish Match',
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber.shade700,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                        elevation: 2,
-                      ),
-                      onPressed: () =>
-                          _showScoreDialog(context, game, isFinish: false),
-                      icon: const Icon(Icons.emoji_events_outlined,
-                          color: Colors.white, size: 18),
-                      label: const Text(
-                        'Live Score',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Row 3: Cancel Match (No Edit Match as requested)
+            // Cancel Match
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -470,6 +554,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
   }
 
   /// 📹 CCTV RECORDED MATCH VIDEO SECTION Widget
+  /// 🎥 CCTV RECORDED MATCH VIDEO SECTION Widget (With Multi-Camera Options)
   Widget _buildCctvVideoSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -489,70 +574,193 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.videocam_rounded,
-                  color: AppColors.primary, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                'CCTV Recorded Match Footage',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: context.textPrimary,
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.videocam_rounded,
+                      color: AppColors.primary, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'CCTV Recorded Match Footage',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: context.textPrimary,
+                    ),
+                  ),
+                ],
               ),
+              Obx(() {
+                final count = controller.matchVideos.length;
+                if (count == 0) return const SizedBox.shrink();
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    count > 1 ? '$count CAMERAS' : '1 CAMERA',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              }),
             ],
           ),
           Divider(color: context.borderColor, height: 20),
           Obx(() {
-            final playbackUrl = controller.cctvPlaybackUrl.value ??
-                game.videoPlaybackUrl;
+            if (controller.isLoadingVideos.value) {
+              return Container(
+                height: 160,
+                width: double.infinity,
+                alignment: Alignment.center,
+                child:
+                    const CircularProgressIndicator(color: AppColors.primary),
+              );
+            }
+
+            final videos = controller.matchVideos;
+            final selectedVid = controller.selectedVideo.value ??
+                (videos.isNotEmpty ? videos.first : null);
+
+            final playbackUrl = (controller.cctvPlaybackUrl.value != null &&
+                    controller.cctvPlaybackUrl.value!.isNotEmpty)
+                ? controller.cctvPlaybackUrl.value!
+                : ((selectedVid != null && selectedVid.playbackUrl.isNotEmpty)
+                    ? selectedVid.playbackUrl
+                    : game.videoPlaybackUrl);
+
+            final cameraDisplayName = selectedVid?.cameraName ?? 'Camera 1';
 
             if (playbackUrl != null && playbackUrl.isNotEmpty) {
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: double.infinity,
-                    height: 190,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(Icons.play_circle_fill_rounded,
-                            size: 56, color: AppColors.primary),
-                        Positioned(
-                          bottom: 12,
-                          left: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.videocam_outlined,
-                                    color: Colors.white, size: 14),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    '${game.courtName} • Auto-recorded via S3 CCTV',
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 11),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                  // Camera switcher if multiple
+                  if (videos.length > 1) ...[
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: List.generate(videos.length, (index) {
+                          final vid = videos[index];
+                          final isSelected = selectedVid?.id == vid.id ||
+                              (selectedVid == null && index == 0);
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(right: 8, bottom: 10),
+                            child: InkWell(
+                              onTap: () => controller.selectCamera(vid),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : (isDark
+                                          ? const Color(0xFF1E2822)
+                                          : const Color(0xFFF1F5F2)),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : Colors.grey.shade400,
                                   ),
                                 ),
-                              ],
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.videocam_rounded,
+                                      size: 14,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.grey,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      vid.cameraName,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : context.textPrimary,
+                                        fontSize: 11,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+
+                  GestureDetector(
+                    onTap: () {
+                      Get.toNamed('/videos/player', arguments: {
+                        'videoUrl': playbackUrl,
+                        'title': '${game.title} - $cameraDisplayName',
+                        'cameras': videos.map((v) => v.toJson()).toList(),
+                        'initialIndex':
+                            videos.indexWhere((v) => v.id == selectedVid?.id),
+                      });
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 190,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(Icons.play_circle_fill_rounded,
+                              size: 56, color: AppColors.primary),
+                          Positioned(
+                            bottom: 12,
+                            left: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black87,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.videocam_outlined,
+                                      color: Colors.white, size: 14),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      '${game.courtName} • $cameraDisplayName • Auto-recorded via S3 CCTV',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 11),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -567,13 +775,17 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       onPressed: () {
                         Get.toNamed('/videos/player', arguments: {
                           'videoUrl': playbackUrl,
-                          'title': game.title,
+                          'title': '${game.title} - $cameraDisplayName',
+                          'cameras': videos.map((v) => v.toJson()).toList(),
+                          'initialIndex':
+                              videos.indexWhere((v) => v.id == selectedVid?.id),
                         });
                       },
                       icon: const Icon(Icons.fullscreen_rounded,
                           color: AppColors.primary),
-                      label: const Text('Watch Recorded Match Video',
-                          style: TextStyle(
+                      label: Text(
+                          'Watch Recorded Match Video ($cameraDisplayName)',
+                          style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold)),
                     ),
@@ -583,22 +795,16 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             }
 
             return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              alignment: Alignment.center,
+              child: Column(
                 children: [
-                  const Icon(Icons.info_outline_rounded,
-                      color: AppColors.primary, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'CCTV match video is automatically recorded during the match and saved to secure storage upon completion.',
-                      style: TextStyle(
-                          color: context.textSecondary, fontSize: 12),
-                    ),
+                  Icon(Icons.video_camera_back_outlined,
+                      size: 40, color: Colors.grey.shade400),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No CCTV footage recorded yet for this match.',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                   ),
                 ],
               ),
@@ -652,48 +858,237 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             ],
           ),
           Divider(color: context.borderColor, height: 20),
-          if (roster.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'No players have joined this match yet.',
-                style: TextStyle(color: context.textSecondary, fontSize: 13),
+
+          // 🏆 Team Filter Segmented Control Bar
+          Obx(() {
+            final activeTab = controller.selectedRosterTeamFilter.value;
+            final teamACount =
+                roster.where((p) => p.team.toUpperCase().contains('A')).length;
+            final teamBCount =
+                roster.where((p) => p.team.toUpperCase().contains('B')).length;
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  // ALL PLAYERS Filter Pill
+                  GestureDetector(
+                    onTap: () =>
+                        controller.selectedRosterTeamFilter.value = 'ALL',
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: activeTab == 'ALL'
+                            ? AppColors.primary
+                            : (isDark
+                                ? const Color(0xFF1E293B)
+                                : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: activeTab == 'ALL'
+                              ? AppColors.primary
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.groups_rounded,
+                            size: 14,
+                            color: activeTab == 'ALL'
+                                ? Colors.white
+                                : (isDark ? Colors.white70 : Colors.black87),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'All Players (${roster.length})',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: activeTab == 'ALL'
+                                  ? Colors.white
+                                  : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // TEAM A Filter Pill
+                  GestureDetector(
+                    onTap: () =>
+                        controller.selectedRosterTeamFilter.value = 'TEAM_A',
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: activeTab == 'TEAM_A'
+                            ? Colors.green
+                            : (isDark
+                                ? const Color(0xFF1E293B)
+                                : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: activeTab == 'TEAM_A'
+                              ? Colors.green
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.shield_outlined,
+                            size: 14,
+                            color: activeTab == 'TEAM_A'
+                                ? Colors.white
+                                : Colors.green,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Team A ($teamACount)',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: activeTab == 'TEAM_A'
+                                  ? Colors.white
+                                  : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // TEAM B Filter Pill
+                  GestureDetector(
+                    onTap: () =>
+                        controller.selectedRosterTeamFilter.value = 'TEAM_B',
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: activeTab == 'TEAM_B'
+                            ? Colors.blue.shade700
+                            : (isDark
+                                ? const Color(0xFF1E293B)
+                                : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: activeTab == 'TEAM_B'
+                              ? Colors.blue.shade700
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.shield_outlined,
+                            size: 14,
+                            color: activeTab == 'TEAM_B'
+                                ? Colors.white
+                                : Colors.blue.shade700,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Team B ($teamBCount)',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: activeTab == 'TEAM_B'
+                                  ? Colors.white
+                                  : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            )
-          else
-            ListView.separated(
+            );
+          }),
+          const SizedBox(height: 14),
+
+          Obx(() {
+            final filterTab = controller.selectedRosterTeamFilter.value;
+            List<GameRosterPlayerModel> filteredRoster;
+            if (filterTab == 'TEAM_A') {
+              filteredRoster = roster
+                  .where((p) => p.team.toUpperCase().contains('A'))
+                  .toList();
+            } else if (filterTab == 'TEAM_B') {
+              filteredRoster = roster
+                  .where((p) => p.team.toUpperCase().contains('B'))
+                  .toList();
+            } else {
+              filteredRoster = roster;
+            }
+
+            if (filteredRoster.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  filterTab == 'TEAM_A'
+                      ? 'No players assigned to Team A in this match.'
+                      : (filterTab == 'TEAM_B'
+                          ? 'No players assigned to Team B in this match.'
+                          : 'No players have joined this match yet.'),
+                  style: TextStyle(color: context.textSecondary, fontSize: 13),
+                ),
+              );
+            }
+
+            return ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: roster.length,
+              itemCount: filteredRoster.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
-                final player = roster[index];
+                final player = filteredRoster[index];
+                final isTeamA = player.team.toUpperCase().contains('A');
+
                 return Container(
-                  padding: const EdgeInsets.all(10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: isDark
                         ? AppColors.darkInputBg
                         : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: context.borderColor),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isTeamA
+                          ? Colors.green.withValues(alpha: 0.3)
+                          : Colors.blue.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     children: [
                       CircleAvatar(
-                        radius: 16,
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.2),
+                        radius: 18,
+                        backgroundColor: (isTeamA ? Colors.green : Colors.blue)
+                            .withValues(alpha: 0.18),
                         child: Text(
                           player.name.isNotEmpty
                               ? player.name[0].toUpperCase()
                               : 'P',
-                          style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12),
+                          style: TextStyle(
+                            color:
+                                isTeamA ? Colors.green : Colors.blue.shade700,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,93 +1096,79 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                             Text(
                               player.name,
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: context.textPrimary),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                                color: context.textPrimary,
+                              ),
                             ),
+                            const SizedBox(height: 2),
                             Text(
                               'Position: ${player.position} • OVR: ${player.ovr}',
                               style: TextStyle(
-                                  fontSize: 11, color: context.textSecondary),
+                                fontSize: 11.5,
+                                color: context.textSecondary,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          color: (isTeamA ? Colors.green : Colors.blue.shade700)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                isTeamA ? Colors.green : Colors.blue.shade700,
+                            width: 1,
+                          ),
                         ),
                         child: Text(
-                          player.team,
-                          style: const TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10),
+                          isTeamA ? 'TEAM A' : 'TEAM B',
+                          style: TextStyle(
+                            color:
+                                isTeamA ? Colors.green : Colors.blue.shade700,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 10.5,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 );
               },
-            ),
+            );
+          }),
         ],
       ),
     );
   }
 
-  void _showScoreDialog(BuildContext context, GameModel game,
-      {required bool isFinish}) {
+  void _confirmStopMatch(BuildContext context, GameModel game) {
     Get.dialog(
       AlertDialog(
         backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Submit Match Score: ${game.title}',
+        title: Text('Stop & Complete Match: ${game.title}',
             style: TextStyle(color: context.textPrimary)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Enter final match score:',
-                style: TextStyle(fontSize: 12)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: AppTextField(
-                    controller: teamAController,
-                    label: 'Team A Score',
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AppTextField(
-                    controller: teamBController,
-                    label: 'Team B Score',
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+        content: const Text(
+            'Are you sure you want to stop this match? The match will be marked as COMPLETED and moved to Match History, where you can record the final score.',
+            style: TextStyle(fontSize: 12.5)),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Cancel'),
+            child: const Text('Back'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
-              final a = int.tryParse(teamAController.text.trim()) ?? 0;
-              final b = int.tryParse(teamBController.text.trim()) ?? 0;
               Get.back();
-              controller.submitMatchScore(game.id, a, b, isFinal: isFinish);
+              controller.completeGame(
+                  game.id, game.teamAScore, game.teamBScore);
             },
-            child: const Text('Submit Score',
+            child: const Text('Stop & Complete',
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -814,7 +1195,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
               Get.back();
-              controller.cancelMatchWithRefunds(game.id, 'Cancelled by manager');
+              controller.cancelMatchWithRefunds(
+                  game.id, 'Cancelled by manager');
             },
             child: const Text('Confirm Cancel',
                 style: TextStyle(color: Colors.white)),

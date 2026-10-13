@@ -128,10 +128,12 @@ class AdminController extends GetxController {
 
       if (isLoadMore) {
         final existingIds = players.map((e) => e.id).toSet();
-        final newEntries = list.where((e) => !existingIds.contains(e.id)).toList();
+        final newEntries =
+            list.where((e) => !existingIds.contains(e.id)).toList();
         players.addAll(newEntries);
         // Sort merged list alphabetically
-        players.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        players.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         playerPage = targetPage;
       } else {
         players.assignAll(list);
@@ -177,10 +179,12 @@ class AdminController extends GetxController {
 
       if (isLoadMore) {
         final existingIds = managers.map((e) => e.id).toSet();
-        final newEntries = list.where((e) => !existingIds.contains(e.id)).toList();
+        final newEntries =
+            list.where((e) => !existingIds.contains(e.id)).toList();
         managers.addAll(newEntries);
         // Sort merged list alphabetically
-        managers.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        managers.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         managerPage = targetPage;
       } else {
         managers.assignAll(list);
@@ -219,7 +223,8 @@ class AdminController extends GetxController {
 
       if (isLoadMore) {
         final existingIds = auditLogs.map((e) => e.id).toSet();
-        final newEntries = logs.where((e) => !existingIds.contains(e.id)).toList();
+        final newEntries =
+            logs.where((e) => !existingIds.contains(e.id)).toList();
         auditLogs.addAll(newEntries);
         auditLogPage = targetPage;
       } else {

@@ -807,15 +807,16 @@ export class ManagerService {
   }
 
   /**
-   * Start Match & Trigger CCTV Recording Asynchronously
+   * Start Match (Dynamic start_time = NOW, end_time = NOW + 1.5h) & Trigger CCTV Recording
    */
   static async startMatch(managerId: string, managerName: string, gameId: string) {
     const gameRes = await dbPool.query('SELECT * FROM public.games WHERE id = $1;', [gameId]);
     if (gameRes.rows.length === 0) throw new ApiError(404, 'Match not found', 'MATCH_NOT_FOUND');
 
-    const updatedGame = await ManagerRepository.updateGameStatus(gameId, 'ONGOING');
+    // Dynamic start_time = current time, match_date = today, end_time = start_time + 1.5 hours (90 mins)
+    const updatedGame = await ManagerRepository.startMatchGame(gameId);
 
-    // Trigger CCTV Recording Asynchronously
+    // Trigger CCTV Recording Asynchronously & update camera status
     try {
       const cameras = await CctvRepository.getCamerasByClub(gameRes.rows[0].club_id);
       const courtCamera = cameras.find(
@@ -823,6 +824,11 @@ export class ManagerService {
       );
 
       if (courtCamera) {
+        await dbPool.query(
+          `UPDATE public.cctv_cameras SET status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+          [courtCamera.id]
+        );
+
         CctvService.startMatchRecording(managerId, managerName, gameId, courtCamera.id).catch((err) => {
           logger.error({ err }, `Async CCTV start failed for Game ${gameId}`);
         });
@@ -837,14 +843,14 @@ export class ManagerService {
       actorName: managerName,
       actorRoleName: 'MANAGER',
       actionType: 'MATCH_STARTED',
-      details: 'Match status changed to ONGOING',
+      details: `Match started dynamically at ${updatedGame.start_time || 'current time'}. Scheduled end: ${updatedGame.end_time || '+1.5h'}. CCTV recording active.`,
     });
 
     return updatedGame;
   }
 
   /**
-   * Complete Match & Enter CCTV POST_MATCH (+15 min deadline) Window
+   * Complete Match (Dynamic end_time = NOW) & Enter CCTV POST_MATCH (+10 min buffer) Window
    */
   static async completeMatch(
     managerId: string,
@@ -863,14 +869,19 @@ export class ManagerService {
       });
     }
 
-    const completedGame = await ManagerRepository.updateGameStatus(gameId, 'COMPLETED');
+    // Dynamic end_time = exact current time when manager stops match
+    const completedGame = await ManagerRepository.completeMatchGame(gameId);
 
-    // CCTV enters POST_MATCH window (+15 minutes stop deadline).
+    // CCTV enters POST_MATCH window (+10 minutes stop deadline buffer)
     try {
       const recording = await CctvRepository.getRecordingByGame(gameId);
-      if (recording && recording.status === 'RECORDING') {
+      if (recording) {
         await dbPool.query(
-          `UPDATE public.cctv_recordings SET recording_status = 'POST_MATCH' WHERE id = $1;`,
+          `UPDATE public.cctv_recordings
+           SET recording_status = 'POST_MATCH',
+               stop_deadline = CURRENT_TIMESTAMP + INTERVAL '10 minutes',
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1;`,
           [recording.id]
         );
         await dbPool.query(
@@ -879,8 +890,16 @@ export class ManagerService {
           [recording.id, managerId, JSON.stringify({ postMatchWindowMinutes: 10 })]
         );
       }
+
+      // Reset camera status to ONLINE
+      if (completedGame && completedGame.court_id) {
+        await dbPool.query(
+          `UPDATE public.cctv_cameras SET status = 'ONLINE', updated_at = CURRENT_TIMESTAMP WHERE court_id = $1;`,
+          [completedGame.court_id]
+        );
+      }
     } catch (err) {
-      logger.error({ err }, `Error transitioning CCTV to POST_MATCH for Game ${gameId}`);
+      logger.error({ err }, `Error transitioning CCTV to POST_MATCH (+10m buffer) for Game ${gameId}`);
     }
 
     await GamesRepository.addActivityLog({
@@ -889,7 +908,9 @@ export class ManagerService {
       actorName: managerName,
       actorRoleName: 'MANAGER',
       actionType: 'MATCH_COMPLETED',
-      details: scoreData ? `Final Score: Team A ${scoreData.teamAScore} - ${scoreData.teamBScore} Team B` : 'Match marked as completed',
+      details: scoreData
+        ? `Match completed at ${completedGame.end_time}. Final Score: Team A ${scoreData.teamAScore} - ${scoreData.teamBScore} Team B`
+        : `Match stopped at ${completedGame.end_time}. CCTV camera set to +10 min post-match recording window.`,
     });
 
     return completedGame;
@@ -999,6 +1020,16 @@ export class ManagerService {
       throw new ApiError(400, 'Cannot submit score for a cancelled match', 'INVALID_MATCH_STATUS');
     }
 
+    // Check if score is already submitted & locked for non-admins (Manager can enter ONCE; Admin can UPDATE anytime)
+    const hasExistingScore = (game.team_a_score > 0 || game.team_b_score > 0);
+    if (hasExistingScore && userRole !== 1) {
+      throw new ApiError(
+        403,
+        'Official match score is locked. Only Platform Administrators can edit or override submitted scores.',
+        'SCORE_LOCKED_ADMIN_ONLY'
+      );
+    }
+
     // Role check: Only match host player (game.creator_id), club manager, or platform admin can submit scores
     if (userRole === 3) {
       if (game.creator_id !== userId) {
@@ -1041,32 +1072,65 @@ export class ManagerService {
     }
 
     const recording = await CctvRepository.getRecordingByGame(gameId);
-    if (!recording) {
-      return { gameId, status: 'NOT_RECORDED', message: 'No recording exists for this match' };
+
+    // Fetch all cataloged game videos (with multi-camera links)
+    const videos = await GamesRepository.getGameVideos(gameId);
+    const videoList: Array<any> = [];
+
+    for (let i = 0; i < videos.length; i++) {
+      const vid = videos[i];
+      try {
+        const url = await getSignedPlaybackUrl(vid.video_url, 3600);
+        videoList.push({
+          id: vid.id,
+          videoId: vid.id,
+          gameId: vid.game_id,
+          cctvId: vid.cctv_id || null,
+          cameraName: vid.camera_name || `Camera ${i + 1}`,
+          cameraType: vid.camera_type || 'RTSP_DOME',
+          cameraStatus: vid.camera_status || 'ONLINE',
+          courtId: vid.court_id || game.court_id,
+          courtName: vid.court_name || 'Court 1',
+          clubName: vid.club_name || 'All Stars Turf',
+          title: vid.title,
+          status: vid.status,
+          playbackUrl: url,
+          durationSeconds: vid.duration_seconds || 5400,
+          createdAt: vid.created_at,
+        });
+      } catch (_) {}
     }
 
-    let playbackUrl: string | null = null;
-    const objectKey = recording.storage_object_key || recording.s3_object_key;
+    let singleRecordingPlaybackUrl: string | null = null;
+    const objectKey = recording?.storage_object_key || recording?.s3_object_key;
     if (objectKey) {
       try {
-        playbackUrl = await getSignedPlaybackUrl(objectKey, 3600);
+        singleRecordingPlaybackUrl = await getSignedPlaybackUrl(objectKey, 3600);
       } catch (err) {
         logger.error({ err }, 'Error signing playback URL for manager');
       }
     }
 
+    const effectivePlaybackUrl = videoList[0]?.playbackUrl || singleRecordingPlaybackUrl || game.video_playback_url;
+
+    if (!recording && videoList.length === 0 && !effectivePlaybackUrl) {
+      return { gameId, status: 'NOT_RECORDED', message: 'No recording exists for this match', videos: [] };
+    }
+
     return {
-      recordingId: recording.id,
-      gameId: recording.game_id,
-      courtId: recording.court_id,
-      cameraId: recording.camera_id,
-      status: recording.status,
-      recordingStatus: recording.recording_status,
-      startTime: recording.start_time || recording.started_at,
-      scheduledMatchEnd: recording.scheduled_match_end,
-      stopDeadline: recording.stop_deadline,
-      actualStopTime: recording.actual_stop_time,
-      playbackUrl,
+      recordingId: recording?.id || null,
+      gameId: recording?.game_id || game.id,
+      courtId: recording?.court_id || game.court_id,
+      cameraId: recording?.camera_id || videoList[0]?.cctvId || null,
+      cameraName: videoList[0]?.cameraName || 'Camera 1',
+      status: recording?.status || (videoList.length > 0 ? 'COMPLETED' : 'NOT_RECORDED'),
+      recordingStatus: recording?.recording_status || (videoList.length > 0 ? 'COMPLETED' : 'NOT_RECORDED'),
+      startTime: recording?.start_time || recording?.started_at || game.start_time,
+      scheduledMatchEnd: recording?.scheduled_match_end,
+      stopDeadline: recording?.stop_deadline,
+      actualStopTime: recording?.actual_stop_time,
+      playbackUrl: effectivePlaybackUrl,
+      videos: videoList,
     };
   }
 

@@ -488,13 +488,14 @@ export class CctvRecordingService {
 
     // Save into game_videos catalog
     await dbPool.query(
-      `INSERT INTO public.game_videos (game_id, club_id, court_id, title, video_url, uploaded_by_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'AVAILABLE')
+      `INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, uploaded_by_id, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')
        ON CONFLICT DO NOTHING;`,
       [
         rec.game_id,
         rec.club_id,
         rec.court_id,
+        rec.camera_id || null,
         `Match Recording - Game ${rec.game_id}`,
         s3ObjectKey,
         options?.userId || null,

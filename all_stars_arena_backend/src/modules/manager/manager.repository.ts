@@ -197,6 +197,34 @@ export class ManagerRepository {
     return res.rows[0];
   }
 
+  static async startMatchGame(gameId: string) {
+    const res = await dbPool.query(
+      `UPDATE public.games
+       SET status = 'ONGOING',
+           match_date = CURRENT_DATE,
+           start_time = CURRENT_TIME,
+           end_time = CURRENT_TIME + INTERVAL '90 minutes',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *;`,
+      [gameId]
+    );
+    return res.rows[0];
+  }
+
+  static async completeMatchGame(gameId: string) {
+    const res = await dbPool.query(
+      `UPDATE public.games
+       SET status = 'COMPLETED',
+           end_time = CURRENT_TIME,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *;`,
+      [gameId]
+    );
+    return res.rows[0];
+  }
+
   static async getClubBookings(clubId: string) {
     const res = await dbPool.query(
       `SELECT b.*, crt.name as court_name, u.name as player_name, u.phone as player_phone
@@ -286,14 +314,40 @@ export class ManagerRepository {
 
     const query = `
       SELECT g.*,
+             COALESCE(
+               (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
+               g.video_playback_url,
+               'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+             ) as video_playback_url,
              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
+             CASE
+               WHEN g.status = 'CANCELLED' AND g.updated_at::date <= CURRENT_DATE THEN g.updated_at::date
+               WHEN g.match_date <= CURRENT_DATE THEN g.match_date
+               ELSE CURRENT_DATE
+             END as history_event_date,
              u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
-             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') * g.entry_fee as total_amount_collected
+             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') * g.entry_fee as total_amount_collected,
+             (
+               SELECT COALESCE(json_agg(
+                 json_build_object(
+                   'userId', gp.user_id,
+                   'name', COALESCE(pu.name, 'Player'),
+                   'profileImageUrl', pu.profile_image_url,
+                   'team', COALESCE(gp.team, 'TEAM_A'),
+                   'position', COALESCE(gp.position, 'MID'),
+                   'ovr', COALESCE(pd.ovr_rating, 80)
+                 )
+               ), '[]'::json)
+               FROM public.game_players gp
+               JOIN public.users pu ON pu.id = gp.user_id
+               LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
+               WHERE gp.game_id = g.id
+             ) as roster
       FROM public.games g
       LEFT JOIN public.users u ON u.id = g.creator_id
       WHERE ${conditions.join(' AND ')}
-      ORDER BY g.match_date DESC, g.start_time DESC
+      ORDER BY history_event_date DESC, g.start_time DESC
       LIMIT $${idx++} OFFSET $${idx++};
     `;
     const res = await dbPool.query(query, values);

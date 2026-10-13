@@ -42,7 +42,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
 
   void _toggleSuspendStatus() {
     final bool isCurrentlySuspended = user.isSuspended;
-    final String actionText = isCurrentlySuspended ? 'Unlock / Reactivate' : 'Block / Suspend';
+    final String actionText =
+        isCurrentlySuspended ? 'Unlock / Reactivate' : 'Block / Suspend';
     final String dialogMessage = isCurrentlySuspended
         ? 'Are you sure you want to unlock and reactivate this user account?'
         : 'Are you sure you want to block and suspend this user account?';
@@ -59,8 +60,10 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: isCurrentlySuspended ? AppColors.primary : AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              backgroundColor:
+                  isCurrentlySuspended ? AppColors.primary : AppColors.error,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
               Get.back();
@@ -100,7 +103,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
             },
             child: Text(
               actionText,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -131,7 +135,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                   width: 1,
                 ),
                 boxShadow: const [
@@ -153,24 +158,30 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSuspended ? AppColors.error : AppColors.primary,
+                            color: isSuspended
+                                ? AppColors.error
+                                : AppColors.primary,
                             width: 3,
                           ),
                         ),
                         child: ClipOval(
-                          child: (user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty)
+                          child: (user.profileImageUrl != null &&
+                                  user.profileImageUrl!.isNotEmpty)
                               ? CachedNetworkImage(
                                   imageUrl: user.profileImageUrl!,
                                   fit: BoxFit.cover,
                                   width: 90,
                                   height: 90,
                                   placeholder: (_, __) => Container(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.1),
                                     child: const Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     ),
                                   ),
-                                  errorWidget: (_, __, ___) => _buildAvatarFallback(),
+                                  errorWidget: (_, __, ___) =>
+                                      _buildAvatarFallback(),
                                 )
                               : _buildAvatarFallback(),
                         ),
@@ -181,7 +192,9 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: isSuspended ? AppColors.error : AppColors.primary,
+                            color: isSuspended
+                                ? AppColors.error
+                                : AppColors.primary,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
@@ -203,7 +216,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -214,15 +228,18 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                     children: [
                       // Role Badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.shield_outlined, size: 14, color: AppColors.primary),
+                            const Icon(Icons.shield_outlined,
+                                size: 14, color: AppColors.primary),
                             const SizedBox(width: 4),
                             Text(
                               user.roleName,
@@ -239,7 +256,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
 
                       // Status Badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: isSuspended
                               ? AppColors.error.withValues(alpha: 0.15)
@@ -252,7 +270,9 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                         child: Text(
                           user.status,
                           style: TextStyle(
-                            color: isSuspended ? AppColors.error : Colors.green.shade700,
+                            color: isSuspended
+                                ? AppColors.error
+                                : Colors.green.shade700,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -273,7 +293,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                   width: 1,
                 ),
               ),
@@ -285,17 +306,22 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                   const Divider(height: 24),
-                  _buildDetailRow(context, Icons.email_outlined, 'Email', user.email),
-                  _buildDetailRow(context, Icons.phone_outlined, 'Phone', user.phone),
+                  _buildDetailRow(
+                      context, Icons.email_outlined, 'Email', user.email),
+                  _buildDetailRow(
+                      context, Icons.phone_outlined, 'Phone', user.phone),
                   _buildDetailRow(
                     context,
                     Icons.location_city_outlined,
                     'City / Location',
-                    user.city != null && user.city!.isNotEmpty ? user.city! : 'Not Specified',
+                    user.city != null && user.city!.isNotEmpty
+                        ? user.city!
+                        : 'Not Specified',
                   ),
                 ],
               ),
@@ -310,7 +336,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                   width: 1,
                 ),
               ),
@@ -322,11 +349,13 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                   const Divider(height: 24),
-                  _buildDetailRow(context, Icons.badge_outlined, 'User ID', user.id),
+                  _buildDetailRow(
+                      context, Icons.badge_outlined, 'User ID', user.id),
                   _buildDetailRow(
                     context,
                     Icons.calendar_today_outlined,
@@ -349,8 +378,10 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
               child: ElevatedButton.icon(
                 onPressed: _toggleSuspendStatus,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isSuspended ? AppColors.primary : AppColors.error,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  backgroundColor:
+                      isSuspended ? AppColors.primary : AppColors.error,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                   elevation: 2,
                 ),
                 icon: Icon(
@@ -358,7 +389,9 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                   color: Colors.white,
                 ),
                 label: Text(
-                  isSuspended ? 'Unlock / Unsuspend User' : 'Block / Suspend User',
+                  isSuspended
+                      ? 'Unlock / Unsuspend User'
+                      : 'Block / Suspend User',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -390,7 +423,8 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _buildDetailRow(
+      BuildContext context, IconData icon, String label, String value) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -407,7 +441,9 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : Colors.grey.shade600,
                   ),
                 ),
                 const SizedBox(height: 2),

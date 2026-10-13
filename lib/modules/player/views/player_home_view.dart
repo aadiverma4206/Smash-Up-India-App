@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../app/routes/app_routes.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/notifications_controller.dart';
+import '../../games/views/find_games_view.dart';
+import '../../games/views/my_matches_view.dart';
+import 'match_history_view.dart';
 import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
@@ -68,163 +72,24 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
 
   Widget _buildMobileLayout(BuildContext context, {bool showBottomNav = true}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color solidHeaderColor =
-        isDark ? const Color(0xFF130722) : Theme.of(context).cardColor;
-    final Color borderColor =
-        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Obx(() {
-        if (controller.isLoading.value) {
-          return _buildHomeSkeletonView(context);
-        }
-        return Stack(
+        final currentIndex = controller.selectedNavIndex.value.clamp(0, 3);
+
+        return IndexedStack(
+          index: currentIndex,
           children: [
-            // 1. Scrollable Main Content Body
-            NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: RefreshIndicator(
-                onRefresh: controller.loadPlayerData,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Integrated Header Background Image
-                      _buildHeaderBackground(context),
-                      const SizedBox(height: 16),
-
-                      // Main Content Body
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Join Game Pill Bar
-                            _buildJoinGamePillBar(context),
-                            const SizedBox(height: 18),
-
-                            // 4 Circular Football Quick Action Buttons Grid
-                            _buildCircularActionsGrid(context),
-                            const SizedBox(height: 20),
-
-                            // Match Highlight Cards (Active / Upcoming)
-                            _buildMatchHighlightsSection(context),
-                            const SizedBox(height: 16),
-
-                            // Football Career Stats Overview
-                            _buildStatsSection(context),
-                            const SizedBox(height: 20),
-
-                            // Quick Modules Navigation Grid
-                            _buildQuickModulesGrid(context),
-                            const SizedBox(height: 20),
-
-                            // Refer & Earn Ad Banner
-                            _buildReferAdBanner(context),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // 2. Seamless Morphing Header Bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ValueListenableBuilder<double>(
-                valueListenable: _headerProgress,
-                builder: (context, progress, child) {
-                  final Color currentBgColor = Color.lerp(
-                    Colors.transparent,
-                    solidHeaderColor,
-                    progress,
-                  )!;
-
-                  final Color currentBorderColor = Color.lerp(
-                    Colors.transparent,
-                    borderColor,
-                    progress,
-                  )!;
-
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: currentBgColor,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: currentBorderColor,
-                          width: 1,
-                        ),
-                      ),
-                      boxShadow: progress > 0.05
-                          ? [
-                              BoxShadow(
-                                color: Colors.black
-                                    .withValues(alpha: 0.12 * progress),
-                                blurRadius: 8 * progress,
-                                offset: Offset(0, 2 * progress),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Row(
-                          children: [
-                            // App Logo
-                            _buildLogoWidget(context),
-
-                            // Flexible Morphing Title ("All Stars Arena")
-                            ClipRect(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                widthFactor: progress,
-                                child: Opacity(
-                                  opacity: progress,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: _buildTitleWidget(context),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const Spacer(),
-
-                            // Action Icons (Notification Bell, Wallet, Profile Avatar)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildNotificationBell(context),
-                                const SizedBox(width: 8),
-                                _buildWalletButton(context),
-                                const SizedBox(width: 8),
-                                _buildProfileAvatar(context),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+            _buildMobileHomeTab(context),
+            const FindGamesView(),
+            const MyMatchesView(),
+            const MatchHistoryView(),
           ],
         );
       }),
 
-      // Bottom Navigation Bar (Hidden in Landscape)
+      // Bottom Navigation Bar
       bottomNavigationBar: showBottomNav
           ? Obx(
               () => Container(
@@ -245,14 +110,10 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                   ],
                 ),
                 child: BottomNavigationBar(
-                  currentIndex: controller.selectedNavIndex.value,
+                  currentIndex: controller.selectedNavIndex.value.clamp(0, 3),
                   onTap: (index) {
                     controller.changeNavIndex(index);
                     if (index == 0) controller.loadPlayerData();
-                    if (index == 1) Get.toNamed('/games/find');
-                    if (index == 2) Get.toNamed('/player/my-matches');
-                    if (index == 3) Get.toNamed('/wallet');
-                    if (index == 4) Get.toNamed('/player/match-history');
                   },
                   type: BottomNavigationBarType.fixed,
                   backgroundColor: Theme.of(context).cardColor,
@@ -285,32 +146,12 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                       label: 'Arena',
                     ),
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.show_chart_rounded, size: 22),
+                      icon: Icon(Icons.sports_soccer_rounded, size: 22),
                       label: 'Find Games',
                     ),
-                    BottomNavigationBarItem(
-                      icon: Stack(
-                        children: [
-                          const Icon(Icons.grid_view_rounded, size: 22),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                color: Colors.redAccent,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      label: 'Explore',
-                    ),
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.shield_outlined, size: 22),
-                      label: 'Wallet',
+                      icon: Icon(Icons.grid_view_rounded, size: 22),
+                      label: 'Explore',
                     ),
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.history_rounded, size: 22),
@@ -322,6 +163,161 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             )
           : null,
     );
+  }
+
+  Widget _buildMobileHomeTab(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color solidHeaderColor =
+        isDark ? const Color(0xFF130722) : Theme.of(context).cardColor;
+    final Color borderColor =
+        isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE);
+
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return _buildHomeSkeletonView(context);
+      }
+      return Stack(
+        children: [
+          // 1. Scrollable Main Content Body
+          NotificationListener<ScrollNotification>(
+            onNotification: _onScrollNotification,
+            child: RefreshIndicator(
+              onRefresh: controller.loadPlayerData,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Integrated Header Background Image
+                    _buildHeaderBackground(context),
+                    const SizedBox(height: 16),
+
+                    // Main Content Body
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Join Game Pill Bar
+                          _buildJoinGamePillBar(context),
+                          const SizedBox(height: 18),
+
+                          // 4 Circular Football Quick Action Buttons Grid
+                          _buildCircularActionsGrid(context),
+                          const SizedBox(height: 20),
+
+                          // Match Highlight Cards (Active / Upcoming)
+                          _buildMatchHighlightsSection(context),
+                          const SizedBox(height: 16),
+
+                          // Football Career Stats Overview
+                          _buildStatsSection(context),
+                          const SizedBox(height: 20),
+
+                          // Quick Modules Navigation Grid
+                          _buildQuickModulesGrid(context),
+                          const SizedBox(height: 20),
+
+                          // Refer & Earn Ad Banner
+                          _buildReferAdBanner(context),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 2. Seamless Morphing Header Bar
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _headerProgress,
+              builder: (context, progress, child) {
+                final Color currentBgColor = Color.lerp(
+                  Colors.transparent,
+                  solidHeaderColor,
+                  progress,
+                )!;
+
+                final Color currentBorderColor = Color.lerp(
+                  Colors.transparent,
+                  borderColor,
+                  progress,
+                )!;
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: currentBgColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: currentBorderColor,
+                        width: 1,
+                      ),
+                    ),
+                    boxShadow: progress > 0.05
+                        ? [
+                            BoxShadow(
+                              color: Colors.black
+                                  .withValues(alpha: 0.12 * progress),
+                              blurRadius: 8 * progress,
+                              offset: Offset(0, 2 * progress),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          // App Logo
+                          _buildLogoWidget(context),
+
+                          // Flexible Morphing Title ("All Stars Arena")
+                          ClipRect(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progress,
+                              child: Opacity(
+                                opacity: progress,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 10.0),
+                                  child: _buildTitleWidget(context),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const Spacer(),
+
+                          // Action Icons (Notification Bell, Profile Avatar)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildNotificationBell(context),
+                              const SizedBox(width: 8),
+                              _buildProfileAvatar(context),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildTabletDesktopLayout(BuildContext context) {
@@ -711,33 +707,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
         ),
       );
     });
-  }
-
-  Widget _buildWalletButton(BuildContext context) {
-    return InkWell(
-      onTap: () => Get.toNamed('/wallet'),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-          boxShadow: const [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Colors.black87,
-            size: 20,
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildProfileAvatar(BuildContext context) {
@@ -1173,7 +1142,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
       {
         'icon': Icons.history_rounded,
         'title': 'History',
-        'route': '/player/match-history',
+        'route': Routes.playerHistoryStandalone,
         'color': const Color(0xFF7B1FA2)
       },
       {

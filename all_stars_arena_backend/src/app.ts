@@ -27,12 +27,15 @@ app.use(
   })
 );
 
-// Global Rate Limiter (100 requests per 15 minutes per IP)
+// Global Rate Limiter (Dev & Localhost bypass to prevent Rate Limit Exceeded during testing)
+const isDev = env.NODE_ENV !== 'production' || process.env.NODE_ENV !== 'production';
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: isDev ? 10000 : 300,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => isDev || req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1',
   handler: (req: Request, _res: Response, next: NextFunction) => {
     next(
       ApiError.tooManyRequests(
