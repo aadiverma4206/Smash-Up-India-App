@@ -197,6 +197,10 @@ class CreateGameController extends GetxController {
   }
 
   Future<void> fetchWalletBalance() async {
+    if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
+      walletBalance.value = 0.0;
+      return;
+    }
     try {
       final w = await _walletRepo.getWallet();
       walletBalance.value = w.balance;

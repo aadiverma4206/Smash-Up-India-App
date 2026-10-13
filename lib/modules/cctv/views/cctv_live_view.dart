@@ -1,24 +1,39 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import 'package:get/get.dart';
 import '../controllers/cctv_live_controller.dart';
+import '../../../data/models/cctv_models.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_loader.dart';
 
-class CctvLiveView extends GetView<CctvLiveController> {
+class CctvLiveView extends StatelessWidget {
   const CctvLiveView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.isRegistered<CctvLiveController>()
+        ? Get.find<CctvLiveController>()
+        : Get.put(CctvLiveController());
+
+    final isDark = context.isDark;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: context.backgroundColor,
       appBar: AppBar(
         title: Obx(() => Text(
               'Live CCTV - Camera ${controller.selectedChannel.value}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
             )),
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+            (isDark ? AppColors.darkAppBar : AppColors.sageGreenAppBar),
         elevation: 0,
+        iconTheme: IconThemeData(
+          color: isDark ? Colors.white : Colors.black87,
+        ),
         actions: [
           // Stream Type (Main HD vs Sub SD) Toggle
           Obx(() => TextButton.icon(
@@ -28,14 +43,14 @@ class CctvLiveView extends GetView<CctvLiveController> {
                   size: 18,
                   color: controller.streamType.value == 'main'
                       ? AppColors.primary
-                      : Colors.grey,
+                      : (isDark ? Colors.grey : Colors.grey.shade700),
                 ),
                 label: Text(
-                  controller.streamType.value == 'main' ? 'HD' : 'SD',
+                  controller.streamType.value == 'main' ? 'HD (Main)' : 'SD (Sub)',
                   style: TextStyle(
                     color: controller.streamType.value == 'main'
                         ? AppColors.primary
-                        : Colors.grey,
+                        : (isDark ? Colors.grey : Colors.grey.shade700),
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -43,7 +58,10 @@ class CctvLiveView extends GetView<CctvLiveController> {
               )),
           // Manual Reconnect Button
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            icon: Icon(
+              Icons.refresh_rounded,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
             tooltip: 'Reconnect Camera',
             onPressed: controller.reconnectCurrentCamera,
           ),
@@ -55,11 +73,14 @@ class CctvLiveView extends GetView<CctvLiveController> {
 
           return Column(
             children: [
-              // 1. Live Video Player Display Frame
+              // 1. Live Video Player Display Frame (Constrained 16:9 AspectRatio)
               Expanded(
                 flex: isFS ? 1 : 0,
                 child: AspectRatio(
-                  aspectRatio: isFS ? (MediaQuery.of(context).size.width / MediaQuery.of(context).size.height) : (16 / 9),
+                  aspectRatio: isFS
+                      ? (MediaQuery.of(context).size.width /
+                          MediaQuery.of(context).size.height)
+                      : (16 / 9),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -68,7 +89,7 @@ class CctvLiveView extends GetView<CctvLiveController> {
                           ? BorderRadius.zero
                           : BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.grey.shade900,
+                        color: isDark ? Colors.grey.shade900 : Colors.black26,
                         width: 1,
                       ),
                     ),
@@ -79,26 +100,26 @@ class CctvLiveView extends GetView<CctvLiveController> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          _buildPlayerContent(context),
+                          _buildPlayerContent(context, controller),
 
                           // Top-Left Live Status Overlay Badge
                           Positioned(
-                            top: 12,
-                            left: 12,
-                            child: _buildLiveStatusBadge(context),
+                            top: 10,
+                            left: 10,
+                            child: _buildLiveStatusBadge(context, controller),
                           ),
 
                           // Top-Right Fullscreen Toggle Button
                           Positioned(
-                            top: 8,
-                            right: 8,
+                            top: 6,
+                            right: 6,
                             child: IconButton(
                               icon: Icon(
                                 isFS
                                     ? Icons.fullscreen_exit_rounded
                                     : Icons.fullscreen_rounded,
                                 color: Colors.white,
-                                size: 24,
+                                size: 22,
                               ),
                               onPressed: controller.toggleFullscreen,
                             ),
@@ -106,20 +127,20 @@ class CctvLiveView extends GetView<CctvLiveController> {
 
                           // Bottom-Left Camera Channel Info Banner
                           Positioned(
-                            bottom: 12,
-                            left: 12,
+                            bottom: 10,
+                            left: 10,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.7),
+                                color: Colors.black.withValues(alpha: 0.75),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'Dahua XVR • Channel ${controller.selectedChannel.value}',
+                                'Dahua XVR • Channel ${controller.selectedChannel.value} (${controller.streamType.value.toUpperCase()})',
                                 style: const TextStyle(
                                   color: Colors.white70,
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -135,24 +156,24 @@ class CctvLiveView extends GetView<CctvLiveController> {
               if (!isFS) ...[
                 const SizedBox(height: 16),
 
-                // 2. Selectable 4 Camera Channels Section
+                // 2. Selectable Dynamic Camera Channels Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Select Camera Channel',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: context.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        '4 Channels Available',
+                        '${controller.cameraOptions.length} Channels Available',
                         style: TextStyle(
-                          color: Colors.grey.shade500,
+                          color: context.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -161,12 +182,12 @@ class CctvLiveView extends GetView<CctvLiveController> {
                 ),
                 const SizedBox(height: 12),
 
-                // Grid of 4 Selectable Camera Cards
+                // Dynamic Grid of Selectable Camera Cards
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: GridView.builder(
-                      itemCount: 4,
+                      itemCount: controller.cameraOptions.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -175,14 +196,14 @@ class CctvLiveView extends GetView<CctvLiveController> {
                         mainAxisSpacing: 12,
                       ),
                       itemBuilder: (context, index) {
-                        final channel = index + 1;
+                        final cam = controller.cameraOptions[index];
                         final isSelected =
-                            controller.selectedChannel.value == channel;
-                        final status = controller.channelStatuses[channel] ??
-                            'Connecting';
+                            controller.selectedChannel.value == cam.channel;
+                        final status = controller.channelStatuses[cam.channel] ??
+                            cam.status;
 
                         return _buildCameraCard(
-                            context, channel, isSelected, status);
+                            context, controller, cam, isSelected, status);
                       },
                     ),
                   ),
@@ -193,19 +214,24 @@ class CctvLiveView extends GetView<CctvLiveController> {
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: isDark
+                        ? const Color(0xFF1A1A1A)
+                        : context.inputBgColor,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade800),
+                    border: Border.all(color: context.borderColor),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.security_rounded,
+                      const Icon(Icons.security_rounded,
                           color: AppColors.primary, size: 20),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '🔐 Server-managed credentials. Local DVR IP (192.168.1.2) requires court Wi-Fi or VPN connection.',
-                          style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.3),
+                          '🔐 Direct RTSP stream connection. Local DVR IP (192.168.1.2) requires court Wi-Fi network.',
+                          style: TextStyle(
+                              color: context.textSecondary,
+                              fontSize: 11,
+                              height: 1.3),
                         ),
                       ),
                     ],
@@ -219,88 +245,126 @@ class CctvLiveView extends GetView<CctvLiveController> {
     );
   }
 
-  Widget _buildPlayerContent(BuildContext context) {
+  Widget _buildPlayerContent(
+      BuildContext context, CctvLiveController controller) {
     if (controller.isPlayerInitializing.value) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const AppLoader(message: ''),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             'Connecting to Camera ${controller.selectedChannel.value} RTSP stream...',
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       );
     }
 
-    if (controller.vlcPlayerController != null && controller.isPlaying.value) {
-      return VlcPlayer(
-        controller: controller.vlcPlayerController!,
-        aspectRatio: 16 / 9,
-        placeholder: const AppLoader(message: 'Decoding RTSP stream...'),
+    if (controller.videoPlayerController != null &&
+        controller.videoPlayerController!.value.isInitialized) {
+      return FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: controller.videoPlayerController!.value.size.width,
+          height: controller.videoPlayerController!.value.size.height,
+          child: VideoPlayer(controller.videoPlayerController!),
+        ),
       );
     }
 
     // Offline / Connection Failed State
     return Container(
       color: const Color(0xFF151515),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.videocam_off_rounded,
-            size: 48,
-            color: Colors.red.shade400,
+      padding: const EdgeInsets.only(top: 8, left: 12, right: 12, bottom: 28),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.videocam_off_rounded,
+                size: 32,
+                color: Colors.red.shade400,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Camera ${controller.selectedChannel.value} ${controller.channelStatuses[controller.selectedChannel.value] ?? "Offline"}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                controller.errorMessage.value.isNotEmpty
+                    ? controller.errorMessage.value
+                    : 'Unable to establish RTSP stream connection to 192.168.1.2:554.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 10),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (controller.streamType.value == 'main')
+                    ElevatedButton.icon(
+                      onPressed: controller.toggleStreamType,
+                      icon: const Icon(Icons.sd_rounded, size: 14),
+                      label: const Text('Use Sub Stream (SD)',
+                          style: TextStyle(fontSize: 11)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: controller.reconnectCurrentCamera,
+                    icon: const Icon(Icons.refresh_rounded, size: 14),
+                    label: const Text('Retry Connection',
+                        style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white38),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            'Camera ${controller.selectedChannel.value} ${controller.channelStatuses[controller.selectedChannel.value] ?? "Offline"}',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            controller.errorMessage.value.isNotEmpty
-                ? controller.errorMessage.value
-                : 'Unable to establish RTSP stream connection to 192.168.1.2:554.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 14),
-          ElevatedButton.icon(
-            onPressed: controller.reconnectCurrentCamera,
-            icon: const Icon(Icons.refresh_rounded, size: 16),
-            label: const Text('Retry Connection'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              minimumSize: Size.zero,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildLiveStatusBadge(BuildContext context) {
+  Widget _buildLiveStatusBadge(
+      BuildContext context, CctvLiveController controller) {
     final status =
         controller.channelStatuses[controller.selectedChannel.value] ??
             'Connecting';
 
     Color color = Colors.orange;
-    if (status == 'Live') {
+    if (status == 'Live' || status == 'ONLINE') {
       color = Colors.green;
     } else if (status == 'Offline' || status == 'Connection failed') {
       color = Colors.red;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.75),
         borderRadius: BorderRadius.circular(20),
@@ -310,17 +374,17 @@ class CctvLiveView extends GetView<CctvLiveController> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 7,
+            height: 7,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
           Text(
             status.toUpperCase(),
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.bold,
-              fontSize: 10,
+              fontSize: 9,
               letterSpacing: 0.5,
             ),
           ),
@@ -330,15 +394,23 @@ class CctvLiveView extends GetView<CctvLiveController> {
   }
 
   Widget _buildCameraCard(
-      BuildContext context, int channel, bool isSelected, String status) {
+      BuildContext context,
+      CctvLiveController controller,
+      CctvLiveCameraOptionModel cam,
+      bool isSelected,
+      String status) {
+    final isDark = context.isDark;
+    final channel = cam.channel;
+
     Color statusColor = Colors.orange;
-    if (status == 'Live') {
+    if (status == 'Live' || status == 'ONLINE') {
       statusColor = Colors.green;
     } else if (status == 'Offline' || status == 'Connection failed') {
       statusColor = Colors.red;
     }
 
-    final courtName = channel % 2 != 0 ? 'Court 1 (Main Pitch)' : 'Court 2 (Side Pitch)';
+    final courtName =
+        cam.courtName ?? (channel % 2 != 0 ? 'Court 1 (Main Pitch)' : 'Court 2 (Side Pitch)');
 
     return InkWell(
       onTap: () => controller.selectCamera(channel),
@@ -348,11 +420,11 @@ class CctvLiveView extends GetView<CctvLiveController> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : const Color(0xFF1E1E1E),
+              ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.1)
+              : context.cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.shade800,
+            color: isSelected ? AppColors.primary : context.borderColor,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -369,13 +441,15 @@ class CctvLiveView extends GetView<CctvLiveController> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary
-                        : Colors.grey.shade800,
+                        : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     'CH $channel',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : (isDark ? Colors.white70 : Colors.black87),
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -406,18 +480,20 @@ class CctvLiveView extends GetView<CctvLiveController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Camera $channel',
+                  cam.name,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: context.textPrimary,
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.w600,
                     fontSize: 15,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   courtName,
-                  style: const TextStyle(
-                    color: Colors.grey,
+                  style: TextStyle(
+                    color: context.textSecondary,
                     fontSize: 11,
                   ),
                   maxLines: 1,

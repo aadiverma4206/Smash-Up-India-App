@@ -17,6 +17,13 @@ class AuthService extends GetxService {
   final Rxn<UserModel> currentUser = Rxn<UserModel>();
   final RxBool isLoggedIn = false.obs;
 
+  bool get isPlayer =>
+      currentUser.value?.isPlayer ?? (currentUser.value?.roleId == 3);
+  bool get isAdmin =>
+      currentUser.value?.isAdmin ?? (currentUser.value?.roleId == 1);
+  bool get isManager =>
+      currentUser.value?.isManager ?? (currentUser.value?.roleId == 2);
+
   Future<void> init() async {
     final token = await _secureStorage.getAccessToken();
     if (token != null && token.isNotEmpty) {

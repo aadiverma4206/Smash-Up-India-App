@@ -1,8 +1,3 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'login_request_model.g.dart';
-
-@JsonSerializable(includeIfNull: false)
 class LoginRequestModel {
   final String identifier;
   final String password;
@@ -15,6 +10,15 @@ class LoginRequestModel {
   });
 
   factory LoginRequestModel.fromJson(Map<String, dynamic> json) =>
-      _$LoginRequestModelFromJson(json);
-  Map<String, dynamic> toJson() => _$LoginRequestModelToJson(this);
+      LoginRequestModel(
+        identifier: (json['identifier'] ?? '').toString(),
+        password: (json['password'] ?? '').toString(),
+        device: json['device'] as Map<String, dynamic>?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'identifier': identifier,
+        'password': password,
+        if (device != null) 'device': device,
+      };
 }

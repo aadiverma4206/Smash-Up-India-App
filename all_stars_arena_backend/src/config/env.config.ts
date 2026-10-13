@@ -17,6 +17,8 @@ const envSchema = z.object({
   RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(''),
   RESEND_API_KEY: z.string().optional().default(''),
   EMAIL_FROM: z.string().default('ALL STARS ARENA <no-reply@allstarsarena.com>'),
+  // Backend public URL for building absolute URLs (HLS streams, etc.)
+  BACKEND_URL: z.string().optional().default(''),
 
   // Firebase Admin Credentials (Optional)
   GOOGLE_APPLICATION_CREDENTIALS: z

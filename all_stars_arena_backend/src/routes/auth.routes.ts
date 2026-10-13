@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   registerSendOtpController,
+  resendOtpController,
   registerVerifyOtpController,
   registerPlayerController,
   loginController,
@@ -19,6 +20,7 @@ import {
 import { validateRequest } from '../middlewares/validate.middleware.js';
 import {
   registerSendOtpSchema,
+  resendOtpSchema,
   registerVerifyOtpSchema,
   registerPlayerSchema,
   loginSchema,
@@ -37,6 +39,16 @@ router.post(
   '/register/send-otp',
   validateRequest(registerSendOtpSchema),
   registerSendOtpController
+);
+router.post(
+  '/register/resend-otp',
+  validateRequest(resendOtpSchema),
+  resendOtpController
+);
+router.post(
+  '/resend-otp',
+  validateRequest(resendOtpSchema),
+  resendOtpController
 );
 router.post(
   '/register/verify',

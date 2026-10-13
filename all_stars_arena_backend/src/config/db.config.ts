@@ -187,16 +187,26 @@ export const initDbTables = async () => {
       SET video_playback_url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
       WHERE (video_playback_url IS NULL OR video_playback_url = '') AND UPPER(status::text) = 'COMPLETED';
 
-      INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
-      SELECT g.id, u.id,
-             CASE WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 2 = 1 THEN 'TEAM_A' ELSE 'TEAM_B' END,
-             CASE WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 3 = 0 THEN 'ST' WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 3 = 1 THEN 'MID' ELSE 'DEF' END,
-             'PAID'
-      FROM public.games g
-      CROSS JOIN public.users u
-      WHERE u.role_id = 3
-      AND NOT EXISTS (SELECT 1 FROM public.game_players gp WHERE gp.game_id = g.id)
-      ON CONFLICT DO NOTHING;
+      DO $$
+      BEGIN
+        INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
+        SELECT seeded.game_id, seeded.user_id, seeded.team, seeded.position, 'PAID'
+        FROM (
+          SELECT g.id as game_id, u.id as user_id,
+                 (CASE WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 2 = 1 THEN 'TEAM_A' ELSE 'TEAM_B' END)::public.team_side as team,
+                 (CASE WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 3 = 0 THEN 'ST' WHEN (ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id)) % 3 = 1 THEN 'MID' ELSE 'DEF' END)::public.football_position as position,
+                 ROW_NUMBER() OVER (PARTITION BY g.id ORDER BY u.id) as rn,
+                 COALESCE(g.max_players, 10) as max_p
+          FROM public.games g
+          CROSS JOIN public.users u
+          WHERE u.role_id = 3
+          AND NOT EXISTS (SELECT 1 FROM public.game_players gp WHERE gp.game_id = g.id)
+        ) seeded
+        WHERE seeded.rn <= seeded.max_p
+        ON CONFLICT DO NOTHING;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
 
       CREATE TABLE IF NOT EXISTS public.game_slot_requests (
           id VARCHAR(64) PRIMARY KEY DEFAULT ('req_' || SUBSTR(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT), 1, 16)),
@@ -411,6 +421,9 @@ export const initDbTables = async () => {
       END;
       $$;
 
+      DROP FUNCTION IF EXISTS public.get_wallet_transaction_history(VARCHAR, INT, INT);
+      DROP FUNCTION IF EXISTS public.get_wallet_transaction_history(VARCHAR);
+
       CREATE OR REPLACE FUNCTION public.get_wallet_transaction_history(
           p_user_id VARCHAR(64),
           p_limit INT DEFAULT 50,
@@ -429,14 +442,14 @@ export const initDbTables = async () => {
       BEGIN
           RETURN QUERY
           SELECT
-              t.id,
-              t.user_id,
-              t.type as transaction_type,
-              t.amount,
-              t.balance_after,
-              t.description,
-              t.status,
-              t.reference_id,
+              t.id::VARCHAR(64),
+              t.user_id::VARCHAR(64),
+              t.type::VARCHAR(32) as transaction_type,
+              t.amount::NUMERIC(10,2),
+              t.balance_after::NUMERIC(10,2),
+              t.description::TEXT,
+              t.status::VARCHAR(32),
+              t.reference_id::VARCHAR(64),
               t.created_at
           FROM public.transactions t
           WHERE t.user_id = p_user_id
@@ -670,7 +683,7 @@ export const initDbTables = async () => {
           END IF;
 
           INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
-          VALUES (p_game_id, p_user_id, v_assigned_team, UPPER(p_position), 'PAID')
+          VALUES (p_game_id, p_user_id, v_assigned_team, UPPER(p_position)::public.football_position, 'PAID')
           RETURNING id INTO v_roster_id;
 
           IF v_current_count + 1 >= v_max_players THEN
@@ -697,8 +710,32 @@ export const initDbTables = async () => {
         surface = EXCLUDED.surface,
         status = 'AVAILABLE';
 
-      -- Clean up any non-canonical courts that are not court_1 or court_2
-      DELETE FROM public.courts WHERE id NOT IN ('court_1', 'court_2');
+      -- 3. Normalize all games strictly to all_stars_arena_club and court_1 / court_2
+      UPDATE public.games
+      SET 
+        club_id = 'all_stars_arena_club',
+        court_id = CASE 
+          WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
+          ELSE 'court_1'
+        END
+      WHERE club_id <> 'all_stars_arena_club' OR court_id NOT IN ('court_1', 'court_2');
+
+      DO $$
+      BEGIN
+        UPDATE public.court_bookings
+        SET court_id = CASE 
+          WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
+          ELSE 'court_1'
+        END
+        WHERE court_id NOT IN ('court_1', 'court_2');
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END $$;
+
+      -- Clean up any non-canonical courts that are safely unreferenced
+      DELETE FROM public.courts WHERE id NOT IN ('court_1', 'court_2')
+      AND NOT EXISTS (SELECT 1 FROM public.court_bookings cb WHERE cb.court_id = courts.id)
+      AND NOT EXISTS (SELECT 1 FROM public.games g WHERE g.court_id = courts.id);
 
       -- Multi-camera CCTV cataloging: add cctv_id to game_videos
       ALTER TABLE public.game_videos ADD COLUMN IF NOT EXISTS cctv_id VARCHAR(64) REFERENCES public.cctv_cameras(id) ON DELETE SET NULL;
@@ -718,16 +755,6 @@ export const initDbTables = async () => {
         name = EXCLUDED.name,
         status = 'ONLINE',
         health_status = 'ONLINE';
-
-      -- 3. Normalize all games strictly to all_stars_arena_club and court_1 / court_2
-      UPDATE public.games
-      SET 
-        club_id = 'all_stars_arena_club',
-        court_id = CASE 
-          WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
-          ELSE 'court_1'
-        END
-      WHERE club_id <> 'all_stars_arena_club' OR court_id NOT IN ('court_1', 'court_2');
 
       -- 4. Ensure all managers and admins are linked to all_stars_arena_club
       INSERT INTO public.club_managers (club_id, user_id)

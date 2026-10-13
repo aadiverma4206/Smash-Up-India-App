@@ -27,8 +27,9 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
             children: [
               // Multi-camera quick switcher inside player view
               Obx(() {
-                if (controller.cameras.length <= 1)
+                if (controller.cameras.length <= 1) {
                   return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: SingleChildScrollView(

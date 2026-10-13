@@ -4,6 +4,7 @@ import '../repositories/wallet_repository.dart';
 import '../../../data/models/wallet_models.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/services/auth_service.dart';
 
 class WalletController extends GetxController {
   final WalletRepository repository = Get.find<WalletRepository>();
@@ -41,6 +42,12 @@ class WalletController extends GetxController {
   }
 
   Future<void> fetchWalletDetails() async {
+    // Admin (Role 1) and Manager (Role 2) do not have player wallets
+    if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
+      AppLogger.info('Admin/Manager role active - Skipping player wallet fetch.');
+      return;
+    }
+
     isLoading.value = true;
     try {
       final w = await repository.getWallet();
@@ -53,6 +60,10 @@ class WalletController extends GetxController {
   }
 
   Future<void> fetchTransactions() async {
+    if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
+      return;
+    }
+
     try {
       final list = await repository.getTransactions();
       transactions.assignAll(list);

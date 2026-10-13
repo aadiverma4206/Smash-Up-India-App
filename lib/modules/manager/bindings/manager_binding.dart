@@ -6,6 +6,7 @@ import '../controllers/manager_games_controller.dart';
 import '../../cctv/datasources/cctv_remote_datasource.dart';
 import '../../cctv/repositories/cctv_repository.dart';
 import '../../cctv/controllers/cctv_controller.dart';
+import '../../cctv/controllers/cctv_live_controller.dart';
 import '../../games/datasources/games_remote_datasource.dart';
 import '../../games/repositories/games_repository.dart';
 import '../../../core/network/dio_client.dart';
@@ -50,7 +51,7 @@ class ManagerBinding extends Bindings {
       fenix: true,
     );
 
-    // CCTV dependencies for Bottom Nav CCTV Tab
+    // CCTV dependencies for Bottom Nav CCTV Tab & Live Stream
     if (!Get.isRegistered<CctvRemoteDataSource>()) {
       Get.lazyPut<CctvRemoteDataSource>(
         () => CctvRemoteDataSource(dioClient: Get.find<DioClient>()),
@@ -64,9 +65,17 @@ class ManagerBinding extends Bindings {
         fenix: true,
       );
     }
-    Get.lazyPut<CctvController>(
-      () => CctvController(),
-      fenix: true,
-    );
+    if (!Get.isRegistered<CctvController>()) {
+      Get.lazyPut<CctvController>(
+        () => CctvController(),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<CctvLiveController>()) {
+      Get.lazyPut<CctvLiveController>(
+        () => CctvLiveController(),
+        fenix: true,
+      );
+    }
   }
 }

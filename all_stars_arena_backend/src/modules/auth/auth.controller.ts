@@ -10,6 +10,11 @@ export const registerSendOtpController = asyncHandler(async (req: Request, res: 
   res.status(200).json(ApiResponse.success(result.message, result));
 });
 
+export const resendOtpController = asyncHandler(async (req: Request, res: Response) => {
+  const result = await AuthService.resendOtp(req.body);
+  res.status(200).json(ApiResponse.success(result.message, result));
+});
+
 export const registerVerifyOtpController = asyncHandler(async (req: Request, res: Response) => {
   const result = await AuthService.verifyRegisterOtp(req.body);
   res.status(200).json(ApiResponse.success(result.message, result));

@@ -16,6 +16,7 @@ import {
   createLiveSession,
   getLiveChannelStatus,
   releaseLiveSession,
+  streamLiveCamera,
 } from './cctv.controller.js';
 import { validateRequest } from '../../middlewares/validate.middleware.js';
 import {
@@ -41,6 +42,8 @@ router.get('/health', getFfmpegHealth);
 
 // Live CCTV Streaming Routes (Authorized Admin & Manager Only: Roles 1 & 2)
 router.get('/live/cameras', requireRole([1, 2]), getLiveCameras);
+
+router.get('/live/stream/:channel', requireRole([1, 2]), streamLiveCamera);
 
 router.post(
   '/live/session',

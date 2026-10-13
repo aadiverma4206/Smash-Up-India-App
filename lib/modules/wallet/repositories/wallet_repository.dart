@@ -1,6 +1,8 @@
+import 'package:get/get.dart';
 import '../datasources/wallet_remote_datasource.dart';
 import '../../../data/models/wallet_models.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/services/auth_service.dart';
 
 class WalletRepository {
   final WalletRemoteDataSource remoteDataSource;
@@ -8,6 +10,12 @@ class WalletRepository {
   WalletRepository({required this.remoteDataSource});
 
   Future<WalletBalanceModel> getWallet() async {
+    // Admin (Role 1) and Manager (Role 2) do not have player wallets.
+    // Return zero-balance stub locally without making network request to /api/v1/wallet.
+    if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
+      return WalletBalanceModel(balance: 0, hasPin: false);
+    }
+
     final response = await remoteDataSource.getWallet();
     if (response.data == null) {
       throw AppException('Wallet details not found.');
@@ -46,6 +54,10 @@ class WalletRepository {
 
   Future<List<WalletTransactionModel>> getTransactions(
       {int page = 1, int limit = 20}) async {
+    if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
+      return [];
+    }
+
     final response =
         await remoteDataSource.getTransactions(page: page, limit: limit);
     return response.data ?? [];

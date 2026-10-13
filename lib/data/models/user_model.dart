@@ -27,6 +27,10 @@ class UserModel {
     this.profileImageUrl,
   });
 
+  bool get isAdmin => roleId == 1 || (roleName?.toUpperCase() == 'ADMIN');
+  bool get isManager => roleId == 2 || (roleName?.toUpperCase() == 'MANAGER');
+  bool get isPlayer => roleId == 3 || (roleName?.toUpperCase() == 'PLAYER');
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final rawImage = (json['profileImageUrl'] ??
             json['profile_image_url'] ??

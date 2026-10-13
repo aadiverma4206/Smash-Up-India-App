@@ -101,3 +101,14 @@ export const revokeSessionSchema = z.object({
     id: z.string().min(1, 'Session ID is required'),
   }),
 });
+
+export const resendOtpSchema = z.object({
+  body: z
+    .object({
+      email: z.string().email('Invalid email address').optional(),
+      identifier: z.string().optional(),
+    })
+    .refine((data) => Boolean(data.email || data.identifier), {
+      message: 'Either email or identifier is required',
+    }),
+});

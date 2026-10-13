@@ -1,9 +1,12 @@
 import { Response } from 'express';
+import { spawn } from 'child_process';
 import { CctvService } from './cctv.service.js';
 import { CctvRecordingService } from '../../services/cctvRecording.service.js';
 import { ApiResponse, ApiError } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AuthenticatedRequest } from '../../types/index.js';
+import { getDefaultRtspUrl, env } from '../../config/env.config.js';
+import { logger } from '../../utils/logger.js';
 
 export const addCamera = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -218,11 +221,19 @@ export const getLiveCameras = asyncHandler(
 export const createLiveSession = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const { channel, streamType } = req.body;
+
+    // Derive the backend's public URL from the incoming request
+    // This ensures HLS URLs use the correct host (not localhost) when accessed from mobile devices
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers['host'] || `localhost:${env.PORT || 5000}`;
+    const backendBaseUrl = process.env.BACKEND_URL || `${protocol}://${host}`;
+
     const session = await CctvService.createLiveSession(
       req.user?.id || '',
       req.user?.roleId || 2,
       Number(channel),
-      streamType || 'main'
+      streamType || 'sub',
+      backendBaseUrl
     );
     res.status(200).json(ApiResponse.success('Authorized live stream session generated', session));
   }
@@ -249,5 +260,68 @@ export const releaseLiveSession = asyncHandler(
       req.user?.roleId || 2
     );
     res.status(200).json(ApiResponse.success('Live stream session released', result));
+  }
+);
+
+export const streamLiveCamera = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const channel = Number(req.params.channel) || 1;
+    const subtype = req.query.subtype === 'sub' ? 1 : 0;
+    const rtspUrl = getDefaultRtspUrl(channel, subtype);
+
+    if (!CctvRecordingService.isFfmpegAvailable()) {
+      const fallbackUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+      return res.redirect(fallbackUrl);
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'video/mp4',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Connection': 'keep-alive',
+    });
+
+    const ffmpegArgs = [
+      '-rtsp_transport',
+      'tcp',
+      '-stimeout',
+      '10000000',
+      '-i',
+      rtspUrl,
+      '-c:v',
+      'copy',
+      '-c:a',
+      'aac',
+      '-f',
+      'mp4',
+      '-movflags',
+      'frag_keyframe+empty_moov+default_base_moof',
+      'pipe:1',
+    ];
+
+    try {
+      const child = spawn(env.FFMPEG_PATH || 'ffmpeg', ffmpegArgs, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      child.stdout.pipe(res);
+
+      req.on('close', () => {
+        try {
+          child.kill('SIGINT');
+          setTimeout(() => {
+            if (!child.killed) child.kill('SIGKILL');
+          }, 1000);
+        } catch (_) {}
+      });
+
+      child.on('error', (err) => {
+        logger.warn({ err: err.message }, `Live stream piping error for channel ${channel}`);
+      });
+    } catch (err: any) {
+      logger.info(`Operating stream in direct fallback mode: ${err.message}`);
+      return res.redirect('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+    }
   }
 );

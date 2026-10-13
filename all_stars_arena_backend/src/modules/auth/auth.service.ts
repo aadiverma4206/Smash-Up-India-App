@@ -69,6 +69,33 @@ export class AuthService {
   }
 
   /**
+   * Resend OTP (Registration or Account Verification)
+   */
+  static async resendOtp(data: { email?: string; identifier?: string }) {
+    const rawTarget = data.email || data.identifier || '';
+    const normalizedTarget = rawTarget.trim().toLowerCase();
+
+    if (!normalizedTarget) {
+      throw new ApiError(400, 'Email is required');
+    }
+
+    const user = await AuthRepository.findUserByIdentifier(normalizedTarget);
+    if (user) {
+      await createAndSendOTP(user.email, 'LOGIN', user.id);
+      return {
+        message: 'OTP resent successfully to your email',
+        email: user.email,
+      };
+    }
+
+    await createAndSendOTP(normalizedTarget, 'REGISTRATION');
+    return {
+      message: 'Verification OTP resent to your email',
+      email: normalizedTarget,
+    };
+  }
+
+  /**
    * Step 2: Verify Registration OTP
    */
   static async verifyRegisterOtp(data: {

@@ -8,17 +8,29 @@ import '../../../core/network/dio_client.dart';
 class CctvBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<CctvRemoteDataSource>(
-      () => CctvRemoteDataSource(dioClient: Get.find<DioClient>()),
-    );
-    Get.lazyPut<CctvRepository>(
-      () => CctvRepository(remoteDataSource: Get.find<CctvRemoteDataSource>()),
-    );
-    Get.lazyPut<CctvController>(
-      () => CctvController(),
-    );
-    Get.lazyPut<CctvLiveController>(
-      () => CctvLiveController(),
-    );
+    if (!Get.isRegistered<CctvRemoteDataSource>()) {
+      Get.lazyPut<CctvRemoteDataSource>(
+        () => CctvRemoteDataSource(dioClient: Get.find<DioClient>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<CctvRepository>()) {
+      Get.lazyPut<CctvRepository>(
+        () => CctvRepository(remoteDataSource: Get.find<CctvRemoteDataSource>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<CctvController>()) {
+      Get.lazyPut<CctvController>(
+        () => CctvController(),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<CctvLiveController>()) {
+      Get.lazyPut<CctvLiveController>(
+        () => CctvLiveController(),
+        fenix: true,
+      );
+    }
   }
 }

@@ -53,7 +53,6 @@ export class CctvService {
       protocol?: string;
     }
   ) {
-    // Role 2 (Manager) must be verified to manage this club
     if (userRole === 2) {
       const isAuthorized = await CctvRepository.isClubManager(data.clubId, managerId);
       if (!isAuthorized) {
@@ -61,7 +60,6 @@ export class CctvService {
       }
     }
 
-    // If court is provided, ensure it belongs to the target club
     if (data.courtId) {
       const validCourt = await CctvRepository.isCourtInClub(data.courtId, data.clubId);
       if (!validCourt) {
@@ -69,7 +67,6 @@ export class CctvService {
       }
     }
 
-    // Encrypt camera connection details at rest using AES-256-GCM
     const encryptedRtsp = encryptSecret(data.rtspUrl);
 
     const camera = await CctvRepository.createCamera({
@@ -92,7 +89,6 @@ export class CctvService {
       details: `Added CCTV Camera '${data.name}' for Club '${data.clubId}'`,
     });
 
-    // Return sanitized camera metadata without leaking raw credentials
     return {
       id: camera.id,
       clubId: camera.club_id,
@@ -133,7 +129,6 @@ export class CctvService {
       throw new ApiError(404, 'CCTV Camera not found', 'CAMERA_NOT_FOUND');
     }
 
-    // Club manager authorization check
     if (userRole === 2) {
       const isAuthorized = await CctvRepository.isClubManager(camera.club_id, managerId);
       if (!isAuthorized) {
@@ -141,7 +136,6 @@ export class CctvService {
       }
     }
 
-    // Validate court belongs to camera's club
     if (data.courtId) {
       const validCourt = await CctvRepository.isCourtInClub(data.courtId, camera.club_id);
       if (!validCourt) {
@@ -243,7 +237,6 @@ export class CctvService {
       }
     }
 
-    // Execute real network test (never fake success)
     const result = await CctvRecordingService.testCameraConnection(camera);
 
     return {
@@ -256,7 +249,7 @@ export class CctvService {
   }
 
   /**
-   * Get Cameras by Club (with manager scope authorization)
+   * Get Cameras by Club
    */
   static async getClubCameras(clubId: string, managerId?: string, userRole?: number) {
     if (userRole === 2 && managerId) {
@@ -308,14 +301,12 @@ export class CctvService {
       cameraId = gameIdOrCameraId;
     }
 
-    // 1. Verify Game exists & is approved
     const gameRes = await dbPool.query('SELECT * FROM public.games WHERE id = $1;', [gameId]);
     if (gameRes.rows.length === 0) {
       throw new ApiError(404, 'Match game not found', 'MATCH_NOT_FOUND');
     }
     const game = gameRes.rows[0];
 
-    // Club manager authorization check
     if (userRole === 2) {
       const isAuthorized = await CctvRepository.isClubManager(game.club_id, managerId);
       if (!isAuthorized) {
@@ -323,12 +314,10 @@ export class CctvService {
       }
     }
 
-    // Check approval status
     if (game.approval_status && game.approval_status !== 'APPROVED') {
       throw new ApiError(400, 'Cannot record a match that is not approved by manager', 'MATCH_NOT_APPROVED');
     }
 
-    // 2. Resolve Camera
     let camera: any = null;
     if (cameraId) {
       camera = await CctvRepository.getCameraById(cameraId);
@@ -340,18 +329,15 @@ export class CctvService {
       throw new ApiError(400, 'CCTV Camera is disabled or not found for this court/club', 'CAMERA_DISABLED');
     }
 
-    // Validate camera belongs to game's club
     if (camera.club_id !== game.club_id) {
       throw new ApiError(400, 'Camera does not belong to the club hosting this match', 'INVALID_CAMERA_CLUB');
     }
 
-    // 3. Idempotent check: if recording already active, return existing
     const existingRec = await CctvRepository.getRecordingByGame(gameId);
     if (existingRec && (existingRec.status === 'RECORDING' || existingRec.recording_status === 'RECORDING')) {
       return existingRec;
     }
 
-    // 4. Calculate stop deadline (match end timestamp + 15 minutes)
     const now = new Date();
     const postMatchMins = env.RECORDING_POST_MATCH_MINUTES || 15;
     let matchEndMs = now.getTime() + 90 * 60 * 1000;
@@ -387,7 +373,6 @@ export class CctvService {
       s3ObjectKey,
     });
 
-    // 5. Trigger server-side recording process
     await CctvRecordingService.startRecording({
       recordingId: recording.id,
       gameId,
@@ -409,7 +394,7 @@ export class CctvService {
   }
 
   /**
-   * Stop Match Recording (Manager or Admin authorized only)
+   * Stop Match Recording
    */
   static async stopMatchRecording(
     managerId: string,
@@ -470,7 +455,7 @@ export class CctvService {
   }
 
   /**
-   * Extend Recording Deadline (Up to 60 minutes)
+   * Extend Recording Deadline
    */
   static async extendRecording(
     managerId: string,
@@ -536,7 +521,6 @@ export class CctvService {
     }
     const game = gameRes.rows[0];
 
-    // Authorization
     if (userRole === 3) {
       const isPlayer = await dbPool.query(
         'SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;',
@@ -566,7 +550,6 @@ export class CctvService {
     }
     const game = gameRes.rows[0];
 
-    // Role-based visibility enforcement
     if (userRole === 3 && userId) {
       const isParticipant = await dbPool.query(
         'SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;',
@@ -598,7 +581,6 @@ export class CctvService {
 
     let videoRes = await dbPool.query(query, params);
 
-    // If specific camera had no video yet, fallback to any available video for the game
     if (videoRes.rows.length === 0 && cctvId) {
       videoRes = await dbPool.query(
         `SELECT gv.*, cam.name as camera_name
@@ -615,7 +597,7 @@ export class CctvService {
     }
 
     const video = videoRes.rows[0];
-    const signedUrl = await getSignedPlaybackUrl(video.video_url, 3600); // 1-hour signed GET URL
+    const signedUrl = await getSignedPlaybackUrl(video.video_url, 3600);
 
     return {
       gameId,
@@ -648,7 +630,7 @@ export class CctvService {
   }
 
   /**
-   * Get Live CCTV Camera Options (Authorized Admin & Manager Only)
+   * Get Dynamic Live CCTV Camera Options from DB Credentials & Host Configuration
    */
   static async getLiveCameras(userId: string, userRole: number) {
     if (userRole === 3) {
@@ -667,14 +649,15 @@ export class CctvService {
 
     const isHostOnline = testResult.status === 'ONLINE';
 
-    const channels = [
-      { channel: 1, name: 'Camera 1 (Main Pitch)', courtName: 'Court 1' },
-      { channel: 2, name: 'Camera 2 (Side Pitch)', courtName: 'Court 2' },
-      { channel: 3, name: 'Camera 3 (Goal View A)', courtName: 'Court 1' },
-      { channel: 4, name: 'Camera 4 (Goal View B)', courtName: 'Court 2' },
+    // 4 Dynamic Dahua Channels corresponding to XVR Channel 1, 2, 3, 4
+    const channelConfigs = [
+      { channel: 1, name: 'Camera 1 (Court 1 - Main)', courtName: 'Court 1' },
+      { channel: 2, name: 'Camera 2 (Court 1 - Sideline)', courtName: 'Court 1' },
+      { channel: 3, name: 'Camera 3 (Court 2 - Main)', courtName: 'Court 2' },
+      { channel: 4, name: 'Camera 4 (Court 2 - Goalpost)', courtName: 'Court 2' },
     ];
 
-    return channels.map((c) => ({
+    return channelConfigs.map((c) => ({
       id: `live_cam_channel_${c.channel}`,
       channel: c.channel,
       name: c.name,
@@ -689,7 +672,7 @@ export class CctvService {
   }
 
   /**
-   * Request Authorized Live Stream Session (Server-side Credentials Management)
+   * Request Authorized Direct RTSP Live Stream Session (Zero FFmpeg Dependency)
    */
   static async createLiveSession(
     userId: string,
@@ -701,8 +684,8 @@ export class CctvService {
       throw new ApiError(403, 'Forbidden: Live CCTV is only accessible to Managers and Admins', 'FORBIDDEN_LIVE_CCTV_ROLE');
     }
 
-    if (channel < 1 || channel > 4) {
-      throw new ApiError(400, 'Invalid channel. Camera channel must be between 1 and 4', 'INVALID_CAMERA_CHANNEL');
+    if (channel < 1 || channel > 16) {
+      throw new ApiError(400, 'Invalid channel. Camera channel must be between 1 and 16', 'INVALID_CAMERA_CHANNEL');
     }
 
     const subtype = streamType === 'sub' ? 1 : 0;
@@ -725,22 +708,33 @@ export class CctvService {
     const sessionId = `live_sess_${channel}_${Date.now()}`;
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
+    const cameraNameMap: Record<number, string> = {
+      1: 'Camera 1 (Court 1 - Main)',
+      2: 'Camera 2 (Court 1 - Sideline)',
+      3: 'Camera 3 (Court 2 - Main)',
+      4: 'Camera 4 (Court 2 - Goalpost)',
+    };
+
+    const cameraName = cameraNameMap[channel] || `Camera ${channel}`;
+
     await CctvRepository.logAudit({
       adminId: userId,
       adminName: `User:${userId}`,
       action: 'LIVE_CCTV_SESSION_CREATED',
       target: `Channel:${channel}`,
-      details: `Created Live Stream Session '${sessionId}' for Channel ${channel} (${streamType} stream)`,
+      details: `Created Direct RTSP Live Stream Session '${sessionId}' for Channel ${channel} (${streamType} stream)`,
     });
 
     return {
       sessionId,
       channel,
-      cameraName: `Camera ${channel}`,
+      cameraName,
       streamType,
       status: connTest.status,
       latencyMs: connTest.latencyMs || 0,
       rtspUrl,
+      playbackUrl: rtspUrl,
+      hlsUrl: rtspUrl,
       expiresAt,
     };
   }

@@ -55,7 +55,7 @@ export const createAndSendOTP = async (
   }
 
   // Send OTP via Resend API / Email
-  await sendOTP(normalizedIdentifier, rawOTP);
+  await sendOTP(userId, normalizedIdentifier, rawOTP);
 
   return {
     success: true,

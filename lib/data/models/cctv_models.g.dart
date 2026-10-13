@@ -110,6 +110,8 @@ CctvLiveSessionModel _$CctvLiveSessionModelFromJson(
       status: json['status'] as String,
       latencyMs: (json['latencyMs'] as num?)?.toInt() ?? 0,
       rtspUrl: json['rtspUrl'] as String,
+      hlsUrl: json['hlsUrl'] as String? ?? '',
+      hlsReady: json['hlsReady'] as bool? ?? false,
       expiresAt: json['expiresAt'] as String,
     );
 
@@ -123,5 +125,7 @@ Map<String, dynamic> _$CctvLiveSessionModelToJson(
       'status': instance.status,
       'latencyMs': instance.latencyMs,
       'rtspUrl': instance.rtspUrl,
+      'hlsUrl': instance.hlsUrl,
+      'hlsReady': instance.hlsReady,
       'expiresAt': instance.expiresAt,
     };

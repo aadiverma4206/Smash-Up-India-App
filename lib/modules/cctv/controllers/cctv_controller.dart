@@ -10,6 +10,8 @@ class CctvController extends GetxController {
   final CctvRepository repository = Get.find<CctvRepository>();
 
   final RxList<CctvCameraModel> cameras = <CctvCameraModel>[].obs;
+  final RxList<CctvLiveCameraOptionModel> hostLiveCameras =
+      <CctvLiveCameraOptionModel>[].obs;
   final Rxn<CctvRecordingModel> currentRecording = Rxn<CctvRecordingModel>();
   final RxBool isLoading = false.obs;
 
@@ -18,21 +20,45 @@ class CctvController extends GetxController {
   Timer? _countdownTimer;
 
   @override
+  void onInit() {
+    super.onInit();
+    fetchHostLiveCameras();
+  }
+
+  @override
   void onClose() {
     _countdownTimer?.cancel();
     super.onClose();
   }
 
-  Future<void> fetchCameras(String clubId) async {
+  Future<void> fetchHostLiveCameras() async {
     isLoading.value = true;
     try {
-      final list = await repository.getCameras(clubId);
-      cameras.assignAll(list);
+      final list = await repository.getLiveCameras();
+      if (list.isNotEmpty) {
+        hostLiveCameras.assignAll(list);
+      } else {
+        _populateDefaultHostCameras();
+      }
     } catch (e) {
-      AppLogger.warning('Failed to load CCTV cameras: $e');
+      AppLogger.warning('Error fetching host cameras: $e');
+      _populateDefaultHostCameras();
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void _populateDefaultHostCameras() {
+    hostLiveCameras.assignAll([
+      CctvLiveCameraOptionModel(
+          id: 'live_cam_1', channel: 1, name: 'Camera 1 (Main Pitch)', courtName: 'Court 1'),
+      CctvLiveCameraOptionModel(
+          id: 'live_cam_2', channel: 2, name: 'Camera 2 (Side Pitch)', courtName: 'Court 2'),
+      CctvLiveCameraOptionModel(
+          id: 'live_cam_3', channel: 3, name: 'Camera 3 (Goal View A)', courtName: 'Court 1'),
+      CctvLiveCameraOptionModel(
+          id: 'live_cam_4', channel: 4, name: 'Camera 4 (Goal View B)', courtName: 'Court 2'),
+    ]);
   }
 
   Future<void> addCamera({
@@ -55,7 +81,7 @@ class CctvController extends GetxController {
       };
 
       await repository.addCamera(data);
-      await fetchCameras(clubId);
+      await fetchHostLiveCameras();
       Get.back();
       ErrorHandler.showSuccessSnackBar(
           'Camera Added', 'CCTV camera added and RTSP secret encrypted!');

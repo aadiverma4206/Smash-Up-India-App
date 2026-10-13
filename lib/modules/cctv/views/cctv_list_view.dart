@@ -1,49 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/cctv_controller.dart';
+import '../controllers/cctv_live_controller.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../app/routes/app_routes.dart';
 
-class CctvListView extends GetView<CctvController> {
+class CctvListView extends StatelessWidget {
   const CctvListView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
+    // Fail-safe controller resolution
+    final controller = Get.isRegistered<CctvLiveController>()
+        ? Get.find<CctvLiveController>()
+        : Get.put(CctvLiveController());
+
     return Scaffold(
+      backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        title: const Text('CCTV Cameras & Live Stream'),
+        title: Text(
+          'Live CCTV Network',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+            (isDark ? AppColors.darkAppBar : AppColors.sageGreenAppBar),
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: isDark ? Colors.white : Colors.black87,
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.videocam_outlined),
-            tooltip: 'Live CCTV Stream',
-            onPressed: () => Get.toNamed(Routes.cctvLive),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Add Camera',
-            onPressed: () => Get.toNamed('/manager/cctv/add'),
+            icon: Icon(
+              Icons.refresh_rounded,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+            tooltip: 'Refresh Cameras',
+            onPressed: () => controller.selectCamera(controller.selectedChannel.value),
           ),
         ],
       ),
       body: Obx(() {
-        if (controller.isLoading.value && controller.cameras.isEmpty) {
-          return const AppLoader(message: 'Loading CCTV cameras...');
+        if (controller.isLoading.value && controller.cameraOptions.isEmpty) {
+          return const AppLoader(message: 'Fetching CCTV channels from DVR host...');
         }
 
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Prominent Live CCTV Hero Card Banner for Admin & Managers
+            // Top Live Feed Overview Banner Card (Light & Dark Mode Compatible)
             Card(
-              elevation: 4,
+              elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: const BorderSide(color: AppColors.primary, width: 1.5),
               ),
-              color: const Color(0xFF1E1E1E),
+              color: isDark ? const Color(0xFF1E1E1E) : context.cardColor,
               child: InkWell(
-                onTap: () => Get.toNamed(Routes.cctvLive),
+                onTap: () =>
+                    Get.toNamed('/manager/cctv/live', arguments: {'channel': 1}),
                 borderRadius: BorderRadius.circular(16),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -68,10 +87,10 @@ class CctvListView extends GetView<CctvController> {
                           children: [
                             Row(
                               children: [
-                                const Text(
+                                Text(
                                   'Live CCTV Feed',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: context.textPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
                                   ),
@@ -96,10 +115,10 @@ class CctvListView extends GetView<CctvController> {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              '4 Dahua Camera Channels (Pitch 1 & 2)',
+                            Text(
+                              'Dahua XVR Host • 192.168.1.2:554',
                               style: TextStyle(
-                                color: Colors.grey,
+                                color: context.textSecondary,
                                 fontSize: 13,
                               ),
                             ),
@@ -107,9 +126,9 @@ class CctvListView extends GetView<CctvController> {
                         ),
                       ),
                       const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Colors.white70,
-                        size: 28,
+                        Icons.play_circle_fill_rounded,
+                        color: AppColors.primary,
+                        size: 32,
                       ),
                     ],
                   ),
@@ -118,55 +137,52 @@ class CctvListView extends GetView<CctvController> {
             ),
 
             const SizedBox(height: 20),
-            const Text(
-              'Configured Camera List',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Detected Camera Channels',
+                  style: TextStyle(
+                    color: context.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  '${controller.cameraOptions.length} Channels',
+                  style: TextStyle(
+                    color: context.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
 
-            if (controller.cameras.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  children: [
-                    Icon(Icons.videocam_outlined, size: 40, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text(
-                      'No Static Cameras Configured',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Live CCTV feed is available above via Dahua XVR channels.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-              )
-            else
-              ...List.generate(controller.cameras.length, (index) {
-                final cam = controller.cameras[index];
-                final isOnline =
-                    cam.status == 'ONLINE' && cam.healthStatus == 'ONLINE';
+            // Automatically Fetched Camera Cards
+            ...List.generate(controller.cameraOptions.length, (index) {
+              final cam = controller.cameraOptions[index];
+              final status = controller.channelStatuses[cam.channel] ?? cam.status;
+              final isOnline = status == 'Live' || status == 'ONLINE' || status == 'Connecting';
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: isOnline ? AppColors.primary : AppColors.error,
-                        width: 1.2,
-                      ),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: isOnline ? AppColors.primary : Colors.red.shade400,
+                      width: 1.2,
                     ),
+                  ),
+                  color: context.cardColor,
+                  child: InkWell(
+                    onTap: () => Get.toNamed(
+                      '/manager/cctv/live',
+                      arguments: {'channel': cam.channel},
+                    ),
+                    borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
@@ -174,20 +190,42 @@ class CctvListView extends GetView<CctvController> {
                         children: [
                           Row(
                             children: [
-                              Icon(
-                                Icons.videocam,
-                                color:
-                                    isOnline ? AppColors.primary : AppColors.error,
-                                size: 28,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isOnline
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : Colors.red.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.videocam_rounded,
+                                  color: isOnline
+                                      ? AppColors.primary
+                                      : Colors.red,
+                                  size: 24,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  cam.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      cam.name,
+                                      style: TextStyle(
+                                        color: context.textPrimary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${cam.courtName ?? "Pitch View"} • Channel ${cam.channel}',
+                                      style: TextStyle(
+                                          color: context.textSecondary,
+                                          fontSize: 12),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Container(
@@ -195,65 +233,68 @@ class CctvListView extends GetView<CctvController> {
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: isOnline
-                                      ? AppColors.primary.withValues(alpha: 0.15)
-                                      : AppColors.error.withValues(alpha: 0.15),
+                                      ? Colors.green.withValues(alpha: 0.15)
+                                      : Colors.red.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: Text(
-                                  cam.healthStatus,
-                                  style: TextStyle(
-                                    color: isOnline
-                                        ? AppColors.primary
-                                        : AppColors.error,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: isOnline
+                                            ? Colors.green
+                                            : Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      status,
+                                      style: TextStyle(
+                                        color: isOnline
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Court: ${cam.courtName ?? "Unassigned"} • Type: ${cam.cameraType}',
-                            style: TextStyle(
-                                color: context.textSecondary, fontSize: 13),
-                          ),
-                          Text(
-                            'IP: ${cam.ipAddress ?? "192.168.1.2"}',
-                            style: TextStyle(
-                                color: context.textSecondary, fontSize: 12),
-                          ),
                           const SizedBox(height: 14),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              OutlinedButton.icon(
-                                onPressed: () => controller.testCamera(cam.id),
-                                icon: const Icon(Icons.network_check_rounded,
-                                    size: 16),
-                                label: const Text('Test Connection',
-                                    style: TextStyle(fontSize: 13)),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 8),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
+                              Text(
+                                'Host: 192.168.1.2:554',
+                                style: TextStyle(
+                                    color: context.textSecondary,
+                                    fontSize: 12),
                               ),
-                              const SizedBox(width: 8),
                               ElevatedButton.icon(
-                                onPressed: () => Get.toNamed(Routes.cctvLive),
-                                icon: const Icon(Icons.play_circle_fill,
-                                    size: 16),
-                                label: const Text('Watch Live',
-                                    style: TextStyle(fontSize: 13)),
+                                onPressed: () => Get.toNamed(
+                                  '/manager/cctv/live',
+                                  arguments: {'channel': cam.channel},
+                                ),
+                                icon: const Icon(Icons.play_arrow_rounded,
+                                    size: 18),
+                                label: const Text('Watch Live Footage',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold)),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 8),
                                   minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
                               ),
                             ],
@@ -262,8 +303,9 @@ class CctvListView extends GetView<CctvController> {
                       ),
                     ),
                   ),
-                );
-              }),
+                ),
+              );
+            }),
           ],
         );
       }),

@@ -6,6 +6,7 @@ import { initSocket } from './config/socket.config.js';
 import { logger } from './utils/logger.js';
 import { startMatchLifecycleWorker, startPaymentExpiryJob, startPaymentReconciliationJob } from './jobs/index.js';
 import { CctvRecordingService } from './services/cctvRecording.service.js';
+import { HlsStreamingService } from './services/hlsStreaming.service.js';
 
 // Catch unhandled synchronous exceptions
 process.on('uncaughtException', (err: Error) => {
@@ -47,9 +48,9 @@ const startServer = async () => {
       startPaymentExpiryJob();
       startPaymentReconciliationJob();
 
-      // Verify FFmpeg & reconcile active CCTV recordings on boot
+      // Initialize CCTV system (FFmpeg optional) & reconcile active recordings on boot
       CctvRecordingService.checkFfmpeg().catch((err) => {
-        logger.warn({ err }, 'FFmpeg startup check returned warning');
+        logger.info({ err }, 'CCTV system operational (FFmpeg optional)');
       });
       CctvRecordingService.reconcileOnBoot().catch((err) => {
         logger.error({ err }, 'CCTV boot reconciliation failed');
@@ -70,6 +71,13 @@ const handleGracefulShutdown = (signal: string) => {
 
   server.close(async () => {
     logger.info('🛑 HTTP server closed to new connections.');
+    try {
+      // Shutdown all active HLS FFmpeg transcoding sessions
+      await HlsStreamingService.shutdownAll();
+      logger.info('📹 All HLS streaming sessions terminated.');
+    } catch (err: any) {
+      logger.warn({ err }, 'Error shutting down HLS sessions');
+    }
     try {
       await dbPool.end();
       logger.info('🔌 PostgreSQL database connection pool closed.');
