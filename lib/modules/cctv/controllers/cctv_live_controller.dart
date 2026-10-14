@@ -1,13 +1,12 @@
-﻿import 'package:video_player/video_player.dart';
+﻿import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:get/get.dart';
+import 'package:dio/dio.dart';
 import '../repositories/cctv_repository.dart';
 import '../../../data/models/cctv_models.dart';
 import '../../../core/utils/app_logger.dart';
 
-/// Controller for dynamic live CCTV streaming view.
-///
-/// Fetches camera channels dynamically from host credentials / backend database.
-/// Connects directly to camera RTSP stream credentials with zero FFmpeg dependency.
+/// Controller for dynamic live CCTV direct RTSP playback using MediaKit native textures.
 class CctvLiveController extends GetxController {
   final CctvRepository repository = Get.find<CctvRepository>();
 
@@ -15,20 +14,22 @@ class CctvLiveController extends GetxController {
       <CctvLiveCameraOptionModel>[].obs;
   final RxInt selectedChannel = 1.obs;
 
-  // Default to 'sub' stream (lower bitrate, better for mobile)
+  // Default to 'sub' stream (lower bitrate, optimized for mobile)
   final RxString streamType = 'sub'.obs;
 
   final Rxn<CctvLiveSessionModel> currentSession = Rxn<CctvLiveSessionModel>();
   final RxMap<int, String> channelStatuses = <int, String>{}.obs;
 
   final RxBool isLoading = false.obs;
+  final RxBool isLoadingChannel = false.obs;
   final RxBool isPlayerInitializing = false.obs;
   final RxBool isPlaying = false.obs;
   final RxBool isFullscreen = false.obs;
   final RxBool isMuted = true.obs;
   final RxString errorMessage = ''.obs;
 
-  VideoPlayerController? videoPlayerController;
+  Player? player;
+  VideoController? videoController;
 
   @override
   void onInit() {
@@ -50,16 +51,22 @@ class CctvLiveController extends GetxController {
     super.onClose();
   }
 
+  /// Helper to redact embedded credentials from RTSP URLs for safe logging and UI display.
+  String sanitizeRtspUrl(String raw) {
+    if (raw.isEmpty) return raw;
+    return raw.replaceAll(RegExp(r'rtsp://[^@]+@'), 'rtsp://***:***@');
+  }
+
   Future<void> _disposePlayer() async {
-    if (videoPlayerController != null) {
+    final playerToDispose = player;
+    player = null;
+    videoController = null;
+    if (playerToDispose != null) {
       try {
-        videoPlayerController!.removeListener(_videoListener);
-        await videoPlayerController!.pause();
-        await videoPlayerController!.dispose();
+        await playerToDispose.dispose();
       } catch (e) {
-        AppLogger.warning('Error disposing VideoPlayer: $e');
+        AppLogger.warning('Safe dispose MediaKit Player: $e');
       }
-      videoPlayerController = null;
     }
   }
 
@@ -126,6 +133,9 @@ class CctvLiveController extends GetxController {
 
   Future<void> selectCamera(int channel) async {
     if (channel < 1) return;
+    if (isLoadingChannel.value && selectedChannel.value == channel) return;
+
+    isLoadingChannel.value = true;
     selectedChannel.value = channel;
     channelStatuses[channel] = 'Connecting';
     errorMessage.value = '';
@@ -147,85 +157,94 @@ class CctvLiveController extends GetxController {
       if (session.status == 'OFFLINE') {
         channelStatuses[channel] = 'Offline';
         errorMessage.value =
-            'DVR Host 192.168.1.2:554 is unreachable.\n'
-            '• Connect mobile device to local court Wi-Fi (192.168.1.x).';
+            'DVR Host is unreachable from the court network.\n'
+            'Please verify camera power and network connectivity.';
         isPlayerInitializing.value = false;
+        isLoadingChannel.value = false;
         return;
       }
 
-      final streamUrl = session.playbackUrl;
+      final rtspStreamUrl = session.playbackUrl;
 
-      if (streamUrl.isEmpty) {
+      if (rtspStreamUrl.isEmpty) {
         channelStatuses[channel] = 'Offline';
         errorMessage.value =
-            'Network unreachable: DVR IP 192.168.1.2:554 cannot be reached directly from this device.';
+            'Unable to generate RTSP stream URL for Channel $channel.';
         isPlayerInitializing.value = false;
+        isLoadingChannel.value = false;
         return;
       }
 
+      final sanitizedLogUrl = sanitizeRtspUrl(rtspStreamUrl);
       AppLogger.info(
-          'Connecting VideoPlayer to Channel $channel (${streamType.value.toUpperCase()}): $streamUrl');
+          'Connecting MediaKit Player to Channel $channel (${streamType.value.toUpperCase()}): $sanitizedLogUrl');
 
-      final controller = VideoPlayerController.networkUrl(
-        Uri.parse(streamUrl),
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-        httpHeaders: {
-          'Accept': '*/*',
-          'Connection': 'keep-alive',
-        },
+      final newPlayer = Player(
+        configuration: const PlayerConfiguration(
+          bufferSize: 32 * 1024 * 1024,
+        ),
       );
 
-      videoPlayerController = controller;
-      controller.addListener(_videoListener);
+      final newVideoController = VideoController(newPlayer);
 
-      await controller.initialize().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception(
-              'Stream initialization timed out. The camera stream at 192.168.1.2:554 is not responding.');
-        },
-      );
+      player = newPlayer;
+      videoController = newVideoController;
 
-      await controller.setVolume(isMuted.value ? 0.0 : 1.0);
-      await controller.play();
+      newPlayer.stream.playing.listen((playing) {
+        if (playing && !isPlaying.value) {
+          isPlaying.value = true;
+          channelStatuses[channel] = 'Live';
+          errorMessage.value = '';
+        }
+      });
+
+      newPlayer.stream.error.listen((err) {
+        if (err.isNotEmpty) {
+          isPlaying.value = false;
+          channelStatuses[channel] = 'Connection failed';
+          errorMessage.value = sanitizeRtspUrl(err);
+        }
+      });
+
+      await newPlayer.open(Media(rtspStreamUrl));
+      if (isMuted.value) {
+        await newPlayer.setVolume(0.0);
+      } else {
+        await newPlayer.setVolume(100.0);
+      }
 
       isPlaying.value = true;
       channelStatuses[channel] = 'Live';
       errorMessage.value = '';
       isPlayerInitializing.value = false;
     } catch (e) {
-      final errStr = e.toString();
-      AppLogger.error('Failed to initialize live camera session: $e');
+      final errStr = sanitizeRtspUrl(e.toString());
+      AppLogger.error('Failed to initialize live camera RTSP session: $errStr');
 
       channelStatuses[channel] = 'Connection failed';
-      if (errStr.contains('ExoPlaybackSource') ||
-          errStr.contains('Source error') ||
-          errStr.contains('timeout')) {
-        errorMessage.value =
-            'Network unreachable: 192.168.1.2:554 cannot be reached from this device.\n'
-            'Please connect device to court Wi-Fi (192.168.1.x).';
+      if (e is DioException) {
+        final statusCode = e.response?.statusCode;
+        if (statusCode == 403) {
+          errorMessage.value =
+              'Access Denied: Live CCTV is only accessible to Managers and Admins.';
+        } else if (statusCode == 504) {
+          errorMessage.value =
+              'DVR is unreachable from the backend server.\n'
+              'Please check court network connectivity.';
+        } else if (statusCode == 401) {
+          errorMessage.value = 'Session expired. Please log in again.';
+        } else {
+          errorMessage.value =
+              'Connection failed (HTTP $statusCode): ${e.response?.statusMessage ?? "Server error"}';
+        }
       } else {
         errorMessage.value =
             'Connection failed: ${errStr.replaceAll('Exception: ', '').replaceAll('PlatformException(', '').replaceAll(')', '')}';
       }
       isPlayerInitializing.value = false;
       isPlaying.value = false;
-    }
-  }
-
-  void _videoListener() {
-    if (videoPlayerController == null) return;
-    final value = videoPlayerController!.value;
-
-    if (value.hasError) {
-      isPlaying.value = false;
-      channelStatuses[selectedChannel.value] = 'Connection failed';
-      errorMessage.value =
-          value.errorDescription ?? 'RTSP stream decoding error.';
-    } else if (value.isPlaying && !isPlaying.value) {
-      isPlaying.value = true;
-      channelStatuses[selectedChannel.value] = 'Live';
-      errorMessage.value = '';
+    } finally {
+      isLoadingChannel.value = false;
     }
   }
 
@@ -244,9 +263,8 @@ class CctvLiveController extends GetxController {
 
   void toggleMute() {
     isMuted.value = !isMuted.value;
-    if (videoPlayerController != null &&
-        videoPlayerController!.value.isInitialized) {
-      videoPlayerController!.setVolume(isMuted.value ? 0.0 : 1.0);
+    if (player != null) {
+      player!.setVolume(isMuted.value ? 0.0 : 100.0);
     }
   }
 }

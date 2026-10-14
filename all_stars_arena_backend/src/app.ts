@@ -77,30 +77,6 @@ app.get('/', (_req: Request, res: Response) => {
 // Swagger OpenAPI Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// HLS Static File Serving for Live CCTV Streams
-// FFmpeg writes HLS .m3u8 playlists and .ts segments to temp_hls/<sessionId>/
-// Flutter's video_player fetches these files via HTTP (HLS is fully supported; RTSP is NOT)
-const hlsDir = path.resolve(process.cwd(), 'temp_hls');
-if (!fs.existsSync(hlsDir)) {
-  fs.mkdirSync(hlsDir, { recursive: true });
-}
-app.use('/hls', (req: Request, res: Response, next: NextFunction) => {
-  // Security: only allow access to .m3u8 and .ts files; block traversal attempts
-  const cleanPath = path.normalize(req.path).replace(/^(\.\.(\/|\\|$))+/, '');
-  if (!cleanPath.endsWith('.m3u8') && !cleanPath.endsWith('.ts')) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Cache-Control', 'no-cache, no-store');
-  if (cleanPath.endsWith('.m3u8')) {
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-  } else if (cleanPath.endsWith('.ts')) {
-    res.setHeader('Content-Type', 'video/mp2t');
-  }
-  next();
-}, express.static(hlsDir, { dotfiles: 'deny' }));
-
 // API Master Router
 app.use('/api/v1', apiRoutes);
 

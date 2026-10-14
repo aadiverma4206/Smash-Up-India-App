@@ -6,7 +6,6 @@ import { initSocket } from './config/socket.config.js';
 import { logger } from './utils/logger.js';
 import { startMatchLifecycleWorker, startPaymentExpiryJob, startPaymentReconciliationJob } from './jobs/index.js';
 import { CctvRecordingService } from './services/cctvRecording.service.js';
-import { HlsStreamingService } from './services/hlsStreaming.service.js';
 
 // Catch unhandled synchronous exceptions
 process.on('uncaughtException', (err: Error) => {
@@ -71,13 +70,6 @@ const handleGracefulShutdown = (signal: string) => {
 
   server.close(async () => {
     logger.info('🛑 HTTP server closed to new connections.');
-    try {
-      // Shutdown all active HLS FFmpeg transcoding sessions
-      await HlsStreamingService.shutdownAll();
-      logger.info('📹 All HLS streaming sessions terminated.');
-    } catch (err: any) {
-      logger.warn({ err }, 'Error shutting down HLS sessions');
-    }
     try {
       await dbPool.end();
       logger.info('🔌 PostgreSQL database connection pool closed.');

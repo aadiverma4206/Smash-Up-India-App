@@ -1,5 +1,5 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:get/get.dart';
 import '../controllers/cctv_live_controller.dart';
 import '../../../data/models/cctv_models.dart';
@@ -73,7 +73,7 @@ class CctvLiveView extends StatelessWidget {
 
           return Column(
             children: [
-              // 1. Live Video Player Display Frame (Constrained 16:9 AspectRatio)
+              // 1. Live Video Player Display Frame
               Expanded(
                 flex: isFS ? 1 : 0,
                 child: AspectRatio(
@@ -100,7 +100,7 @@ class CctvLiveView extends StatelessWidget {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          _buildPlayerContent(context, controller),
+                          _buildPlayerContent(context, controller, isFS),
 
                           // Top-Left Live Status Overlay Badge
                           Positioned(
@@ -137,7 +137,7 @@ class CctvLiveView extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'Dahua XVR • Channel ${controller.selectedChannel.value} (${controller.streamType.value.toUpperCase()})',
+                                'Direct RTSP • Channel ${controller.selectedChannel.value} (${controller.streamType.value.toUpperCase()})',
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 10,
@@ -227,7 +227,7 @@ class CctvLiveView extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '🔐 Direct RTSP stream connection. Local DVR IP (192.168.1.2) requires court Wi-Fi network.',
+                          '🔒 Direct RTSP Stream via MediaKit native video decoder. No server-side FFmpeg transcoding required.',
                           style: TextStyle(
                               color: context.textSecondary,
                               fontSize: 11,
@@ -246,7 +246,16 @@ class CctvLiveView extends StatelessWidget {
   }
 
   Widget _buildPlayerContent(
-      BuildContext context, CctvLiveController controller) {
+      BuildContext context, CctvLiveController controller, bool isFS) {
+    if (controller.videoController != null) {
+      return Video(
+        key: ValueKey('media_kit_${controller.selectedChannel.value}_${controller.videoController.hashCode}'),
+        controller: controller.videoController!,
+        fit: BoxFit.cover,
+        controls: NoVideoControls,
+      );
+    }
+
     if (controller.isPlayerInitializing.value) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -258,18 +267,6 @@ class CctvLiveView extends StatelessWidget {
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
-      );
-    }
-
-    if (controller.videoPlayerController != null &&
-        controller.videoPlayerController!.value.isInitialized) {
-      return FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: controller.videoPlayerController!.value.size.width,
-          height: controller.videoPlayerController!.value.size.height,
-          child: VideoPlayer(controller.videoPlayerController!),
-        ),
       );
     }
 
@@ -300,7 +297,7 @@ class CctvLiveView extends StatelessWidget {
               Text(
                 controller.errorMessage.value.isNotEmpty
                     ? controller.errorMessage.value
-                    : 'Unable to establish RTSP stream connection to 192.168.1.2:554.',
+                    : 'Unable to establish RTSP stream connection to camera.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white54, fontSize: 10),
                 maxLines: 2,

@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:media_kit/media_kit.dart';
 import 'app/bindings/initial_binding.dart';
 import 'core/config/env_config.dart';
 import 'core/storage/preferences_service.dart';
@@ -11,6 +12,7 @@ import 'firebase_options.dart';
 
 Future<void> bootstrap({String envFile = '.env.dev'}) async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   // Initialize Firebase (safely)
   try {

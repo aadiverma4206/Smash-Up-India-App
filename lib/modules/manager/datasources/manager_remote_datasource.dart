@@ -255,7 +255,22 @@ class ManagerRemoteDataSource {
     );
     return ApiResponseParser.parse<List<Map<String, dynamic>>>(
       response.data,
-      (json) => (json as List).map((e) => e as Map<String, dynamic>).toList(),
+      (json) {
+        if (json is List) {
+          return json.map((e) => e as Map<String, dynamic>).toList();
+        }
+        if (json is Map<String, dynamic> && json['players'] is List) {
+          return (json['players'] as List)
+              .map((e) => e as Map<String, dynamic>)
+              .toList();
+        }
+        if (json is Map<String, dynamic> && json['data'] is List) {
+          return (json['data'] as List)
+              .map((e) => e as Map<String, dynamic>)
+              .toList();
+        }
+        return <Map<String, dynamic>>[];
+      },
     );
   }
 

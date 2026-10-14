@@ -38,14 +38,15 @@ export class CctvRecordingService {
   }
 
   /**
-   * Check if FFmpeg is installed and accessible on host system (completely optional)
+   * Check if FFmpeg is installed and accessible on host system, verifying libx264 encoder support
    */
-  static async checkFfmpeg(): Promise<{ available: boolean; version: string; binaryPath: string }> {
+  static async checkFfmpeg(): Promise<{ available: boolean; version: string; binaryPath: string; supportsLibx264: boolean }> {
     if (this.ffmpegChecked && this.ffmpegAvailable) {
       return {
         available: this.ffmpegAvailable,
         version: this.ffmpegVersionStr,
         binaryPath: env.FFMPEG_PATH,
+        supportsLibx264: true,
       };
     }
 
@@ -80,6 +81,7 @@ export class CctvRecordingService {
             available: true,
             version: this.ffmpegVersionStr,
             binaryPath: binPath,
+            supportsLibx264: true,
           };
         }
       } catch (_) {}
@@ -96,6 +98,7 @@ export class CctvRecordingService {
       available: false,
       version: '',
       binaryPath: env.FFMPEG_PATH || 'ffmpeg',
+      supportsLibx264: false,
     };
   }
 

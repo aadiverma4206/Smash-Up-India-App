@@ -37,6 +37,12 @@ android {
         versionName = flutter.versionName
     }
 
+    packaging {
+        jniLibs {
+            keepDebugSymbols.add("**/*.so")
+        }
+    }
+
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("debug")

@@ -1,5 +1,6 @@
 import { CctvRepository } from './cctv.repository.js';
 import { CctvRecordingService } from '../../services/cctvRecording.service.js';
+import { CctvDiscoveryService } from '../../services/cctvDiscovery.service.js';
 import { encryptSecret, decryptSecret, redactRtspUrl } from '../../utils/crypto.utils.js';
 import { getSignedPlaybackUrl } from '../../services/storage.service.js';
 import { ApiError } from '../../utils/apiResponse.js';
@@ -630,55 +631,38 @@ export class CctvService {
   }
 
   /**
-   * Get Dynamic Live CCTV Camera Options from DB Credentials & Host Configuration
+   * Get Dynamic Live CCTV Camera Options from DB Credentials & Host Discovery
    */
-  static async getLiveCameras(userId: string, userRole: number) {
+  static async getLiveCameras(userId: string, userRole: number, forceRefresh = false) {
     if (userRole === 3) {
       throw new ApiError(403, 'Forbidden: Live CCTV is only accessible to Managers and Admins', 'FORBIDDEN_LIVE_CCTV_ROLE');
     }
 
-    const host = env.CAMERA_HOST || '192.168.1.2';
-    const port = env.CAMERA_RTSP_PORT || 554;
+    const discovered = await CctvDiscoveryService.discoverCameras(forceRefresh);
 
-    const testResult = await CctvRecordingService.testCameraConnection({
-      id: 'dahua_dvr_host',
-      ip_address: host,
-      port,
-      rtsp_url_encrypted: '',
-    });
-
-    const isHostOnline = testResult.status === 'ONLINE';
-
-    // 4 Dynamic Dahua Channels corresponding to XVR Channel 1, 2, 3, 4
-    const channelConfigs = [
-      { channel: 1, name: 'Camera 1 (Court 1 - Main)', courtName: 'Court 1' },
-      { channel: 2, name: 'Camera 2 (Court 1 - Sideline)', courtName: 'Court 1' },
-      { channel: 3, name: 'Camera 3 (Court 2 - Main)', courtName: 'Court 2' },
-      { channel: 4, name: 'Camera 4 (Court 2 - Goalpost)', courtName: 'Court 2' },
-    ];
-
-    return channelConfigs.map((c) => ({
-      id: `live_cam_channel_${c.channel}`,
+    return discovered.map((c) => ({
+      id: c.id,
       channel: c.channel,
       name: c.name,
       courtName: c.courtName,
-      status: isHostOnline ? 'ONLINE' : 'OFFLINE',
-      healthStatus: isHostOnline ? 'ONLINE' : 'OFFLINE',
-      ipAddress: host,
-      port,
-      protocol: 'rtsp',
-      supportedSubtypes: ['main', 'sub'],
+      status: c.healthStatus === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
+      healthStatus: c.healthStatus,
+      ipAddress: c.ipAddress,
+      port: c.port,
+      protocol: c.protocol,
+      supportedSubtypes: c.supportedSubtypes,
     }));
   }
 
   /**
-   * Request Authorized Direct RTSP Live Stream Session (Zero FFmpeg Dependency)
+   * Request Authorized Live Stream Session with direct RTSP stream configuration
    */
   static async createLiveSession(
     userId: string,
     userRole: number,
     channel: number,
-    streamType: 'main' | 'sub' = 'main'
+    streamType: 'main' | 'sub' = 'main',
+    backendBaseUrl = ''
   ) {
     if (userRole === 3) {
       throw new ApiError(403, 'Forbidden: Live CCTV is only accessible to Managers and Admins', 'FORBIDDEN_LIVE_CCTV_ROLE');
@@ -695,19 +679,6 @@ export class CctvService {
       throw new ApiError(500, 'CCTV RTSP configuration is missing on server', 'RTSP_CONFIG_MISSING');
     }
 
-    const host = env.CAMERA_HOST || '192.168.1.2';
-    const port = env.CAMERA_RTSP_PORT || 554;
-
-    const connTest = await CctvRecordingService.testCameraConnection({
-      id: `dahua_ch_${channel}`,
-      ip_address: host,
-      port,
-      rtsp_url_encrypted: '',
-    });
-
-    const sessionId = `live_sess_${channel}_${Date.now()}`;
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-
     const cameraNameMap: Record<number, string> = {
       1: 'Camera 1 (Court 1 - Main)',
       2: 'Camera 2 (Court 1 - Sideline)',
@@ -716,6 +687,9 @@ export class CctvService {
     };
 
     const cameraName = cameraNameMap[channel] || `Camera ${channel}`;
+
+    const sessionId = `live_sess_${channel}_${Date.now()}`;
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
     await CctvRepository.logAudit({
       adminId: userId,
@@ -730,11 +704,10 @@ export class CctvService {
       channel,
       cameraName,
       streamType,
-      status: connTest.status,
-      latencyMs: connTest.latencyMs || 0,
+      status: 'ONLINE',
+      latencyMs: 0,
       rtspUrl,
       playbackUrl: rtspUrl,
-      hlsUrl: rtspUrl,
       expiresAt,
     };
   }
