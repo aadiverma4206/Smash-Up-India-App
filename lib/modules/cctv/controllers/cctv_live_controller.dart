@@ -34,6 +34,10 @@ class CctvLiveController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    try {
+      MediaKit.ensureInitialized();
+    } catch (_) {}
+
     int initialChannel = 1;
     final args = Get.arguments;
     if (args is Map<String, dynamic> && args['channel'] != null) {
@@ -133,7 +137,21 @@ class CctvLiveController extends GetxController {
 
   Future<void> selectCamera(int channel) async {
     if (channel < 1) return;
-    if (isLoadingChannel.value && selectedChannel.value == channel) return;
+
+    // Guard against premature disposal / recreation if player is already active on target channel & streamType
+    if (player != null &&
+        videoController != null &&
+        currentSession.value != null &&
+        currentSession.value!.channel == channel &&
+        currentSession.value!.streamType == streamType.value &&
+        selectedChannel.value == channel &&
+        isPlaying.value) {
+      AppLogger.info(
+          'Channel $channel (${streamType.value.toUpperCase()}) is already active and playing. Skipping disposal.');
+      return;
+    }
+
+    if (isLoadingChannel.value) return;
 
     isLoadingChannel.value = true;
     selectedChannel.value = channel;
@@ -185,37 +203,92 @@ class CctvLiveController extends GetxController {
         ),
       );
 
-      final newVideoController = VideoController(newPlayer);
+      // Safe libmpv property settings for low-latency TCP RTSP playback
+      if (newPlayer.platform is NativePlayer) {
+        final mpv = newPlayer.platform as NativePlayer;
+        await mpv.setProperty('rtsp-transport', 'tcp');
+        await mpv.setProperty('network-timeout', '10');
+        await mpv.setProperty('hwdec', 'auto-safe');
+        await mpv.setProperty('profile', 'low-latency');
+      }
+
+      final newVideoController = VideoController(
+        newPlayer,
+        configuration: const VideoControllerConfiguration(
+          enableHardwareAcceleration: true,
+        ),
+      );
 
       player = newPlayer;
       videoController = newVideoController;
 
+      // --- Safe, Detailed MediaKit Player Stream Diagnostics ---
       newPlayer.stream.playing.listen((playing) {
-        if (playing && !isPlaying.value) {
+        AppLogger.info(
+            '📹 [CCTV Diagnostic] Stream Playing: $playing (Channel $channel)');
+        if (playing) {
           isPlaying.value = true;
           channelStatuses[channel] = 'Live';
           errorMessage.value = '';
         }
       });
 
-      newPlayer.stream.error.listen((err) {
-        if (err.isNotEmpty) {
-          isPlaying.value = false;
-          channelStatuses[channel] = 'Connection failed';
-          errorMessage.value = sanitizeRtspUrl(err);
+      newPlayer.stream.buffering.listen((buffering) {
+        AppLogger.info(
+            '⏳ [CCTV Diagnostic] Stream Buffering: $buffering (Channel $channel)');
+      });
+
+      newPlayer.stream.width.listen((width) {
+        if (width != null && width > 0) {
+          AppLogger.info(
+              '📐 [CCTV Diagnostic] Stream Video Width: ${width}px (Channel $channel)');
+          isPlaying.value = true;
+          channelStatuses[channel] = 'Live';
+          errorMessage.value = '';
         }
       });
 
-      await newPlayer.open(Media(rtspStreamUrl));
+      newPlayer.stream.height.listen((height) {
+        if (height != null && height > 0) {
+          AppLogger.info(
+              '📐 [CCTV Diagnostic] Stream Video Height: ${height}px (Channel $channel)');
+        }
+      });
+
+      newPlayer.stream.position.listen((position) {
+        if (position.inSeconds > 0 && position.inSeconds % 10 == 0) {
+          AppLogger.info(
+              '⏱️ [CCTV Diagnostic] Stream Position: ${position.inSeconds}s (Channel $channel)');
+        }
+      });
+
+      newPlayer.stream.error.listen((err) {
+        if (err.isNotEmpty) {
+          final sanitizedErr = sanitizeRtspUrl(err);
+          AppLogger.error(
+              '❌ [CCTV Diagnostic] Stream Error: $sanitizedErr (Channel $channel)');
+          isPlaying.value = false;
+          channelStatuses[channel] = 'Connection failed';
+          errorMessage.value = sanitizedErr;
+        }
+      });
+
+      // Open RTSP stream with timeout safety
+      await newPlayer.open(Media(rtspStreamUrl)).timeout(
+        const Duration(seconds: 12),
+        onTimeout: () {
+          AppLogger.warning(
+              '⚠️ [CCTV Diagnostic] RTSP stream open timed out after 12s for Channel $channel');
+          throw Exception('RTSP connection timed out. Camera stream did not respond.');
+        },
+      );
+
       if (isMuted.value) {
         await newPlayer.setVolume(0.0);
       } else {
         await newPlayer.setVolume(100.0);
       }
 
-      isPlaying.value = true;
-      channelStatuses[channel] = 'Live';
-      errorMessage.value = '';
       isPlayerInitializing.value = false;
     } catch (e) {
       final errStr = sanitizeRtspUrl(e.toString());

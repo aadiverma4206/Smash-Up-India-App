@@ -248,11 +248,13 @@ class CctvLiveView extends StatelessWidget {
   Widget _buildPlayerContent(
       BuildContext context, CctvLiveController controller, bool isFS) {
     if (controller.videoController != null) {
-      return Video(
-        key: ValueKey('media_kit_${controller.selectedChannel.value}_${controller.videoController.hashCode}'),
-        controller: controller.videoController!,
-        fit: BoxFit.cover,
-        controls: NoVideoControls,
+      return SizedBox.expand(
+        child: Video(
+          key: ValueKey('media_kit_${controller.selectedChannel.value}_${controller.videoController.hashCode}'),
+          controller: controller.videoController!,
+          fit: BoxFit.cover,
+          controls: NoVideoControls,
+        ),
       );
     }
 
@@ -410,7 +412,12 @@ class CctvLiveView extends StatelessWidget {
         cam.courtName ?? (channel % 2 != 0 ? 'Court 1 (Main Pitch)' : 'Court 2 (Side Pitch)');
 
     return InkWell(
-      onTap: () => controller.selectCamera(channel),
+      onTap: () {
+        if (controller.selectedChannel.value != channel ||
+            controller.player == null) {
+          controller.selectCamera(channel);
+        }
+      },
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
