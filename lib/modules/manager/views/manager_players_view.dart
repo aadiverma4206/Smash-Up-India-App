@@ -229,153 +229,182 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
     final String name = (player['name'] ?? 'Player').toString();
     final String phone = (player['phone'] ?? player['email'] ?? '').toString();
     final String position = (player['position'] ?? 'ST').toString();
-    final int elo = int.tryParse(player['elo']?.toString() ?? '750') ?? 750;
+    final int elo = int.tryParse(player['elo']?.toString() ??
+            player['elo_rating']?.toString() ??
+            '750') ??
+        750;
     final bool isBlocked =
         (player['status']?.toString().toUpperCase() == 'BLOCKED') ||
             (player['status']?.toString().toUpperCase() == 'SUSPENDED') ||
             (player['isBlocked'] == true);
-    final String? avatarUrl = player['avatarUrl']?.toString() ??
+    final String? avatarUrl = player['profile_image_url']?.toString() ??
+        player['avatarUrl']?.toString() ??
         player['profileImageUrl']?.toString();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Get.toNamed('/manager/players/detail',
+            arguments: {'playerId': playerId, 'player': player}),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isBlocked
-              ? Colors.redAccent.withValues(alpha: 0.5)
-              : (isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE)),
-        ),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 3, offset: Offset(0, 1)),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isBlocked
+                  ? Colors.redAccent.withValues(alpha: 0.5)
+                  : (isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE)),
+            ),
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black12, blurRadius: 3, offset: Offset(0, 1)),
+            ],
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: avatarUrl.isValidNetworkUrl
-                    ? CachedNetworkImage(
-                        imageUrl: avatarUrl!,
-                        width: 44,
-                        height: 44,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => _defaultAvatar(name),
-                      )
-                    : _defaultAvatar(name),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: avatarUrl.isValidNetworkUrl
+                        ? CachedNetworkImage(
+                            imageUrl: avatarUrl!,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => _defaultAvatar(name),
+                          )
+                        : _defaultAvatar(name),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : Colors.black87,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isBlocked
+                                    ? Colors.redAccent.withValues(alpha: 0.15)
+                                    : Colors.green.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isBlocked
+                                      ? Colors.redAccent
+                                      : Colors.green,
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                isBlocked ? 'BLOCKED' : 'ACTIVE',
+                                style: TextStyle(
+                                  color: isBlocked
+                                      ? Colors.redAccent
+                                      : Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: isBlocked
-                                ? Colors.redAccent.withValues(alpha: 0.15)
-                                : Colors.green.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color:
-                                  isBlocked ? Colors.redAccent : Colors.green,
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Text(
-                            isBlocked ? 'BLOCKED' : 'ACTIVE',
-                            style: TextStyle(
-                              color:
-                                  isBlocked ? Colors.redAccent : Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '$phone • Pos: $position • ELO: $elo',
+                          style: TextStyle(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : Colors.grey.shade600,
+                            fontSize: 12,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '$phone • Pos: $position • ELO: $elo',
-                      style: TextStyle(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : Colors.grey.shade600,
-                        fontSize: 12,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'View History & Stats >',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (isBlocked) ...[
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.green),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
+                      onPressed: () =>
+                          _confirmUnblock(context, playerId, name),
+                      icon: const Icon(Icons.check_circle_outline,
+                          color: Colors.green, size: 14),
+                      label: const Text('Unblock',
+                          style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11)),
+                    ),
+                  ] else ...[
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () =>
+                          _showBlockModal(context, playerId, name),
+                      icon: const Icon(Icons.block_rounded,
+                          color: Colors.redAccent, size: 14),
+                      label: const Text('Block',
+                          style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11)),
                     ),
                   ],
-                ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (isBlocked) ...[
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.green),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  ),
-                  onPressed: () => _confirmUnblock(context, playerId, name),
-                  icon: const Icon(Icons.check_circle_outline,
-                      color: Colors.green, size: 16),
-                  label: const Text('Unblock Player',
-                      style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12)),
-                ),
-              ] else ...[
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.redAccent),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  ),
-                  onPressed: () => _showBlockModal(context, playerId, name),
-                  icon: const Icon(Icons.block_rounded,
-                      color: Colors.redAccent, size: 16),
-                  label: const Text('Block Player',
-                      style: TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12)),
-                ),
-              ],
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

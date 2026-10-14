@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,7 +12,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE cached_data (
@@ -20,12 +21,154 @@ class DatabaseService {
             updated_at TEXT NOT NULL
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS local_notifications (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            body TEXT NOT NULL,
+            type TEXT NOT NULL,
+            data_json TEXT,
+            is_read INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS local_notifications (
+              id TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              title TEXT NOT NULL,
+              body TEXT NOT NULL,
+              type TEXT NOT NULL,
+              data_json TEXT,
+              is_read INTEGER NOT NULL DEFAULT 0,
+              created_at TEXT NOT NULL
+            )
+          ''');
+        }
       },
     );
 
-    // Prune expired cache records older than 5 days on DB initialization
+    // Prune notifications older than 3 days & general cache on DB startup
+    await pruneOldNotifications(maxAge: const Duration(days: 3));
     await pruneExpiredCache();
   }
+
+  // --- Local Notifications Storage & 3-Day Pruning ---
+
+  /// Inserts or updates a list of notifications by [id] (preventing duplicates)
+  Future<void> upsertLocalNotifications(
+      String userId, List<Map<String, dynamic>> items) async {
+    final batch = _db.batch();
+    for (final item in items) {
+      final id = item['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+
+      final title = item['title']?.toString() ?? 'Notification';
+      final body = item['body']?.toString() ?? item['message']?.toString() ?? '';
+      final type = item['type']?.toString() ?? 'SYSTEM';
+      final isRead = (item['isRead'] == true || item['is_read'] == 1) ? 1 : 0;
+      final createdAt = item['createdAt']?.toString() ??
+          item['created_at']?.toString() ??
+          DateTime.now().toIso8601String();
+
+      dynamic dataObj = item['data'];
+      String? dataJsonStr;
+      if (dataObj != null) {
+        if (dataObj is Map) {
+          dataJsonStr = jsonEncode(dataObj);
+        } else if (dataObj is String) {
+          dataJsonStr = dataObj;
+        }
+      }
+
+      batch.insert(
+        'local_notifications',
+        {
+          'id': id,
+          'user_id': userId,
+          'title': title,
+          'body': body,
+          'type': type,
+          'data_json': dataJsonStr,
+          'is_read': isRead,
+          'created_at': createdAt,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    await pruneOldNotifications(maxAge: const Duration(days: 3));
+  }
+
+  /// Retrieves local notifications for [userId] sorted by created_at DESC
+  Future<List<Map<String, dynamic>>> getLocalNotifications(String userId) async {
+    await pruneOldNotifications(maxAge: const Duration(days: 3));
+    final rows = await _db.query(
+      'local_notifications',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'created_at DESC',
+    );
+
+    return rows.map((row) {
+      Map<String, dynamic>? dataMap;
+      final dataStr = row['data_json'] as String?;
+      if (dataStr != null && dataStr.isNotEmpty) {
+        try {
+          dataMap = jsonDecode(dataStr) as Map<String, dynamic>?;
+        } catch (_) {}
+      }
+
+      return {
+        'id': row['id'],
+        'userId': row['user_id'],
+        'title': row['title'],
+        'body': row['body'],
+        'type': row['type'],
+        'data': dataMap,
+        'isRead': (row['is_read'] as int?) == 1,
+        'createdAt': row['created_at'],
+      };
+    }).toList();
+  }
+
+  /// Deletes local notifications older than [maxAge] (default: 3 days / 72 hours)
+  Future<void> pruneOldNotifications(
+      {Duration maxAge = const Duration(days: 3)}) async {
+    try {
+      final cutoffIso = DateTime.now().subtract(maxAge).toIso8601String();
+      await _db.delete(
+        'local_notifications',
+        where: 'created_at < ?',
+        whereArgs: [cutoffIso],
+      );
+    } catch (_) {}
+  }
+
+  Future<void> markLocalNotificationRead(String id) async {
+    await _db.update(
+      'local_notifications',
+      {'is_read': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> markAllLocalNotificationsRead(String userId) async {
+    await _db.update(
+      'local_notifications',
+      {'is_read': 1},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  // --- General Key-Value Cache Storage ---
 
   Future<void> cacheData(String key, String jsonPayload) async {
     await _db.insert(
@@ -93,10 +236,12 @@ class DatabaseService {
 
   Future<void> clearCache() async {
     await _db.delete('cached_data');
+    await _db.delete('local_notifications');
   }
 
   Future<void> clearAllData() async {
     await _db.delete('cached_data');
+    await _db.delete('local_notifications');
     try {
       await _db.execute('VACUUM;');
     } catch (_) {}

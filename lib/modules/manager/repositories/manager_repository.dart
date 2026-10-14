@@ -6,6 +6,7 @@ import '../../../data/models/game_model.dart';
 import '../../../data/models/court_model.dart';
 import '../../../data/models/booking_model.dart';
 import '../../../data/models/slot_request_model.dart';
+import '../../../data/models/notification_model.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/storage/database_service.dart';
 
@@ -190,6 +191,26 @@ class ManagerRepository {
       offset: offset,
     );
     return response.data ?? [];
+  }
+
+  Future<Map<String, dynamic>> getPlayerDetailHistory(String playerId) async {
+    final response = await remoteDataSource.getPlayerDetailHistory(playerId);
+    return response.data ?? {};
+  }
+
+  Future<List<NotificationModel>> getNotifications(
+      {int page = 1, int limit = 50}) async {
+    final response =
+        await remoteDataSource.getNotifications(page: page, limit: limit);
+    return response.data ?? [];
+  }
+
+  Future<void> markNotificationRead(String notificationId) async {
+    await remoteDataSource.markNotificationRead(notificationId);
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await remoteDataSource.markAllNotificationsRead();
   }
 
   Future<Map<String, dynamic>> blockPlayer(

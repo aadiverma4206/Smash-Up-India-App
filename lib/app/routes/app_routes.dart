@@ -20,6 +20,7 @@ abstract class Routes {
   static const wallet = '/wallet';
   static const courts = '/courts';
   static const managerPlayers = '/manager/players';
+  static const managerPlayerDetail = '/manager/players/detail';
   static const managerHistory = '/manager/history';
   static const managerHistoryStandalone = '/manager/history/standalone';
   static const managerHistoryDetails = '/manager/history/details';

@@ -587,7 +587,7 @@ export class ManagerRepository {
       FROM public.users u
       LEFT JOIN public.player_details pd ON pd.user_id = u.id
       WHERE ${conditions.join(' AND ')}
-      ORDER BY u.created_at DESC
+      ORDER BY LOWER(u.name) ASC
       LIMIT $${idx++} OFFSET $${idx++};
     `;
     const res = await dbPool.query(query, values);
@@ -602,6 +602,78 @@ export class ManagerRepository {
     return {
       players: res.rows,
       totalCount: parseInt(countRes.rows[0]?.total_count || '0', 10),
+    };
+  }
+
+  static async getPlayerDetailHistory(playerId: string) {
+    // 1. Fetch Player User & Profile Details
+    const userRes = await dbPool.query(
+      `SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,
+              u.city, u.bio,
+              pd.position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot
+       FROM public.users u
+       LEFT JOIN public.player_details pd ON pd.user_id = u.id
+       WHERE u.id = $1 AND u.role_id = 3;`,
+      [playerId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return null;
+    }
+
+    const player = userRes.rows[0];
+
+    // 2. Fetch Player Match & Payment History
+    const historyRes = await dbPool.query(
+      `SELECT gp.game_id, gp.payment_status, gp.team, gp.position as game_position, gp.created_at as joined_at,
+              g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,
+              g.entry_fee, g.status as match_status,
+              crt.name as court_name, clb.name as club_name,
+              gv.video_url
+       FROM public.game_players gp
+       INNER JOIN public.games g ON g.id = gp.game_id
+       LEFT JOIN public.courts crt ON crt.id = g.court_id
+       LEFT JOIN public.clubs clb ON clb.id = g.club_id
+       LEFT JOIN public.game_videos gv ON gv.game_id = g.id AND gv.status = 'AVAILABLE'
+       WHERE gp.user_id = $1
+       ORDER BY g.match_date DESC, g.start_time DESC;`,
+      [playerId]
+    );
+
+    const history = historyRes.rows;
+
+    // 3. Compute Player Metrics Summary
+    let totalMatches = history.length;
+    let completedMatches = 0;
+    let cancelledMatches = 0;
+    let totalPaid = 0;
+    let totalRefunded = 0;
+
+    for (const match of history) {
+      if (match.match_status === 'COMPLETED') {
+        completedMatches++;
+      } else if (match.match_status === 'CANCELLED') {
+        cancelledMatches++;
+      }
+
+      const fee = Number(match.entry_fee || 0);
+      if (match.payment_status === 'PAID') {
+        totalPaid += fee;
+      } else if (match.payment_status === 'REFUNDED') {
+        totalRefunded += fee;
+      }
+    }
+
+    return {
+      player,
+      stats: {
+        totalMatches,
+        completedMatches,
+        cancelledMatches,
+        totalPaid,
+        totalRefunded,
+      },
+      matchHistory: history,
     };
   }
 

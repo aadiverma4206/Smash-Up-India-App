@@ -22,6 +22,7 @@ import {
   approvePlayerGameController,
   rejectPlayerGameController,
   getAllPlayersController,
+  getPlayerDetailHistoryController,
   blockPlayerController,
   unblockPlayerController,
   submitMatchScoreController,
@@ -106,6 +107,7 @@ router.get('/bookings', getManagerBookingsController);
 
 // All Players & Player Moderation (Block/Unblock)
 router.get('/players', getAllPlayersController);
+router.get('/players/:id', getPlayerDetailHistoryController);
 router.post('/players/:id/block', blockPlayerController);
 router.post('/players/:id/unblock', unblockPlayerController);
 

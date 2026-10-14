@@ -363,13 +363,43 @@ class ManagerDashboardController extends GetxController
     }
   }
 
+  final RxBool isPlayersLoading = false.obs;
+  final Rxn<Map<String, dynamic>> selectedPlayerDetail =
+      Rxn<Map<String, dynamic>>();
+
   Future<void> fetchAllPlayers({String? search, String? status}) async {
+    isPlayersLoading.value = true;
     try {
       final list =
           await repository.getAllPlayers(search: search, status: status);
+      // Sort A to Z alphabetically by player name
+      list.sort((a, b) {
+        final nameA = (a['name'] ?? '').toString().toLowerCase();
+        final nameB = (b['name'] ?? '').toString().toLowerCase();
+        return nameA.compareTo(nameB);
+      });
       playersList.assignAll(list);
     } catch (e) {
       AppLogger.warning('Error fetching players: $e');
+    } finally {
+      isPlayersLoading.value = false;
+    }
+  }
+
+  Future<void> fetchPlayerDetailHistory(String playerId,
+      {bool forceReload = false}) async {
+    isActionLoading.value = true;
+    try {
+      if (forceReload) {
+        selectedPlayerDetail.value = null;
+      }
+      final data = await repository.getPlayerDetailHistory(playerId);
+      selectedPlayerDetail.value = data;
+    } catch (e) {
+      AppLogger.warning('Error fetching player detail history: $e');
+      ErrorHandler.showErrorSnackBar('Player Details Error', e);
+    } finally {
+      isActionLoading.value = false;
     }
   }
 
@@ -378,6 +408,9 @@ class ManagerDashboardController extends GetxController
     try {
       await repository.blockPlayer(playerId, reason);
       await fetchAllPlayers();
+      if (selectedPlayerDetail.value != null) {
+        await fetchPlayerDetailHistory(playerId);
+      }
       ErrorHandler.showSuccessSnackBar(
           'Player Blocked', 'Player access has been restricted');
     } catch (e) {
@@ -392,6 +425,9 @@ class ManagerDashboardController extends GetxController
     try {
       await repository.unblockPlayer(playerId);
       await fetchAllPlayers();
+      if (selectedPlayerDetail.value != null) {
+        await fetchPlayerDetailHistory(playerId);
+      }
       ErrorHandler.showSuccessSnackBar(
           'Player Unblocked', 'Player access restored');
     } catch (e) {

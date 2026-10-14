@@ -233,6 +233,17 @@ export const getAllPlayersController = asyncHandler(async (req: AuthenticatedReq
   res.status(200).json(ApiResponse.success('Players list retrieved', result));
 });
 
+export const getPlayerDetailHistoryController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw new ApiError(401, 'Unauthorized');
+
+  const { id: playerId } = req.params;
+  if (!playerId) throw new ApiError(400, 'Player ID is required');
+
+  const result = await ManagerService.getPlayerDetailHistory(userId, playerId);
+  res.status(200).json(ApiResponse.success('Player detail and match history retrieved', result));
+});
+
 export const blockPlayerController = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const managerId = req.user?.id;
   const managerName = req.user?.email || 'Manager';

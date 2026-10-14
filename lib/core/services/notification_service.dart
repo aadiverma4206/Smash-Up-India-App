@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import '../network/dio_client.dart';
 import '../services/auth_service.dart';
+import '../storage/database_service.dart';
 import '../utils/app_logger.dart';
 import '../../firebase_options.dart';
 
@@ -200,6 +201,8 @@ class NotificationService extends GetxService {
         AppLogger.info(
             '🔔 FCM Foreground Message Received: ${message.notification?.title}');
 
+        _saveFcmMessageToLocalStorage(message);
+
         if (message.notification != null) {
           _showLocalNotification(message);
         }
@@ -208,6 +211,7 @@ class NotificationService extends GetxService {
       // 3. App Opened From Background State via Notification Tap
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         AppLogger.info('🔔 App opened from notification tap: ${message.data}');
+        _saveFcmMessageToLocalStorage(message);
         _handleNotificationClickData(message.data);
       });
 
@@ -216,11 +220,44 @@ class NotificationService extends GetxService {
         if (message != null) {
           AppLogger.info(
               '🔔 Terminated App opened via notification: ${message.data}');
+          _saveFcmMessageToLocalStorage(message);
           _handleNotificationClickData(message.data);
         }
       });
     } catch (e) {
       AppLogger.warning('Error setting up FCM listeners: $e');
+    }
+  }
+
+  Future<void> _saveFcmMessageToLocalStorage(RemoteMessage message) async {
+    try {
+      if (!Get.isRegistered<AuthService>() ||
+          !Get.find<AuthService>().isLoggedIn.value) {
+        return;
+      }
+      final userId = Get.find<AuthService>().currentUser.value?.id ?? '';
+      if (userId.isEmpty) return;
+
+      final notif = message.notification;
+      final notifId = message.messageId ??
+          'fcm_${DateTime.now().millisecondsSinceEpoch}';
+
+      if (Get.isRegistered<DatabaseService>()) {
+        final db = Get.find<DatabaseService>();
+        await db.upsertLocalNotifications(userId, [
+          {
+            'id': notifId,
+            'title': notif?.title ?? 'All Stars Arena',
+            'body': notif?.body ?? '',
+            'type': message.data['type'] ?? 'SYSTEM',
+            'data': message.data,
+            'isRead': false,
+            'createdAt': DateTime.now().toIso8601String(),
+          }
+        ]);
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to save FCM message to local storage: $e');
     }
   }
 

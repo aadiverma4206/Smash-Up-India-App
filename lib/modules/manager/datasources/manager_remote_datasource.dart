@@ -6,6 +6,7 @@ import '../../../data/models/game_model.dart';
 import '../../../data/models/court_model.dart';
 import '../../../data/models/booking_model.dart';
 import '../../../data/models/slot_request_model.dart';
+import '../../../data/models/notification_model.dart';
 
 class ManagerRemoteDataSource {
   final DioClient dioClient;
@@ -272,6 +273,38 @@ class ManagerRemoteDataSource {
         return <Map<String, dynamic>>[];
       },
     );
+  }
+
+  Future<ApiResponseModel<Map<String, dynamic>>> getPlayerDetailHistory(
+      String playerId) async {
+    final response =
+        await dioClient.dio.get('/manager/players/$playerId');
+    return ApiResponseParser.parse<Map<String, dynamic>>(
+      response.data,
+      (json) => json as Map<String, dynamic>,
+    );
+  }
+
+  Future<ApiResponseModel<List<NotificationModel>>> getNotifications(
+      {int page = 1, int limit = 50}) async {
+    final response = await dioClient.dio.get(
+      '/notifications',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    return ApiResponseParser.parse<List<NotificationModel>>(
+      response.data,
+      (json) => (json as List)
+          .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Future<void> markNotificationRead(String notificationId) async {
+    await dioClient.dio.patch('/notifications/$notificationId/read');
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await dioClient.dio.patch('/notifications/read-all');
   }
 
   Future<ApiResponseModel<Map<String, dynamic>>> blockPlayer(

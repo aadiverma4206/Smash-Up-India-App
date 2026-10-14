@@ -931,6 +931,17 @@ export class ManagerService {
   }
 
   /**
+   * Manager Player Management: Get Detailed Player Profile & Full Match/Payment History
+   */
+  static async getPlayerDetailHistory(managerUserId: string, playerId: string) {
+    const data = await ManagerRepository.getPlayerDetailHistory(playerId);
+    if (!data) {
+      throw new ApiError(404, 'Player not found', 'PLAYER_NOT_FOUND');
+    }
+    return data;
+  }
+
+  /**
    * Manager Player Management: Block Player
    */
   static async blockPlayer(managerUserId: string, managerName: string, playerId: string, reason?: string) {
