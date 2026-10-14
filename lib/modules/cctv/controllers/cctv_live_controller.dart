@@ -1,4 +1,5 @@
-﻿import 'package:media_kit/media_kit.dart';
+﻿import 'dart:async';
+import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
@@ -6,7 +7,7 @@ import '../repositories/cctv_repository.dart';
 import '../../../data/models/cctv_models.dart';
 import '../../../core/utils/app_logger.dart';
 
-/// Controller for dynamic live CCTV direct RTSP playback using MediaKit native textures.
+/// Controller for dynamic live CCTV direct RTSP playback with auto 3-minute timeout guard.
 class CctvLiveController extends GetxController {
   final CctvRepository repository = Get.find<CctvRepository>();
 
@@ -28,6 +29,12 @@ class CctvLiveController extends GetxController {
   final RxBool isMuted = true.obs;
   final RxString errorMessage = ''.obs;
 
+  // 3-Minute Live Viewing Auto-Timeout Guard to save battery & DVR bandwidth
+  static const int maxViewingSeconds = 180;
+  final RxInt remainingViewingSeconds = maxViewingSeconds.obs;
+  final RxBool isViewingTimedOut = false.obs;
+  Timer? _viewingTimer;
+
   Player? player;
   VideoController? videoController;
 
@@ -38,18 +45,19 @@ class CctvLiveController extends GetxController {
       MediaKit.ensureInitialized();
     } catch (_) {}
 
-    int initialChannel = 1;
+    int? initialChannel;
     final args = Get.arguments;
     if (args is Map<String, dynamic> && args['channel'] != null) {
       initialChannel = (args['channel'] as num).toInt();
     } else if (args is int) {
       initialChannel = args;
     }
-    _loadLiveCamerasAndConnect(initialChannel);
+    _loadLiveCameras(initialChannel: initialChannel);
   }
 
   @override
   void onClose() {
+    _stopViewingTimer();
     _disposePlayer();
     _releaseCurrentSession();
     super.onClose();
@@ -61,7 +69,43 @@ class CctvLiveController extends GetxController {
     return raw.replaceAll(RegExp(r'rtsp://[^@]+@'), 'rtsp://***:***@');
   }
 
+  void _startViewingTimer() {
+    _viewingTimer?.cancel();
+    remainingViewingSeconds.value = maxViewingSeconds;
+    isViewingTimedOut.value = false;
+
+    _viewingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (remainingViewingSeconds.value > 1) {
+        remainingViewingSeconds.value--;
+      } else {
+        remainingViewingSeconds.value = 0;
+        isViewingTimedOut.value = true;
+        timer.cancel();
+        _onViewingTimeout();
+      }
+    });
+  }
+
+  void _stopViewingTimer() {
+    _viewingTimer?.cancel();
+    _viewingTimer = null;
+  }
+
+  Future<void> _onViewingTimeout() async {
+    AppLogger.info('⏰ [CCTV] 3-Minute live viewing timeout reached. Pausing stream to save bandwidth.');
+    isPlaying.value = false;
+    channelStatuses[selectedChannel.value] = 'Paused (3m Limit)';
+    await _disposePlayer();
+    await _releaseCurrentSession();
+  }
+
+  void resumeStream() {
+    isViewingTimedOut.value = false;
+    selectCamera(selectedChannel.value);
+  }
+
   Future<void> _disposePlayer() async {
+    _stopViewingTimer();
     final playerToDispose = player;
     player = null;
     videoController = null;
@@ -82,7 +126,7 @@ class CctvLiveController extends GetxController {
     }
   }
 
-  Future<void> _loadLiveCamerasAndConnect(int initialChannel) async {
+  Future<void> _loadLiveCameras({int? initialChannel}) async {
     isLoading.value = true;
     try {
       final list = await repository.getLiveCameras();
@@ -100,10 +144,12 @@ class CctvLiveController extends GetxController {
       _populateDefaultChannels();
     } finally {
       isLoading.value = false;
-      final targetChan = cameraOptions.any((c) => c.channel == initialChannel)
-          ? initialChannel
-          : (cameraOptions.isNotEmpty ? cameraOptions.first.channel : 1);
-      selectCamera(targetChan);
+      if (initialChannel != null) {
+        final targetChan = cameraOptions.any((c) => c.channel == initialChannel)
+            ? initialChannel
+            : (cameraOptions.isNotEmpty ? cameraOptions.first.channel : 1);
+        selectCamera(targetChan);
+      }
     }
   }
 
@@ -138,16 +184,16 @@ class CctvLiveController extends GetxController {
   Future<void> selectCamera(int channel) async {
     if (channel < 1) return;
 
-    // Guard against premature disposal / recreation if player is already active on target channel & streamType
     if (player != null &&
         videoController != null &&
         currentSession.value != null &&
         currentSession.value!.channel == channel &&
         currentSession.value!.streamType == streamType.value &&
         selectedChannel.value == channel &&
-        isPlaying.value) {
+        isPlaying.value &&
+        !isViewingTimedOut.value) {
       AppLogger.info(
-          'Channel $channel (${streamType.value.toUpperCase()}) is already active and playing. Skipping disposal.');
+          'Channel $channel (${streamType.value.toUpperCase()}) is already active and playing. Skipping re-initialization.');
       return;
     }
 
@@ -203,7 +249,6 @@ class CctvLiveController extends GetxController {
         ),
       );
 
-      // Safe libmpv property settings for low-latency TCP RTSP playback
       if (newPlayer.platform is NativePlayer) {
         final mpv = newPlayer.platform as NativePlayer;
         await mpv.setProperty('rtsp-transport', 'tcp');
@@ -222,10 +267,7 @@ class CctvLiveController extends GetxController {
       player = newPlayer;
       videoController = newVideoController;
 
-      // --- Safe, Detailed MediaKit Player Stream Diagnostics ---
       newPlayer.stream.playing.listen((playing) {
-        AppLogger.info(
-            '📹 [CCTV Diagnostic] Stream Playing: $playing (Channel $channel)');
         if (playing) {
           isPlaying.value = true;
           channelStatuses[channel] = 'Live';
@@ -233,52 +275,27 @@ class CctvLiveController extends GetxController {
         }
       });
 
-      newPlayer.stream.buffering.listen((buffering) {
-        AppLogger.info(
-            '⏳ [CCTV Diagnostic] Stream Buffering: $buffering (Channel $channel)');
-      });
-
       newPlayer.stream.width.listen((width) {
         if (width != null && width > 0) {
-          AppLogger.info(
-              '📐 [CCTV Diagnostic] Stream Video Width: ${width}px (Channel $channel)');
           isPlaying.value = true;
           channelStatuses[channel] = 'Live';
           errorMessage.value = '';
         }
       });
 
-      newPlayer.stream.height.listen((height) {
-        if (height != null && height > 0) {
-          AppLogger.info(
-              '📐 [CCTV Diagnostic] Stream Video Height: ${height}px (Channel $channel)');
-        }
-      });
-
-      newPlayer.stream.position.listen((position) {
-        if (position.inSeconds > 0 && position.inSeconds % 10 == 0) {
-          AppLogger.info(
-              '⏱️ [CCTV Diagnostic] Stream Position: ${position.inSeconds}s (Channel $channel)');
-        }
-      });
-
       newPlayer.stream.error.listen((err) {
         if (err.isNotEmpty) {
           final sanitizedErr = sanitizeRtspUrl(err);
-          AppLogger.error(
-              '❌ [CCTV Diagnostic] Stream Error: $sanitizedErr (Channel $channel)');
+          AppLogger.error('❌ [CCTV Error] Stream Error: $sanitizedErr (Channel $channel)');
           isPlaying.value = false;
           channelStatuses[channel] = 'Connection failed';
           errorMessage.value = sanitizedErr;
         }
       });
 
-      // Open RTSP stream with timeout safety
       await newPlayer.open(Media(rtspStreamUrl)).timeout(
         const Duration(seconds: 12),
         onTimeout: () {
-          AppLogger.warning(
-              '⚠️ [CCTV Diagnostic] RTSP stream open timed out after 12s for Channel $channel');
           throw Exception('RTSP connection timed out. Camera stream did not respond.');
         },
       );
@@ -290,6 +307,7 @@ class CctvLiveController extends GetxController {
       }
 
       isPlayerInitializing.value = false;
+      _startViewingTimer();
     } catch (e) {
       final errStr = sanitizeRtspUrl(e.toString());
       AppLogger.error('Failed to initialize live camera RTSP session: $errStr');

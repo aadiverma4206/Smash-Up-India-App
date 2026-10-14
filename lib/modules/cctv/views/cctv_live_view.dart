@@ -102,11 +102,18 @@ class CctvLiveView extends StatelessWidget {
                         children: [
                           _buildPlayerContent(context, controller, isFS),
 
-                          // Top-Left Live Status Overlay Badge
+                          // Top-Left Live Status & 3-Min Timer Overlay Badges
                           Positioned(
                             top: 10,
                             left: 10,
-                            child: _buildLiveStatusBadge(context, controller),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildLiveStatusBadge(context, controller),
+                                const SizedBox(width: 8),
+                                _buildViewingTimerBadge(context, controller),
+                              ],
+                            ),
                           ),
 
                           // Top-Right Fullscreen Toggle Button
@@ -227,7 +234,7 @@ class CctvLiveView extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '🔒 Direct RTSP Stream via MediaKit native video decoder. No server-side FFmpeg transcoding required.',
+                          '🔒 Direct RTSP Stream • Auto-pauses after 3 minutes to preserve phone battery & camera network bandwidth.',
                           style: TextStyle(
                               color: context.textSecondary,
                               fontSize: 11,
@@ -247,10 +254,58 @@ class CctvLiveView extends StatelessWidget {
 
   Widget _buildPlayerContent(
       BuildContext context, CctvLiveController controller, bool isFS) {
+    if (controller.isViewingTimedOut.value) {
+      return Container(
+        color: const Color(0xFF151515),
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.timer_off_rounded,
+                size: 38,
+                color: AppColors.secondary,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Live Stream Paused (3-Min Limit)',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Paused automatically to save phone battery & camera network bandwidth.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: controller.resumeStream,
+                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                label: const Text('RESUME STREAM',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (controller.videoController != null) {
       return SizedBox.expand(
         child: Video(
-          key: ValueKey('media_kit_${controller.selectedChannel.value}_${controller.videoController.hashCode}'),
+          key: ValueKey('media_kit_${controller.selectedChannel.value}_${controller.streamType.value}_${controller.videoController.hashCode}'),
           controller: controller.videoController!,
           fit: BoxFit.cover,
           controls: NoVideoControls,
@@ -392,6 +447,39 @@ class CctvLiveView extends StatelessWidget {
     );
   }
 
+  Widget _buildViewingTimerBadge(
+      BuildContext context, CctvLiveController controller) {
+    final secs = controller.remainingViewingSeconds.value;
+    final mins = (secs / 60).floor();
+    final remaining = secs % 60;
+    final timeStr =
+        '${mins.toString().padLeft(2, "0")}:${remaining.toString().padLeft(2, "0")}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, color: Colors.white70, size: 12),
+          const SizedBox(width: 4),
+          Text(
+            timeStr,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCameraCard(
       BuildContext context,
       CctvLiveController controller,
@@ -414,7 +502,8 @@ class CctvLiveView extends StatelessWidget {
     return InkWell(
       onTap: () {
         if (controller.selectedChannel.value != channel ||
-            controller.player == null) {
+            controller.player == null ||
+            controller.isViewingTimedOut.value) {
           controller.selectCamera(channel);
         }
       },
