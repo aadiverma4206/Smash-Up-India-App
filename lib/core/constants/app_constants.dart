@@ -1,6 +1,9 @@
 class AppConstants {
   static const String appName = 'ALL STARS ARENA';
 
+  // Centralized Text Scaling Policy
+  static const double maxTextScaleFactor = 1.3;
+
   // Storage Keys
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';

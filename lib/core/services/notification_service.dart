@@ -161,7 +161,8 @@ class NotificationService extends GetxService {
         AppLogger.info('✅ FCM token sync attempted with backend.');
       }
     } catch (e) {
-      AppLogger.debug('FCM token registration skipped or non-critical notice: $e');
+      AppLogger.debug(
+          'FCM token registration skipped or non-critical notice: $e');
     }
   }
 
@@ -239,8 +240,8 @@ class NotificationService extends GetxService {
       if (userId.isEmpty) return;
 
       final notif = message.notification;
-      final notifId = message.messageId ??
-          'fcm_${DateTime.now().millisecondsSinceEpoch}';
+      final notifId =
+          message.messageId ?? 'fcm_${DateTime.now().millisecondsSinceEpoch}';
 
       if (Get.isRegistered<DatabaseService>()) {
         final db = Get.find<DatabaseService>();

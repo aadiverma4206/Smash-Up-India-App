@@ -23,7 +23,8 @@ class CctvRemoteDataSource {
 
   Future<ApiResponseModel<CctvCameraModel>> addCamera(
       Map<String, dynamic> data) async {
-    final response = await dioClient.dio.post(ApiConstants.cctvCameras, data: data);
+    final response =
+        await dioClient.dio.post(ApiConstants.cctvCameras, data: data);
     return ApiResponseParser.parse<CctvCameraModel>(
       response.data,
       (json) => CctvCameraModel.fromJson(json as Map<String, dynamic>),
@@ -32,7 +33,8 @@ class CctvRemoteDataSource {
 
   Future<ApiResponseModel<Map<String, dynamic>>> testCameraConnection(
       String cameraId) async {
-    final response = await dioClient.dio.post('${ApiConstants.cctvCameras}/$cameraId/test');
+    final response =
+        await dioClient.dio.post('${ApiConstants.cctvCameras}/$cameraId/test');
     return ApiResponseParser.parse<Map<String, dynamic>>(
       response.data,
       (json) => json as Map<String, dynamic>,
@@ -71,12 +73,14 @@ class CctvRemoteDataSource {
   }
 
   // --- Live CCTV Streaming Methods ---
-  Future<ApiResponseModel<List<CctvLiveCameraOptionModel>>> getLiveCameras() async {
+  Future<ApiResponseModel<List<CctvLiveCameraOptionModel>>>
+      getLiveCameras() async {
     final response = await dioClient.dio.get(ApiConstants.cctvLiveCameras);
     return ApiResponseParser.parse<List<CctvLiveCameraOptionModel>>(
       response.data,
       (json) => (json as List)
-          .map((e) => CctvLiveCameraOptionModel.fromJson(e as Map<String, dynamic>))
+          .map((e) =>
+              CctvLiveCameraOptionModel.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -97,7 +101,8 @@ class CctvRemoteDataSource {
 
   Future<ApiResponseModel<Map<String, dynamic>>> getLiveChannelStatus(
       int channel) async {
-    final response = await dioClient.dio.get('${ApiConstants.cctvLiveStatus}/$channel');
+    final response =
+        await dioClient.dio.get('${ApiConstants.cctvLiveStatus}/$channel');
     return ApiResponseParser.parse<Map<String, dynamic>>(
       response.data,
       (json) => json as Map<String, dynamic>,

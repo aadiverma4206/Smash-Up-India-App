@@ -1,4 +1,5 @@
 ﻿import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:get/get.dart';
@@ -7,7 +8,7 @@ import '../repositories/cctv_repository.dart';
 import '../../../data/models/cctv_models.dart';
 import '../../../core/utils/app_logger.dart';
 
-/// Controller for dynamic live CCTV direct RTSP playback with auto 3-minute timeout guard.
+/// Controller for dynamic live CCTV direct RTSP playback with auto 3-minute timeout guard & orientation management.
 class CctvLiveController extends GetxController {
   final CctvRepository repository = Get.find<CctvRepository>();
 
@@ -57,6 +58,8 @@ class CctvLiveController extends GetxController {
 
   @override
   void onClose() {
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _stopViewingTimer();
     _disposePlayer();
     _releaseCurrentSession();
@@ -92,7 +95,8 @@ class CctvLiveController extends GetxController {
   }
 
   Future<void> _onViewingTimeout() async {
-    AppLogger.info('⏰ [CCTV] 3-Minute live viewing timeout reached. Pausing stream to save bandwidth.');
+    AppLogger.info(
+        '⏰ [CCTV] 3-Minute live viewing timeout reached. Pausing stream to save bandwidth.');
     isPlaying.value = false;
     channelStatuses[selectedChannel.value] = 'Paused (3m Limit)';
     await _disposePlayer();
@@ -220,8 +224,7 @@ class CctvLiveController extends GetxController {
 
       if (session.status == 'OFFLINE') {
         channelStatuses[channel] = 'Offline';
-        errorMessage.value =
-            'DVR Host is unreachable from the court network.\n'
+        errorMessage.value = 'DVR Host is unreachable from the court network.\n'
             'Please verify camera power and network connectivity.';
         isPlayerInitializing.value = false;
         isLoadingChannel.value = false;
@@ -286,7 +289,8 @@ class CctvLiveController extends GetxController {
       newPlayer.stream.error.listen((err) {
         if (err.isNotEmpty) {
           final sanitizedErr = sanitizeRtspUrl(err);
-          AppLogger.error('❌ [CCTV Error] Stream Error: $sanitizedErr (Channel $channel)');
+          AppLogger.error(
+              '❌ [CCTV Error] Stream Error: $sanitizedErr (Channel $channel)');
           isPlaying.value = false;
           channelStatuses[channel] = 'Connection failed';
           errorMessage.value = sanitizedErr;
@@ -296,7 +300,8 @@ class CctvLiveController extends GetxController {
       await newPlayer.open(Media(rtspStreamUrl)).timeout(
         const Duration(seconds: 12),
         onTimeout: () {
-          throw Exception('RTSP connection timed out. Camera stream did not respond.');
+          throw Exception(
+              'RTSP connection timed out. Camera stream did not respond.');
         },
       );
 
@@ -319,8 +324,7 @@ class CctvLiveController extends GetxController {
           errorMessage.value =
               'Access Denied: Live CCTV is only accessible to Managers and Admins.';
         } else if (statusCode == 504) {
-          errorMessage.value =
-              'DVR is unreachable from the backend server.\n'
+          errorMessage.value = 'DVR is unreachable from the backend server.\n'
               'Please check court network connectivity.';
         } else if (statusCode == 401) {
           errorMessage.value = 'Session expired. Please log in again.';
@@ -350,6 +354,18 @@ class CctvLiveController extends GetxController {
 
   void toggleFullscreen() {
     isFullscreen.value = !isFullscreen.value;
+    if (isFullscreen.value) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
   }
 
   void toggleMute() {

@@ -16,238 +16,307 @@ class CctvLiveView extends StatelessWidget {
         : Get.put(CctvLiveController());
 
     final isDark = context.isDark;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
-    return Scaffold(
-      backgroundColor: context.backgroundColor,
-      appBar: AppBar(
-        title: Obx(() => Text(
-              'Live CCTV - Camera ${controller.selectedChannel.value}',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-            )),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
-            (isDark ? AppColors.darkAppBar : AppColors.sageGreenAppBar),
-        elevation: 0,
-        iconTheme: IconThemeData(
-          color: isDark ? Colors.white : Colors.black87,
-        ),
-        actions: [
-          // Stream Type (Main HD vs Sub SD) Toggle
-          Obx(() => TextButton.icon(
-                onPressed: controller.toggleStreamType,
-                icon: Icon(
-                  Icons.hd_rounded,
-                  size: 18,
-                  color: controller.streamType.value == 'main'
-                      ? AppColors.primary
-                      : (isDark ? Colors.grey : Colors.grey.shade700),
-                ),
-                label: Text(
-                  controller.streamType.value == 'main' ? 'HD (Main)' : 'SD (Sub)',
+    return Obx(() {
+      final isFS = controller.isFullscreen.value || isLandscape;
+
+      return Scaffold(
+        backgroundColor: isFS ? Colors.black : context.backgroundColor,
+        appBar: isFS
+            ? null
+            : AppBar(
+                title: Text(
+                  'Live CCTV - Camera ${controller.selectedChannel.value}',
                   style: TextStyle(
-                    color: controller.streamType.value == 'main'
-                        ? AppColors.primary
-                        : (isDark ? Colors.grey : Colors.grey.shade700),
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
-              )),
-          // Manual Reconnect Button
-          IconButton(
-            icon: Icon(
-              Icons.refresh_rounded,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-            tooltip: 'Reconnect Camera',
-            onPressed: controller.reconnectCurrentCamera,
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Obx(() {
-          final isFS = controller.isFullscreen.value;
-
-          return Column(
-            children: [
-              // 1. Live Video Player Display Frame
-              Expanded(
-                flex: isFS ? 1 : 0,
-                child: AspectRatio(
-                  aspectRatio: isFS
-                      ? (MediaQuery.of(context).size.width /
-                          MediaQuery.of(context).size.height)
-                      : (16 / 9),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF111111),
-                      borderRadius: isFS
-                          ? BorderRadius.zero
-                          : BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark ? Colors.grey.shade900 : Colors.black26,
-                        width: 1,
+                backgroundColor: Theme.of(context)
+                        .appBarTheme
+                        .backgroundColor ??
+                    (isDark ? AppColors.darkAppBar : AppColors.sageGreenAppBar),
+                elevation: 0,
+                iconTheme: IconThemeData(
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+                actions: [
+                  // Stream Type (Main HD vs Sub SD) Toggle
+                  TextButton.icon(
+                    onPressed: controller.toggleStreamType,
+                    icon: Icon(
+                      Icons.hd_rounded,
+                      size: 18,
+                      color: controller.streamType.value == 'main'
+                          ? AppColors.primary
+                          : (isDark ? Colors.grey : Colors.grey.shade700),
+                    ),
+                    label: Text(
+                      controller.streamType.value == 'main'
+                          ? 'HD (Main)'
+                          : 'SD (Sub)',
+                      style: TextStyle(
+                        color: controller.streamType.value == 'main'
+                            ? AppColors.primary
+                            : (isDark ? Colors.grey : Colors.grey.shade700),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
-                    child: ClipRRect(
-                      borderRadius: isFS
-                          ? BorderRadius.zero
-                          : BorderRadius.circular(16),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          _buildPlayerContent(context, controller, isFS),
-
-                          // Top-Left Live Status & 3-Min Timer Overlay Badges
-                          Positioned(
-                            top: 10,
-                            left: 10,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildLiveStatusBadge(context, controller),
-                                const SizedBox(width: 8),
-                                _buildViewingTimerBadge(context, controller),
-                              ],
-                            ),
+                  ),
+                  // Manual Reconnect Button
+                  IconButton(
+                    icon: Icon(
+                      Icons.refresh_rounded,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    tooltip: 'Reconnect Camera',
+                    onPressed: controller.reconnectCurrentCamera,
+                  ),
+                ],
+              ),
+        body: SafeArea(
+          top: !isFS,
+          bottom: !isFS,
+          child: isFS
+              ? _buildFullscreenPlayer(context, controller)
+              : Column(
+                  children: [
+                    // 1. Live Video Player Display Frame (16:9 Aspect Ratio)
+                    AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF111111),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color:
+                                isDark ? Colors.grey.shade900 : Colors.black26,
+                            width: 1,
                           ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              _buildPlayerContent(context, controller, false),
 
-                          // Top-Right Fullscreen Toggle Button
-                          Positioned(
-                            top: 6,
-                            right: 6,
-                            child: IconButton(
-                              icon: Icon(
-                                isFS
-                                    ? Icons.fullscreen_exit_rounded
-                                    : Icons.fullscreen_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                              onPressed: controller.toggleFullscreen,
-                            ),
-                          ),
-
-                          // Bottom-Left Camera Channel Info Banner
-                          Positioned(
-                            bottom: 10,
-                            left: 10,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.75),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Direct RTSP • Channel ${controller.selectedChannel.value} (${controller.streamType.value.toUpperCase()})',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                              // Top-Left Live Status & 3-Min Timer Overlay Badges
+                              Positioned(
+                                top: 10,
+                                left: 10,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildLiveStatusBadge(context, controller),
+                                    const SizedBox(width: 8),
+                                    _buildViewingTimerBadge(
+                                        context, controller),
+                                  ],
                                 ),
                               ),
+
+                              // Top-Right Fullscreen Toggle Button
+                              Positioned(
+                                top: 6,
+                                right: 6,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.fullscreen_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                  onPressed: controller.toggleFullscreen,
+                                ),
+                              ),
+
+                              // Bottom-Left Camera Channel Info Banner
+                              Positioned(
+                                bottom: 10,
+                                left: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.75),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Direct RTSP • Channel ${controller.selectedChannel.value} (${controller.streamType.value.toUpperCase()})',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 2. Selectable Dynamic Camera Channels Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Select Camera Channel',
+                              style: TextStyle(
+                                color: context.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${controller.cameraOptions.length} Channels',
+                            style: TextStyle(
+                              color: context.textSecondary,
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+
+                    // Dynamic Grid of Selectable Camera Cards
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: GridView.builder(
+                          itemCount: controller.cameraOptions.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1.15,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemBuilder: (context, index) {
+                            final cam = controller.cameraOptions[index];
+                            final isSelected =
+                                controller.selectedChannel.value == cam.channel;
+                            final status =
+                                controller.channelStatuses[cam.channel] ??
+                                    cam.status;
+
+                            return _buildCameraCard(
+                                context, controller, cam, isSelected, status);
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // Security & Network Banner
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1A1A1A)
+                            : context.inputBgColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: context.borderColor),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.security_rounded,
+                              color: AppColors.primary, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '🔒 Direct RTSP Stream • Auto-pauses after 3 minutes to preserve phone battery & camera network bandwidth.',
+                              style: TextStyle(
+                                  color: context.textSecondary,
+                                  fontSize: 11,
+                                  height: 1.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildFullscreenPlayer(
+      BuildContext context, CctvLiveController controller) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.black,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          _buildPlayerContent(context, controller, true),
+
+          // Top-Left Live Status & 3-Min Timer Overlay Badges
+          Positioned(
+            top: 16,
+            left: 16,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildLiveStatusBadge(context, controller),
+                const SizedBox(width: 8),
+                _buildViewingTimerBadge(context, controller),
+              ],
+            ),
+          ),
+
+          // Top-Right Exit Fullscreen Button
+          Positioned(
+            top: 10,
+            right: 10,
+            child: IconButton(
+              icon: const Icon(
+                Icons.fullscreen_exit_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+              onPressed: controller.toggleFullscreen,
+            ),
+          ),
+
+          // Bottom-Left Camera Info
+          Positioned(
+            bottom: 16,
+            left: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Camera ${controller.selectedChannel.value} (${controller.streamType.value.toUpperCase()}) • Live RTSP',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-
-              if (!isFS) ...[
-                const SizedBox(height: 16),
-
-                // 2. Selectable Dynamic Camera Channels Section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Select Camera Channel',
-                        style: TextStyle(
-                          color: context.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${controller.cameraOptions.length} Channels Available',
-                        style: TextStyle(
-                          color: context.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Dynamic Grid of Selectable Camera Cards
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.builder(
-                      itemCount: controller.cameraOptions.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 1.45,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemBuilder: (context, index) {
-                        final cam = controller.cameraOptions[index];
-                        final isSelected =
-                            controller.selectedChannel.value == cam.channel;
-                        final status = controller.channelStatuses[cam.channel] ??
-                            cam.status;
-
-                        return _buildCameraCard(
-                            context, controller, cam, isSelected, status);
-                      },
-                    ),
-                  ),
-                ),
-
-                // Security & Network Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF1A1A1A)
-                        : context.inputBgColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: context.borderColor),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.security_rounded,
-                          color: AppColors.primary, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '🔒 Direct RTSP Stream • Auto-pauses after 3 minutes to preserve phone battery & camera network bandwidth.',
-                          style: TextStyle(
-                              color: context.textSecondary,
-                              fontSize: 11,
-                              height: 1.3),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          );
-        }),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -288,12 +357,13 @@ class CctvLiveView extends StatelessWidget {
                 onPressed: controller.resumeStream,
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
                 label: const Text('RESUME STREAM',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
               ),
             ],
@@ -305,7 +375,8 @@ class CctvLiveView extends StatelessWidget {
     if (controller.videoController != null) {
       return SizedBox.expand(
         child: Video(
-          key: ValueKey('media_kit_${controller.selectedChannel.value}_${controller.streamType.value}_${controller.videoController.hashCode}'),
+          key: ValueKey(
+              'media_kit_${controller.selectedChannel.value}_${controller.streamType.value}_${controller.videoController.hashCode}'),
           controller: controller.videoController!,
           fit: BoxFit.cover,
           controls: NoVideoControls,
@@ -480,12 +551,8 @@ class CctvLiveView extends StatelessWidget {
     );
   }
 
-  Widget _buildCameraCard(
-      BuildContext context,
-      CctvLiveController controller,
-      CctvLiveCameraOptionModel cam,
-      bool isSelected,
-      String status) {
+  Widget _buildCameraCard(BuildContext context, CctvLiveController controller,
+      CctvLiveCameraOptionModel cam, bool isSelected, String status) {
     final isDark = context.isDark;
     final channel = cam.channel;
 
@@ -496,8 +563,8 @@ class CctvLiveView extends StatelessWidget {
       statusColor = Colors.red;
     }
 
-    final courtName =
-        cam.courtName ?? (channel % 2 != 0 ? 'Court 1 (Main Pitch)' : 'Court 2 (Side Pitch)');
+    final courtName = cam.courtName ??
+        (channel % 2 != 0 ? 'Court 1 (Main Pitch)' : 'Court 2 (Side Pitch)');
 
     return InkWell(
       onTap: () {
@@ -534,7 +601,9 @@ class CctvLiveView extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary
-                        : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                        : (isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -548,24 +617,32 @@ class CctvLiveView extends StatelessWidget {
                     ),
                   ),
                 ),
-                Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                          color: statusColor, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      status,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                            color: statusColor, shape: BoxShape.circle),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -576,8 +653,7 @@ class CctvLiveView extends StatelessWidget {
                   cam.name,
                   style: TextStyle(
                     color: context.textPrimary,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.w600,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                     fontSize: 15,
                   ),
                   maxLines: 1,

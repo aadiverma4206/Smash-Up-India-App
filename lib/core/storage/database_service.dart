@@ -69,7 +69,8 @@ class DatabaseService {
       if (id.isEmpty) continue;
 
       final title = item['title']?.toString() ?? 'Notification';
-      final body = item['body']?.toString() ?? item['message']?.toString() ?? '';
+      final body =
+          item['body']?.toString() ?? item['message']?.toString() ?? '';
       final type = item['type']?.toString() ?? 'SYSTEM';
       final isRead = (item['isRead'] == true || item['is_read'] == 1) ? 1 : 0;
       final createdAt = item['createdAt']?.toString() ??
@@ -106,7 +107,8 @@ class DatabaseService {
   }
 
   /// Retrieves local notifications for [userId] sorted by created_at DESC
-  Future<List<Map<String, dynamic>>> getLocalNotifications(String userId) async {
+  Future<List<Map<String, dynamic>>> getLocalNotifications(
+      String userId) async {
     await pruneOldNotifications(maxAge: const Duration(days: 3));
     final rows = await _db.query(
       'local_notifications',

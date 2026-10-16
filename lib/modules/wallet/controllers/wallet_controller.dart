@@ -44,7 +44,8 @@ class WalletController extends GetxController {
   Future<void> fetchWalletDetails() async {
     // Admin (Role 1) and Manager (Role 2) do not have player wallets
     if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
-      AppLogger.info('Admin/Manager role active - Skipping player wallet fetch.');
+      AppLogger.info(
+          'Admin/Manager role active - Skipping player wallet fetch.');
       return;
     }
 

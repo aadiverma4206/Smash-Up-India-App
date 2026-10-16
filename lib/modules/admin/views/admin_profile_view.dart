@@ -8,6 +8,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/services/theme_service.dart';
 import '../../../core/storage/database_service.dart';
 import '../../../core/widgets/app_loader.dart';
@@ -232,18 +233,25 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                 message: 'Loading administrator profile details...');
           }
 
-          final name =
-              profileData['name'] ?? user?.name ?? 'System Administrator';
-          final email =
-              profileData['email'] ?? user?.email ?? 'admin@allstarsarena.com';
-          final phone = profileData['phone'] ?? user?.phone ?? '+91 9999999999';
-          final avatarUrl =
-              profileData['profile_image_url'] ?? user?.profileImageUrl ?? '';
-          final role = profileData['role_name'] ??
-              profileData['role'] ??
-              user?.roleName ??
-              'SYSTEM ADMIN';
-          final city = profileData['city'] ?? user?.city ?? 'Raipur';
+          final String name =
+              (profileData['name'] ?? user?.name ?? 'System Administrator')
+                  .toString();
+          final String email =
+              (profileData['email'] ?? user?.email ?? 'admin@allstarsarena.com')
+                  .toString();
+          final String phone =
+              (profileData['phone'] ?? user?.phone ?? '+91 9999999999')
+                  .toString();
+          final String avatarUrl =
+              (profileData['profile_image_url'] ?? user?.profileImageUrl ?? '')
+                  .toString();
+          final String role = (profileData['role_name'] ??
+                  profileData['role'] ??
+                  user?.roleName ??
+                  'SYSTEM ADMIN')
+              .toString();
+          final String city =
+              (profileData['city'] ?? user?.city ?? 'Raipur').toString();
           final dashboard = Get.isRegistered<AdminController>()
               ? adminController.dashboard.value
               : null;
@@ -281,10 +289,11 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                               radius: 52,
                               backgroundColor: const Color(0xFF7E57C2)
                                   .withValues(alpha: 0.15),
-                              backgroundImage: avatarUrl.isValidNetworkUrl
-                                  ? CachedNetworkImageProvider(avatarUrl)
-                                  : null,
-                              child: !avatarUrl.isValidNetworkUrl
+                              backgroundImage:
+                                  ImageUtils.isValidNetworkUrl(avatarUrl)
+                                      ? CachedNetworkImageProvider(avatarUrl)
+                                      : null,
+                              child: !ImageUtils.isValidNetworkUrl(avatarUrl)
                                   ? Text(
                                       name.isNotEmpty
                                           ? name[0].toUpperCase()

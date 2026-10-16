@@ -73,7 +73,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
   final RxBool _isOfflineMode = false.obs;
   final RxBool _isLoadingNotifications = false.obs;
 
-  final RxList<NotificationModel> _serverNotifications = <NotificationModel>[].obs;
+  final RxList<NotificationModel> _serverNotifications =
+      <NotificationModel>[].obs;
 
   @override
   void initState() {
@@ -112,13 +113,15 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
 
       _serverNotifications.assignAll(remoteNotifs);
     } catch (e) {
-      AppLogger.warning('Network error fetching manager notifications, falling back to local SQLite cache: $e');
+      AppLogger.warning(
+          'Network error fetching manager notifications, falling back to local SQLite cache: $e');
       _isOfflineMode.value = true;
 
       // Fallback to SQLite local storage & prune >3 days old records
       if (userId.isNotEmpty) {
         final localRows = await dbService.getLocalNotifications(userId);
-        final cachedNotifs = localRows.map((r) => NotificationModel.fromJson(r)).toList();
+        final cachedNotifs =
+            localRows.map((r) => NotificationModel.fromJson(r)).toList();
         _serverNotifications.assignAll(cachedNotifs);
       }
     } finally {
@@ -134,7 +137,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     // 1. REAL Pending Games awaiting Manager Approval
     for (final game in dashboardController.pendingPlayerGames) {
       final parsedDate =
-          AppDateUtils.parseMatchDateTime(game.matchDate, game.startTime) ?? now;
+          AppDateUtils.parseMatchDateTime(game.matchDate, game.startTime) ??
+              now;
       final key = 'pending_game_${game.id}';
       itemsMap[key] = ManagerAlertItem(
         id: key,
@@ -282,7 +286,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
             icon: const Icon(Icons.mark_email_read_rounded),
             tooltip: 'Mark All Read',
             onPressed: () async {
-              final userId = Get.find<AuthService>().currentUser.value?.id ?? '';
+              final userId =
+                  Get.find<AuthService>().currentUser.value?.id ?? '';
               if (userId.isNotEmpty) {
                 await repository.markAllNotificationsRead();
                 await dbService.markAllLocalNotificationsRead(userId);
@@ -305,11 +310,13 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
               if (!_isOfflineMode.value) return const SizedBox.shrink();
               return Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 color: Colors.orange.withValues(alpha: 0.15),
                 child: Row(
                   children: const [
-                    Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 18),
+                    Icon(Icons.wifi_off_rounded,
+                        color: Colors.orange, size: 18),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -334,13 +341,14 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                     controller: _searchController,
                     onChanged: (val) => _searchQuery.value = val,
                     style: TextStyle(
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search notifications by keyword...',
-                      prefixIcon:
-                          const Icon(Icons.search_rounded, color: AppColors.primary),
+                      prefixIcon: const Icon(Icons.search_rounded,
+                          color: AppColors.primary),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear_rounded, size: 18),
@@ -393,7 +401,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                               selected: isSelected,
                               selectedColor: AppColors.primary,
                               backgroundColor: Theme.of(context).cardColor,
-                              onSelected: (_) => _activeCategoryFilter.value = cat,
+                              onSelected: (_) =>
+                                  _activeCategoryFilter.value = cat,
                             ),
                           );
                         });
@@ -407,8 +416,10 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
             // Notifications Feed Body
             Expanded(
               child: Obx(() {
-                if (_isLoadingNotifications.value && _serverNotifications.isEmpty) {
-                  return const AppLoader(message: 'Syncing manager notifications...');
+                if (_isLoadingNotifications.value &&
+                    _serverNotifications.isEmpty) {
+                  return const AppLoader(
+                      message: 'Syncing manager notifications...');
                 }
 
                 final allAlerts = _buildAlertItems();
@@ -534,7 +545,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
             ],
           ),
           const SizedBox(height: 8),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -542,7 +552,9 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                 formattedTime,
                 style: TextStyle(
                   fontSize: 11,
-                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade500,
                 ),
               ),
               if (item.isPendingAction) ...[
@@ -559,7 +571,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                       ),
                       onPressed: () => _handleRejectAction(item),
                       child: const Text('Reject',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -573,7 +586,8 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                       ),
                       onPressed: () => _handleApproveAction(item),
                       child: const Text('Approve',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),

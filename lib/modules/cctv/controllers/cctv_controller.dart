@@ -51,13 +51,25 @@ class CctvController extends GetxController {
   void _populateDefaultHostCameras() {
     hostLiveCameras.assignAll([
       CctvLiveCameraOptionModel(
-          id: 'live_cam_1', channel: 1, name: 'Camera 1 (Main Pitch)', courtName: 'Court 1'),
+          id: 'live_cam_1',
+          channel: 1,
+          name: 'Camera 1 (Main Pitch)',
+          courtName: 'Court 1'),
       CctvLiveCameraOptionModel(
-          id: 'live_cam_2', channel: 2, name: 'Camera 2 (Side Pitch)', courtName: 'Court 2'),
+          id: 'live_cam_2',
+          channel: 2,
+          name: 'Camera 2 (Side Pitch)',
+          courtName: 'Court 2'),
       CctvLiveCameraOptionModel(
-          id: 'live_cam_3', channel: 3, name: 'Camera 3 (Goal View A)', courtName: 'Court 1'),
+          id: 'live_cam_3',
+          channel: 3,
+          name: 'Camera 3 (Goal View A)',
+          courtName: 'Court 1'),
       CctvLiveCameraOptionModel(
-          id: 'live_cam_4', channel: 4, name: 'Camera 4 (Goal View B)', courtName: 'Court 2'),
+          id: 'live_cam_4',
+          channel: 4,
+          name: 'Camera 4 (Goal View B)',
+          courtName: 'Court 2'),
     ]);
   }
 

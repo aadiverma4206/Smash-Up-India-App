@@ -23,7 +23,8 @@ Future<void> bootstrap({String envFile = '.env.dev'}) async {
       AppLogger.info('🔥 Firebase initialized successfully during bootstrap.');
     }
   } catch (e) {
-    AppLogger.warning('Firebase initialization skipped or failed during bootstrap: $e');
+    AppLogger.warning(
+        'Firebase initialization skipped or failed during bootstrap: $e');
   }
 
   try {

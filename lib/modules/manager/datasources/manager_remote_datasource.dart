@@ -277,8 +277,7 @@ class ManagerRemoteDataSource {
 
   Future<ApiResponseModel<Map<String, dynamic>>> getPlayerDetailHistory(
       String playerId) async {
-    final response =
-        await dioClient.dio.get('/manager/players/$playerId');
+    final response = await dioClient.dio.get('/manager/players/$playerId');
     return ApiResponseParser.parse<Map<String, dynamic>>(
       response.data,
       (json) => json as Map<String, dynamic>,

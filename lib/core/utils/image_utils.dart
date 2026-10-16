@@ -1,12 +1,21 @@
-extension StringImageUtils on String? {
-  bool get isValidNetworkUrl {
-    if (this == null) return false;
-    final trimmed = this!.trim();
-    if (trimmed.isEmpty) return false;
-    if (trimmed.startsWith('/assets/') || trimmed.startsWith('assets/')) {
+class ImageUtils {
+  ImageUtils._();
+
+  /// Safely checks if an input (String, dynamic, or null) is a valid HTTP/HTTPS network image URL.
+  static bool isValidNetworkUrl(dynamic input) {
+    if (input == null) return false;
+    final str = input.toString().trim();
+    if (str.isEmpty) return false;
+    if (str.startsWith('/assets/') || str.startsWith('assets/')) {
       return false;
     }
-    return trimmed.startsWith('http://') || trimmed.startsWith('https://');
+    return str.startsWith('http://') || str.startsWith('https://');
+  }
+}
+
+extension StringImageUtils on String? {
+  bool get isValidNetworkUrl {
+    return ImageUtils.isValidNetworkUrl(this);
   }
 
   String? get sanitizedNetworkUrl {

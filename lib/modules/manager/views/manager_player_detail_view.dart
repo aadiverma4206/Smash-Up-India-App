@@ -77,9 +77,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.darkBackground
-          : const Color(0xFFF4F6F9),
+      backgroundColor:
+          isDark ? AppColors.darkBackground : const Color(0xFFF4F6F9),
       appBar: AppBar(
         title: const Text(
           'Player Profile & History',
@@ -92,7 +91,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               if (playerId.isNotEmpty) {
-                controller.fetchPlayerDetailHistory(playerId, forceReload: true);
+                controller.fetchPlayerDetailHistory(playerId,
+                    forceReload: true);
               }
             },
           ),
@@ -102,7 +102,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
         child: Obx(() {
           if (controller.isActionLoading.value &&
               controller.selectedPlayerDetail.value == null) {
-            return const AppLoader(message: 'Loading player history & stats...');
+            return const AppLoader(
+                message: 'Loading player history & stats...');
           }
 
           final detailData = controller.selectedPlayerDetail.value;
@@ -118,8 +119,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
           }
 
           final String name = (playerMap['name'] ?? 'Player').toString();
-          final String phone =
-              (playerMap['phone'] ?? '').toString();
+          final String phone = (playerMap['phone'] ?? '').toString();
           final String email = (playerMap['email'] ?? '').toString();
           final String city = (playerMap['city'] ?? '').toString();
           final String bio = (playerMap['bio'] ?? '').toString();
@@ -131,14 +131,17 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   playerMap['elo']?.toString() ??
                   '750') ??
               750;
-          final int ovr = int.tryParse(playerMap['ovr_rating']?.toString() ?? '0') ?? 0;
+          final int ovr =
+              int.tryParse(playerMap['ovr_rating']?.toString() ?? '0') ?? 0;
           final bool isBlocked =
               (playerMap['status']?.toString().toUpperCase() == 'BLOCKED') ||
-                  (playerMap['status']?.toString().toUpperCase() == 'SUSPENDED') ||
+                  (playerMap['status']?.toString().toUpperCase() ==
+                      'SUSPENDED') ||
                   (playerMap['isBlocked'] == true);
-          final String? avatarUrl = playerMap['profile_image_url']?.toString() ??
-              playerMap['avatarUrl']?.toString() ??
-              playerMap['profileImageUrl']?.toString();
+          final String? avatarUrl =
+              playerMap['profile_image_url']?.toString() ??
+                  playerMap['avatarUrl']?.toString() ??
+                  playerMap['profileImageUrl']?.toString();
 
           // Filter match history based on selected filter
           final filteredHistory = historyList.where((item) {
@@ -297,9 +300,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isBlocked
-                            ? Colors.redAccent
-                            : AppColors.primary,
+                        color: isBlocked ? Colors.redAccent : AppColors.primary,
                         width: 2.5,
                       ),
                     ),
@@ -324,7 +325,9 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                       width: 18,
                       height: 18,
                       decoration: BoxDecoration(
-                        color: isBlocked ? Colors.redAccent : const Color(0xFF00C853),
+                        color: isBlocked
+                            ? Colors.redAccent
+                            : const Color(0xFF00C853),
                         shape: BoxShape.circle,
                         border: Border.all(color: cardBg, width: 2),
                       ),
@@ -366,7 +369,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                           decoration: BoxDecoration(
                             color: isBlocked
                                 ? Colors.redAccent.withValues(alpha: 0.12)
-                                : const Color(0xFF00C853).withValues(alpha: 0.12),
+                                : const Color(0xFF00C853)
+                                    .withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: isBlocked
@@ -508,9 +512,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkInputBg
-                    : const Color(0xFFF1F5F9),
+                color: isDark ? AppColors.darkInputBg : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -760,7 +762,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
         LayoutBuilder(
           builder: (context, constraints) {
             // Responsive child aspect ratio depending on screen width
-            final double cardAspectRatio = constraints.maxWidth < 360 ? 1.4 : 1.6;
+            final double cardAspectRatio =
+                constraints.maxWidth < 360 ? 1.4 : 1.6;
 
             return GridView.count(
               crossAxisCount: 2,
@@ -843,8 +846,9 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     final cardBg = isDark ? bgDark : bgLight;
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A);
-    final labelColor =
-        isDark ? AppColors.textPrimaryDark.withValues(alpha: 0.85) : const Color(0xFF1E293B);
+    final labelColor = isDark
+        ? AppColors.textPrimaryDark.withValues(alpha: 0.85)
+        : const Color(0xFF1E293B);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1095,8 +1099,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     final String title =
         (match['game_title'] ?? match['title'] ?? 'Turf Match').toString();
     final String format = (match['format'] ?? '5v5').toString();
-    final String courtName =
-        (match['court_name'] ?? 'Main Pitch').toString();
+    final String courtName = (match['court_name'] ?? 'Main Pitch').toString();
     final String clubName = (match['club_name'] ?? '').toString();
     final String team = (match['team'] ?? '').toString();
     final String gamePosition = (match['game_position'] ?? '').toString();
@@ -1119,7 +1122,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
 
     String timeDisplay = dateStr;
     if (startTime.isNotEmpty) {
-      timeDisplay = '$dateStr  •  $startTime${endTime.isNotEmpty ? ' - $endTime' : ''}';
+      timeDisplay =
+          '$dateStr  •  $startTime${endTime.isNotEmpty ? ' - $endTime' : ''}';
     }
 
     // Payment styling
@@ -1198,7 +1202,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.12),
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -1213,7 +1218,10 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  courtName + (clubName.isNotEmpty ? '  •  $clubName' : ''),
+                                  courtName +
+                                      (clubName.isNotEmpty
+                                          ? '  •  $clubName'
+                                          : ''),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
@@ -1456,7 +1464,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
-              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
           ),
           const SizedBox(height: 6),
@@ -1515,8 +1524,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
   }
 
   Widget _buildDefaultAvatar(String name, {double size = 44}) {
-    final initial =
-        name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'P';
+    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'P';
     return Container(
       width: size,
       height: size,
@@ -1590,7 +1598,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                 fontSize: 13,
               ),
               decoration: InputDecoration(
-                hintText: 'Enter reason for blocking (e.g. misconduct, no-show)...',
+                hintText:
+                    'Enter reason for blocking (e.g. misconduct, no-show)...',
                 hintStyle: TextStyle(
                   color: isDark
                       ? AppColors.textSecondaryDark
@@ -1598,15 +1607,13 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   fontSize: 12,
                 ),
                 filled: true,
-                fillColor: isDark
-                    ? AppColors.darkInputBg
-                    : const Color(0xFFF8FAFC),
+                fillColor:
+                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: isDark
-                        ? AppColors.darkBorder
-                        : const Color(0xFFCBD5E1),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
                   ),
                 ),
               ),
@@ -1619,7 +1626,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1676,9 +1684,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
           'Are you sure you want to restore match and turf booking access for $name?',
           style: TextStyle(
             fontSize: 13,
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : const Color(0xFF475569),
+            color:
+                isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
           ),
         ),
         actions: [
@@ -1687,7 +1694,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
                 fontWeight: FontWeight.bold,
               ),
             ),

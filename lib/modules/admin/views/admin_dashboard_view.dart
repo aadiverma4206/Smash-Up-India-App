@@ -890,15 +890,19 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'System Overview',
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+            Expanded(
+              child: Text(
+                'System Overview',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 8),
             TextButton(
               onPressed: () => Get.toNamed('/admin/users'),
               child: const Text('Manage Users →',

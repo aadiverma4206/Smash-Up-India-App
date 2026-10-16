@@ -305,30 +305,31 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                           _buildLogoWidget(context),
 
                           // Flexible Morphing Title ("Manager Control Center")
-                          ClipRect(
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              widthFactor: progress,
-                              child: Opacity(
-                                opacity: progress,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 10.0),
-                                  child: _buildTitleWidget(context),
+                          Expanded(
+                            child: ClipRect(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: progress,
+                                child: Opacity(
+                                  opacity: progress,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6.0),
+                                    child: _buildTitleWidget(context),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-
-                          const Spacer(),
 
                           // Action Icons (Notification, Profile Avatar, Logout)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildNotificationButton(context),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               _buildProfileAvatar(context),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               _buildLogoutButton(context),
                             ],
                           ),
@@ -825,12 +826,16 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                       color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  'Manage Turf Club & Matches',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold),
+                Flexible(
+                  child: Text(
+                    'Manage Turf Club & Matches',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -982,17 +987,23 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(6),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('Authorized Club',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 ),
-                child: const Text('Authorized Club',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -1003,6 +1014,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 color:
                     isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
                 fontSize: 12),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1052,8 +1065,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(10),
@@ -1103,22 +1116,23 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                const Icon(Icons.sports_soccer_rounded,
-                    color: AppColors.primary, size: 20),
-                const SizedBox(width: 6),
-                Text('Pending Player-Created Matches',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : Colors.black87)),
-              ],
+            const Icon(Icons.sports_soccer_rounded,
+                color: AppColors.primary, size: 20),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Pending Player-Created Matches',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 8),
             Obx(
               () => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1334,22 +1348,23 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                const Icon(Icons.pending_actions_rounded,
-                    color: Colors.amber, size: 20),
-                const SizedBox(width: 6),
-                Text('Pending Player Slot Requests',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : Colors.black87)),
-              ],
+            const Icon(Icons.pending_actions_rounded,
+                color: Colors.amber, size: 20),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Pending Player Slot Requests',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 8),
             Obx(
               () => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1659,16 +1674,20 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Court-Wise Game Management',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+            Expanded(
+              child: Text(
+                'Court-Wise Game Management',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             TextButton.icon(
               onPressed: () => Get.toNamed('/manager/courts'),
               icon: const Icon(Icons.tune_rounded,
@@ -1984,7 +2003,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 ),
                 onPressed: () {
                   Get.find<ManagerGamesController>().selectedGame.value = game;
-                  Get.toNamed('/games/details');
+                  Get.find<ManagerGamesController>()
+                      .fetchMatchRecording(game.id);
+                  Get.toNamed('/manager/games/details',
+                      arguments: {'gameId': game.id, 'game': game});
                 },
                 child: const Text('Manage',
                     style: TextStyle(
@@ -2134,7 +2156,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 tooltip: 'Ongoing Match Control',
                 onPressed: () {
                   Get.find<ManagerGamesController>().selectedGame.value = game;
-                  Get.toNamed('/games/details');
+                  Get.find<ManagerGamesController>()
+                      .fetchMatchRecording(game.id);
+                  Get.toNamed('/manager/games/details',
+                      arguments: {'gameId': game.id, 'game': game});
                 },
               ),
             ] else ...[

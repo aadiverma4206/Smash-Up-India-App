@@ -676,46 +676,54 @@ class _FindGamesViewState extends State<FindGamesView> {
                       ),
                     ),
 
-                    const Spacer(),
+                    const SizedBox(width: 8),
+                    const Expanded(child: SizedBox.shrink()),
 
                     // Creator / Host Tag
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: game.createdByPlayer
-                            ? AppColors.primary.withValues(alpha: 0.15)
-                            : Colors.blue.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
                           color: game.createdByPlayer
-                              ? AppColors.primary.withValues(alpha: 0.3)
-                              : Colors.blue.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            game.createdByPlayer
-                                ? Icons.person_rounded
-                                : Icons.business_rounded,
-                            size: 12,
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : Colors.blue.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
                             color: game.createdByPlayer
-                                ? AppColors.primary
-                                : Colors.blue,
+                                ? AppColors.primary.withValues(alpha: 0.3)
+                                : Colors.blue.withValues(alpha: 0.3),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            game.createdByPlayer ? 'Player Host' : 'Club Match',
-                            style: TextStyle(
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.createdByPlayer
+                                  ? Icons.person_rounded
+                                  : Icons.business_rounded,
+                              size: 12,
                               color: game.createdByPlayer
                                   ? AppColors.primary
                                   : Colors.blue,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                game.createdByPlayer ? 'Player Host' : 'Club Match',
+                                style: TextStyle(
+                                  color: game.createdByPlayer
+                                      ? AppColors.primary
+                                      : Colors.blue,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

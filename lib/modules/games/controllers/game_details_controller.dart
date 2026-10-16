@@ -65,6 +65,10 @@ class GameDetailsController extends GetxController {
   void onInit() {
     super.onInit();
     _initRazorpay();
+    final args = Get.arguments;
+    if (args is Map && args['game'] is GameModel) {
+      game.value = args['game'] as GameModel;
+    }
     if (gameId.isNotEmpty) {
       loadGameDetails();
     }

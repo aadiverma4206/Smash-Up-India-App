@@ -40,13 +40,15 @@ class CctvListView extends StatelessWidget {
               color: isDark ? Colors.white : Colors.black87,
             ),
             tooltip: 'Refresh Cameras',
-            onPressed: () => controller.selectCamera(controller.selectedChannel.value),
+            onPressed: () =>
+                controller.selectCamera(controller.selectedChannel.value),
           ),
         ],
       ),
       body: Obx(() {
         if (controller.isLoading.value && controller.cameraOptions.isEmpty) {
-          return const AppLoader(message: 'Fetching CCTV channels from DVR host...');
+          return const AppLoader(
+              message: 'Fetching CCTV channels from DVR host...');
         }
 
         return ListView(
@@ -61,8 +63,8 @@ class CctvListView extends StatelessWidget {
               ),
               color: isDark ? const Color(0xFF1E1E1E) : context.cardColor,
               child: InkWell(
-                onTap: () =>
-                    Get.toNamed('/manager/cctv/live', arguments: {'channel': 1}),
+                onTap: () => Get.toNamed('/manager/cctv/live',
+                    arguments: {'channel': 1}),
                 borderRadius: BorderRadius.circular(16),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -87,12 +89,16 @@ class CctvListView extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                Text(
-                                  'Live CCTV Feed',
-                                  style: TextStyle(
-                                    color: context.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                                Expanded(
+                                  child: Text(
+                                    'Live CCTV Feed',
+                                    style: TextStyle(
+                                      color: context.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -162,8 +168,11 @@ class CctvListView extends StatelessWidget {
             // Automatically Fetched Camera Cards
             ...List.generate(controller.cameraOptions.length, (index) {
               final cam = controller.cameraOptions[index];
-              final status = controller.channelStatuses[cam.channel] ?? cam.status;
-              final isOnline = status == 'Live' || status == 'ONLINE' || status == 'Connecting';
+              final status =
+                  controller.channelStatuses[cam.channel] ?? cam.status;
+              final isOnline = status == 'Live' ||
+                  status == 'ONLINE' ||
+                  status == 'Connecting';
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -194,15 +203,15 @@ class CctvListView extends StatelessWidget {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: isOnline
-                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      ? AppColors.primary
+                                          .withValues(alpha: 0.15)
                                       : Colors.red.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
                                   Icons.videocam_rounded,
-                                  color: isOnline
-                                      ? AppColors.primary
-                                      : Colors.red,
+                                  color:
+                                      isOnline ? AppColors.primary : Colors.red,
                                   size: 24,
                                 ),
                               ),
@@ -270,28 +279,33 @@ class CctvListView extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Host: 192.168.1.2:554',
-                                style: TextStyle(
-                                    color: context.textSecondary,
-                                    fontSize: 12),
+                              Expanded(
+                                child: Text(
+                                  'Host: 192.168.1.2:554',
+                                  style: TextStyle(
+                                      color: context.textSecondary,
+                                      fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               ElevatedButton.icon(
                                 onPressed: () => Get.toNamed(
                                   '/manager/cctv/live',
                                   arguments: {'channel': cam.channel},
                                 ),
                                 icon: const Icon(Icons.play_arrow_rounded,
-                                    size: 18),
-                                label: const Text('Watch Live Footage',
+                                    size: 16),
+                                label: const Text('Watch Live',
                                     style: TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold)),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 8),
+                                      horizontal: 10, vertical: 6),
                                   minimumSize: Size.zero,
                                   tapTargetSize:
                                       MaterialTapTargetSize.shrinkWrap,

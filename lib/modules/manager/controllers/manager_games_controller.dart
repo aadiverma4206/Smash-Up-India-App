@@ -32,6 +32,19 @@ class ManagerGamesController extends GetxController {
   void onInit() {
     super.onInit();
     fetchClubGames();
+    final args = Get.arguments;
+    if (args is Map) {
+      if (args['game'] is GameModel) {
+        selectedGame.value = args['game'] as GameModel;
+      }
+      final gameId = (args['gameId'] ?? args['id'] ?? '').toString();
+      if (gameId.isNotEmpty) {
+        fetchMatchRecording(gameId);
+      }
+    } else if (args is GameModel) {
+      selectedGame.value = args;
+      fetchMatchRecording(args.id);
+    }
   }
 
   Future<void> fetchClubGames({String? court}) async {

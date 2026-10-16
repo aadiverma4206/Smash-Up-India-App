@@ -6,6 +6,7 @@ import 'package:dio/dio.dart' as dio;
 import '../../../core/services/auth_service.dart';
 import '../../../data/models/user_model.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../app/theme/app_colors.dart';
@@ -202,15 +203,22 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                 message: 'Loading manager profile details...');
           }
 
-          final name = profileData['name'] ?? user?.name ?? 'Club Manager';
-          final email = profileData['email'] ??
-              user?.email ??
-              'manager@allstarsarena.com';
-          final phone = profileData['phone'] ?? user?.phone ?? '+91 9876543210';
-          final avatarUrl =
-              profileData['profile_image_url'] ?? user?.profileImageUrl ?? '';
-          final clubName = profileData['club_name'] ?? 'All Stars Arena Turf';
-          final clubAddress = profileData['club_address'] ?? 'VIP Road, Raipur';
+          final String name =
+              (profileData['name'] ?? user?.name ?? 'Club Manager').toString();
+          final String email = (profileData['email'] ??
+                  user?.email ??
+                  'manager@allstarsarena.com')
+              .toString();
+          final String phone =
+              (profileData['phone'] ?? user?.phone ?? '+91 9876543210')
+                  .toString();
+          final String avatarUrl =
+              (profileData['profile_image_url'] ?? user?.profileImageUrl ?? '')
+                  .toString();
+          final String clubName =
+              (profileData['club_name'] ?? 'All Stars Arena Turf').toString();
+          final String clubAddress =
+              (profileData['club_address'] ?? 'VIP Road, Raipur').toString();
 
           return RefreshIndicator(
             onRefresh: fetchManagerProfile,
@@ -245,10 +253,11 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                               radius: 50,
                               backgroundColor:
                                   AppColors.primary.withValues(alpha: 0.15),
-                              backgroundImage: avatarUrl.isValidNetworkUrl
-                                  ? CachedNetworkImageProvider(avatarUrl)
-                                  : null,
-                              child: !avatarUrl.isValidNetworkUrl
+                              backgroundImage:
+                                  ImageUtils.isValidNetworkUrl(avatarUrl)
+                                      ? CachedNetworkImageProvider(avatarUrl)
+                                      : null,
+                              child: !ImageUtils.isValidNetworkUrl(avatarUrl)
                                   ? Text(
                                       name.isNotEmpty
                                           ? name[0].toUpperCase()

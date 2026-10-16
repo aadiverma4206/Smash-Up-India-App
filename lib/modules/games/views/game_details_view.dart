@@ -195,8 +195,12 @@ class GameDetailsView extends StatelessWidget {
                 const Icon(Icons.stadium_rounded,
                     color: AppColors.primary, size: 18),
                 const SizedBox(width: 8),
-                Text('${game.clubName} (${game.courtName})',
-                    style: TextStyle(color: context.textSecondary)),
+                Expanded(
+                  child: Text('${game.clubName} (${game.courtName})',
+                      style: TextStyle(color: context.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -205,9 +209,13 @@ class GameDetailsView extends StatelessWidget {
                 const Icon(Icons.calendar_today_rounded,
                     color: AppColors.primary, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                    '${AppDateUtils.formatDate(game.matchDate)} • ${AppDateUtils.formatTimeRange(game.startTime, game.endTime)}',
-                    style: TextStyle(color: context.textSecondary)),
+                Expanded(
+                  child: Text(
+                      '${AppDateUtils.formatDate(game.matchDate)} • ${AppDateUtils.formatTimeRange(game.startTime, game.endTime)}',
+                      style: TextStyle(color: context.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -216,10 +224,14 @@ class GameDetailsView extends StatelessWidget {
                 const Icon(Icons.currency_rupee_rounded,
                     color: Colors.amber, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                    'Entry Fee: ₹${game.perPlayerFee.toStringAsFixed(0)} / player',
-                    style: const TextStyle(
-                        color: Colors.amber, fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(
+                      'Entry Fee: ₹${game.perPlayerFee.toStringAsFixed(0)} / player',
+                      style: const TextStyle(
+                          color: Colors.amber, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
             if (game.description != null && game.description!.isNotEmpty) ...[

@@ -16,7 +16,8 @@ class CctvBinding extends Bindings {
     }
     if (!Get.isRegistered<CctvRepository>()) {
       Get.lazyPut<CctvRepository>(
-        () => CctvRepository(remoteDataSource: Get.find<CctvRemoteDataSource>()),
+        () =>
+            CctvRepository(remoteDataSource: Get.find<CctvRemoteDataSource>()),
         fenix: true,
       );
     }
