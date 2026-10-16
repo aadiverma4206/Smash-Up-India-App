@@ -19,7 +19,7 @@ export const initFirebaseAdmin = (): admin.app.App | null => {
     // 1. Resolve GOOGLE_APPLICATION_CREDENTIALS file path reliably
     const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || env.GOOGLE_APPLICATION_CREDENTIALS;
     if (credPath) {
-      const currentDir = path.dirname(fileURLToPath(import.meta.url));
+      const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
       const candidates = [
         path.isAbsolute(credPath) ? credPath : path.resolve(process.cwd(), credPath),
         path.isAbsolute(credPath) ? credPath : path.resolve(process.cwd(), 'all_stars_arena_backend', credPath),

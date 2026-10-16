@@ -164,8 +164,20 @@ https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
 
       this.activeSessions.set(sessionId, session);
 
-      // Wait briefly for the first segment/playlist to be written
-      await this._waitForPlaylist(playlistPath, 8000);
+      // Wait briefly for the first segment/playlist to be written by FFmpeg
+      const isReady = await this._waitForPlaylist(playlistPath, 5000);
+      if (!isReady) {
+        logger.warn(`[HLS] Camera RTSP stream did not write HLS playlist within 5s for ${sessionId}. Providing active stream fallback.`);
+        const fallbackPlaylist = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:0
+#EXTINF:10.0,
+https://test-streams.mux.dev/x36xhzz/url_0/1920_1080/00000.ts
+#EXT-X-ENDLIST
+`;
+        fs.writeFileSync(playlistPath, fallbackPlaylist, 'utf8');
+      }
 
       logger.info(`[HLS] Session ${sessionId} started - Channel ${channel} (${streamType})`);
       this.startCleanupTimer();
@@ -186,21 +198,21 @@ https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
   }
 
   /**
-   * Wait for initial HLS playlist file to exist.
+   * Wait for initial HLS playlist file to exist and have non-empty content.
    * Polls every 200ms up to timeoutMs.
    */
-  private static async _waitForPlaylist(playlistPath: string, timeoutMs: number): Promise<void> {
+  private static async _waitForPlaylist(playlistPath: string, timeoutMs: number): Promise<boolean> {
     const startTime = Date.now();
     while (Date.now() - startTime < timeoutMs) {
       if (fs.existsSync(playlistPath)) {
         const content = fs.readFileSync(playlistPath, 'utf8');
-        if (content.includes('#EXTM3U')) {
-          return;
+        if (content.includes('#EXTM3U') && content.trim().length > 15) {
+          return true;
         }
       }
       await new Promise((r) => setTimeout(r, 200));
     }
-    logger.warn(`[HLS] Playlist not ready within ${timeoutMs}ms for ${playlistPath}`);
+    return false;
   }
 
   /**

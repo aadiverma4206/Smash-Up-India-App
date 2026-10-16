@@ -1,6 +1,7 @@
 import { CctvRepository } from './cctv.repository.js';
 import { CctvRecordingService } from '../../services/cctvRecording.service.js';
 import { CctvDiscoveryService } from '../../services/cctvDiscovery.service.js';
+import { HlsStreamingService } from '../../services/hlsStreaming.service.js';
 import { encryptSecret, decryptSecret, redactRtspUrl } from '../../utils/crypto.utils.js';
 import { getSignedPlaybackUrl } from '../../services/storage.service.js';
 import { ApiError } from '../../utils/apiResponse.js';
@@ -687,16 +688,33 @@ export class CctvService {
     };
 
     const cameraName = cameraNameMap[channel] || `Camera ${channel}`;
-
     const sessionId = `live_sess_${channel}_${Date.now()}`;
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+
+    let hlsPlaybackUrl = '';
+    try {
+      const hlsResult = await HlsStreamingService.startOrReuseSession({
+        sessionId,
+        rtspUrl,
+        channel,
+        streamType,
+      });
+      const baseUrl = backendBaseUrl || env.BACKEND_URL || '';
+      hlsPlaybackUrl = baseUrl
+        ? `${baseUrl.replace(/\/$/, '')}${hlsResult.hlsUrlPath}`
+        : hlsResult.hlsUrlPath;
+    } catch (err: any) {
+      logger.warn(`[CCTV] HLS stream start failed, falling back to direct RTSP: ${err.message}`);
+    }
+
+    const playbackUrl = hlsPlaybackUrl || rtspUrl;
 
     await CctvRepository.logAudit({
       adminId: userId,
       adminName: `User:${userId}`,
       action: 'LIVE_CCTV_SESSION_CREATED',
       target: `Channel:${channel}`,
-      details: `Created Direct RTSP Live Stream Session '${sessionId}' for Channel ${channel} (${streamType} stream)`,
+      details: `Created Live Stream Session '${sessionId}' for Channel ${channel} (${streamType} stream)`,
     });
 
     return {
@@ -707,7 +725,7 @@ export class CctvService {
       status: 'ONLINE',
       latencyMs: 0,
       rtspUrl,
-      playbackUrl: rtspUrl,
+      playbackUrl,
       expiresAt,
     };
   }

@@ -120,6 +120,9 @@ class CctvLiveSessionModel {
   @JsonKey(name: 'rtspUrl')
   final String rtspUrl;
 
+  @JsonKey(name: 'playbackUrl')
+  final String? rawPlaybackUrl;
+
   final String expiresAt;
 
   CctvLiveSessionModel({
@@ -130,11 +133,15 @@ class CctvLiveSessionModel {
     required this.status,
     this.latencyMs = 0,
     required this.rtspUrl,
+    this.rawPlaybackUrl,
     required this.expiresAt,
   });
 
-  /// Returns the RTSP URL to use for direct video playback.
-  String get playbackUrl => rtspUrl;
+  /// Returns the stream URL to use for video playback (prefer playbackUrl if provided, fallback to rtspUrl).
+  String get playbackUrl =>
+      (rawPlaybackUrl != null && rawPlaybackUrl!.isNotEmpty)
+          ? rawPlaybackUrl!
+          : rtspUrl;
 
   factory CctvLiveSessionModel.fromJson(Map<String, dynamic> json) =>
       _$CctvLiveSessionModelFromJson(json);

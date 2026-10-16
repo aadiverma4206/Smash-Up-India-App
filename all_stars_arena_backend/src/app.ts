@@ -12,6 +12,7 @@ import { errorHandler } from './middlewares/error.middleware.js';
 import { requestId } from './middlewares/requestId.js';
 import { swaggerSpec } from './config/swagger.js';
 import { ApiError, ApiResponse } from './utils/apiResponse.js';
+import { HlsStreamingService } from './services/hlsStreaming.service.js';
 
 const app = express();
 
@@ -76,6 +77,9 @@ app.get('/', (_req: Request, res: Response) => {
 
 // Swagger OpenAPI Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Serve Live CCTV HLS Streams
+app.use('/hls', express.static(HlsStreamingService.getHlsBaseDir()));
 
 // API Master Router
 app.use('/api/v1', apiRoutes);
