@@ -109,22 +109,31 @@ class WalletTransactionModel {
   });
 
   factory WalletTransactionModel.fromJson(Map<String, dynamic> json) {
+    double parseDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return WalletTransactionModel(
-      id: (json['id'] ?? json['transaction_id'] ?? '') as String,
+      id: (json['id'] ?? json['transaction_id'] ?? json['tx_id'] ?? '')
+          .toString(),
       transactionType: (json['transactionType'] ??
-          json['transaction_type'] ??
-          'TOPUP') as String,
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-      balanceAfter:
-          (json['balanceAfter'] ?? json['balance_after'] as num?)?.toDouble() ??
-              0.0,
-      description: (json['description'] ?? 'Wallet transaction') as String,
-      status: (json['status'] ?? 'SUCCESS') as String,
-      referenceId: (json['referenceId'] ?? json['reference_id']) as String?,
-      providerPaymentId: (json['providerPaymentId'] ??
-          json['provider_payment_id'] ??
-          json['razorpay_payment_id']) as String?,
-      createdAt: (json['createdAt'] ?? json['created_at'] ?? '') as String,
+              json['transaction_type'] ??
+              json['type'] ??
+              'TOPUP')
+          .toString(),
+      amount: parseDouble(json['amount']),
+      balanceAfter: parseDouble(json['balanceAfter'] ?? json['balance_after']),
+      description: (json['description'] ?? 'Wallet transaction').toString(),
+      status: (json['status'] ?? 'SUCCESS').toString(),
+      referenceId:
+          json['referenceId']?.toString() ?? json['reference_id']?.toString(),
+      providerPaymentId: json['providerPaymentId']?.toString() ??
+          json['provider_payment_id']?.toString() ??
+          json['razorpay_payment_id']?.toString(),
+      createdAt: (json['createdAt'] ?? json['created_at'] ?? '').toString(),
     );
   }
 

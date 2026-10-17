@@ -69,10 +69,20 @@ class WalletRemoteDataSource {
     );
     return ApiResponseParser.parse<List<WalletTransactionModel>>(
       response.data,
-      (json) => (json as List)
-          .map(
-              (e) => WalletTransactionModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      (json) {
+        final List listData;
+        if (json is Map<String, dynamic> && json['transactions'] is List) {
+          listData = json['transactions'] as List;
+        } else if (json is List) {
+          listData = json;
+        } else {
+          listData = [];
+        }
+        return listData
+            .map((e) =>
+                WalletTransactionModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      },
     );
   }
 

@@ -8,6 +8,7 @@ part of 'player_stats_model.dart';
 
 Map<String, dynamic> _$PlayerStatsModelToJson(PlayerStatsModel instance) =>
     <String, dynamic>{
+      'matchesJoined': instance.matchesJoined,
       'matchesPlayed': instance.matchesPlayed,
       'matchesWon': instance.matchesWon,
       'matchesLost': instance.matchesLost,

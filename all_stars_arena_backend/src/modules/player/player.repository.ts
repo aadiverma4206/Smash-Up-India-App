@@ -108,22 +108,42 @@ export class PlayerRepository {
       `SELECT * FROM public.player_stats WHERE user_id = $1;`,
       [userId]
     );
+    const joinedRes = await dbPool.query(
+      `SELECT COUNT(*)::int as joined_count FROM public.game_players WHERE user_id = $1;`,
+      [userId]
+    ).catch(() => ({ rows: [{ joined_count: 0 }] }));
+
+    const matchesJoined = joinedRes.rows[0]?.joined_count || 0;
     const row = res.rows[0];
+
     if (!row) {
       return {
+        matchesJoined: matchesJoined,
+        matches_joined: matchesJoined,
         matchesPlayed: 0,
+        matches_played: 0,
         matchesWon: 0,
+        matches_won: 0,
         matchesLost: 0,
+        matches_lost: 0,
         matchesDrawn: 0,
+        matches_drawn: 0,
         goalsScored: 0,
+        goals_scored: 0,
         assists: 0,
         motmCount: 0,
+        motm_count: 0,
         winRatePercentage: 0.0,
+        win_rate_percentage: 0.0,
       };
     }
+
+    const played = row.matches_played || 0;
     return {
-      matchesPlayed: row.matches_played || 0,
-      matches_played: row.matches_played || 0,
+      matchesJoined: matchesJoined > 0 ? matchesJoined : played,
+      matches_joined: matchesJoined > 0 ? matchesJoined : played,
+      matchesPlayed: played,
+      matches_played: played,
       matchesWon: row.matches_won || 0,
       matches_won: row.matches_won || 0,
       matchesLost: row.matches_lost || 0,

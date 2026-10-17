@@ -437,24 +437,119 @@ export const initDbTables = async () => {
           description TEXT,
           status VARCHAR(32),
           reference_id VARCHAR(64),
+          provider_payment_id VARCHAR(128),
           created_at TIMESTAMP WITH TIME ZONE
       ) LANGUAGE plpgsql AS $$
+      DECLARE
+          v_current_wallet_balance NUMERIC(10,2) := 0.00;
       BEGIN
+          SELECT COALESCE(wallet_balance, 0.00) INTO v_current_wallet_balance
+          FROM public.player_details
+          WHERE user_id = p_user_id;
+
           RETURN QUERY
-          SELECT
-              t.id::VARCHAR(64),
-              t.user_id::VARCHAR(64),
-              t.type::VARCHAR(32) as transaction_type,
-              t.amount::NUMERIC(10,2),
-              t.balance_after::NUMERIC(10,2),
-              t.description::TEXT,
-              t.status::VARCHAR(32),
-              t.reference_id::VARCHAR(64),
-              t.created_at
-          FROM public.transactions t
-          WHERE t.user_id = p_user_id
-          ORDER BY t.created_at DESC
+          WITH combined_ledger AS (
+              SELECT
+                  t.id::VARCHAR(64) as id,
+                  t.user_id::VARCHAR(64) as user_id,
+                  CASE
+                      WHEN UPPER(t.type::TEXT) LIKE '%REFUND%' OR UPPER(t.description) LIKE '%REFUND%' OR UPPER(t.description) LIKE '%CANCEL%' THEN 'REFUND'::VARCHAR(32)
+                      WHEN UPPER(t.type::TEXT) IN ('TOPUP', 'WALLET_TOPUP', 'DEPOSIT', 'CREDIT') THEN 'TOPUP'::VARCHAR(32)
+                      WHEN UPPER(t.type::TEXT) IN ('PAYMENT', 'DEBIT', 'WITHDRAWAL', 'MATCH_JOIN') THEN 'DEBIT'::VARCHAR(32)
+                      ELSE UPPER(t.type::TEXT)::VARCHAR(32)
+                  END as transaction_type,
+                  t.amount::NUMERIC(10,2) as amount,
+                  COALESCE(NULLIF(t.balance_after, 0), v_current_wallet_balance, 0.00)::NUMERIC(10,2) as balance_after,
+                  t.description::TEXT as description,
+                  t.status::VARCHAR(32) as status,
+                  t.reference_id::VARCHAR(64) as reference_id,
+                  wt.provider_payment_id::VARCHAR(128) as provider_payment_id,
+                  t.created_at as created_at
+              FROM public.transactions t
+              LEFT JOIN public.wallet_transactions wt ON (wt.id = t.id OR (t.reference_id IS NOT NULL AND wt.reference_id = t.reference_id))
+              WHERE t.user_id = p_user_id
+
+              UNION
+
+              SELECT
+                  wt.id::VARCHAR(64) as id,
+                  wt.user_id::VARCHAR(64) as user_id,
+                  CASE
+                      WHEN UPPER(wt.transaction_type::TEXT) LIKE '%REFUND%' OR UPPER(wt.description) LIKE '%REFUND%' OR UPPER(wt.description) LIKE '%CANCEL%' THEN 'REFUND'::VARCHAR(32)
+                      WHEN UPPER(wt.transaction_type::TEXT) IN ('TOPUP', 'WALLET_TOPUP', 'DEPOSIT', 'CREDIT') THEN 'TOPUP'::VARCHAR(32)
+                      WHEN UPPER(wt.transaction_type::TEXT) IN ('PAYMENT', 'DEBIT', 'WITHDRAWAL', 'MATCH_JOIN') THEN 'DEBIT'::VARCHAR(32)
+                      ELSE UPPER(wt.transaction_type::TEXT)::VARCHAR(32)
+                  END as transaction_type,
+                  wt.amount::NUMERIC(10,2) as amount,
+                  COALESCE(NULLIF(wt.balance_after, 0), v_current_wallet_balance, 0.00)::NUMERIC(10,2) as balance_after,
+                  wt.description::TEXT as description,
+                  wt.status::VARCHAR(32) as status,
+                  wt.reference_id::VARCHAR(64) as reference_id,
+                  wt.provider_payment_id::VARCHAR(128) as provider_payment_id,
+                  wt.created_at as created_at
+              FROM public.wallet_transactions wt
+              WHERE wt.user_id = p_user_id
+                AND NOT EXISTS (
+                    SELECT 1 FROM public.transactions t2 WHERE t2.id = wt.id OR (wt.reference_id IS NOT NULL AND t2.reference_id = wt.reference_id)
+                )
+
+              UNION
+
+              SELECT
+                  po.id::VARCHAR(64) as id,
+                  po.user_id::VARCHAR(64) as user_id,
+                  'TOPUP'::VARCHAR(32) as transaction_type,
+                  (po.amount_paise / 100.0)::NUMERIC(10,2) as amount,
+                  v_current_wallet_balance::NUMERIC(10,2) as balance_after,
+                  'Wallet Top-up Order' as description,
+                  po.status::VARCHAR(32) as status,
+                  po.id::VARCHAR(64) as reference_id,
+                  po.provider_payment_id::VARCHAR(128) as provider_payment_id,
+                  po.created_at as created_at
+              FROM public.payment_orders po
+              WHERE po.user_id = p_user_id
+                AND po.status IN ('PAID', 'SUCCESS', 'SETTLED', 'COMPLETED')
+                AND NOT EXISTS (
+                    SELECT 1 FROM public.transactions t3 WHERE t3.reference_id = po.id OR t3.id = po.id
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM public.wallet_transactions wt3 WHERE wt3.reference_id = po.id OR wt3.id = po.id
+                )
+
+              UNION
+
+              SELECT
+                  ('mref_' || gp.game_id || '_' || gp.user_id)::VARCHAR(64) as id,
+                  gp.user_id::VARCHAR(64) as user_id,
+                  'REFUND'::VARCHAR(32) as transaction_type,
+                  COALESCE(g.entry_fee, 0.00)::NUMERIC(10,2) as amount,
+                  v_current_wallet_balance::NUMERIC(10,2) as balance_after,
+                  ('Refund for cancelled match: ' || COALESCE(g.title, 'Football Match'))::TEXT as description,
+                  'SUCCESS'::VARCHAR(32) as status,
+                  ('MATCH_REFUND:' || gp.game_id || ':' || gp.user_id)::VARCHAR(64) as reference_id,
+                  NULL::VARCHAR(128) as provider_payment_id,
+                  COALESCE(g.updated_at, g.created_at, CURRENT_TIMESTAMP) as created_at
+              FROM public.game_players gp
+              JOIN public.games g ON g.id = gp.game_id
+              WHERE gp.user_id = p_user_id
+                AND (g.status = 'CANCELLED' OR gp.payment_status = 'REFUNDED')
+                AND COALESCE(g.entry_fee, 0) > 0
+                AND NOT EXISTS (
+                    SELECT 1 FROM public.transactions t4
+                    WHERE t4.user_id = gp.user_id
+                      AND (t4.reference_id = ('MATCH_REFUND:' || gp.game_id || ':' || gp.user_id) OR UPPER(t4.description) LIKE ('%' || UPPER(COALESCE(g.title, 'Match')) || '%'))
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM public.wallet_transactions wt4
+                    WHERE wt4.user_id = gp.user_id
+                      AND (wt4.reference_id = ('MATCH_REFUND:' || gp.game_id || ':' || gp.user_id) OR UPPER(wt4.description) LIKE ('%' || UPPER(COALESCE(g.title, 'Match')) || '%'))
+                )
+          )
+          SELECT * FROM combined_ledger
+          ORDER BY created_at DESC
           LIMIT p_limit OFFSET p_offset;
+      END;
+      $$;
       END;
       $$;
 

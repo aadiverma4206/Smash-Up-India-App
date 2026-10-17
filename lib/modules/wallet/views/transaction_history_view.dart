@@ -61,7 +61,7 @@ class TransactionHistoryView extends GetView<WalletController> {
                 softWrap: true,
               ),
               subtitle: Text(
-                'ID: ${tx.id} • ${AppDateUtils.formatDateTime(tx.createdAt)}',
+                AppDateUtils.formatDateTime(tx.createdAt),
                 style: TextStyle(color: context.textSecondary, fontSize: 12),
               ),
               trailing: Text(

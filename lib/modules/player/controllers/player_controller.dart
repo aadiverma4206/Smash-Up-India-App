@@ -19,10 +19,32 @@ class PlayerController extends GetxController {
 
   final RxBool isLoading = false.obs;
   final RxBool isUploadingAvatar = false.obs;
+  final RxBool isLoadingStats = false.obs;
   final RxString errorMessage = ''.obs;
 
-  // Navigation Index (0: Home, 1: Games, 2: My Matches, 3: Wallet, 4: Profile)
+  // Navigation Index (0: Arena, 1: Explore, 2: History)
   final RxInt selectedNavIndex = 0.obs;
+
+  // Dynamic Statistics State
+  final RxList<DynamicStatCardModel> dynamicStatsList =
+      <DynamicStatCardModel>[].obs;
+  final RxString selectedStatCategory =
+      'ALL'.obs; // Categories: 'ALL', 'MATCHES', 'PERFORMANCE'
+
+  List<DynamicStatCardModel> get filteredDynamicStats {
+    if (selectedStatCategory.value == 'MATCHES') {
+      return dynamicStatsList.where((e) => e.category == 'MATCHES').toList();
+    } else if (selectedStatCategory.value == 'PERFORMANCE') {
+      return dynamicStatsList
+          .where((e) => e.category == 'PERFORMANCE')
+          .toList();
+    }
+    return dynamicStatsList;
+  }
+
+  void setStatCategory(String category) {
+    selectedStatCategory.value = category;
+  }
 
   @override
   void onInit() {
@@ -38,15 +60,19 @@ class PlayerController extends GetxController {
       final sum = await repository.getDashboardSummary();
       summary.value = sum;
       if (sum.profile != null) profile.value = sum.profile;
-      if (sum.stats != null) stats.value = sum.stats;
+      if (sum.stats != null) {
+        stats.value = sum.stats;
+        _buildDynamicStatsList(sum.stats!);
+      } else {
+        await fetchPlayerStatistics();
+      }
     } catch (e) {
       AppLogger.warning(
           'Failed to load dashboard summary: $e. Falling back...');
       try {
         final p = await repository.getProfile();
-        final s = await repository.getStats();
         profile.value = p;
-        stats.value = s;
+        await fetchPlayerStatistics();
       } catch (err) {
         AppLogger.warning('Failed to load player profile/stats: $err');
         errorMessage.value = ErrorHandler.getErrorMessage(err);
@@ -65,8 +91,120 @@ class PlayerController extends GetxController {
           );
         }
       }
+      if (dynamicStatsList.isEmpty) {
+        _buildDynamicStatsList(stats.value ?? PlayerStatsModel());
+      }
       isLoading.value = false;
     }
+  }
+
+  /// Dedicated Backend Function: Dynamically fetch & calculate Player Statistics
+  Future<void> fetchPlayerStatistics() async {
+    isLoadingStats.value = true;
+    try {
+      final s = await repository.getStats();
+      stats.value = s;
+      _buildDynamicStatsList(s);
+    } catch (e) {
+      AppLogger.warning('Failed to load player statistics: $e');
+      _buildDynamicStatsList(stats.value ?? PlayerStatsModel());
+    } finally {
+      isLoadingStats.value = false;
+    }
+  }
+
+  void _buildDynamicStatsList(PlayerStatsModel s) {
+    final items = <DynamicStatCardModel>[
+      DynamicStatCardModel(
+        id: 'joined',
+        label: 'Joined',
+        value: '${s.matchesJoined > 0 ? s.matchesJoined : s.matchesPlayed}',
+        icon: Icons.sports_soccer_rounded,
+        color: const Color(0xFF00C853), // Green
+        category: 'MATCHES',
+      ),
+      DynamicStatCardModel(
+        id: 'played',
+        label: 'Played',
+        value: '${s.matchesPlayed}',
+        icon: Icons.sports_football_rounded,
+        color: const Color(0xFF0288D1), // Blue
+        category: 'MATCHES',
+      ),
+      DynamicStatCardModel(
+        id: 'won',
+        label: 'Won',
+        value: '${s.matchesWon}',
+        icon: Icons.emoji_events_rounded,
+        color: const Color(0xFFFFB300), // Amber
+        category: 'MATCHES',
+      ),
+      DynamicStatCardModel(
+        id: 'lost',
+        label: 'Lost',
+        value: '${s.matchesLost}',
+        icon: Icons.cancel_outlined,
+        color: const Color(0xFFE53935), // Red
+        category: 'MATCHES',
+      ),
+      DynamicStatCardModel(
+        id: 'drawn',
+        label: 'Drawn',
+        value: '${s.matchesDrawn}',
+        icon: Icons.remove_circle_outline_rounded,
+        color: const Color(0xFF8E24AA), // Purple
+        category: 'MATCHES',
+      ),
+      DynamicStatCardModel(
+        id: 'win_rate',
+        label: 'Win %',
+        value: '${s.winRatePercentage.toStringAsFixed(0)}%',
+        icon: Icons.analytics_rounded,
+        color: const Color(0xFF00B0FF), // Light Blue
+        category: 'PERFORMANCE',
+      ),
+      DynamicStatCardModel(
+        id: 'goals',
+        label: 'Goals',
+        value: '${s.goalsScored}',
+        icon: Icons.sports_score_rounded,
+        color: const Color(0xFFFF6D00), // Orange
+        category: 'PERFORMANCE',
+      ),
+      DynamicStatCardModel(
+        id: 'assists',
+        label: 'Assists',
+        value: '${s.assists}',
+        icon: Icons.handshake_rounded,
+        color: const Color(0xFF00BFA5), // Teal
+        category: 'PERFORMANCE',
+      ),
+      DynamicStatCardModel(
+        id: 'mvp',
+        label: 'MVP / MOTM',
+        value: '${s.motmCount}',
+        icon: Icons.stars_rounded,
+        color: const Color(0xFFFFD600), // Yellow Star
+        category: 'PERFORMANCE',
+      ),
+    ];
+
+    if (s.customStats != null && s.customStats!.isNotEmpty) {
+      for (final cs in s.customStats!) {
+        items.add(
+          DynamicStatCardModel(
+            id: cs.key,
+            label: cs.label,
+            value: cs.value,
+            icon: Icons.insights_rounded,
+            color: const Color(0xFF7C4DFF),
+            category: 'ALL',
+          ),
+        );
+      }
+    }
+
+    dynamicStatsList.value = items;
   }
 
   Future<void> updateProfile({
@@ -173,4 +311,22 @@ class PlayerController extends GetxController {
   void changeNavIndex(int index) {
     selectedNavIndex.value = index;
   }
+}
+
+class DynamicStatCardModel {
+  final String id;
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final String category; // 'ALL', 'MATCHES', 'PERFORMANCE'
+
+  DynamicStatCardModel({
+    required this.id,
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.category,
+  });
 }

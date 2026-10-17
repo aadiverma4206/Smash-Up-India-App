@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../app/routes/app_routes.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/notifications_controller.dart';
-import '../../games/views/find_games_view.dart';
 import '../../games/views/my_matches_view.dart';
 import 'match_history_view.dart';
 import '../../../data/models/game_model.dart';
@@ -77,13 +76,12 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Obx(() {
-        final currentIndex = controller.selectedNavIndex.value.clamp(0, 3);
+        final currentIndex = controller.selectedNavIndex.value.clamp(0, 2);
 
         return IndexedStack(
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            const FindGamesView(),
             const MyMatchesView(),
             const MatchHistoryView(),
           ],
@@ -111,7 +109,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                   ],
                 ),
                 child: BottomNavigationBar(
-                  currentIndex: controller.selectedNavIndex.value.clamp(0, 3),
+                  currentIndex: controller.selectedNavIndex.value.clamp(0, 2),
                   onTap: (index) {
                     controller.changeNavIndex(index);
                     if (index == 0) controller.loadPlayerData();
@@ -146,16 +144,42 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                       ),
                       label: 'Arena',
                     ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.sports_soccer_rounded, size: 22),
-                      label: 'Find Games',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.grid_view_rounded, size: 22),
+                    BottomNavigationBarItem(
+                      icon: Container(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 3,
+                              width: 20,
+                              color: controller.selectedNavIndex.value == 1
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                            ),
+                            const SizedBox(height: 4),
+                            const Icon(Icons.grid_view_rounded, size: 22),
+                          ],
+                        ),
+                      ),
                       label: 'Explore',
                     ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.history_rounded, size: 22),
+                    BottomNavigationBarItem(
+                      icon: Container(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 3,
+                              width: 20,
+                              color: controller.selectedNavIndex.value == 2
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                            ),
+                            const SizedBox(height: 4),
+                            const Icon(Icons.history_rounded, size: 22),
+                          ],
+                        ),
+                      ),
                       label: 'History',
                     ),
                   ],
@@ -330,14 +354,10 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           Obx(
             () => NavigationRail(
               backgroundColor: Theme.of(context).cardColor,
-              selectedIndex: controller.selectedNavIndex.value,
+              selectedIndex: controller.selectedNavIndex.value.clamp(0, 2),
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
                 if (index == 0) controller.loadPlayerData();
-                if (index == 1) Get.toNamed('/games/find');
-                if (index == 2) Get.toNamed('/player/my-matches');
-                if (index == 3) Get.toNamed('/wallet');
-                if (index == 4) Get.toNamed('/player/match-history');
               },
               labelType: NavigationRailLabelType.all,
               selectedIconTheme: const IconThemeData(color: Color(0xFF00C853)),
@@ -358,13 +378,8 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.apps_rounded), label: Text('Arena')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.show_chart_rounded),
-                    label: Text('Find Games')),
-                NavigationRailDestination(
                     icon: Icon(Icons.grid_view_rounded),
                     label: Text('Explore')),
-                NavigationRailDestination(
-                    icon: Icon(Icons.shield_outlined), label: Text('Wallet')),
                 NavigationRailDestination(
                     icon: Icon(Icons.history_rounded), label: Text('History')),
               ],
@@ -1035,23 +1050,41 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// Football Career Statistics Section
+  /// 100% Dynamic Football Career Statistics Section
   Widget _buildStatsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final s = controller.stats.value;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header Row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Football Statistics',
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+            Row(
+              children: [
+                Text(
+                  'Football Statistics',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => controller.fetchPlayerStatistics(),
+                  borderRadius: BorderRadius.circular(12),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.refresh_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
             TextButton(
               onPressed: () => Get.toNamed('/player/match-history'),
@@ -1064,62 +1097,166 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           ],
         ),
         const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildSmallStatCard(context, 'Played', '${s?.matchesPlayed ?? 0}',
-                Icons.sports_football),
-            _buildSmallStatCard(
-                context, 'Won', '${s?.matchesWon ?? 0}', Icons.emoji_events),
-            _buildSmallStatCard(
-                context,
-                'Win %',
-                '${s?.winRatePercentage.toStringAsFixed(0) ?? 0}%',
-                Icons.analytics),
-            _buildSmallStatCard(
-                context, 'Goals', '${s?.goalsScored ?? 0}', Icons.sports_score),
-          ],
-        ),
+
+        // Category Filter Chips (All, Matches, Performance)
+        Obx(() {
+          final currentCat = controller.selectedStatCategory.value;
+          return Row(
+            children: [
+              _buildCategoryFilterChip(
+                  context, 'ALL', 'All', currentCat == 'ALL'),
+              const SizedBox(width: 6),
+              _buildCategoryFilterChip(
+                  context, 'MATCHES', 'Matches', currentCat == 'MATCHES'),
+              const SizedBox(width: 6),
+              _buildCategoryFilterChip(context, 'PERFORMANCE', 'Performance',
+                  currentCat == 'PERFORMANCE'),
+            ],
+          );
+        }),
+        const SizedBox(height: 10),
+
+        // Dynamic Horizontal Scrollable Stat Cards List
+        Obx(() {
+          if (controller.isLoadingStats.value) {
+            return const SizedBox(
+              height: 75,
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final statsList = controller.filteredDynamicStats;
+
+          if (statsList.isEmpty) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              alignment: Alignment.center,
+              child: Text(
+                'No statistics recorded yet',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade600,
+                ),
+              ),
+            );
+          }
+
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: statsList.map((item) {
+                return _buildDynamicStatCard(context, item);
+              }).toList(),
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildSmallStatCard(
-      BuildContext context, String label, String value, IconData icon) {
+  Widget _buildCategoryFilterChip(
+      BuildContext context, String categoryKey, String label, bool isSelected) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: () => controller.setStatCategory(categoryKey),
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary
+              : (isDark ? const Color(0xFF1E212A) : const Color(0xFFF2F4F7)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected
+                ? Colors.white
+                : (isDark
+                    ? AppColors.textSecondaryDark
+                    : Colors.grey.shade700),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDynamicStatCard(
+      BuildContext context, DynamicStatCardModel item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE)),
-          boxShadow: const [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 2, offset: Offset(0, 1)),
-          ],
+    return Container(
+      width: 85,
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
         ),
-        child: Column(
-          children: [
-            Icon(icon, size: 16, color: AppColors.primary),
-            const SizedBox(height: 4),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color:
-                        isDark ? AppColors.textPrimaryDark : Colors.black87)),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : Colors.grey.shade600)),
-          ],
-        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 3,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: item.color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(item.icon, size: 16, color: item.color),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            item.value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            item.label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
