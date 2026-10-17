@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { CctvService } from './cctv.service.js';
 import { CctvRecordingService } from '../../services/cctvRecording.service.js';
+import { MediaMtxService } from '../../services/mediaMtx.service.js';
 import { ApiResponse, ApiError } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { AuthenticatedRequest } from '../../types/index.js';
@@ -202,8 +203,15 @@ export const getRecordingFailures = asyncHandler(
 
 export const getFfmpegHealth = asyncHandler(
   async (_req: AuthenticatedRequest, res: Response) => {
-    const health = await CctvRecordingService.checkFfmpeg();
-    res.status(200).json(ApiResponse.success('FFmpeg status', health));
+    const isMediaMtxActive = await MediaMtxService.isPortListening(8888);
+    res.status(200).json(
+      ApiResponse.success('Media server status', {
+        available: isMediaMtxActive,
+        engine: 'MediaMTX (HLS/WebRTC) Native Engine',
+        hlsPort: 8888,
+        rtspPort: 8555,
+      })
+    );
   }
 );
 

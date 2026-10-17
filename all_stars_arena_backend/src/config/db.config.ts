@@ -445,7 +445,7 @@ export const initDbTables = async () => {
       BEGIN
           SELECT COALESCE(wallet_balance, 0.00) INTO v_current_wallet_balance
           FROM public.player_details
-          WHERE user_id = p_user_id;
+          WHERE public.player_details.user_id = p_user_id;
 
           RETURN QUERY
           WITH combined_ledger AS (
@@ -548,8 +548,6 @@ export const initDbTables = async () => {
           SELECT * FROM combined_ledger
           ORDER BY created_at DESC
           LIMIT p_limit OFFSET p_offset;
-      END;
-      $$;
       END;
       $$;
 

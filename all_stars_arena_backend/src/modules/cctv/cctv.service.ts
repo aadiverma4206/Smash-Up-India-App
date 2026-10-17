@@ -1,7 +1,7 @@
 import { CctvRepository } from './cctv.repository.js';
 import { CctvRecordingService } from '../../services/cctvRecording.service.js';
 import { CctvDiscoveryService } from '../../services/cctvDiscovery.service.js';
-import { HlsStreamingService } from '../../services/hlsStreaming.service.js';
+import { MediaMtxService } from '../../services/mediaMtx.service.js';
 import { encryptSecret, decryptSecret, redactRtspUrl } from '../../utils/crypto.utils.js';
 import { getSignedPlaybackUrl } from '../../services/storage.service.js';
 import { ApiError } from '../../utils/apiResponse.js';
@@ -641,7 +641,7 @@ export class CctvService {
 
     const discovered = await CctvDiscoveryService.discoverCameras(forceRefresh);
 
-    return discovered.map((c) => ({
+    return discovered.map((c: any) => ({
       id: c.id,
       channel: c.channel,
       name: c.name,
@@ -691,23 +691,19 @@ export class CctvService {
     const sessionId = `live_sess_${channel}_${Date.now()}`;
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
-    let hlsPlaybackUrl = '';
-    try {
-      const hlsResult = await HlsStreamingService.startOrReuseSession({
-        sessionId,
-        rtspUrl,
-        channel,
-        streamType,
-      });
-      const baseUrl = backendBaseUrl || env.BACKEND_URL || '';
-      hlsPlaybackUrl = baseUrl
-        ? `${baseUrl.replace(/\/$/, '')}${hlsResult.hlsUrlPath}`
-        : hlsResult.hlsUrlPath;
-    } catch (err: any) {
-      logger.warn(`[CCTV] HLS stream start failed, falling back to direct RTSP: ${err.message}`);
-    }
+    // Ensure MediaMTX server is active on port 8888
+    await MediaMtxService.ensureRunning();
 
-    const playbackUrl = hlsPlaybackUrl || rtspUrl;
+    // Determine host IP for MediaMTX HLS stream (port 8888)
+    let mediaServerHost = '127.0.0.1';
+    try {
+      const rawTarget = backendBaseUrl || env.BACKEND_URL || 'http://127.0.0.1:5000';
+      const parsed = new URL(rawTarget);
+      mediaServerHost = parsed.hostname;
+    } catch (_) {}
+
+    const streamKey = `cam${channel}_${streamType}`;
+    const playbackUrl = `http://${mediaServerHost}:8888/${streamKey}/index.m3u8`;
 
     await CctvRepository.logAudit({
       adminId: userId,

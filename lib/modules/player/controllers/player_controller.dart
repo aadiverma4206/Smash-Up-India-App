@@ -25,26 +25,9 @@ class PlayerController extends GetxController {
   // Navigation Index (0: Arena, 1: Explore, 2: History)
   final RxInt selectedNavIndex = 0.obs;
 
-  // Dynamic Statistics State
+  // Dynamic Statistics State (4 Main Results)
   final RxList<DynamicStatCardModel> dynamicStatsList =
       <DynamicStatCardModel>[].obs;
-  final RxString selectedStatCategory =
-      'ALL'.obs; // Categories: 'ALL', 'MATCHES', 'PERFORMANCE'
-
-  List<DynamicStatCardModel> get filteredDynamicStats {
-    if (selectedStatCategory.value == 'MATCHES') {
-      return dynamicStatsList.where((e) => e.category == 'MATCHES').toList();
-    } else if (selectedStatCategory.value == 'PERFORMANCE') {
-      return dynamicStatsList
-          .where((e) => e.category == 'PERFORMANCE')
-          .toList();
-    }
-    return dynamicStatsList;
-  }
-
-  void setStatCategory(String category) {
-    selectedStatCategory.value = category;
-  }
 
   @override
   void onInit() {
@@ -114,14 +97,13 @@ class PlayerController extends GetxController {
   }
 
   void _buildDynamicStatsList(PlayerStatsModel s) {
-    final items = <DynamicStatCardModel>[
+    dynamicStatsList.value = [
       DynamicStatCardModel(
         id: 'joined',
         label: 'Joined',
         value: '${s.matchesJoined > 0 ? s.matchesJoined : s.matchesPlayed}',
         icon: Icons.sports_soccer_rounded,
         color: const Color(0xFF00C853), // Green
-        category: 'MATCHES',
       ),
       DynamicStatCardModel(
         id: 'played',
@@ -129,7 +111,6 @@ class PlayerController extends GetxController {
         value: '${s.matchesPlayed}',
         icon: Icons.sports_football_rounded,
         color: const Color(0xFF0288D1), // Blue
-        category: 'MATCHES',
       ),
       DynamicStatCardModel(
         id: 'won',
@@ -137,7 +118,6 @@ class PlayerController extends GetxController {
         value: '${s.matchesWon}',
         icon: Icons.emoji_events_rounded,
         color: const Color(0xFFFFB300), // Amber
-        category: 'MATCHES',
       ),
       DynamicStatCardModel(
         id: 'lost',
@@ -145,66 +125,8 @@ class PlayerController extends GetxController {
         value: '${s.matchesLost}',
         icon: Icons.cancel_outlined,
         color: const Color(0xFFE53935), // Red
-        category: 'MATCHES',
-      ),
-      DynamicStatCardModel(
-        id: 'drawn',
-        label: 'Drawn',
-        value: '${s.matchesDrawn}',
-        icon: Icons.remove_circle_outline_rounded,
-        color: const Color(0xFF8E24AA), // Purple
-        category: 'MATCHES',
-      ),
-      DynamicStatCardModel(
-        id: 'win_rate',
-        label: 'Win %',
-        value: '${s.winRatePercentage.toStringAsFixed(0)}%',
-        icon: Icons.analytics_rounded,
-        color: const Color(0xFF00B0FF), // Light Blue
-        category: 'PERFORMANCE',
-      ),
-      DynamicStatCardModel(
-        id: 'goals',
-        label: 'Goals',
-        value: '${s.goalsScored}',
-        icon: Icons.sports_score_rounded,
-        color: const Color(0xFFFF6D00), // Orange
-        category: 'PERFORMANCE',
-      ),
-      DynamicStatCardModel(
-        id: 'assists',
-        label: 'Assists',
-        value: '${s.assists}',
-        icon: Icons.handshake_rounded,
-        color: const Color(0xFF00BFA5), // Teal
-        category: 'PERFORMANCE',
-      ),
-      DynamicStatCardModel(
-        id: 'mvp',
-        label: 'MVP / MOTM',
-        value: '${s.motmCount}',
-        icon: Icons.stars_rounded,
-        color: const Color(0xFFFFD600), // Yellow Star
-        category: 'PERFORMANCE',
       ),
     ];
-
-    if (s.customStats != null && s.customStats!.isNotEmpty) {
-      for (final cs in s.customStats!) {
-        items.add(
-          DynamicStatCardModel(
-            id: cs.key,
-            label: cs.label,
-            value: cs.value,
-            icon: Icons.insights_rounded,
-            color: const Color(0xFF7C4DFF),
-            category: 'ALL',
-          ),
-        );
-      }
-    }
-
-    dynamicStatsList.value = items;
   }
 
   Future<void> updateProfile({
@@ -319,7 +241,6 @@ class DynamicStatCardModel {
   final String value;
   final IconData icon;
   final Color color;
-  final String category; // 'ALL', 'MATCHES', 'PERFORMANCE'
 
   DynamicStatCardModel({
     required this.id,
@@ -327,6 +248,5 @@ class DynamicStatCardModel {
     required this.value,
     required this.icon,
     required this.color,
-    required this.category,
   });
 }

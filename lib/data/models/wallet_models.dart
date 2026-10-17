@@ -75,13 +75,7 @@ class RazorpayOrderModel {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'paymentOrderId': paymentOrderId,
-        'orderId': orderId,
-        'amountPaisa': amountPaisa,
-        'currency': currency,
-        'keyId': keyId,
-      };
+  Map<String, dynamic> toJson() => _$RazorpayOrderModelToJson(this);
 }
 
 @JsonSerializable(createFactory: false)

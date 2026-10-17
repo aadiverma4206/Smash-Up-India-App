@@ -6,6 +6,7 @@ import { initSocket } from './config/socket.config.js';
 import { logger } from './utils/logger.js';
 import { startMatchLifecycleWorker, startPaymentExpiryJob, startPaymentReconciliationJob } from './jobs/index.js';
 import { CctvRecordingService } from './services/cctvRecording.service.js';
+import { MediaMtxService } from './services/mediaMtx.service.js';
 
 // Catch unhandled synchronous exceptions
 process.on('uncaughtException', (err: Error) => {
@@ -53,6 +54,11 @@ const startServer = async () => {
       });
       CctvRecordingService.reconcileOnBoot().catch((err) => {
         logger.error({ err }, 'CCTV boot reconciliation failed');
+      });
+
+      // Ensure MediaMTX streaming server is active
+      MediaMtxService.ensureRunning().catch((err) => {
+        logger.warn({ err }, 'MediaMTX auto-start check skipped');
       });
     } catch (workerErr: any) {
       logger.error({ workerErr }, 'Failed to start background worker jobs');

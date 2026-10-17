@@ -142,6 +142,74 @@ class CctvListView extends StatelessWidget {
               ),
             ),
 
+            const SizedBox(height: 12),
+
+            // Secondary Dedicated MediaMTX Low-Latency Player Banner
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: isDark ? Colors.blueAccent.shade700 : Colors.blue.shade400,
+                  width: 1.2,
+                ),
+              ),
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+              child: InkWell(
+                onTap: () => Get.toNamed('/manager/cctv/media-server',
+                    arguments: {'channel': 1}),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(14.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.blueAccent.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.router_rounded,
+                          color: Colors.blueAccent,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'MediaMTX HLS Server Stream',
+                              style: TextStyle(
+                                color: context.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Direct LL-HLS Player (Port 8888 • Substream / Mainstream)',
+                              style: TextStyle(
+                                color: context.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.blueAccent,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

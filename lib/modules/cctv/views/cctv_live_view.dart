@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:video_player/video_player.dart' as vp;
 import 'package:get/get.dart';
 import '../controllers/cctv_live_controller.dart';
 import '../../../data/models/cctv_models.dart';
@@ -319,6 +320,25 @@ class CctvLiveView extends StatelessWidget {
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
+      );
+    }
+
+    if (controller.isUsingFallbackPlayer.value &&
+        controller.fallbackVideoPlayerController != null &&
+        controller.fallbackVideoPlayerController!.value.isInitialized) {
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: controller.fallbackVideoPlayerController!.value.size.width > 0
+                ? controller.fallbackVideoPlayerController!.value.size.width
+                : 16,
+            height: controller.fallbackVideoPlayerController!.value.size.height > 0
+                ? controller.fallbackVideoPlayerController!.value.size.height
+                : 9,
+            child: vp.VideoPlayer(controller.fallbackVideoPlayerController!),
+          ),
+        ),
       );
     }
 

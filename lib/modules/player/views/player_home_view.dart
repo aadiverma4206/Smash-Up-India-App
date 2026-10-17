@@ -1050,7 +1050,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// 100% Dynamic Football Career Statistics Section
+  /// 4 Main Football Career Statistics Section
   Widget _buildStatsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1096,27 +1096,9 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             ),
           ],
         ),
-        const SizedBox(height: 6),
-
-        // Category Filter Chips (All, Matches, Performance)
-        Obx(() {
-          final currentCat = controller.selectedStatCategory.value;
-          return Row(
-            children: [
-              _buildCategoryFilterChip(
-                  context, 'ALL', 'All', currentCat == 'ALL'),
-              const SizedBox(width: 6),
-              _buildCategoryFilterChip(
-                  context, 'MATCHES', 'Matches', currentCat == 'MATCHES'),
-              const SizedBox(width: 6),
-              _buildCategoryFilterChip(context, 'PERFORMANCE', 'Performance',
-                  currentCat == 'PERFORMANCE'),
-            ],
-          );
-        }),
         const SizedBox(height: 10),
 
-        // Dynamic Horizontal Scrollable Stat Cards List
+        // 4 Main Stat Cards Row
         Obx(() {
           if (controller.isLoadingStats.value) {
             return const SizedBox(
@@ -1134,7 +1116,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             );
           }
 
-          final statsList = controller.filteredDynamicStats;
+          final statsList = controller.dynamicStatsList.take(4).toList();
 
           if (statsList.isEmpty) {
             return Container(
@@ -1153,48 +1135,18 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             );
           }
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: statsList.map((item) {
-                return _buildDynamicStatCard(context, item);
-              }).toList(),
-            ),
+          return Row(
+            children: statsList.map((item) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: _buildDynamicStatCard(context, item),
+                ),
+              );
+            }).toList(),
           );
         }),
       ],
-    );
-  }
-
-  Widget _buildCategoryFilterChip(
-      BuildContext context, String categoryKey, String label, bool isSelected) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: () => controller.setStatCategory(categoryKey),
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : (isDark ? const Color(0xFF1E212A) : const Color(0xFFF2F4F7)),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected
-                ? Colors.white
-                : (isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade700),
-          ),
-        ),
-      ),
     );
   }
 
@@ -1203,9 +1155,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: 85,
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),

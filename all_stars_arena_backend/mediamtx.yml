@@ -1,0 +1,108 @@
+# ==============================================================================
+# MediaMTX Configuration for ALL STARS ARENA - CCTV Live Streaming
+# Camera: Botivate / Dahua XVR (192.168.1.2)
+# ==============================================================================
+
+# General Configuration
+logLevel: info
+logDestinations: [stdout]
+
+# ------------------------------------------------------------------------------
+# RTSP Server (Local relay on port 8555 - avoids 8554 emulator conflict)
+# ------------------------------------------------------------------------------
+rtsp: yes
+rtspTransports: [tcp]
+rtspAddress: :8555
+
+# ------------------------------------------------------------------------------
+# HLS Server (HTTP Live Streaming - used by Flutter video_player & web)
+# Accessible at: http://<SERVER_IP>:8888/<stream_name>/index.m3u8
+# ------------------------------------------------------------------------------
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+hlsVariant: fmp4           # fMP4 supports H.265 (HEVC) & H.264 natively in ExoPlayer/AVPlayer
+hlsSegmentCount: 5
+hlsSegmentDuration: 2s      # Aligned with 2-second camera keyframe interval
+hlsAllowOrigins: ['*']     # Allow mobile app & web CORS access
+
+# ------------------------------------------------------------------------------
+# WebRTC Server (Ultra Low Latency ~300ms)
+# Accessible at: http://<SERVER_IP>:8889/<stream_name>
+# ------------------------------------------------------------------------------
+webrtc: yes
+webrtcAddress: :8889
+webrtcAllowOrigins: ['*']
+
+# ------------------------------------------------------------------------------
+# Camera Stream Definitions (Channels 1-4 for Dahua XVR / Botivate)
+# IMPORTANT: In RTSP URL, '@' in password 'admin@123' is URL-encoded as '%40'
+# ------------------------------------------------------------------------------
+paths:
+  # --- Legacy / Default Compatibility Paths ---
+  cctv_live:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=1&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  cctv_hd:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=1&subtype=0
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  # --- Channel 1 (Court 1 - Main Pitch) ---
+  cam1_sub:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=1&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  cam1_main:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=1&subtype=0
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  # --- Channel 2 (Court 1 - Sideline) ---
+  cam2_sub:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=2&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  cam2_main:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=2&subtype=0
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  # --- Channel 3 (Court 2 - Main Pitch) ---
+  cam3_sub:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=3&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  cam3_main:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=3&subtype=0
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  # --- Channel 4 (Court 2 - Goalpost) ---
+  cam4_sub:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=4&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  cam4_main:
+    source: rtsp://admin:admin%40123@192.168.1.2:554/cam/realmonitor?channel=4&subtype=0
+    rtspTransport: tcp
+    sourceOnDemand: yes
+    sourceOnDemandCloseAfter: 15s
+
+  # Catch-all fallback for dynamic paths
+  ~^.*$: {}

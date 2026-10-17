@@ -9,7 +9,7 @@ describe('CCTV Live RTSP Direct Playback Unit Tests', () => {
     expect(session.channel).toBe(1);
     expect(session.streamType).toBe('sub');
     expect(session.rtspUrl).toContain('rtsp://');
-    expect(session.playbackUrl).toContain('rtsp://');
+    expect(session.playbackUrl).toMatch(/^(http|rtsp):\/\//);
   });
 
   it('rejects live session creation for Player role (roleId=3)', async () => {

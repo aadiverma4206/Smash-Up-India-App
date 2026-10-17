@@ -529,24 +529,31 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.phone_rounded,
-                              size: 13, color: AppColors.primary),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              phone,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: textSecondary,
-                                fontWeight: FontWeight.w500,
+                      InkWell(
+                        onTap: () => _makePhoneCall(phone),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.phone_rounded,
+                                  size: 13, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  phone,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -611,28 +618,56 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                                 fontWeight: FontWeight.bold)),
                       ),
                     ] else ...[
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.redAccent,
-                          side: const BorderSide(
-                              color: Colors.redAccent, width: 1),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(
+                                  color: AppColors.primary, width: 1),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () => _makePhoneCall(phone),
+                            icon: const Icon(Icons.phone_outlined,
+                                size: 13, color: AppColors.primary),
+                            label: const Text('Call',
+                                style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold)),
                           ),
-                        ),
-                        onPressed: () =>
-                            _showBlockModal(context, playerId, name),
-                        icon: const Icon(Icons.block_rounded,
-                            size: 13, color: Colors.redAccent),
-                        label: const Text('Block',
-                            style: TextStyle(
-                                color: Colors.redAccent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 6),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              side: const BorderSide(
+                                  color: Colors.redAccent, width: 1),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () =>
+                                _showBlockModal(context, playerId, name),
+                            icon: const Icon(Icons.block_rounded,
+                                size: 13, color: Colors.redAccent),
+                            label: const Text('Block',
+                                style: TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
                       ),
                     ],
                   ],

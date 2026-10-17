@@ -239,18 +239,19 @@ export class WalletService {
           !crypto.timingSafeEqual(sigBuffer, genBuffer)
         ) {
           logger.warn(`Payment signature mismatch for order ${razorpayOrderId}`);
-          if (env.NODE_ENV === 'production') {
-            throw new ApiError(
-              400,
-              'Invalid payment signature. Payment verification failed.',
-              'PAYMENT_VERIFICATION_FAILED'
-            );
-          }
+          throw new ApiError(
+            400,
+            'Invalid payment signature. Payment verification failed.',
+            'PAYMENT_VERIFICATION_FAILED'
+          );
         }
       } catch (sigErr) {
-        if (env.NODE_ENV === 'production') {
-          throw sigErr;
-        }
+        if (sigErr instanceof ApiError) throw sigErr;
+        throw new ApiError(
+          400,
+          'Invalid payment signature format.',
+          'PAYMENT_VERIFICATION_FAILED'
+        );
       }
     }
 

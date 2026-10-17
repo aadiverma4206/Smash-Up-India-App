@@ -19,13 +19,21 @@ class ManagerClubModel {
   });
 
   factory ManagerClubModel.fromJson(Map<String, dynamic> json) {
-    return ManagerClubModel(
-      id: (json['id'] ?? '').toString(),
-      name: (json['name'] ?? '').toString(),
-      city: (json['city'] ?? '').toString(),
-      address: (json['address'] ?? '').toString(),
-      status: (json['status'] ?? 'ACTIVE').toString(),
-    );
+    if (json.isEmpty) {
+      return ManagerClubModel(
+          id: '', name: '', city: '', address: '', status: 'ACTIVE');
+    }
+    try {
+      return _$ManagerClubModelFromJson(json);
+    } catch (_) {
+      return ManagerClubModel(
+        id: (json['id'] ?? '').toString(),
+        name: (json['name'] ?? '').toString(),
+        city: (json['city'] ?? '').toString(),
+        address: (json['address'] ?? '').toString(),
+        status: (json['status'] ?? 'ACTIVE').toString(),
+      );
+    }
   }
   Map<String, dynamic> toJson() => _$ManagerClubModelToJson(this);
 }
@@ -49,6 +57,11 @@ class ManagerDashboardModel {
   });
 
   factory ManagerDashboardModel.fromJson(Map<String, dynamic> json) {
+    try {
+      if (json.containsKey('totalRevenue') && json['club'] != null) {
+        return _$ManagerDashboardModelFromJson(json);
+      }
+    } catch (_) {}
     final stats = json['stats'] is Map<String, dynamic>
         ? json['stats'] as Map<String, dynamic>
         : null;

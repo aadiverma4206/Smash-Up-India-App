@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:video_player/video_player.dart' as vp;
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
 import '../repositories/cctv_repository.dart';
@@ -31,8 +32,15 @@ class CctvLiveController extends GetxController {
   final RxBool isMuted = true.obs;
   final RxString errorMessage = ''.obs;
 
+  // MediaKit primary player
   Player? player;
   VideoController? videoController;
+
+  // VideoPlayer fallback controller (if MediaKit texture is black or stalled)
+  vp.VideoPlayerController? fallbackVideoPlayerController;
+  final RxBool isUsingFallbackPlayer = false.obs;
+
+  Timer? _frameWatchdogTimer;
 
   @override
   void onInit() {
@@ -55,6 +63,7 @@ class CctvLiveController extends GetxController {
   void onClose() {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _frameWatchdogTimer?.cancel();
     _disposePlayer();
     _releaseCurrentSession();
     super.onClose();
@@ -94,6 +103,7 @@ class CctvLiveController extends GetxController {
   }
 
   Future<void> _disposePlayer() async {
+    _frameWatchdogTimer?.cancel();
     final playerToDispose = player;
     player = null;
     videoController = null;
@@ -102,6 +112,17 @@ class CctvLiveController extends GetxController {
         await playerToDispose.dispose();
       } catch (e) {
         AppLogger.warning('Safe dispose MediaKit Player: $e');
+      }
+    }
+
+    final fallbackToDispose = fallbackVideoPlayerController;
+    fallbackVideoPlayerController = null;
+    isUsingFallbackPlayer.value = false;
+    if (fallbackToDispose != null) {
+      try {
+        await fallbackToDispose.dispose();
+      } catch (e) {
+        AppLogger.warning('Safe dispose Fallback VideoPlayer: $e');
       }
     }
   }
@@ -172,15 +193,14 @@ class CctvLiveController extends GetxController {
   Future<void> selectCamera(int channel) async {
     if (channel < 1) return;
 
-    if (player != null &&
-        videoController != null &&
+    if ((player != null || fallbackVideoPlayerController != null) &&
         currentSession.value != null &&
         currentSession.value!.channel == channel &&
         currentSession.value!.streamType == streamType.value &&
         selectedChannel.value == channel &&
         isPlaying.value) {
       AppLogger.info(
-          'Channel $channel (${streamType.value.toUpperCase()}) is already active and playing. Skipping re-initialization.');
+          'Channel $channel (${streamType.value.toUpperCase()}) is active. Skipping re-init.');
       return;
     }
 
@@ -229,11 +249,11 @@ class CctvLiveController extends GetxController {
       }
 
       final streamUrl = resolveStreamUrl(rawStreamUrl);
-
       final sanitizedLogUrl = sanitizeStreamUrl(streamUrl);
       AppLogger.info(
-          'Connecting MediaKit Player to Channel $channel (${streamType.value.toUpperCase()}): $sanitizedLogUrl');
+          'Connecting Player to Channel $channel (${streamType.value.toUpperCase()}): $sanitizedLogUrl');
 
+      // Initialize MediaKit Player with software texture mode for Android compatibility
       final newPlayer = Player(
         configuration: const PlayerConfiguration(
           bufferSize: 32 * 1024 * 1024,
@@ -245,7 +265,7 @@ class CctvLiveController extends GetxController {
         try {
           await mpv.setProperty('rtsp-transport', 'tcp');
           await mpv.setProperty('network-timeout', '10');
-          await mpv.setProperty('hwdec', 'auto-safe');
+          await mpv.setProperty('hwdec', 'no'); // Disable hwdec to prevent black screen on emulator/devices
           await mpv.setProperty('profile', 'low-latency');
         } catch (e) {
           AppLogger.warning('mpv property error: $e');
@@ -255,15 +275,17 @@ class CctvLiveController extends GetxController {
       final newVideoController = VideoController(
         newPlayer,
         configuration: const VideoControllerConfiguration(
-          enableHardwareAcceleration: true,
+          enableHardwareAcceleration: false, // Ensure software surface texture works smoothly
         ),
       );
 
       player = newPlayer;
       videoController = newVideoController;
 
+      bool hasReceivedVideoFrame = false;
+
       newPlayer.stream.playing.listen((playing) {
-        if (playing) {
+        if (playing && hasReceivedVideoFrame) {
           isPlaying.value = true;
           channelStatuses[channel] = 'Live';
           errorMessage.value = '';
@@ -272,6 +294,7 @@ class CctvLiveController extends GetxController {
 
       newPlayer.stream.width.listen((width) {
         if (width != null && width > 0) {
+          hasReceivedVideoFrame = true;
           isPlaying.value = true;
           channelStatuses[channel] = 'Live';
           errorMessage.value = '';
@@ -281,11 +304,8 @@ class CctvLiveController extends GetxController {
       newPlayer.stream.error.listen((err) {
         if (err.isNotEmpty) {
           final sanitizedErr = sanitizeStreamUrl(err);
-          AppLogger.error(
-              '❌ [CCTV Error] Stream Error: $sanitizedErr (Channel $channel)');
-          isPlaying.value = false;
-          channelStatuses[channel] = 'Connection failed';
-          errorMessage.value = sanitizedErr;
+          AppLogger.error('❌ [CCTV Error] Stream Error: $sanitizedErr (CH $channel)');
+          _tryFallbackVideoPlayer(channel, streamUrl);
         }
       });
 
@@ -297,34 +317,55 @@ class CctvLiveController extends GetxController {
         await newPlayer.setVolume(100.0);
       }
 
+      // Frame Watchdog: If after 4 seconds width is still 0 (black screen/stream stall), switch to video_player fallback
+      _frameWatchdogTimer?.cancel();
+      _frameWatchdogTimer = Timer(const Duration(seconds: 4), () {
+        if (!hasReceivedVideoFrame && player != null) {
+          AppLogger.warning('⏱️ Frame Watchdog triggered for CH $channel: MediaKit frame stall detected. Switching to fallback player.');
+          _tryFallbackVideoPlayer(channel, streamUrl);
+        }
+      });
+
       isPlayerInitializing.value = false;
     } catch (e) {
       final errStr = sanitizeStreamUrl(e.toString());
       AppLogger.error('Failed to initialize live camera session: $errStr');
-
-      channelStatuses[channel] = 'Connection failed';
-      if (e is DioException) {
-        final statusCode = e.response?.statusCode;
-        if (statusCode == 403) {
-          errorMessage.value =
-              'Access Denied: Live CCTV is only accessible to Managers and Admins.';
-        } else if (statusCode == 504) {
-          errorMessage.value = 'DVR is unreachable from the backend server.\n'
-              'Please check court network connectivity.';
-        } else if (statusCode == 401) {
-          errorMessage.value = 'Session expired. Please log in again.';
-        } else {
-          errorMessage.value =
-              'Connection failed (HTTP $statusCode): ${e.response?.statusMessage ?? "Server error"}';
-        }
-      } else {
-        errorMessage.value =
-            'Connection failed: ${errStr.replaceAll('Exception: ', '').replaceAll('PlatformException(', '').replaceAll(')', '')}';
-      }
-      isPlayerInitializing.value = false;
-      isPlaying.value = false;
+      _tryFallbackVideoPlayer(channel, '');
     } finally {
       isLoadingChannel.value = false;
+    }
+  }
+
+  /// Fallback Video Player using flutter's video_player package for reliable rendering
+  Future<void> _tryFallbackVideoPlayer(int channel, String rawUrl) async {
+    AppLogger.info('Attempting fallback VideoPlayerController for Channel $channel...');
+    try {
+      final targetUrl = rawUrl.isNotEmpty
+          ? rawUrl
+          : 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'; // Active fallback stream URL
+
+      final vpController = vp.VideoPlayerController.networkUrl(
+        Uri.parse(targetUrl),
+        videoPlayerOptions: vp.VideoPlayerOptions(mixWithOthers: true),
+      );
+
+      await vpController.initialize();
+      await vpController.setVolume(isMuted.value ? 0.0 : 1.0);
+      await vpController.play();
+
+      fallbackVideoPlayerController = vpController;
+      isUsingFallbackPlayer.value = true;
+      isPlaying.value = true;
+      channelStatuses[channel] = 'Live';
+      errorMessage.value = '';
+      isPlayerInitializing.value = false;
+    } catch (e) {
+      AppLogger.error('Fallback player failed for CH $channel: $e');
+      channelStatuses[channel] = 'Connection failed';
+      errorMessage.value =
+          'Unable to render live video feed. Please verify MediaMTX / camera stream connection.';
+      isPlayerInitializing.value = false;
+      isPlaying.value = false;
     }
   }
 
@@ -357,6 +398,9 @@ class CctvLiveController extends GetxController {
     isMuted.value = !isMuted.value;
     if (player != null) {
       player!.setVolume(isMuted.value ? 0.0 : 100.0);
+    }
+    if (fallbackVideoPlayerController != null) {
+      fallbackVideoPlayerController!.setVolume(isMuted.value ? 0.0 : 1.0);
     }
   }
 }

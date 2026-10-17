@@ -55,6 +55,7 @@ import '../../modules/cctv/views/cctv_list_view.dart';
 import '../../modules/cctv/views/add_cctv_view.dart';
 import '../../modules/cctv/views/cctv_details_view.dart';
 import '../../modules/cctv/views/cctv_live_view.dart';
+import '../../modules/cctv/views/media_server_cctv_view.dart';
 import '../../modules/admin/bindings/admin_binding.dart';
 import '../../modules/admin/views/admin_dashboard_view.dart';
 import '../../modules/admin/views/admin_users_view.dart';
@@ -332,6 +333,20 @@ class AppPages {
     GetPage(
       name: Routes.cctvLive,
       page: () => const CctvLiveView(),
+      binding: CctvBinding(),
+    ),
+    GetPage(
+      name: Routes.mediaServerCctv,
+      page: () {
+        final args = Get.arguments;
+        int chan = 1;
+        if (args is Map<String, dynamic> && args['channel'] != null) {
+          chan = (args['channel'] as num).toInt();
+        } else if (args is int) {
+          chan = args;
+        }
+        return MediaServerCctvScreen(initialChannel: chan);
+      },
       binding: CctvBinding(),
     ),
     GetPage(
