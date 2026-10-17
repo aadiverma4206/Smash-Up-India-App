@@ -36,18 +36,28 @@ class PlayerPaymentHistoryController extends GetxController {
   }
 
   Future<void> fetchTransactions() async {
-    isLoading.value = true;
+    // 1. Immediately load local storage cached transactions for 0ms instant UI rendering
+    final cachedList = await repository.getLocalCachedTransactions();
+    if (cachedList.isNotEmpty) {
+      allTransactions.value = cachedList;
+      applyFilters();
+    } else {
+      isLoading.value = true;
+    }
+
     errorMessage.value = '';
     try {
+      // 2. Fetch latest fresh list from API and update local storage + UI
       final list = await repository.getTransactions(page: 1, limit: 100);
-      allTransactions.value = list;
-      applyFilters();
+      if (list.isNotEmpty) {
+        allTransactions.value = list;
+        applyFilters();
+      }
     } catch (e) {
       AppLogger.warning('Failed to fetch ledger transactions: $e');
-      errorMessage.value = 'Failed to load transaction history.';
-      allTransactions.clear();
-      filteredTransactions.clear();
-      groupedTransactions.clear();
+      if (allTransactions.isEmpty) {
+        errorMessage.value = 'Failed to load transaction history.';
+      }
     } finally {
       isLoading.value = false;
     }
