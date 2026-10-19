@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../utils/app_logger.dart';
+import '../server_discovery_service.dart';
 
 class RetryInterceptor extends Interceptor {
   final Dio dio;
@@ -12,7 +13,29 @@ class RetryInterceptor extends Interceptor {
       DioException err, ErrorInterceptorHandler handler) async {
     final requestOptions = err.requestOptions;
 
-    // Retry ONLY idempotent GET requests on timeout or network connection errors
+    // Check if error is due to an unreachable host (timeout or connection refused)
+    if (err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.connectionError) {
+      bool failoverDone = requestOptions.extra['failoverDone'] ?? false;
+      if (!failoverDone) {
+        requestOptions.extra['failoverDone'] = true;
+        final switched = await ServerDiscoveryService.handleConnectionFailure(dio);
+        if (switched) {
+          AppLogger.info('🔄 [RetryInterceptor] Retrying request with new baseUrl: ${dio.options.baseUrl}');
+          requestOptions.baseUrl = dio.options.baseUrl;
+          try {
+            final response = await dio.fetch(requestOptions);
+            return handler.resolve(response);
+          } catch (retryErr) {
+            if (retryErr is DioException) {
+              return handler.next(retryErr);
+            }
+          }
+        }
+      }
+    }
+
+    // Standard retry for idempotent GET requests
     if (requestOptions.method.toUpperCase() == 'GET' &&
         (err.type == DioExceptionType.connectionTimeout ||
             err.type == DioExceptionType.receiveTimeout ||

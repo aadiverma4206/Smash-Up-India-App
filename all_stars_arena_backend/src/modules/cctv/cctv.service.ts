@@ -2,6 +2,7 @@ import { CctvRepository } from './cctv.repository.js';
 import { CctvRecordingService } from '../../services/cctvRecording.service.js';
 import { CctvDiscoveryService } from '../../services/cctvDiscovery.service.js';
 import { MediaMtxService } from '../../services/mediaMtx.service.js';
+import { TunnelService } from '../../services/tunnel.service.js';
 import { encryptSecret, decryptSecret, redactRtspUrl } from '../../utils/crypto.utils.js';
 import { getSignedPlaybackUrl } from '../../services/storage.service.js';
 import { ApiError } from '../../utils/apiResponse.js';
@@ -694,16 +695,27 @@ export class CctvService {
     // Ensure MediaMTX server is active on port 8888
     await MediaMtxService.ensureRunning();
 
-    // Determine host IP for MediaMTX HLS stream (port 8888)
+    // Determine host IP and base origin for universal streaming
     let mediaServerHost = '127.0.0.1';
+    let baseOrigin = 'http://127.0.0.1:5000';
     try {
       const rawTarget = backendBaseUrl || env.BACKEND_URL || 'http://127.0.0.1:5000';
       const parsed = new URL(rawTarget);
       mediaServerHost = parsed.hostname;
+      baseOrigin = parsed.origin;
     } catch (_) {}
 
     const streamKey = `cam${channel}_${streamType}`;
-    const playbackUrl = `http://${mediaServerHost}:8888/${streamKey}/index.m3u8`;
+    // Universal stream URL proxied through Express (works on Mobile Data, any WiFi, Internet)
+    const playbackUrl = `${baseOrigin}/cctv-stream/${streamKey}/index.m3u8`;
+    // Direct MediaMTX URL for ultra-low latency on LAN
+    const directPlaybackUrl = `http://${mediaServerHost}:8888/${streamKey}/index.m3u8`;
+
+    // Public Cloudflare Tunnel URL (100% accessible on MGMT BOTIVATE and 5G/4G Mobile Data)
+    const tunnelOrigin = TunnelService.getUrl();
+    const tunnelPlaybackUrl = tunnelOrigin
+      ? `${tunnelOrigin}/cctv-stream/${streamKey}/index.m3u8`
+      : null;
 
     await CctvRepository.logAudit({
       adminId: userId,
@@ -722,6 +734,9 @@ export class CctvService {
       latencyMs: 0,
       rtspUrl,
       playbackUrl,
+      tunnelPlaybackUrl,
+      tunnelUrl: tunnelOrigin,
+      directPlaybackUrl,
       expiresAt,
     };
   }

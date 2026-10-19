@@ -51,10 +51,8 @@ import '../../modules/manager/views/manager_history_detail_view.dart';
 import '../../modules/manager/views/manager_notifications_view.dart';
 import '../../modules/manager/views/manager_profile_view.dart';
 import '../../modules/cctv/bindings/cctv_binding.dart';
-import '../../modules/cctv/views/cctv_list_view.dart';
 import '../../modules/cctv/views/add_cctv_view.dart';
 import '../../modules/cctv/views/cctv_details_view.dart';
-import '../../modules/cctv/views/cctv_live_view.dart';
 import '../../modules/cctv/views/media_server_cctv_view.dart';
 import '../../modules/admin/bindings/admin_binding.dart';
 import '../../modules/admin/views/admin_dashboard_view.dart';
@@ -327,12 +325,21 @@ class AppPages {
     ),
     GetPage(
       name: '/manager/cctv',
-      page: () => const CctvListView(),
+      page: () => const MediaServerCctvScreen(),
       binding: CctvBinding(),
     ),
     GetPage(
       name: Routes.cctvLive,
-      page: () => const CctvLiveView(),
+      page: () {
+        final args = Get.arguments;
+        int chan = 1;
+        if (args is Map && args['channel'] != null) {
+          chan = (args['channel'] as num).toInt();
+        } else if (args is int) {
+          chan = args;
+        }
+        return MediaServerCctvScreen(initialChannel: chan);
+      },
       binding: CctvBinding(),
     ),
     GetPage(
@@ -340,7 +347,7 @@ class AppPages {
       page: () {
         final args = Get.arguments;
         int chan = 1;
-        if (args is Map<String, dynamic> && args['channel'] != null) {
+        if (args is Map && args['channel'] != null) {
           chan = (args['channel'] as num).toInt();
         } else if (args is int) {
           chan = args;

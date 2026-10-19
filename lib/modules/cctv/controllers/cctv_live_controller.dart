@@ -4,7 +4,6 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player/video_player.dart' as vp;
 import 'package:get/get.dart';
-import 'package:dio/dio.dart';
 import '../repositories/cctv_repository.dart';
 import '../../../data/models/cctv_models.dart';
 import '../../../core/config/env_config.dart';

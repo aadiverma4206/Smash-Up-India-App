@@ -8,6 +8,7 @@ import '../../../data/models/login_request_model.dart';
 import '../../../data/models/register_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../app/routes/app_routes.dart';
+import '../../../core/config/env_config.dart';
 import '../../../core/utils/app_logger.dart';
 
 class AuthController extends GetxController {
@@ -61,7 +62,7 @@ class AuthController extends GetxController {
       final token = await secureStorage.getAccessToken();
       if (token != null && token.isNotEmpty) {
         final UserModel user =
-            await repository.getMe().timeout(const Duration(seconds: 20));
+            await repository.getMe().timeout(const Duration(seconds: 6));
 
         if (user.status == 'SUSPENDED') {
           await AuthService.to.logout();
@@ -98,7 +99,7 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Login (Email OR Mobile + Password - NO OTP) with 20-Second Timeout
+  /// Login (Email OR Mobile + Password - NO OTP) with connection timeout handling
   Future<void> login(String identifier, String password) async {
     isLoading.value = true;
     errorMessage.value = '';
@@ -110,7 +111,7 @@ class AuthController extends GetxController {
       );
 
       final response =
-          await repository.login(request).timeout(const Duration(seconds: 20));
+          await repository.login(request).timeout(const Duration(seconds: 12));
 
       if (response.user.status == 'SUSPENDED') {
         const suspendedMsg =
@@ -124,10 +125,11 @@ class AuthController extends GetxController {
           response.user, response.accessToken, response.refreshToken);
       routeUserByRole(response.user.roleId);
     } on TimeoutException {
-      const timeoutMsg =
-          'Login Timed Out: Server took too long to respond (20s limit). Please check your connection and try again.';
+      final host = Uri.tryParse(EnvConfig.baseUrl)?.host ?? EnvConfig.baseUrl;
+      final timeoutMsg =
+          'Server at $host did not respond. Check your connection or verify that the backend is running.';
       errorMessage.value = timeoutMsg;
-      ErrorHandler.showErrorSnackBar('Login Timeout', timeoutMsg);
+      ErrorHandler.showErrorSnackBar('Connection Timeout', timeoutMsg);
     } catch (e) {
       final msg = ErrorHandler.getErrorMessage(e);
       errorMessage.value = msg;

@@ -7,6 +7,7 @@ import { logger } from './utils/logger.js';
 import { startMatchLifecycleWorker, startPaymentExpiryJob, startPaymentReconciliationJob } from './jobs/index.js';
 import { CctvRecordingService } from './services/cctvRecording.service.js';
 import { MediaMtxService } from './services/mediaMtx.service.js';
+import { TunnelService } from './services/tunnel.service.js';
 
 // Catch unhandled synchronous exceptions
 process.on('uncaughtException', (err: Error) => {
@@ -60,6 +61,11 @@ const startServer = async () => {
       MediaMtxService.ensureRunning().catch((err) => {
         logger.warn({ err }, 'MediaMTX auto-start check skipped');
       });
+
+      // Ensure Cloudflare Tunnel is active for universal outside-network streaming
+      TunnelService.start(Number(PORT) || 5000).catch((err) => {
+        logger.warn({ err }, 'Cloudflare Tunnel start skipped');
+      });
     } catch (workerErr: any) {
       logger.error({ workerErr }, 'Failed to start background worker jobs');
     }
@@ -73,6 +79,8 @@ const server = await startServer();
 // Graceful Shutdown Handler
 const handleGracefulShutdown = (signal: string) => {
   logger.info(`📡 Received ${signal}. Starting graceful shutdown...`);
+
+  TunnelService.stop();
 
   server.close(async () => {
     logger.info('🛑 HTTP server closed to new connections.');

@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/auth_controller.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/routes/app_routes.dart';
+import '../../../core/config/env_config.dart';
+import '../../../core/network/server_discovery_service.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/auto_fit_text.dart';
@@ -640,6 +642,51 @@ class _LoginViewState extends State<LoginView> {
               ],
             ),
           ),
+
+          const SizedBox(height: 18),
+
+          // Server Connection Badge / Switcher
+          Center(
+            child: InkWell(
+              onTap: () => _showServerConfigDialog(context),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkCard : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkBorder : Colors.grey.shade300,
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Server: ${Uri.tryParse(EnvConfig.baseUrl)?.host ?? EnvConfig.baseUrl}',
+                      style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Icon(Icons.tune_rounded, size: 13, color: secondaryTextColor),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -711,6 +758,124 @@ class _LoginViewState extends State<LoginView> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showServerConfigDialog(BuildContext context) {
+    final textController = TextEditingController(text: EnvConfig.baseUrl);
+    bool isProbing = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
+            final cardColor = isDark ? AppColors.darkCard : Colors.white;
+            final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+            final secColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
+            return AlertDialog(
+              backgroundColor: cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  const Icon(Icons.dns_rounded, color: AppColors.primary, size: 22),
+                  const SizedBox(width: 8),
+                  Text('Server Connection', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Configure backend API address (Local IP, Android Emulator, or Public Tunnel for 5G):',
+                    style: TextStyle(color: secColor, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: textController,
+                    style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      labelText: 'API Base URL',
+                      hintText: 'http://192.168.1.21:5000/api/v1',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.link_rounded, size: 18),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ActionChip(
+                        label: const Text('WiFi LAN (.21)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => textController.text = 'http://192.168.1.21:5000/api/v1',
+                      ),
+                      ActionChip(
+                        label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => textController.text = 'http://10.0.2.2:5000/api/v1',
+                      ),
+                      ActionChip(
+                        avatar: isProbing
+                            ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.auto_awesome, size: 14),
+                        label: const Text('Auto-Detect', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        onPressed: isProbing
+                            ? null
+                            : () async {
+                                setDialogState(() => isProbing = true);
+                                final found = await ServerDiscoveryService.findWorkingServer();
+                                setDialogState(() => isProbing = false);
+                                if (found != null) {
+                                  textController.text = found;
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Found active server: $found'), duration: const Duration(seconds: 2)),
+                                    );
+                                  }
+                                } else {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: const Text('No active server found. Please check backend.'), duration: const Duration(seconds: 2)),
+                                    );
+                                  }
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                  onPressed: () async {
+                    final newUrl = textController.text.trim();
+                    if (newUrl.isNotEmpty) {
+                      await EnvConfig.saveBaseUrl(newUrl);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      setState(() {});
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Server updated to: $newUrl'), duration: const Duration(seconds: 2)),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Save & Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

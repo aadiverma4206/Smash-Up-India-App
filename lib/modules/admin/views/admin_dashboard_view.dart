@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
 import '../../manager/views/manager_history_view.dart';
-import '../../cctv/views/cctv_list_view.dart';
+import '../../cctv/views/media_server_cctv_view.dart';
 import 'admin_profile_view.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
@@ -77,8 +77,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            const ManagerHistoryView(), // Index 1: Match History & Records (Exact same view!)
-            const CctvListView(), // Index 2: CCTV Cameras
+            const ManagerHistoryView(), // Index 1: Match History & Records
+            currentIndex == 2 ? const MediaServerCctvScreen() : const SizedBox.shrink(), // Index 2: CCTV Cameras
             const AdminProfileView(), // Index 3: Profile
           ],
         );

@@ -13,6 +13,7 @@ import { requestId } from './middlewares/requestId.js';
 import { swaggerSpec } from './config/swagger.js';
 import { ApiError, ApiResponse } from './utils/apiResponse.js';
 import { HlsStreamingService } from './services/hlsStreaming.service.js';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const app = express();
 
@@ -80,6 +81,27 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Serve Live CCTV HLS Streams
 app.use('/hls', express.static(HlsStreamingService.getHlsBaseDir()));
+
+// Reverse-Proxy MediaMTX HLS streams through Express on port 5000
+// Allows CCTV streaming over any public domain, Cloudflare tunnel, ngrok, mobile data, or LAN without opening port 8888
+app.use(
+  ['/cctv-stream', '/cam*'],
+  createProxyMiddleware({
+    target: 'http://127.0.0.1:8888',
+    changeOrigin: true,
+    pathRewrite: (path) => path.replace(/^\/cctv-stream/, ''),
+    on: {
+      proxyRes: (proxyRes, req) => {
+        const reqUrl = (req as any).originalUrl || req.url || '';
+        if (proxyRes.headers.location && reqUrl.startsWith('/cctv-stream')) {
+          if (!proxyRes.headers.location.startsWith('/cctv-stream')) {
+            proxyRes.headers.location = `/cctv-stream${proxyRes.headers.location}`;
+          }
+        }
+      },
+    },
+  })
+);
 
 // API Master Router
 app.use('/api/v1', apiRoutes);

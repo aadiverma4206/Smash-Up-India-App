@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -5,10 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import '../../../core/config/env_config.dart';
+import '../../../core/network/server_discovery_service.dart';
+import '../../../core/utils/app_logger.dart';
+import '../../../app/theme/app_colors.dart';
 
 /// Production-ready CCTV Live Stream Player using MediaMTX HLS streams.
 /// Connects directly to MediaMTX server (port 8888) with support for Channels 1-4,
 /// Low-Latency HLS (LL-HLS), quality switching (SD/HD), Fullscreen, and URL persistence.
+/// Fully compatible with both Light Mode and Dark Mode themes.
 class MediaServerCctvScreen extends StatefulWidget {
   /// Base URL where MediaMTX HLS is hosted (e.g. 'http://10.0.2.2:8888' or 'https://cctv.domain.com')
   final String? initialBaseUrl;
@@ -33,14 +38,16 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   bool _isInitialized = false;
   bool _hasError = false;
   String _errorMessage = '';
-  bool _isFullscreen = false;
-  bool _isMuted = true;
+  bool _showControlsOverlay = true;
+  Timer? _controlsTimer;
 
   // Selected Channel (1, 2, 3, 4) and Stream Quality ('sub' for SD, 'main' for HD)
   late int _selectedChannel;
   String _selectedQuality = 'sub'; // 'sub' = SD (low latency), 'main' = HD (1080p)
 
   late String _baseUrl;
+
+  String _activeStreamUrl = '';
 
   final Map<int, String> _channelNames = {
     1: 'Camera 1 (Court 1 - Main Pitch)',
@@ -59,21 +66,21 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       final envUri = Uri.tryParse(EnvConfig.baseUrl);
       if (envUri != null && envUri.host.isNotEmpty) {
         String host = envUri.host;
-        // On Android emulator, localhost / 127.0.0.1 routes to 10.0.2.2
         if (host == 'localhost' || host == '127.0.0.1') {
           if (!kIsWeb && Platform.isAndroid) {
             host = '10.0.2.2';
           }
         }
         final scheme = envUri.scheme.isNotEmpty ? envUri.scheme : 'http';
-        return '$scheme://$host:8888';
+        final port = envUri.hasPort ? envUri.port : (scheme == 'https' ? 443 : 5000);
+        return '$scheme://$host:$port/cctv-stream';
       }
     } catch (_) {}
 
     if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:8888';
+      return 'http://10.0.2.2:5000/cctv-stream';
     }
-    return 'http://localhost:8888';
+    return 'http://localhost:5000/cctv-stream';
   }
 
   @override
@@ -86,32 +93,135 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     _loadSavedBaseUrlAndInitialize();
   }
 
+  bool _isAutoReconnecting = false;
+
   Future<void> _loadSavedBaseUrlAndInitialize() async {
+    String? cachedTunnel;
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedUrl = prefs.getString(_prefKeyBaseUrl);
-      // Ignore obsolete hardcoded '192.168.1.100' placeholder to prevent timeout on emulator/device
       if (savedUrl != null &&
           savedUrl.trim().isNotEmpty &&
           !savedUrl.contains('192.168.1.100')) {
         _baseUrl = savedUrl.trim();
       }
+      cachedTunnel = prefs.getString(ServerDiscoveryService.prefKeyTunnelUrl);
     } catch (_) {}
-    _initializePlayer();
+    _initializePlayer(cachedTunnel);
   }
 
   /// Construct stream key based on mediamtx.yml path definitions
   /// e.g. cam1_sub, cam1_main, cam2_sub, cam2_main, etc.
   String get _currentStreamKey => 'cam${_selectedChannel}_$_selectedQuality';
 
-  /// Construct complete HLS playlist URL
-  /// e.g. http://10.0.2.2:8888/cam1_sub/index.m3u8
-  String get _currentHlsUrl {
-    final cleanBase = _baseUrl.replaceAll(RegExp(r'/$'), '');
-    return '$cleanBase/$_currentStreamKey/index.m3u8';
+  /// Universal Express HLS Proxy URL (Port 5000 / cctv-stream)
+  /// Streams over ANY network (Mobile Data 4G/5G, any WiFi, Internet, Tunnels) without exposing port 8888
+  String get _backendProxyHlsUrl {
+    final cleanBase = EnvConfig.baseUrl
+        .replaceAll(RegExp(r'/api/v1/?$'), '')
+        .replaceAll(RegExp(r'/$'), '');
+    return '$cleanBase/cctv-stream/$_currentStreamKey/index.m3u8';
   }
 
-  Future<void> _initializePlayer() async {
+  /// Direct MediaMTX URL (Port 8888) for local network
+  String get _directMediaMtxHlsUrl {
+    try {
+      final envUri = Uri.tryParse(EnvConfig.baseUrl);
+      if (envUri != null && envUri.host.isNotEmpty) {
+        String host = envUri.host;
+        if (host == 'localhost' || host == '127.0.0.1') {
+          if (!kIsWeb && Platform.isAndroid) host = '10.0.2.2';
+        }
+        return 'http://$host:8888/$_currentStreamKey/index.m3u8';
+      }
+    } catch (_) {}
+    return 'http://10.0.2.2:8888/$_currentStreamKey/index.m3u8';
+  }
+
+  /// Complete list of intelligent candidate URLs in order of priority:
+  List<String> _buildCandidateUrls([String? cachedTunnelUrl]) {
+    final candidates = <String>[];
+
+    // Priority 1: Universal Express Proxy (Port 5000)
+    final proxyUrl = _backendProxyHlsUrl;
+    if (proxyUrl.isNotEmpty && !candidates.contains(proxyUrl)) {
+      candidates.add(proxyUrl);
+    }
+
+    // Priority 2: Direct MediaMTX port 8888 on backend host (for ultra-low latency LAN on Botivate_5g)
+    final directUrl = _directMediaMtxHlsUrl;
+    if (directUrl.isNotEmpty && !candidates.contains(directUrl)) {
+      candidates.add(directUrl);
+    }
+
+    // Priority 3: Dynamic Cached Cloudflare Tunnel (Universal for MGMT BOTIVATE & 5G/4G Mobile Data)
+    if (cachedTunnelUrl != null && cachedTunnelUrl.isNotEmpty) {
+      final clean = cachedTunnelUrl
+          .replaceAll(RegExp(r'/api/v1/?$'), '')
+          .replaceAll(RegExp(r'/$'), '');
+      final tunnelStream = '$clean/cctv-stream/$_currentStreamKey/index.m3u8';
+      if (!candidates.contains(tunnelStream)) candidates.add(tunnelStream);
+    }
+
+    // Priority 4: Production Cloudflare Quick Tunnel (Guaranteed to work across all subnets & mobile data)
+    const staticTunnel = 'https://integrity-bookmarks-options-matches.trycloudflare.com/cctv-stream';
+    final staticTunnelStream = '$staticTunnel/$_currentStreamKey/index.m3u8';
+    if (!candidates.contains(staticTunnelStream)) {
+      candidates.add(staticTunnelStream);
+    }
+
+    // Priority 5: Known LAN Fallback (Botivate_5g IP 192.168.1.21)
+    const lanFallback = 'http://192.168.1.21:5000/cctv-stream';
+    final lanStream = '$lanFallback/$_currentStreamKey/index.m3u8';
+    if (!candidates.contains(lanStream)) {
+      candidates.add(lanStream);
+    }
+
+    // Priority 6: Custom user configured URL if different
+    if (_baseUrl.isNotEmpty) {
+      final clean = _baseUrl.replaceAll(RegExp(r'/$'), '');
+      final customUrl = clean.contains('/cam')
+          ? clean
+          : '$clean/$_currentStreamKey/index.m3u8';
+      if (!candidates.contains(customUrl)) {
+        candidates.add(customUrl);
+      }
+    }
+
+    // Priority 7: Android Emulator fallbacks
+    if (!kIsWeb && Platform.isAndroid) {
+      final emuProxy = 'http://10.0.2.2:5000/cctv-stream/$_currentStreamKey/index.m3u8';
+      final emuDirect = 'http://10.0.2.2:8888/$_currentStreamKey/index.m3u8';
+      final adbDirect = 'http://127.0.0.1:8888/$_currentStreamKey/index.m3u8';
+      if (!candidates.contains(emuProxy)) candidates.add(emuProxy);
+      if (!candidates.contains(emuDirect)) candidates.add(emuDirect);
+      if (!candidates.contains(adbDirect)) candidates.add(adbDirect);
+    }
+
+    return candidates;
+  }
+
+  void _handleStreamRuntimeError(String? errorDescription) {
+    if (!mounted || _isAutoReconnecting) return;
+    _isAutoReconnecting = true;
+    AppLogger.warning('⚠️ [CCTV Stream] Connection lost or WiFi changed: $errorDescription. Auto-reconnecting...');
+
+    if (mounted) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Network changed. Reconnecting...';
+      });
+    }
+
+    // Automatic reconnect with candidate failover
+    Future.delayed(const Duration(milliseconds: 1200), () async {
+      if (!mounted) return;
+      await _initializePlayer();
+      _isAutoReconnecting = false;
+    });
+  }
+
+  Future<void> _initializePlayer([String? cachedTunnelUrl]) async {
     if (!mounted) return;
 
     setState(() {
@@ -126,16 +236,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       await oldController.dispose();
     }
 
-    // Build ordered list of candidate URLs to try
-    final candidates = <String>[_currentHlsUrl];
-
-    // On Android (emulator or device), add 10.0.2.2 and 127.0.0.1 (adb reverse)
-    if (!kIsWeb && Platform.isAndroid) {
-      final emuUrl = 'http://10.0.2.2:8888/$_currentStreamKey/index.m3u8';
-      final adbUrl = 'http://127.0.0.1:8888/$_currentStreamKey/index.m3u8';
-      if (!candidates.contains(emuUrl)) candidates.add(emuUrl);
-      if (!candidates.contains(adbUrl)) candidates.add(adbUrl);
-    }
+    // Build ordered list of candidate URLs to try dynamically
+    final candidates = _buildCandidateUrls(cachedTunnelUrl);
 
     String lastError = '';
 
@@ -143,6 +245,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       if (!mounted) return;
 
       try {
+        AppLogger.info('📡 [CCTV Stream] Trying candidate: $candidateUrl');
         final uri = Uri.parse(candidateUrl);
         final controller = VideoPlayerController.networkUrl(
           uri,
@@ -153,7 +256,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         );
 
         await controller.initialize().timeout(const Duration(seconds: 4));
-        await controller.setVolume(_isMuted ? 0.0 : 1.0);
+        await controller.setVolume(0.0);
         await controller.play();
 
         if (!mounted) {
@@ -161,7 +264,15 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           return;
         }
 
-        // Successfully connected! Update _baseUrl to working host
+        controller.addListener(() {
+          if (mounted && controller.value.hasError && !_hasError) {
+            _handleStreamRuntimeError(controller.value.errorDescription);
+          }
+        });
+
+        _activeStreamUrl = candidateUrl;
+
+        // Successfully connected! Update _baseUrl to working host base
         final workingBase = candidateUrl.replaceAll(
           RegExp(r'/cam\d+_(sub|main)/index\.m3u8.*$'),
           '',
@@ -174,6 +285,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           } catch (_) {}
         }
 
+        AppLogger.info('✅ [CCTV Stream] Live video stream connected: $candidateUrl');
+
         setState(() {
           _controller = controller;
           _isInitialized = true;
@@ -182,6 +295,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         return;
       } catch (e) {
         lastError = e.toString();
+        AppLogger.warning('❌ [CCTV Stream] Candidate failed: $candidateUrl ($e)');
         // Candidate failed, continuing to next candidate
       }
     }
@@ -194,30 +308,49 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     }
   }
 
-  void _toggleFullscreen() {
+  void _toggleControlsOverlayVisibility() {
     setState(() {
-      _isFullscreen = !_isFullscreen;
+      _showControlsOverlay = !_showControlsOverlay;
     });
-
-    if (_isFullscreen) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    } else {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-      ]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (_showControlsOverlay) {
+      _resetControlsTimer();
     }
   }
 
-  void _toggleMute() {
-    setState(() {
-      _isMuted = !_isMuted;
-      _controller?.setVolume(_isMuted ? 0.0 : 1.0);
-    });
+  void _resetControlsTimer() {
+    _controlsTimer?.cancel();
+    if (_showControlsOverlay) {
+      _controlsTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _showControlsOverlay = false;
+          });
+        }
+      });
+    }
+  }
+
+  void _openFullscreenPlayer(BuildContext context) {
+    if (_controller == null || !_isInitialized) return;
+
+    Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: true,
+        fullscreenDialog: true,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return CctvFullscreenPlayerPage(
+            controller: _controller!,
+            channel: _selectedChannel,
+            quality: _selectedQuality,
+            channelName:
+                _channelNames[_selectedChannel] ?? 'Camera $_selectedChannel',
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
   }
 
   void _switchChannel(int channel) {
@@ -251,6 +384,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
   @override
   void dispose() {
+    _controlsTimer?.cancel();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _controller?.dispose();
@@ -259,52 +393,66 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isFullscreen) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: _buildPlayerContent(),
-      );
-    }
+    final isDark = context.isDark;
+    final bgColor = context.backgroundColor;
+    final cardColor = context.cardColor;
+    final borderColor = context.borderColor;
+    final textPrimary = context.textPrimary;
+    final textSecondary = context.textSecondary;
+    final inputBg = context.inputBgColor;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: bgColor,
       appBar: AppBar(
         title: Row(
           children: [
             Container(
-              width: 10,
-              height: 10,
+              width: 9,
+              height: 9,
               decoration: BoxDecoration(
                 color: _isInitialized
-                    ? Colors.greenAccent
-                    : (_hasError ? Colors.redAccent : Colors.orange),
+                    ? const Color(0xFF10B981)
+                    : (_hasError ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: (_isInitialized
+                            ? const Color(0xFF10B981)
+                            : (_hasError ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)))
+                        .withValues(alpha: 0.5),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Flexible(
               child: Text(
-                'MediaMTX CCTV CH $_selectedChannel',
+                'CCTV Live • CH $_selectedChannel',
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: isDark ? Colors.white : Colors.black87,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+            (isDark ? AppColors.darkAppBar : AppColors.sageGreenAppBar),
         elevation: 0,
+        iconTheme: IconThemeData(
+          color: isDark ? Colors.white : Colors.black87,
+        ),
         actions: [
           IconButton(
-            icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white),
-            onPressed: _toggleMute,
-            tooltip: _isMuted ? 'Unmute' : 'Mute',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: Icon(
+              Icons.refresh_rounded,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
             onPressed: _initializePlayer,
             tooltip: 'Reload Stream',
           ),
@@ -314,7 +462,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Video Player Box (16:9 Aspect Ratio)
+            // Video Player Box (Always 16:9 Aspect Ratio)
             Container(
               color: Colors.black,
               child: AspectRatio(
@@ -325,72 +473,95 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
             // Controls & Channel Selection
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Stream Quality Selector (SD Substream vs HD Mainstream) - Overflow-safe
+                  // Stream Quality Selector (SD Substream vs HD Mainstream)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Stream Quality:',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        children: [
+                          Icon(Icons.tune_rounded, size: 16, color: textSecondary),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Stream Quality:',
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildQualityChip('SD (Sub)', 'sub'),
+                          _buildQualityChip('SD (Sub)', 'sub', Icons.speed_rounded, context),
                           const SizedBox(width: 8),
-                          _buildQualityChip('HD (1080p)', 'main'),
+                          _buildQualityChip('HD (1080p)', 'main', Icons.hd_rounded, context),
                         ],
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
 
                   // Camera Channel Grid Options (CH 1-4)
-                  const Text(
+                  Text(
                     'Select Camera Channel:',
-                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 4,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 2.2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemBuilder: (context, index) {
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final crossCount = constraints.maxWidth > 550 ? 4 : 2;
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 4,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossCount,
+                          childAspectRatio: crossCount == 4 ? 2.6 : 2.1,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemBuilder: (context, index) {
                       final ch = index + 1;
                       final isSelected = _selectedChannel == ch;
                       final camName = _channelNames[ch] ?? 'Camera $ch';
 
                       return InkWell(
                         onTap: () => _switchChannel(ch),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? Colors.blueAccent.withValues(alpha: 0.25)
-                                : const Color(0xFF1E293B),
-                            borderRadius: BorderRadius.circular(10),
+                                ? AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.12)
+                                : cardColor,
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected ? Colors.blueAccent : Colors.white12,
+                              color: isSelected ? AppColors.primary : borderColor,
                               width: isSelected ? 1.8 : 1,
                             ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(alpha: 0.15),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,32 +570,59 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                     decoration: BoxDecoration(
-                                      color: isSelected ? Colors.blueAccent : Colors.grey.shade800,
-                                      borderRadius: BorderRadius.circular(4),
+                                      color: isSelected ? AppColors.primary : inputBg,
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       'CH $ch',
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: isSelected ? Colors.white : textPrimary,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 10,
+                                        fontSize: 10.5,
+                                        letterSpacing: 0.3,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
+                                  const Spacer(),
                                   if (isSelected)
-                                    const Icon(Icons.check_circle_rounded, color: Colors.blueAccent, size: 14),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: const Color(0xFF10B981), width: 0.8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.fiber_manual_record, color: Color(0xFF10B981), size: 6),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'ACTIVE',
+                                            style: TextStyle(
+                                              color: Color(0xFF10B981),
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    Icon(Icons.videocam_outlined, color: textSecondary, size: 16),
                                 ],
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 6),
                               Text(
                                 camName,
                                 style: TextStyle(
-                                  color: isSelected ? Colors.white : Colors.white70,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  fontSize: 11,
+                                  color: isSelected
+                                      ? (isDark ? Colors.white : AppColors.primaryDark)
+                                      : textSecondary,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  fontSize: 11.5,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -434,56 +632,128 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                         ),
                       );
                     },
-                  ),
+                  );
+                },
+              ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                  // Camera Technical Information Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Camera & Stream Diagnostics',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                  // Server URL Quick Config Button
+                  InkWell(
+                    onTap: _showUrlDialog,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor, width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.dns_rounded, color: AppColors.primary, size: 19),
                           ),
-                        ),
-                        const Divider(color: Colors.white12, height: 20),
-                        _buildInfoRow('Active Camera', _channelNames[_selectedChannel] ?? 'CH $_selectedChannel'),
-                        _buildInfoRow('Stream Key', _currentStreamKey),
-                        _buildInfoRow('Media Server Base', _baseUrl),
-                        _buildInfoRow('Full Stream URL', _currentHlsUrl),
-                        _buildInfoRow('Protocol', 'Low-Latency HLS (LL-HLS)'),
-                        _buildInfoRow(
-                          'Stream Status',
-                          _isInitialized ? 'ONLINE 🟢' : (_hasError ? 'ERROR 🔴' : 'CONNECTING 🟡'),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'MediaMTX Base URL',
+                                  style: TextStyle(
+                                    color: textPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _baseUrl,
+                                  style: TextStyle(
+                                    color: textSecondary,
+                                    fontSize: 11,
+                                    fontFamily: 'monospace',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Edit',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Server URL Configuration Action
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.blueAccent,
-                      side: const BorderSide(color: Colors.blueAccent),
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  // Diagnostics Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor, width: 1.2),
                     ),
-                    icon: const Icon(Icons.settings_input_component_rounded),
-                    label: const Text('Configure MediaMTX Server Address'),
-                    onPressed: _showUrlDialog,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.analytics_rounded, color: AppColors.primary, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Camera & Stream Diagnostics',
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Divider(color: borderColor, height: 22),
+                        _buildInfoRow('Active Camera', _channelNames[_selectedChannel] ?? 'CH $_selectedChannel', context),
+                        _buildInfoRow('Stream Key', _currentStreamKey, context),
+                        _buildInfoRow('Media Server Base', _baseUrl, context, copyable: true),
+                        _buildInfoRow('Full Stream URL', _activeStreamUrl.isNotEmpty ? _activeStreamUrl : _backendProxyHlsUrl, context, copyable: true),
+                        _buildInfoRow('Stream Mode', _activeStreamUrl.contains('/cctv-stream') ? 'Universal Proxy (Port 5000)' : 'Direct MediaMTX (Port 8888)', context),
+                        _buildInfoRow('Protocol', 'Low-Latency HLS (fMP4)', context),
+                        _buildInfoRow(
+                          'Stream Status',
+                          _isInitialized ? 'ONLINE 🟢' : (_hasError ? 'ERROR 🔴' : 'CONNECTING 🟡'),
+                          context,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -509,7 +779,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.videocam_off_rounded, color: Colors.redAccent, size: 36),
+                      const Icon(Icons.videocam_off_rounded, color: Color(0xFFEF4444), size: 36),
                       const SizedBox(height: 6),
                       Text(
                         'Failed to load Channel $_selectedChannel Stream',
@@ -522,11 +792,13 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Ensure MediaMTX is running at $_baseUrl and the camera is online.',
+                        _activeStreamUrl.isNotEmpty
+                            ? 'Attempting connection across LAN and Cloud Tunnel...'
+                            : 'Ensure Camera DVR (192.168.1.2) is powered on and connected.',
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white60, fontSize: 11),
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
                       ),
                       if (_errorMessage.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -535,7 +807,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 10),
+                          style: const TextStyle(color: Color(0xFFF87171), fontSize: 10),
                         ),
                       ],
                       const SizedBox(height: 10),
@@ -544,14 +816,26 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                         children: [
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            onPressed: _initializePlayer,
+                            onPressed: () async {
+                              setState(() {
+                                _isInitialized = false;
+                                _hasError = false;
+                              });
+                              final working = await ServerDiscoveryService.findWorkingServer();
+                              if (working != null) {
+                                await EnvConfig.saveBaseUrl(working);
+                              }
+                              await _loadSavedBaseUrlAndInitialize();
+                            },
                             icon: const Icon(Icons.refresh_rounded, size: 14),
-                            label: const Text('Retry', style: TextStyle(fontSize: 12)),
+                            label: const Text('Retry Auto-Connect', style: TextStyle(fontSize: 12)),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton.icon(
@@ -561,9 +845,10 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                             onPressed: _showUrlDialog,
-                            icon: const Icon(Icons.edit_rounded, size: 14),
+                            icon: const Icon(Icons.tune_rounded, size: 14),
                             label: const Text('Change URL', style: TextStyle(fontSize: 12)),
                           ),
                         ],
@@ -583,116 +868,301 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: Colors.blueAccent),
-            const SizedBox(height: 12),
+            const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 2.8,
+              ),
+            ),
+            const SizedBox(height: 14),
             Text(
               'Connecting to MediaMTX Stream (CH $_selectedChannel)...',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
             ),
           ],
         ),
       );
     }
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Center(
-          child: AspectRatio(
-            aspectRatio: _controller!.value.aspectRatio > 0
-                ? _controller!.value.aspectRatio
-                : 16 / 9,
-            child: VideoPlayer(_controller!),
-          ),
-        ),
+    final double videoRatio = (_controller != null &&
+            _controller!.value.isInitialized &&
+            _controller!.value.aspectRatio > 0)
+        ? _controller!.value.aspectRatio
+        : (16 / 9);
 
-        // LIVE status badge overlay (top-left)
-        Positioned(
-          top: 12,
-          left: 12,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.fiber_manual_record, color: Colors.white, size: 10),
-                SizedBox(width: 4),
-                Text(
-                  'LIVE',
-                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleControlsOverlayVisibility,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Video background container
+          Container(
+            color: Colors.black,
+            width: double.infinity,
+            height: double.infinity,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: videoRatio,
+                child: VideoPlayer(_controller!),
+              ),
             ),
           ),
-        ),
 
-        // Controls overlay (bottom-right)
-        Positioned(
-          bottom: 10,
-          right: 10,
-          child: Row(
-            children: [
-              IconButton(
-                icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up, color: Colors.white, size: 22),
-                onPressed: _toggleMute,
+          // Animated Overlay Controls
+          AnimatedOpacity(
+            opacity: _showControlsOverlay ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 220),
+            child: IgnorePointer(
+              ignoring: !_showControlsOverlay,
+              child: Stack(
+                children: [
+                  // Top Gradient & Header Controls (LIVE Badge + Channel Title + Exit button)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.8),
+                            Colors.black.withValues(alpha: 0.0),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        top: false,
+                        left: true,
+                        right: true,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC2626)
+                                      .withValues(alpha: 0.95),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withValues(alpha: 0.4),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.fiber_manual_record,
+                                        color: Colors.white, size: 8),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'LIVE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.65),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: Colors.white24, width: 0.8),
+                                  ),
+                                  child: Text(
+                                    'CH $_selectedChannel • ${_selectedQuality == 'sub' ? 'SD' : 'HD 1080p'}',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Gradient & Fullscreen Toggle Control
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.0),
+                            Colors.black.withValues(alpha: 0.8),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: SafeArea(
+                        top: false,
+                        bottom: false,
+                        left: true,
+                        right: true,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Material(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(8),
+                                child: InkWell(
+                                  onTap: () => _openFullscreenPlayer(context),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: Colors.white24, width: 0.8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.fullscreen_rounded,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              IconButton(
-                icon: Icon(
-                  _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-                  color: Colors.white,
-                  size: 26,
-                ),
-                onPressed: _toggleFullscreen,
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildQualityChip(String label, String qualityKey) {
+  Widget _buildQualityChip(
+      String label, String qualityKey, IconData icon, BuildContext context) {
     final isSelected = _selectedQuality == qualityKey;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => _switchQuality(qualityKey),
-      selectedColor: Colors.blueAccent,
-      backgroundColor: const Color(0xFF1E293B),
-      side: BorderSide(
-        color: isSelected ? Colors.blueAccent : Colors.white12,
-        width: 1,
-      ),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.grey[300],
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        fontSize: 11,
+    final cardColor = context.cardColor;
+    final borderColor = context.borderColor;
+    final textSecondary = context.textSecondary;
+
+    return InkWell(
+      onTap: () => _switchQuality(qualityKey),
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : cardColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : borderColor,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? Colors.white : textSecondary,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : textSecondary,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 11.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(
+      String label, String value, BuildContext context, {bool copyable = false}) {
+    final textSecondary = context.textSecondary;
+    final textPrimary = context.textPrimary;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3.5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+          Text(label, style: TextStyle(color: textSecondary, fontSize: 12)),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12),
+                  ),
+                ),
+                if (copyable) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: value));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Copied $label to clipboard'),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: const Padding(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(Icons.copy_rounded,
+                          color: AppColors.primary, size: 14),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -704,81 +1174,631 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     final textController = TextEditingController(text: _baseUrl);
     final envUri = Uri.tryParse(EnvConfig.baseUrl);
     final envHost = envUri?.host ?? '';
+    final cleanBackend = EnvConfig.baseUrl
+        .replaceAll(RegExp(r'/api/v1/?$'), '')
+        .replaceAll(RegExp(r'/$'), '');
 
     final presets = <Map<String, String>>[
-      {'label': 'Emulator (10.0.2.2)', 'url': 'http://10.0.2.2:8888'},
-      if (envHost.isNotEmpty && envHost != '10.0.2.2' && envHost != 'localhost')
-        {'label': 'LAN ($envHost)', 'url': 'http://$envHost:8888'},
-      {'label': 'Localhost', 'url': 'http://localhost:8888'},
+      {
+        'label': 'Universal Proxy (Port 5000)',
+        'sub': 'Mobile Data / All Networks',
+        'url': '$cleanBackend/cctv-stream',
+      },
+      if (envHost.isNotEmpty && envHost != 'localhost' && envHost != '127.0.0.1')
+        {
+          'label': 'Direct MediaMTX (Port 8888)',
+          'sub': 'Local WiFi / LAN',
+          'url': 'http://$envHost:8888',
+        },
+      if (!kIsWeb && Platform.isAndroid)
+        {
+          'label': 'Android Emulator',
+          'sub': '10.0.2.2',
+          'url': 'http://10.0.2.2:5000/cctv-stream',
+        },
+      {
+        'label': 'Localhost / Reverse ADB',
+        'sub': '127.0.0.1',
+        'url': 'http://127.0.0.1:5000/cctv-stream',
+      },
     ];
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Update MediaMTX Base URL', style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter the address where MediaMTX HLS is hosted (Local IP, DDNS, or Public Tunnel):',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: textController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: 'http://10.0.2.2:8888 or http://192.168.1.x:8888',
-                hintStyle: TextStyle(color: Colors.white38, fontSize: 11),
-                labelText: 'Server Base URL',
-                labelStyle: TextStyle(color: Colors.blueAccent),
-                border: OutlineInputBorder(),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final isDark = dialogCtx.isDark;
+            final cardColor = dialogCtx.cardColor;
+            final borderColor = dialogCtx.borderColor;
+            final textPrimary = dialogCtx.textPrimary;
+            final textSecondary = dialogCtx.textSecondary;
+            final inputBg = dialogCtx.inputBgColor;
+            final currentInput = textController.text.trim();
+
+            return Dialog(
+              backgroundColor: cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: borderColor, width: 1.2),
+              ),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Padding(
+                padding: const EdgeInsets.all(22.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with Icon
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.dns_rounded,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Media Server Address',
+                                style: TextStyle(
+                                  color: textPrimary,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Configure MediaMTX HLS Host',
+                                style: TextStyle(
+                                  color: textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    Text(
+                      'Enter the base URL where MediaMTX HLS port 8888 is reachable:',
+                      style: TextStyle(
+                        color: textSecondary,
+                        fontSize: 12.5,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Input Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: inputBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor, width: 1.2),
+                      ),
+                      child: TextField(
+                        controller: textController,
+                        onChanged: (_) => setDialogState(() {}),
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                        keyboardType: TextInputType.url,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14),
+                          hintText: 'http://10.0.2.2:8888',
+                          hintStyle:
+                              TextStyle(color: textSecondary, fontSize: 13),
+                          prefixIcon: const Icon(
+                            Icons.link_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          suffixIcon: currentInput.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.cancel,
+                                      color: textSecondary, size: 18),
+                                  onPressed: () {
+                                    textController.clear();
+                                    setDialogState(() {});
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Presets Section
+                    Row(
+                      children: [
+                        const Icon(Icons.bolt_rounded,
+                            color: Color(0xFFFBBF24), size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Quick Network Presets:',
+                          style: TextStyle(
+                            color: textSecondary,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Preset Options
+                    Column(
+                      children: presets.map((preset) {
+                        final isCurrent = currentInput == preset['url'];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6.0),
+                          child: InkWell(
+                            onTap: () {
+                              textController.text = preset['url']!;
+                              setDialogState(() {});
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: isCurrent
+                                    ? AppColors.primary
+                                        .withValues(alpha: isDark ? 0.3 : 0.12)
+                                    : inputBg,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isCurrent
+                                      ? AppColors.primary
+                                      : borderColor,
+                                  width: isCurrent ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isCurrent
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_off,
+                                    size: 16,
+                                    color: isCurrent
+                                        ? AppColors.primary
+                                        : textSecondary,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          preset['label']!,
+                                          style: TextStyle(
+                                            color: isCurrent
+                                                ? (isDark
+                                                    ? Colors.white
+                                                    : AppColors.primaryDark)
+                                                : textPrimary,
+                                            fontWeight: isCurrent
+                                                ? FontWeight.bold
+                                                : FontWeight.w500,
+                                            fontSize: 12.5,
+                                          ),
+                                        ),
+                                        Text(
+                                          preset['url']!,
+                                          style: TextStyle(
+                                            color: textSecondary,
+                                            fontSize: 10.5,
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: cardColor,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      preset['sub']!,
+                                      style: TextStyle(
+                                        color: isCurrent
+                                            ? AppColors.primary
+                                            : textSecondary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Dialog Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: textSecondary,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 11),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          icon: const Icon(Icons.check_rounded, size: 16),
+                          label: const Text(
+                            'Save & Connect',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          onPressed: () {
+                            final newUrl = textController.text.trim();
+                            if (newUrl.isNotEmpty) {
+                              Navigator.pop(ctx);
+                              _saveBaseUrl(newUrl);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Standalone Fullscreen Landscape Video Player Page.
+/// Pushed via root navigator so it covers the entire app (including bottom bars).
+class CctvFullscreenPlayerPage extends StatefulWidget {
+  final VideoPlayerController controller;
+  final int channel;
+  final String quality;
+  final String channelName;
+
+  const CctvFullscreenPlayerPage({
+    super.key,
+    required this.controller,
+    required this.channel,
+    required this.quality,
+    required this.channelName,
+  });
+
+  @override
+  State<CctvFullscreenPlayerPage> createState() =>
+      _CctvFullscreenPlayerPageState();
+}
+
+class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
+  bool _showOverlay = true;
+  Timer? _overlayTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _resetOverlayTimer();
+  }
+
+  void _toggleOverlay() {
+    setState(() {
+      _showOverlay = !_showOverlay;
+    });
+    if (_showOverlay) {
+      _resetOverlayTimer();
+    }
+  }
+
+  void _resetOverlayTimer() {
+    _overlayTimer?.cancel();
+    if (_showOverlay) {
+      _overlayTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _showOverlay = false;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _overlayTimer?.cancel();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Orientation orientation = MediaQuery.of(context).orientation;
+    final bool isPhysicallyLandscape = orientation == Orientation.landscape;
+    final double videoRatio = widget.controller.value.aspectRatio > 0
+        ? widget.controller.value.aspectRatio
+        : (16 / 9);
+
+    Widget playerBody = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleOverlay,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Black Background + Centered Video
+          Container(
+            color: Colors.black,
+            width: double.infinity,
+            height: double.infinity,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: videoRatio,
+                child: VideoPlayer(widget.controller),
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Quick Presets:',
-              style: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: presets.map((preset) {
-                return ActionChip(
-                  label: Text(preset['label']!, style: const TextStyle(fontSize: 10.5, color: Colors.white)),
-                  backgroundColor: const Color(0xFF334155),
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  onPressed: () {
-                    textController.text = preset['url']!;
-                  },
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-            onPressed: () {
-              final newUrl = textController.text.trim();
-              if (newUrl.isNotEmpty) {
-                Navigator.pop(ctx);
-                _saveBaseUrl(newUrl);
-              }
-            },
-            child: const Text('Save & Reconnect'),
+
+          // Animated Controls Overlay
+          AnimatedOpacity(
+            opacity: _showOverlay ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: IgnorePointer(
+              ignoring: !_showOverlay,
+              child: Stack(
+                children: [
+                  // Top Gradient Header Bar
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.85),
+                            Colors.black.withValues(alpha: 0.0),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        top: true,
+                        left: true,
+                        right: true,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: Row(
+                            children: [
+                              Material(
+                                color: Colors.black45,
+                                shape: const CircleBorder(),
+                                clipBehavior: Clip.antiAlias,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.arrow_back_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                  onPressed: () => Navigator.pop(context),
+                                  tooltip: 'Exit Fullscreen',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC2626)
+                                      .withValues(alpha: 0.95),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withValues(alpha: 0.4),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.fiber_manual_record,
+                                        color: Colors.white, size: 8),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'LIVE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.65),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: Colors.white24, width: 0.8),
+                                  ),
+                                  child: Text(
+                                    '${widget.channelName} • ${widget.quality == 'sub' ? 'SD' : 'HD 1080p'}',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Right Exit Fullscreen Button
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.0),
+                            Colors.black.withValues(alpha: 0.85),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: SafeArea(
+                        top: false,
+                        bottom: true,
+                        left: true,
+                        right: true,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Material(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(8),
+                                child: InkWell(
+                                  onTap: () => Navigator.pop(context),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: Colors.white24, width: 0.8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.fullscreen_exit_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'Exit Fullscreen',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
+    );
+
+    if (!isPhysicallyLandscape) {
+      playerBody = RotatedBox(
+        quarterTurns: 1,
+        child: playerBody,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: playerBody,
     );
   }
 }

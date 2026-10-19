@@ -7,7 +7,7 @@ import '../controllers/manager_games_controller.dart';
 import 'manager_players_view.dart';
 import 'manager_history_view.dart';
 import '../../games/views/create_game_view.dart';
-import '../../cctv/views/cctv_list_view.dart';
+import '../../cctv/views/media_server_cctv_view.dart';
 import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
@@ -82,7 +82,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            currentIndex == 1 ? const CctvListView() : const SizedBox.shrink(),
+            currentIndex == 1 ? const MediaServerCctvScreen() : const SizedBox.shrink(),
             const CreateGameView(),
             const ManagerPlayersView(),
             const ManagerHistoryView(),
@@ -359,10 +359,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
                 if (index == 0) controller.loadManagerData();
-                if (index == 1) {
-                  controller.selectCourt(0);
-                  Get.toNamed('/manager/courts');
-                }
                 if (index == 2) {
                   Get.toNamed(Routes.createGame);
                 }
@@ -388,7 +384,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.apps_rounded), label: Text('Control')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.stadium_rounded), label: Text('Court 1')),
+                    icon: Icon(Icons.videocam_rounded), label: Text('CCTV')),
                 NavigationRailDestination(
                     icon: Icon(Icons.add_circle_outline_rounded),
                     label: Text('Create')),
