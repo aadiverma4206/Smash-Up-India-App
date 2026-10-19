@@ -651,7 +651,8 @@ class _LoginViewState extends State<LoginView> {
               onTap: () => _showServerConfigDialog(context),
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkCard : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(16),
@@ -681,7 +682,8 @@ class _LoginViewState extends State<LoginView> {
                       ),
                     ),
                     const SizedBox(width: 5),
-                    Icon(Icons.tune_rounded, size: 13, color: secondaryTextColor),
+                    Icon(Icons.tune_rounded,
+                        size: 13, color: secondaryTextColor),
                   ],
                 ),
               ),
@@ -772,17 +774,26 @@ class _LoginViewState extends State<LoginView> {
           builder: (dialogCtx, setDialogState) {
             final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
             final cardColor = isDark ? AppColors.darkCard : Colors.white;
-            final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-            final secColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+            final textColor =
+                isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+            final secColor = isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight;
 
             return AlertDialog(
               backgroundColor: cardColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: Row(
                 children: [
-                  const Icon(Icons.dns_rounded, color: AppColors.primary, size: 22),
+                  const Icon(Icons.dns_rounded,
+                      color: AppColors.primary, size: 22),
                   const SizedBox(width: 8),
-                  Text('Server Connection', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text('Server Connection',
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
               content: Column(
@@ -796,13 +807,17 @@ class _LoginViewState extends State<LoginView> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: textController,
-                    style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
                     decoration: const InputDecoration(
                       labelText: 'API Base URL',
-                      hintText: 'http://192.168.1.21:5000/api/v1',
+                      hintText: 'http://192.168.1.28:5000/api/v1',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.link_rounded, size: 18),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -811,35 +826,52 @@ class _LoginViewState extends State<LoginView> {
                     runSpacing: 6,
                     children: [
                       ActionChip(
-                        label: const Text('WiFi LAN (.21)', style: TextStyle(fontSize: 11)),
-                        onPressed: () => textController.text = 'http://192.168.1.21:5000/api/v1',
+                        label: const Text('WiFi LAN (.28)',
+                            style: TextStyle(fontSize: 11)),
+                        onPressed: () => textController.text =
+                            'http://192.168.1.28:5000/api/v1',
                       ),
                       ActionChip(
-                        label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
-                        onPressed: () => textController.text = 'http://10.0.2.2:5000/api/v1',
+                        label: const Text('Emulator (10.0.2.2)',
+                            style: TextStyle(fontSize: 11)),
+                        onPressed: () =>
+                            textController.text = 'http://10.0.2.2:5000/api/v1',
                       ),
                       ActionChip(
                         avatar: isProbing
-                            ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.auto_awesome, size: 14),
-                        label: const Text('Auto-Detect', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        label: const Text('Auto-Detect',
+                            style: TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold)),
                         onPressed: isProbing
                             ? null
                             : () async {
                                 setDialogState(() => isProbing = true);
-                                final found = await ServerDiscoveryService.findWorkingServer();
+                                final found = await ServerDiscoveryService
+                                    .findWorkingServer();
                                 setDialogState(() => isProbing = false);
                                 if (found != null) {
                                   textController.text = found;
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Found active server: $found'), duration: const Duration(seconds: 2)),
+                                      SnackBar(
+                                          content: Text(
+                                              'Found active server: $found'),
+                                          duration: const Duration(seconds: 2)),
                                     );
                                   }
                                 } else {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: const Text('No active server found. Please check backend.'), duration: const Duration(seconds: 2)),
+                                      SnackBar(
+                                          content: const Text(
+                                              'No active server found. Please check backend.'),
+                                          duration: const Duration(seconds: 2)),
                                     );
                                   }
                                 }
@@ -855,7 +887,9 @@ class _LoginViewState extends State<LoginView> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white),
                   onPressed: () async {
                     final newUrl = textController.text.trim();
                     if (newUrl.isNotEmpty) {
@@ -864,7 +898,9 @@ class _LoginViewState extends State<LoginView> {
                       setState(() {});
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Server updated to: $newUrl'), duration: const Duration(seconds: 2)),
+                          SnackBar(
+                              content: Text('Server updated to: $newUrl'),
+                              duration: const Duration(seconds: 2)),
                         );
                       }
                     }

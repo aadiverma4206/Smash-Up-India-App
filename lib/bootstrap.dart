@@ -10,7 +10,7 @@ import 'core/services/auth_service.dart';
 import 'core/utils/app_logger.dart';
 import 'firebase_options.dart';
 
-Future<void> bootstrap({String envFile = '.env.dev'}) async {
+Future<void> bootstrap({String envFile = '.env'}) async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
 

@@ -72,7 +72,8 @@ class WalletRepository {
       }
       return list;
     } catch (e) {
-      AppLogger.warning('Network error fetching transactions, loading local storage cache: $e');
+      AppLogger.warning(
+          'Network error fetching transactions, loading local storage cache: $e');
       final cached = await getLocalCachedTransactions();
       if (cached.isNotEmpty) {
         return cached;

@@ -710,7 +710,9 @@ class _FindGamesViewState extends State<FindGamesView> {
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                game.createdByPlayer ? 'Player Host' : 'Club Match',
+                                game.createdByPlayer
+                                    ? 'Player Host'
+                                    : 'Club Match',
                                 style: TextStyle(
                                   color: game.createdByPlayer
                                       ? AppColors.primary

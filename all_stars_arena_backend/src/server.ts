@@ -38,8 +38,8 @@ const startServer = async () => {
     logger.error({ err }, '❌ Database table initialization failed on startup');
   }
 
-  // 2. Start HTTP server
-  const server = httpServer.listen(PORT, () => {
+  // 2. Start HTTP server listening on 0.0.0.0 (all interfaces for mobile device access)
+  const server = httpServer.listen(PORT, '0.0.0.0', () => {
     logger.info(`⚽ ALL STARS ARENA Server running in ${env.NODE_ENV} mode on port ${PORT}`);
     logger.info(`⚡ Socket.io Real-Time engine active on ws://localhost:${PORT}`);
 

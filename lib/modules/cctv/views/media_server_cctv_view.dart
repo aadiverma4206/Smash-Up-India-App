@@ -43,7 +43,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
   // Selected Channel (1, 2, 3, 4) and Stream Quality ('sub' for SD, 'main' for HD)
   late int _selectedChannel;
-  String _selectedQuality = 'sub'; // 'sub' = SD (low latency), 'main' = HD (1080p)
+  String _selectedQuality =
+      'sub'; // 'sub' = SD (low latency), 'main' = HD (1080p)
 
   late String _baseUrl;
 
@@ -55,6 +56,27 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     3: 'Camera 3 (Court 2 - Main Pitch)',
     4: 'Camera 4 (Court 2 - Goalpost)',
   };
+
+  /// Safely check if a VideoPlayerController is initialized and not disposed
+  static bool _isControllerValid(VideoPlayerController? controller) {
+    if (controller == null) return false;
+    try {
+      return controller.value.isInitialized;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Safely get aspectRatio without throwing on disposed controller
+  static double _getControllerAspectRatio(VideoPlayerController? controller) {
+    if (controller == null) return 16 / 9;
+    try {
+      final ratio = controller.value.aspectRatio;
+      return ratio > 0 ? ratio : (16 / 9);
+    } catch (_) {
+      return 16 / 9;
+    }
+  }
 
   /// Smart default base URL resolution based on platform and EnvConfig
   static String _resolveDefaultBaseUrl([String? initialBaseUrl]) {
@@ -72,7 +94,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           }
         }
         final scheme = envUri.scheme.isNotEmpty ? envUri.scheme : 'http';
-        final port = envUri.hasPort ? envUri.port : (scheme == 'https' ? 443 : 5000);
+        final port =
+            envUri.hasPort ? envUri.port : (scheme == 'https' ? 443 : 5000);
         return '$scheme://$host:$port/cctv-stream';
       }
     } catch (_) {}
@@ -86,9 +109,10 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedChannel = (widget.initialChannel >= 1 && widget.initialChannel <= 4)
-        ? widget.initialChannel
-        : 1;
+    _selectedChannel =
+        (widget.initialChannel >= 1 && widget.initialChannel <= 4)
+            ? widget.initialChannel
+            : 1;
     _baseUrl = _resolveDefaultBaseUrl(widget.initialBaseUrl);
     _loadSavedBaseUrlAndInitialize();
   }
@@ -164,7 +188,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     }
 
     // Priority 4: Production Cloudflare Quick Tunnel (Guaranteed to work across all subnets & mobile data)
-    const staticTunnel = 'https://integrity-bookmarks-options-matches.trycloudflare.com/cctv-stream';
+    const staticTunnel =
+        'https://integrity-bookmarks-options-matches.trycloudflare.com/cctv-stream';
     final staticTunnelStream = '$staticTunnel/$_currentStreamKey/index.m3u8';
     if (!candidates.contains(staticTunnelStream)) {
       candidates.add(staticTunnelStream);
@@ -190,7 +215,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
     // Priority 7: Android Emulator fallbacks
     if (!kIsWeb && Platform.isAndroid) {
-      final emuProxy = 'http://10.0.2.2:5000/cctv-stream/$_currentStreamKey/index.m3u8';
+      final emuProxy =
+          'http://10.0.2.2:5000/cctv-stream/$_currentStreamKey/index.m3u8';
       final emuDirect = 'http://10.0.2.2:8888/$_currentStreamKey/index.m3u8';
       final adbDirect = 'http://127.0.0.1:8888/$_currentStreamKey/index.m3u8';
       if (!candidates.contains(emuProxy)) candidates.add(emuProxy);
@@ -204,7 +230,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   void _handleStreamRuntimeError(String? errorDescription) {
     if (!mounted || _isAutoReconnecting) return;
     _isAutoReconnecting = true;
-    AppLogger.warning('⚠️ [CCTV Stream] Connection lost or WiFi changed: $errorDescription. Auto-reconnecting...');
+    AppLogger.warning(
+        '⚠️ [CCTV Stream] Connection lost or WiFi changed: $errorDescription. Auto-reconnecting...');
 
     if (mounted) {
       setState(() {
@@ -265,9 +292,12 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         }
 
         controller.addListener(() {
-          if (mounted && controller.value.hasError && !_hasError) {
-            _handleStreamRuntimeError(controller.value.errorDescription);
-          }
+          if (!mounted) return;
+          try {
+            if (controller.value.hasError && !_hasError) {
+              _handleStreamRuntimeError(controller.value.errorDescription);
+            }
+          } catch (_) {}
         });
 
         _activeStreamUrl = candidateUrl;
@@ -285,7 +315,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           } catch (_) {}
         }
 
-        AppLogger.info('✅ [CCTV Stream] Live video stream connected: $candidateUrl');
+        AppLogger.info(
+            '✅ [CCTV Stream] Live video stream connected: $candidateUrl');
 
         setState(() {
           _controller = controller;
@@ -295,7 +326,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         return;
       } catch (e) {
         lastError = e.toString();
-        AppLogger.warning('❌ [CCTV Stream] Candidate failed: $candidateUrl ($e)');
+        AppLogger.warning(
+            '❌ [CCTV Stream] Candidate failed: $candidateUrl ($e)');
         // Candidate failed, continuing to next candidate
       }
     }
@@ -330,27 +362,32 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     }
   }
 
-  void _openFullscreenPlayer(BuildContext context) {
-    if (_controller == null || !_isInitialized) return;
+  bool _isFullscreen = false;
 
-    Navigator.of(context, rootNavigator: true).push(
-      PageRouteBuilder(
-        opaque: true,
-        fullscreenDialog: true,
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return CctvFullscreenPlayerPage(
-            controller: _controller!,
-            channel: _selectedChannel,
-            quality: _selectedQuality,
-            channelName:
-                _channelNames[_selectedChannel] ?? 'Camera $_selectedChannel',
-          );
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    );
+  void _toggleFullscreen() {
+    setState(() {
+      _isFullscreen = !_isFullscreen;
+    });
+
+    if (_isFullscreen) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  void _openFullscreenPlayer(BuildContext context) {
+    _toggleFullscreen();
   }
 
   void _switchChannel(int channel) {
@@ -385,14 +422,264 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   @override
   void dispose() {
     _controlsTimer?.cancel();
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    _controller?.dispose();
+    if (_controller != null) {
+      try {
+        _controller!.pause();
+        _controller!.dispose();
+      } catch (_) {}
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isFullscreen) {
+      final Orientation orientation = MediaQuery.of(context).orientation;
+      final bool isPhysicallyLandscape = orientation == Orientation.landscape;
+      final bool isPlayerReady =
+          _isControllerValid(_controller) && _isInitialized;
+      final double videoRatio = _getControllerAspectRatio(_controller);
+
+      Widget fullscreenBody = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _toggleControlsOverlayVisibility,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Fullscreen Video Player
+            Container(
+              color: Colors.black,
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: isPlayerReady
+                    ? AspectRatio(
+                        aspectRatio: videoRatio,
+                        child: VideoPlayer(_controller!),
+                      )
+                    : const CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2.5,
+                      ),
+              ),
+            ),
+
+            // Animated Controls Overlay
+            AnimatedOpacity(
+              opacity: _showControlsOverlay ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: IgnorePointer(
+                ignoring: !_showControlsOverlay,
+                child: Stack(
+                  children: [
+                    // Top Header Bar in Fullscreen
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.85),
+                              Colors.black.withValues(alpha: 0.0),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: SafeArea(
+                          top: true,
+                          bottom: false,
+                          left: true,
+                          right: true,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            child: Row(
+                              children: [
+                                Material(
+                                  color: Colors.black45,
+                                  shape: const CircleBorder(),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.arrow_back_rounded,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                    onPressed: _toggleFullscreen,
+                                    tooltip: 'Exit Fullscreen',
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDC2626)
+                                        .withValues(alpha: 0.95),
+                                    borderRadius: BorderRadius.circular(6),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            Colors.red.withValues(alpha: 0.4),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.fiber_manual_record,
+                                          color: Colors.white, size: 8),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'LIVE',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.65),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                          color: Colors.white24, width: 0.8),
+                                    ),
+                                    child: Text(
+                                      '${_channelNames[_selectedChannel] ?? 'Camera $_selectedChannel'} • ${_selectedQuality == 'sub' ? 'SD' : 'HD 1080p'}',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Bottom Right Exit Fullscreen Button
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.0),
+                              Colors.black.withValues(alpha: 0.85),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          bottom: true,
+                          left: true,
+                          right: true,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Material(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: InkWell(
+                                    onTap: _toggleFullscreen,
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                            color: Colors.white24, width: 0.8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.fullscreen_exit_rounded,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'Exit Fullscreen',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (!isPhysicallyLandscape) {
+        fullscreenBody = RotatedBox(
+          quarterTurns: 1,
+          child: fullscreenBody,
+        );
+      }
+
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) {
+            _toggleFullscreen();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: fullscreenBody,
+        ),
+      );
+    }
     final isDark = context.isDark;
     final bgColor = context.backgroundColor;
     final cardColor = context.cardColor;
@@ -412,13 +699,17 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
               decoration: BoxDecoration(
                 color: _isInitialized
                     ? const Color(0xFF10B981)
-                    : (_hasError ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
+                    : (_hasError
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFFF59E0B)),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: (_isInitialized
                             ? const Color(0xFF10B981)
-                            : (_hasError ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)))
+                            : (_hasError
+                                ? const Color(0xFFEF4444)
+                                : const Color(0xFFF59E0B)))
                         .withValues(alpha: 0.5),
                     blurRadius: 6,
                     spreadRadius: 1,
@@ -473,7 +764,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
             // Controls & Channel Selection
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -484,7 +776,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.tune_rounded, size: 16, color: textSecondary),
+                          Icon(Icons.tune_rounded,
+                              size: 16, color: textSecondary),
                           const SizedBox(width: 6),
                           Text(
                             'Stream Quality:',
@@ -499,9 +792,11 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildQualityChip('SD (Sub)', 'sub', Icons.speed_rounded, context),
+                          _buildQualityChip(
+                              'SD (Sub)', 'sub', Icons.speed_rounded, context),
                           const SizedBox(width: 8),
-                          _buildQualityChip('HD (1080p)', 'main', Icons.hd_rounded, context),
+                          _buildQualityChip(
+                              'HD (1080p)', 'main', Icons.hd_rounded, context),
                         ],
                       ),
                     ],
@@ -534,107 +829,130 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                           mainAxisSpacing: 10,
                         ),
                         itemBuilder: (context, index) {
-                      final ch = index + 1;
-                      final isSelected = _selectedChannel == ch;
-                      final camName = _channelNames[ch] ?? 'Camera $ch';
+                          final ch = index + 1;
+                          final isSelected = _selectedChannel == ch;
+                          final camName = _channelNames[ch] ?? 'Camera $ch';
 
-                      return InkWell(
-                        onTap: () => _switchChannel(ch),
-                        borderRadius: BorderRadius.circular(12),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.12)
-                                : cardColor,
+                          return InkWell(
+                            onTap: () => _switchChannel(ch),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected ? AppColors.primary : borderColor,
-                              width: isSelected ? 1.8 : 1,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: AppColors.primary.withValues(alpha: 0.15),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary
+                                        .withValues(alpha: isDark ? 0.25 : 0.12)
+                                    : cardColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : borderColor,
+                                  width: isSelected ? 1.8 : 1,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.primary
+                                              .withValues(alpha: 0.15),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? AppColors.primary : inputBg,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'CH $ch',
-                                      style: TextStyle(
-                                        color: isSelected ? Colors.white : textPrimary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10.5,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  if (isSelected)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: const Color(0xFF10B981), width: 0.8),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.fiber_manual_record, color: Color(0xFF10B981), size: 6),
-                                          SizedBox(width: 3),
-                                          Text(
-                                            'ACTIVE',
-                                            style: TextStyle(
-                                              color: Color(0xFF10B981),
-                                              fontSize: 8.5,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 7, vertical: 2.5),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : inputBg,
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'CH $ch',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : textPrimary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10.5,
+                                            letterSpacing: 0.3,
                                           ),
-                                        ],
+                                        ),
                                       ),
-                                    )
-                                  else
-                                    Icon(Icons.videocam_outlined, color: textSecondary, size: 16),
+                                      const Spacer(),
+                                      if (isSelected)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF10B981)
+                                                .withValues(alpha: 0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            border: Border.all(
+                                                color: const Color(0xFF10B981),
+                                                width: 0.8),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.fiber_manual_record,
+                                                  color: Color(0xFF10B981),
+                                                  size: 6),
+                                              SizedBox(width: 3),
+                                              Text(
+                                                'ACTIVE',
+                                                style: TextStyle(
+                                                  color: Color(0xFF10B981),
+                                                  fontSize: 8.5,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      else
+                                        Icon(Icons.videocam_outlined,
+                                            color: textSecondary, size: 16),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    camName,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? (isDark
+                                              ? Colors.white
+                                              : AppColors.primaryDark)
+                                          : textSecondary,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
+                                      fontSize: 11.5,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                camName,
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? (isDark ? Colors.white : AppColors.primaryDark)
-                                      : textSecondary,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                  fontSize: 11.5,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
 
                   const SizedBox(height: 18),
 
@@ -643,7 +961,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                     onTap: _showUrlDialog,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
                         color: cardColor,
                         borderRadius: BorderRadius.circular(12),
@@ -657,7 +976,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                               color: AppColors.primary.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.dns_rounded, color: AppColors.primary, size: 19),
+                            child: const Icon(Icons.dns_rounded,
+                                color: AppColors.primary, size: 19),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -687,7 +1007,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(6),
@@ -724,10 +1045,12 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.15),
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.analytics_rounded, color: AppColors.primary, size: 18),
+                              child: const Icon(Icons.analytics_rounded,
+                                  color: AppColors.primary, size: 18),
                             ),
                             const SizedBox(width: 10),
                             Text(
@@ -741,15 +1064,34 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                           ],
                         ),
                         Divider(color: borderColor, height: 22),
-                        _buildInfoRow('Active Camera', _channelNames[_selectedChannel] ?? 'CH $_selectedChannel', context),
+                        _buildInfoRow(
+                            'Active Camera',
+                            _channelNames[_selectedChannel] ??
+                                'CH $_selectedChannel',
+                            context),
                         _buildInfoRow('Stream Key', _currentStreamKey, context),
-                        _buildInfoRow('Media Server Base', _baseUrl, context, copyable: true),
-                        _buildInfoRow('Full Stream URL', _activeStreamUrl.isNotEmpty ? _activeStreamUrl : _backendProxyHlsUrl, context, copyable: true),
-                        _buildInfoRow('Stream Mode', _activeStreamUrl.contains('/cctv-stream') ? 'Universal Proxy (Port 5000)' : 'Direct MediaMTX (Port 8888)', context),
-                        _buildInfoRow('Protocol', 'Low-Latency HLS (fMP4)', context),
+                        _buildInfoRow('Media Server Base', _baseUrl, context,
+                            copyable: true),
+                        _buildInfoRow(
+                            'Full Stream URL',
+                            _activeStreamUrl.isNotEmpty
+                                ? _activeStreamUrl
+                                : _backendProxyHlsUrl,
+                            context,
+                            copyable: true),
+                        _buildInfoRow(
+                            'Stream Mode',
+                            _activeStreamUrl.contains('/cctv-stream')
+                                ? 'Universal Proxy (Port 5000)'
+                                : 'Direct MediaMTX (Port 8888)',
+                            context),
+                        _buildInfoRow(
+                            'Protocol', 'Low-Latency HLS (fMP4)', context),
                         _buildInfoRow(
                           'Stream Status',
-                          _isInitialized ? 'ONLINE 🟢' : (_hasError ? 'ERROR 🔴' : 'CONNECTING 🟡'),
+                          _isInitialized
+                              ? 'ONLINE 🟢'
+                              : (_hasError ? 'ERROR 🔴' : 'CONNECTING 🟡'),
                           context,
                         ),
                       ],
@@ -769,17 +1111,20 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       return LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
+            primary: false,
             physics: const ClampingScrollPhysics(),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.videocam_off_rounded, color: Color(0xFFEF4444), size: 36),
+                      const Icon(Icons.videocam_off_rounded,
+                          color: Color(0xFFEF4444), size: 36),
                       const SizedBox(height: 6),
                       Text(
                         'Failed to load Channel $_selectedChannel Stream',
@@ -798,7 +1143,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        style: const TextStyle(
+                            color: Color(0xFF94A3B8), fontSize: 11),
                       ),
                       if (_errorMessage.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -807,7 +1153,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Color(0xFFF87171), fontSize: 10),
+                          style: const TextStyle(
+                              color: Color(0xFFF87171), fontSize: 10),
                         ),
                       ],
                       const SizedBox(height: 10),
@@ -818,38 +1165,45 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
                             onPressed: () async {
                               setState(() {
                                 _isInitialized = false;
                                 _hasError = false;
                               });
-                              final working = await ServerDiscoveryService.findWorkingServer();
+                              final working = await ServerDiscoveryService
+                                  .findWorkingServer();
                               if (working != null) {
                                 await EnvConfig.saveBaseUrl(working);
                               }
                               await _loadSavedBaseUrlAndInitialize();
                             },
                             icon: const Icon(Icons.refresh_rounded, size: 14),
-                            label: const Text('Retry Auto-Connect', style: TextStyle(fontSize: 12)),
+                            label: const Text('Retry Auto-Connect',
+                                style: TextStyle(fontSize: 12)),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
                               side: const BorderSide(color: Colors.white38),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
                             onPressed: _showUrlDialog,
                             icon: const Icon(Icons.tune_rounded, size: 14),
-                            label: const Text('Change URL', style: TextStyle(fontSize: 12)),
+                            label: const Text('Change URL',
+                                style: TextStyle(fontSize: 12)),
                           ),
                         ],
                       ),
@@ -886,11 +1240,9 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       );
     }
 
-    final double videoRatio = (_controller != null &&
-            _controller!.value.isInitialized &&
-            _controller!.value.aspectRatio > 0)
-        ? _controller!.value.aspectRatio
-        : (16 / 9);
+    final bool isPlayerReady =
+        _isControllerValid(_controller) && _isInitialized;
+    final double videoRatio = _getControllerAspectRatio(_controller);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -904,10 +1256,15 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
             width: double.infinity,
             height: double.infinity,
             child: Center(
-              child: AspectRatio(
-                aspectRatio: videoRatio,
-                child: VideoPlayer(_controller!),
-              ),
+              child: isPlayerReady
+                  ? AspectRatio(
+                      aspectRatio: videoRatio,
+                      child: VideoPlayer(_controller!),
+                    )
+                  : const CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2.5,
+                    ),
             ),
           ),
 
@@ -1113,8 +1470,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     );
   }
 
-  Widget _buildInfoRow(
-      String label, String value, BuildContext context, {bool copyable = false}) {
+  Widget _buildInfoRow(String label, String value, BuildContext context,
+      {bool copyable = false}) {
     final textSecondary = context.textSecondary;
     final textPrimary = context.textPrimary;
 
@@ -1184,7 +1541,9 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         'sub': 'Mobile Data / All Networks',
         'url': '$cleanBackend/cctv-stream',
       },
-      if (envHost.isNotEmpty && envHost != 'localhost' && envHost != '127.0.0.1')
+      if (envHost.isNotEmpty &&
+          envHost != 'localhost' &&
+          envHost != '127.0.0.1')
         {
           'label': 'Direct MediaMTX (Port 8888)',
           'sub': 'Local WiFi / LAN',
@@ -1505,300 +1864,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           },
         );
       },
-    );
-  }
-}
-
-/// Standalone Fullscreen Landscape Video Player Page.
-/// Pushed via root navigator so it covers the entire app (including bottom bars).
-class CctvFullscreenPlayerPage extends StatefulWidget {
-  final VideoPlayerController controller;
-  final int channel;
-  final String quality;
-  final String channelName;
-
-  const CctvFullscreenPlayerPage({
-    super.key,
-    required this.controller,
-    required this.channel,
-    required this.quality,
-    required this.channelName,
-  });
-
-  @override
-  State<CctvFullscreenPlayerPage> createState() =>
-      _CctvFullscreenPlayerPageState();
-}
-
-class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
-  bool _showOverlay = true;
-  Timer? _overlayTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _resetOverlayTimer();
-  }
-
-  void _toggleOverlay() {
-    setState(() {
-      _showOverlay = !_showOverlay;
-    });
-    if (_showOverlay) {
-      _resetOverlayTimer();
-    }
-  }
-
-  void _resetOverlayTimer() {
-    _overlayTimer?.cancel();
-    if (_showOverlay) {
-      _overlayTimer = Timer(const Duration(seconds: 4), () {
-        if (mounted) {
-          setState(() {
-            _showOverlay = false;
-          });
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _overlayTimer?.cancel();
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Orientation orientation = MediaQuery.of(context).orientation;
-    final bool isPhysicallyLandscape = orientation == Orientation.landscape;
-    final double videoRatio = widget.controller.value.aspectRatio > 0
-        ? widget.controller.value.aspectRatio
-        : (16 / 9);
-
-    Widget playerBody = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _toggleOverlay,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Black Background + Centered Video
-          Container(
-            color: Colors.black,
-            width: double.infinity,
-            height: double.infinity,
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: videoRatio,
-                child: VideoPlayer(widget.controller),
-              ),
-            ),
-          ),
-
-          // Animated Controls Overlay
-          AnimatedOpacity(
-            opacity: _showOverlay ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 200),
-            child: IgnorePointer(
-              ignoring: !_showOverlay,
-              child: Stack(
-                children: [
-                  // Top Gradient Header Bar
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.black.withValues(alpha: 0.85),
-                            Colors.black.withValues(alpha: 0.0),
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                      child: SafeArea(
-                        bottom: false,
-                        top: true,
-                        left: true,
-                        right: true,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          child: Row(
-                            children: [
-                              Material(
-                                color: Colors.black45,
-                                shape: const CircleBorder(),
-                                clipBehavior: Clip.antiAlias,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.arrow_back_rounded,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                                  onPressed: () => Navigator.pop(context),
-                                  tooltip: 'Exit Fullscreen',
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFDC2626)
-                                      .withValues(alpha: 0.95),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.red.withValues(alpha: 0.4),
-                                      blurRadius: 6,
-                                    ),
-                                  ],
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.fiber_manual_record,
-                                        color: Colors.white, size: 8),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'LIVE',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.65),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                        color: Colors.white24, width: 0.8),
-                                  ),
-                                  child: Text(
-                                    '${widget.channelName} • ${widget.quality == 'sub' ? 'SD' : 'HD 1080p'}',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Bottom Right Exit Fullscreen Button
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.black.withValues(alpha: 0.0),
-                            Colors.black.withValues(alpha: 0.85),
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                      child: SafeArea(
-                        top: false,
-                        bottom: true,
-                        left: true,
-                        right: true,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Material(
-                                color: Colors.black.withValues(alpha: 0.65),
-                                borderRadius: BorderRadius.circular(8),
-                                child: InkWell(
-                                  onTap: () => Navigator.pop(context),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                          color: Colors.white24, width: 0.8),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.fullscreen_exit_rounded,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                        SizedBox(width: 6),
-                                        Text(
-                                          'Exit Fullscreen',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (!isPhysicallyLandscape) {
-      playerBody = RotatedBox(
-        quarterTurns: 1,
-        child: playerBody,
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: playerBody,
     );
   }
 }

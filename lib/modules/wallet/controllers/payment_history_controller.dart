@@ -124,8 +124,8 @@ class PlayerPaymentHistoryController extends GetxController {
     for (final tx in txs) {
       String headerKey = 'Recent Transactions';
       try {
-        final parsedDate = DateTime.tryParse(tx.createdAt)?.toLocal() ??
-            DateTime.now();
+        final parsedDate =
+            DateTime.tryParse(tx.createdAt)?.toLocal() ?? DateTime.now();
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final txDate =

@@ -103,7 +103,8 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
               return RefreshIndicator(
                 onRefresh: controller.fetchTransactions,
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: controller.groupedTransactions.length,
                   itemBuilder: (context, groupIndex) {
                     final group = controller.groupedTransactions[groupIndex];
@@ -194,9 +195,7 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary
-                        : (isDark(context)
-                            ? AppColors.darkCard
-                            : Colors.white),
+                        : (isDark(context) ? AppColors.darkCard : Colors.white),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isSelected
@@ -217,9 +216,8 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
                       Text(
                         filter,
                         style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : context.textPrimary,
+                          color:
+                              isSelected ? Colors.white : context.textPrimary,
                           fontSize: 12,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.w600,
@@ -273,7 +271,8 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
                   color: isDark(context) ? Colors.black26 : Colors.white,
                   borderRadius: BorderRadius.circular(20),

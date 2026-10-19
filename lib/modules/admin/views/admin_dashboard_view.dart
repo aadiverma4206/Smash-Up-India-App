@@ -78,7 +78,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           children: [
             _buildMobileHomeTab(context),
             const ManagerHistoryView(), // Index 1: Match History & Records
-            currentIndex == 2 ? const MediaServerCctvScreen() : const SizedBox.shrink(), // Index 2: CCTV Cameras
+            currentIndex == 2
+                ? const MediaServerCctvScreen()
+                : const SizedBox.shrink(), // Index 2: CCTV Cameras
             const AdminProfileView(), // Index 3: Profile
           ],
         );

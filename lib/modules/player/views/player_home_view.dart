@@ -1198,9 +1198,8 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w500,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : Colors.grey.shade600,
+              color:
+                  isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
             ),
             textAlign: TextAlign.center,
             maxLines: 1,

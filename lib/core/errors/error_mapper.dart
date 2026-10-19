@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import '../config/env_config.dart';
 import 'app_exception.dart';
 
 class ErrorMapper {
@@ -8,7 +9,7 @@ class ErrorMapper {
         err.type == DioExceptionType.sendTimeout ||
         err.type == DioExceptionType.receiveTimeout) {
       return NetworkException(
-        'Connection timed out. Please check your internet connection and try again.',
+        'Connection timed out while connecting to ${EnvConfig.baseUrl}. Please check server connectivity.',
         code: 'TIMEOUT',
       );
     }
@@ -16,7 +17,7 @@ class ErrorMapper {
     if (err.type == DioExceptionType.connectionError ||
         err.type == DioExceptionType.badCertificate) {
       return NetworkException(
-        'No internet connection. Please check your Wi-Fi or mobile data.',
+        'Cannot reach server at ${EnvConfig.baseUrl}. Tap the server tune icon below to auto-detect or update server IP.',
         code: 'NO_INTERNET',
       );
     }

@@ -82,7 +82,9 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            currentIndex == 1 ? const MediaServerCctvScreen() : const SizedBox.shrink(),
+            currentIndex == 1
+                ? const MediaServerCctvScreen()
+                : const SizedBox.shrink(),
             const CreateGameView(),
             const ManagerPlayersView(),
             const ManagerHistoryView(),

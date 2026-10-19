@@ -29,12 +29,13 @@ class PlayerStatsModel {
   });
 
   factory PlayerStatsModel.fromJson(Map<String, dynamic> json) {
-    final int played = (json['matchesPlayed'] ?? json['matches_played'] as num?)?.toInt() ?? 0;
+    final int played =
+        (json['matchesPlayed'] ?? json['matches_played'] as num?)?.toInt() ?? 0;
     final int joined = (json['matchesJoined'] ??
-            json['matches_joined'] ??
-            json['joinedMatches'] ??
-            json['joined_matches'] as num?)
-        ?.toInt() ??
+                json['matches_joined'] ??
+                json['joinedMatches'] ??
+                json['joined_matches'] as num?)
+            ?.toInt() ??
         played;
 
     List<DynamicStatCustomItem>? customList;
@@ -101,4 +102,3 @@ class DynamicStatCustomItem {
         'icon': icon,
       };
 }
-

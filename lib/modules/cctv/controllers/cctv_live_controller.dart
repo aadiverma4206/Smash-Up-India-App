@@ -93,8 +93,9 @@ class CctvLiveController extends GetxController {
       if ((rawUri.host == 'localhost' || rawUri.host == '127.0.0.1') &&
           envUri.host != 'localhost' &&
           envUri.host != '127.0.0.1') {
-        final targetPort =
-            rawUri.hasPort ? rawUri.port : (envUri.hasPort ? envUri.port : 5000);
+        final targetPort = rawUri.hasPort
+            ? rawUri.port
+            : (envUri.hasPort ? envUri.port : 5000);
         return '${envUri.scheme}://${envUri.host}:$targetPort${rawUri.path}${rawUri.hasQuery ? '?${rawUri.query}' : ''}';
       }
     }
@@ -264,7 +265,8 @@ class CctvLiveController extends GetxController {
         try {
           await mpv.setProperty('rtsp-transport', 'tcp');
           await mpv.setProperty('network-timeout', '10');
-          await mpv.setProperty('hwdec', 'no'); // Disable hwdec to prevent black screen on emulator/devices
+          await mpv.setProperty('hwdec',
+              'no'); // Disable hwdec to prevent black screen on emulator/devices
           await mpv.setProperty('profile', 'low-latency');
         } catch (e) {
           AppLogger.warning('mpv property error: $e');
@@ -274,7 +276,8 @@ class CctvLiveController extends GetxController {
       final newVideoController = VideoController(
         newPlayer,
         configuration: const VideoControllerConfiguration(
-          enableHardwareAcceleration: false, // Ensure software surface texture works smoothly
+          enableHardwareAcceleration:
+              false, // Ensure software surface texture works smoothly
         ),
       );
 
@@ -303,7 +306,8 @@ class CctvLiveController extends GetxController {
       newPlayer.stream.error.listen((err) {
         if (err.isNotEmpty) {
           final sanitizedErr = sanitizeStreamUrl(err);
-          AppLogger.error('❌ [CCTV Error] Stream Error: $sanitizedErr (CH $channel)');
+          AppLogger.error(
+              '❌ [CCTV Error] Stream Error: $sanitizedErr (CH $channel)');
           _tryFallbackVideoPlayer(channel, streamUrl);
         }
       });
@@ -320,7 +324,8 @@ class CctvLiveController extends GetxController {
       _frameWatchdogTimer?.cancel();
       _frameWatchdogTimer = Timer(const Duration(seconds: 4), () {
         if (!hasReceivedVideoFrame && player != null) {
-          AppLogger.warning('⏱️ Frame Watchdog triggered for CH $channel: MediaKit frame stall detected. Switching to fallback player.');
+          AppLogger.warning(
+              '⏱️ Frame Watchdog triggered for CH $channel: MediaKit frame stall detected. Switching to fallback player.');
           _tryFallbackVideoPlayer(channel, streamUrl);
         }
       });
@@ -337,7 +342,8 @@ class CctvLiveController extends GetxController {
 
   /// Fallback Video Player using flutter's video_player package for reliable rendering
   Future<void> _tryFallbackVideoPlayer(int channel, String rawUrl) async {
-    AppLogger.info('Attempting fallback VideoPlayerController for Channel $channel...');
+    AppLogger.info(
+        'Attempting fallback VideoPlayerController for Channel $channel...');
     try {
       final targetUrl = rawUrl.isNotEmpty
           ? rawUrl

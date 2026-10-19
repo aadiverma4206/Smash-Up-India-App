@@ -19,9 +19,11 @@ class RetryInterceptor extends Interceptor {
       bool failoverDone = requestOptions.extra['failoverDone'] ?? false;
       if (!failoverDone) {
         requestOptions.extra['failoverDone'] = true;
-        final switched = await ServerDiscoveryService.handleConnectionFailure(dio);
+        final switched =
+            await ServerDiscoveryService.handleConnectionFailure(dio);
         if (switched) {
-          AppLogger.info('🔄 [RetryInterceptor] Retrying request with new baseUrl: ${dio.options.baseUrl}');
+          AppLogger.info(
+              '🔄 [RetryInterceptor] Retrying request with new baseUrl: ${dio.options.baseUrl}');
           requestOptions.baseUrl = dio.options.baseUrl;
           try {
             final response = await dio.fetch(requestOptions);
