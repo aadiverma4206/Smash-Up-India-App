@@ -40,7 +40,7 @@ class EnvConfig {
   }
 
   /// Initialize Environment Configuration.
-  /// Attempts to load `.env` file first, falling back to `.env.dev` or `.env.prod`.
+  /// Attempts to load `.env` file first, falling back to `.env.example`.
   static Future<void> init({String envFile = '.env'}) async {
     bool loaded = false;
 
@@ -53,25 +53,14 @@ class EnvConfig {
       AppLogger.warning('Failed to load $envFile: $e');
     }
 
-    // 2. Fallback to .env.dev if needed
-    if (!loaded && envFile != '.env.dev') {
+    // 2. Fallback to .env.example if needed
+    if (!loaded) {
       try {
-        await dotenv.load(fileName: '.env.dev');
+        await dotenv.load(fileName: '.env.example');
         loaded = true;
-        AppLogger.info('⚡ Fallback environment file loaded: .env.dev');
+        AppLogger.info('⚡ Fallback environment file loaded: .env.example');
       } catch (e) {
-        AppLogger.warning('Failed to load .env.dev fallback: $e');
-      }
-    }
-
-    // 3. Fallback to .env.prod if needed
-    if (!loaded && envFile != '.env.prod') {
-      try {
-        await dotenv.load(fileName: '.env.prod');
-        loaded = true;
-        AppLogger.info('⚡ Fallback environment file loaded: .env.prod');
-      } catch (e) {
-        AppLogger.warning('Failed to load .env.prod fallback: $e');
+        AppLogger.warning('Failed to load .env.example fallback: $e');
       }
     }
 

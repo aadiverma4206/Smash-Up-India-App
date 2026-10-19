@@ -39,7 +39,7 @@ const startServer = async () => {
   }
 
   // 2. Start HTTP server listening on 0.0.0.0 (all interfaces for mobile device access)
-  const server = httpServer.listen(PORT, '0.0.0.0', () => {
+  const server = httpServer.listen(Number(PORT) || 5000, '0.0.0.0', () => {
     logger.info(`⚽ ALL STARS ARENA Server running in ${env.NODE_ENV} mode on port ${PORT}`);
     logger.info(`⚡ Socket.io Real-Time engine active on ws://localhost:${PORT}`);
 
@@ -77,10 +77,16 @@ const startServer = async () => {
 const server = await startServer();
 
 // Graceful Shutdown Handler
-const handleGracefulShutdown = (signal: string) => {
+const handleGracefulShutdown = async (signal: string) => {
   logger.info(`📡 Received ${signal}. Starting graceful shutdown...`);
 
   TunnelService.stop();
+
+  try {
+    await CctvRecordingService.stopAllActiveRecordings('SERVER_SHUTDOWN');
+  } catch (recErr: any) {
+    logger.error({ recErr }, 'Error stopping active recordings on shutdown');
+  }
 
   server.close(async () => {
     logger.info('🛑 HTTP server closed to new connections.');

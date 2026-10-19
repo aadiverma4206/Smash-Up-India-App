@@ -41,6 +41,22 @@ class CctvRemoteDataSource {
     );
   }
 
+  Future<ApiResponseModel<CctvRecordingModel>> startRecording(String gameId,
+      {int channel = 1, String? cameraId}) async {
+    final response = await dioClient.dio.post(
+      '/matches/start',
+      data: {
+        'matchId': gameId,
+        'channel': channel,
+        if (cameraId != null) 'cameraId': cameraId,
+      },
+    );
+    return ApiResponseParser.parse<CctvRecordingModel>(
+      response.data,
+      (json) => CctvRecordingModel.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
   Future<ApiResponseModel<CctvRecordingModel>> getRecordingByGame(
       String gameId) async {
     final response = await dioClient.dio.get('/cctv/recordings/game/$gameId');

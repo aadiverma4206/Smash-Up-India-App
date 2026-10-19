@@ -11,7 +11,7 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = (authHeader && authHeader.split(' ')[1]) || (req.query?.token as string);
 
   if (!token) {
     return next(new ApiError(401, 'Authentication token required', 'UNAUTHORIZED'));
@@ -122,5 +122,48 @@ export const requireOwner = (req: AuthenticatedRequest, _res: Response, next: Ne
       )
     );
   }
+};
+
+/**
+ * Optional Authentication: Attaches req.user if token is valid, but allows guest/unauthenticated requests through
+ */
+export const optionalAuthenticateToken = async (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers['authorization'];
+  const token = (authHeader && authHeader.split(' ')[1]) || (req.query?.token as string);
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
+    const userRes = await dbPool.query(
+      `SELECT u.id, u.email, u.phone, u.role_id, u.status,
+              ad.admin_type, ad.is_owner
+       FROM public.users u
+       LEFT JOIN public.admin_details ad ON ad.user_id = u.id
+       WHERE u.id = $1;`,
+      [decoded.id]
+    );
+
+    if (userRes.rows.length > 0 && userRes.rows[0].status !== 'SUSPENDED') {
+      const user = userRes.rows[0];
+      req.user = {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        roleId: user.role_id,
+        adminType: user.admin_type || null,
+        isOwner: Boolean(user.is_owner),
+      };
+    }
+  } catch (_) {
+    // Non-fatal for optional auth
+  }
   next();
 };
+

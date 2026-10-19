@@ -25,6 +25,19 @@ class CctvRepository {
     return response.data ?? {};
   }
 
+  Future<CctvRecordingModel> startRecording(String gameId,
+      {int channel = 1, String? cameraId}) async {
+    final response = await remoteDataSource.startRecording(
+      gameId,
+      channel: channel,
+      cameraId: cameraId,
+    );
+    if (response.data == null) {
+      throw AppException('Failed to start CCTV recording.');
+    }
+    return response.data!;
+  }
+
   Future<CctvRecordingModel?> getRecordingByGame(String gameId) async {
     try {
       final response = await remoteDataSource.getRecordingByGame(gameId);

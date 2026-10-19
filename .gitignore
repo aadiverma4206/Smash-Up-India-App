@@ -1,7 +1,10 @@
 # Environment & Secret Configuration Files (CRITICAL - Never commit API secrets or keys)
 .env
+.env.dev
+.env.prod
 .env.*
 *.env
+!.env.example
 *.pem
 *.key
 *.p12

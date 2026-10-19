@@ -37,6 +37,14 @@ export const getSignedPlaybackUrl = async (
   objectKey: string,
   expiresInSeconds = 3600
 ): Promise<string> => {
+  if (!objectKey) return '';
+  if (
+    objectKey.startsWith('/api/') ||
+    objectKey.startsWith('http://') ||
+    objectKey.startsWith('https://')
+  ) {
+    return objectKey;
+  }
   try {
     const command = new GetObjectCommand({
       Bucket: s3Bucket,
@@ -45,8 +53,10 @@ export const getSignedPlaybackUrl = async (
 
     return await getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
   } catch (err: any) {
-    logger.error(`Error generating signed playback URL for key ${objectKey}:`, err);
-    throw new Error('Could not generate playback URL');
+    logger.warn(
+      `Could not generate S3 signed URL for key ${objectKey}: ${err.message}. Falling back to local video endpoint.`
+    );
+    return objectKey.startsWith('/') ? objectKey : `/api/videos/${path.basename(objectKey)}`;
   }
 };
 

@@ -1654,18 +1654,30 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
             final videos = controller.matchVideos;
             final selectedVid = controller.selectedVideo.value ??
                 (videos.isNotEmpty ? videos.first : null);
-
-            const sampleNetworkUrl =
-                'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
             final playbackUrl = (controller.cctvPlaybackUrl.value != null &&
                     controller.cctvPlaybackUrl.value!.isNotEmpty)
                 ? controller.cctvPlaybackUrl.value!
                 : ((selectedVid != null && selectedVid.playbackUrl.isNotEmpty)
                     ? selectedVid.playbackUrl
-                    : ((game.videoPlaybackUrl != null &&
-                            game.videoPlaybackUrl!.isNotEmpty)
-                        ? game.videoPlaybackUrl!
-                        : sampleNetworkUrl));
+                    : (game.videoPlaybackUrl ?? ''));
+
+            if (playbackUrl.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    Icon(Icons.video_camera_back_outlined,
+                        size: 40, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No CCTV footage recorded for this match.',
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    ),
+                  ],
+                ),
+              );
+            }
 
             final cameraDisplayName = selectedVid?.cameraName ?? 'Camera 1';
             final courtDisplayName = selectedVid?.courtName ?? game.courtName;

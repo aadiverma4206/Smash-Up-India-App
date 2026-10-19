@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -64,7 +66,30 @@ const envSchema = z.object({
   RECORDING_SEGMENT_SECONDS: z.coerce.number().default(300),
   RECORDING_MAX_RETRIES: z.coerce.number().default(3),
   RECORDING_MAX_CONCURRENT: z.coerce.number().default(5),
-  FFMPEG_PATH: z.string().default('ffmpeg'),
+  FFMPEG_PATH: z
+    .string()
+    .default(
+      process.env.FFMPEG_PATH ||
+        (process.platform === 'win32' &&
+        process.env.LOCALAPPDATA &&
+        fs.existsSync(
+          path.join(
+            process.env.LOCALAPPDATA,
+            'Microsoft',
+            'WinGet',
+            'Links',
+            'ffmpeg.exe'
+          )
+        )
+          ? path.join(
+              process.env.LOCALAPPDATA,
+              'Microsoft',
+              'WinGet',
+              'Links',
+              'ffmpeg.exe'
+            )
+          : 'ffmpeg')
+    ),
 
   // AWS S3 Storage
   AWS_REGION: z.string().default(process.env.AWS_S3_REGION || 'ap-south-1'),

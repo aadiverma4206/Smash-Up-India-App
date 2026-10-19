@@ -9,6 +9,7 @@ import '../../../core/config/env_config.dart';
 import '../../../core/network/server_discovery_service.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../app/theme/app_colors.dart';
+
 class MediaServerCctvScreen extends StatefulWidget {
   /// Base URL where MediaMTX HLS is hosted (e.g. 'http://10.0.2.2:8888' or 'https://cctv.domain.com')
   final String? initialBaseUrl;
@@ -398,18 +399,37 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   }
 
   bool _isCurrentlyInFullscreenPage = false;
+  bool _isTransitioningFullscreen = false;
 
-  void _openFullscreenPlayer(BuildContext context) {
-    if (_controller == null || !_isInitialized || !_isControllerValid(_controller)) return;
+  void _openFullscreenPlayer(BuildContext context) async {
+    if (_controller == null ||
+        !_isInitialized ||
+        !_isControllerValid(_controller) ||
+        _isTransitioningFullscreen) {
+      return;
+    }
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    setState(() {
+      _isTransitioningFullscreen = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    if (!mounted) return;
 
     setState(() {
       _isCurrentlyInFullscreenPage = true;
+      _isTransitioningFullscreen = false;
     });
 
-    Navigator.of(context, rootNavigator: true).push(
+    await navigator.push(
       PageRouteBuilder(
         opaque: true,
         fullscreenDialog: true,
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
         pageBuilder: (fullscreenContext, animation, secondaryAnimation) {
           return CctvFullscreenPlayerPage(
             controller: _controller!,
@@ -423,13 +443,22 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           return FadeTransition(opacity: animation, child: child);
         },
       ),
-    ).then((_) {
+    );
+
+    if (mounted) {
+      setState(() {
+        _isTransitioningFullscreen = true;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 120));
+
       if (mounted) {
         setState(() {
           _isCurrentlyInFullscreenPage = false;
+          _isTransitioningFullscreen = false;
         });
       }
-    });
+    }
   }
 
   void _switchChannel(int channel) {
@@ -910,6 +939,37 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   }
 
   Widget _buildPlayerContent() {
+    if (_isTransitioningFullscreen) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2.5,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Optimizing Live View...',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_isCurrentlyInFullscreenPage) {
       return Container(
         color: Colors.black,
@@ -1775,15 +1835,21 @@ class CctvFullscreenPlayerPage extends StatefulWidget {
 class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
   bool _showOverlay = true;
   Timer? _overlayTimer;
+  late TransformationController _transformationController;
+  double _currentZoomScale = 1.0;
+  bool _isExitingFullscreen = false;
 
   @override
   void initState() {
     super.initState();
+    _transformationController = TransformationController();
     // 1. Hide Android System Navigation Bar & Status Bar completely
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // 2. Lock Orientation to Landscape
+    // 2. Allow Device Rotation in ALL directions seamlessly
     SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
@@ -1810,11 +1876,57 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
     ]);
   }
 
+  void _handleExitFullscreen(BuildContext context) async {
+    if (_isExitingFullscreen) return;
+    setState(() {
+      _isExitingFullscreen = true;
+    });
+
+    _restoreSystemUIAndOrientations();
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
+
   @override
   void dispose() {
     _overlayTimer?.cancel();
+    _transformationController.dispose();
     _restoreSystemUIAndOrientations();
     super.dispose();
+  }
+
+  void _zoomIn() {
+    final double newScale = (_currentZoomScale + 0.5).clamp(1.0, 4.0);
+    _setZoomScale(newScale);
+  }
+
+  void _zoomOut() {
+    final double newScale = (_currentZoomScale - 0.5).clamp(1.0, 4.0);
+    _setZoomScale(newScale);
+  }
+
+  void _resetZoom() {
+    _setZoomScale(1.0);
+  }
+
+  void _setZoomScale(double targetScale) {
+    setState(() {
+      _currentZoomScale = targetScale;
+      _transformationController.value =
+          Matrix4.diagonal3Values(targetScale, targetScale, 1.0);
+    });
+  }
+
+  void _handleDoubleTap() {
+    if (_currentZoomScale > 1.0) {
+      _resetZoom();
+    } else {
+      _setZoomScale(2.5);
+    }
   }
 
   void _toggleOverlay() {
@@ -1841,31 +1953,66 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isExitingFullscreen) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2.5,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Restoring View...',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final bool isControllerValid =
         _MediaServerCctvScreenState._isControllerValid(widget.controller);
     final double videoRatio =
         _MediaServerCctvScreenState._getControllerAspectRatio(
             widget.controller);
 
-    final Orientation orientation = MediaQuery.of(context).orientation;
-    final bool isPhysicallyLandscape = orientation == Orientation.landscape;
-
     Widget playerBody = GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onDoubleTap: _handleDoubleTap,
       onTap: _toggleOverlay,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Black Background + Centered Video
+          // Black Background + Centered Video with InteractiveViewer Zoom
           Container(
             color: Colors.black,
             width: double.infinity,
             height: double.infinity,
             child: Center(
               child: isControllerValid
-                  ? AspectRatio(
-                      aspectRatio: videoRatio,
-                      child: VideoPlayer(widget.controller),
+                  ? InteractiveViewer(
+                      minScale: 1.0,
+                      maxScale: 4.0,
+                      clipBehavior: Clip.hardEdge,
+                      transformationController: _transformationController,
+                      child: AspectRatio(
+                        aspectRatio: videoRatio,
+                        child: VideoPlayer(widget.controller),
+                      ),
                     )
                   : const CircularProgressIndicator(
                       color: AppColors.primary,
@@ -1918,11 +2065,8 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
                                     color: Colors.white,
                                     size: 22,
                                   ),
-                                  onPressed: () {
-                                    _restoreSystemUIAndOrientations();
-                                    Navigator.of(context, rootNavigator: true)
-                                        .pop();
-                                  },
+                                  onPressed: () =>
+                                      _handleExitFullscreen(context),
                                   tooltip: 'Exit Fullscreen',
                                 ),
                               ),
@@ -1988,7 +2132,7 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
                     ),
                   ),
 
-                  // Bottom Right Exit Fullscreen Button
+                  // Bottom Right Controls (Zoom + Exit Fullscreen)
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -2015,15 +2159,67 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              // Zoom Controls Pill
+                              Container(
+                                margin: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: Colors.white24, width: 0.8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    InkWell(
+                                      onTap: _zoomOut,
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(4),
+                                        child: Icon(Icons.zoom_out_rounded,
+                                            color: Colors.white, size: 18),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6),
+                                      child: Text(
+                                        '${_currentZoomScale.toStringAsFixed(1)}x',
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: _zoomIn,
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(4),
+                                        child: Icon(Icons.zoom_in_rounded,
+                                            color: Colors.white, size: 18),
+                                      ),
+                                    ),
+                                    if (_currentZoomScale > 1.0) ...[
+                                      InkWell(
+                                        onTap: _resetZoom,
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(Icons.restart_alt_rounded,
+                                              color: Colors.white70, size: 16),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+
+                              // Exit Fullscreen Button
                               Material(
                                 color: Colors.black.withValues(alpha: 0.65),
                                 borderRadius: BorderRadius.circular(8),
                                 child: InkWell(
-                                  onTap: () {
-                                    _restoreSystemUIAndOrientations();
-                                    Navigator.of(context, rootNavigator: true)
-                                        .pop();
-                                  },
+                                  onTap: () => _handleExitFullscreen(context),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -2068,13 +2264,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
         ],
       ),
     );
-
-    if (!isPhysicallyLandscape) {
-      playerBody = RotatedBox(
-        quarterTurns: 1,
-        child: playerBody,
-      );
-    }
 
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {

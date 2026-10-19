@@ -69,8 +69,7 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-    - .env.dev
-    - .env.prod
+    - .env.example
     - assets/images/App_Logo/
     - assets/images/Refer/
     - assets/images/No_data/

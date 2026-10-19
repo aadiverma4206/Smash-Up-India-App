@@ -103,8 +103,9 @@ app.use(
   })
 );
 
-// API Master Router
+// API Master Router (Support both /api and /api/v1)
 app.use('/api/v1', apiRoutes);
+app.use('/api', apiRoutes);
 
 // Catch-all 404 Not Found Handler for unmatched routes
 app.use((req: Request, _res: Response, next: NextFunction) => {

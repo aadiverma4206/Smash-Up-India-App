@@ -118,6 +118,26 @@ class CctvController extends GetxController {
     }
   }
 
+  Future<void> startRecordingForGame(String gameId,
+      {int channel = 1, String? cameraId}) async {
+    isLoading.value = true;
+    try {
+      final rec = await repository.startRecording(gameId,
+          channel: channel, cameraId: cameraId);
+      currentRecording.value = rec;
+      if (rec.recordingStatus == 'RECORDING' ||
+          rec.recordingStatus == 'POST_MATCH') {
+        _startVisualCountdown(rec.stopDeadline);
+      }
+      ErrorHandler.showSuccessSnackBar(
+          'Recording Started', 'CCTV live match recording is now active.');
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar('Recording Failed', e);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> fetchGameRecording(String gameId) async {
     try {
       final rec = await repository.getRecordingByGame(gameId);
