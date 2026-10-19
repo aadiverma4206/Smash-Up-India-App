@@ -82,9 +82,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            currentIndex == 1
-                ? const MediaServerCctvScreen()
-                : const SizedBox.shrink(),
             const CreateGameView(),
             const ManagerPlayersView(),
             const ManagerHistoryView(),
@@ -92,7 +89,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         );
       }),
 
-      // Bottom Navigation Bar (Visible across all 5 dashboard tabs!)
+      // Bottom Navigation Bar (4 Items: Home, Create, Players, History)
       bottomNavigationBar: showBottomNav
           ? Obx(
               () => Container(
@@ -147,10 +144,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                         ),
                       ),
                       label: 'Home',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.videocam_rounded, size: 22),
-                      label: 'CCTV',
                     ),
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.add_circle_outline_rounded, size: 22),
@@ -386,7 +379,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.apps_rounded), label: Text('Control')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.videocam_rounded), label: Text('CCTV')),
+                    icon: Icon(Icons.stadium_rounded), label: Text('Courts')),
                 NavigationRailDestination(
                     icon: Icon(Icons.add_circle_outline_rounded),
                     label: Text('Create')),
@@ -843,7 +836,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Row 1 Circular Action Buttons: Court 1, Court 2, Match History, All Players
+  /// Row 1 Circular Action Buttons: Court 1, Court 2, CCTV
   Widget _buildPrimaryActionsGrid(BuildContext context) {
     final row1 = [
       {
@@ -863,9 +856,9 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         }
       },
       {
-        'icon': Icons.history_rounded,
-        'title': 'Match History',
-        'onTap': () => Get.toNamed(Routes.managerHistoryStandalone)
+        'icon': Icons.videocam_rounded,
+        'title': 'CCTV',
+        'onTap': () => Get.to(() => const MediaServerCctvScreen())
       },
     ];
 

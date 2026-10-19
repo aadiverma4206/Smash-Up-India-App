@@ -9,11 +9,6 @@ import '../../../core/config/env_config.dart';
 import '../../../core/network/server_discovery_service.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../app/theme/app_colors.dart';
-
-/// Production-ready CCTV Live Stream Player using MediaMTX HLS streams.
-/// Connects directly to MediaMTX server (port 8888) with support for Channels 1-4,
-/// Low-Latency HLS (LL-HLS), quality switching (SD/HD), Fullscreen, and URL persistence.
-/// Fully compatible with both Light Mode and Dark Mode themes.
 class MediaServerCctvScreen extends StatefulWidget {
   /// Base URL where MediaMTX HLS is hosted (e.g. 'http://10.0.2.2:8888' or 'https://cctv.domain.com')
   final String? initialBaseUrl;
@@ -35,6 +30,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   static const String _prefKeyBaseUrl = 'mediamtx_base_url';
 
   VideoPlayerController? _controller;
+  late TransformationController _transformationController;
+  double _currentZoomScale = 1.0;
   bool _isInitialized = false;
   bool _hasError = false;
   String _errorMessage = '';
@@ -109,12 +106,50 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   @override
   void initState() {
     super.initState();
+    _transformationController = TransformationController();
+    // Enable seamless device rotation in ALL directions
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     _selectedChannel =
         (widget.initialChannel >= 1 && widget.initialChannel <= 4)
             ? widget.initialChannel
             : 1;
     _baseUrl = _resolveDefaultBaseUrl(widget.initialBaseUrl);
     _loadSavedBaseUrlAndInitialize();
+  }
+
+  void _zoomIn() {
+    final double newScale = (_currentZoomScale + 0.5).clamp(1.0, 4.0);
+    _setZoomScale(newScale);
+  }
+
+  void _zoomOut() {
+    final double newScale = (_currentZoomScale - 0.5).clamp(1.0, 4.0);
+    _setZoomScale(newScale);
+  }
+
+  void _resetZoom() {
+    _setZoomScale(1.0);
+  }
+
+  void _setZoomScale(double targetScale) {
+    setState(() {
+      _currentZoomScale = targetScale;
+      _transformationController.value =
+          Matrix4.diagonal3Values(targetScale, targetScale, 1.0);
+    });
+  }
+
+  void _handleDoubleTap() {
+    if (_currentZoomScale > 1.0) {
+      _resetZoom();
+    } else {
+      _setZoomScale(2.5);
+    }
   }
 
   bool _isAutoReconnecting = false;
@@ -362,32 +397,39 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     }
   }
 
-  bool _isFullscreen = false;
-
-  void _toggleFullscreen() {
-    setState(() {
-      _isFullscreen = !_isFullscreen;
-    });
-
-    if (_isFullscreen) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    } else {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
-  }
+  bool _isCurrentlyInFullscreenPage = false;
 
   void _openFullscreenPlayer(BuildContext context) {
-    _toggleFullscreen();
+    if (_controller == null || !_isInitialized || !_isControllerValid(_controller)) return;
+
+    setState(() {
+      _isCurrentlyInFullscreenPage = true;
+    });
+
+    Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: true,
+        fullscreenDialog: true,
+        pageBuilder: (fullscreenContext, animation, secondaryAnimation) {
+          return CctvFullscreenPlayerPage(
+            controller: _controller!,
+            channel: _selectedChannel,
+            quality: _selectedQuality,
+            channelName:
+                _channelNames[_selectedChannel] ?? 'Camera $_selectedChannel',
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _isCurrentlyInFullscreenPage = false;
+        });
+      }
+    });
   }
 
   void _switchChannel(int channel) {
@@ -422,6 +464,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   @override
   void dispose() {
     _controlsTimer?.cancel();
+    _transformationController.dispose();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -440,246 +483,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isFullscreen) {
-      final Orientation orientation = MediaQuery.of(context).orientation;
-      final bool isPhysicallyLandscape = orientation == Orientation.landscape;
-      final bool isPlayerReady =
-          _isControllerValid(_controller) && _isInitialized;
-      final double videoRatio = _getControllerAspectRatio(_controller);
-
-      Widget fullscreenBody = GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _toggleControlsOverlayVisibility,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Fullscreen Video Player
-            Container(
-              color: Colors.black,
-              width: double.infinity,
-              height: double.infinity,
-              child: Center(
-                child: isPlayerReady
-                    ? AspectRatio(
-                        aspectRatio: videoRatio,
-                        child: VideoPlayer(_controller!),
-                      )
-                    : const CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 2.5,
-                      ),
-              ),
-            ),
-
-            // Animated Controls Overlay
-            AnimatedOpacity(
-              opacity: _showControlsOverlay ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: IgnorePointer(
-                ignoring: !_showControlsOverlay,
-                child: Stack(
-                  children: [
-                    // Top Header Bar in Fullscreen
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black.withValues(alpha: 0.85),
-                              Colors.black.withValues(alpha: 0.0),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                        child: SafeArea(
-                          top: true,
-                          bottom: false,
-                          left: true,
-                          right: true,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            child: Row(
-                              children: [
-                                Material(
-                                  color: Colors.black45,
-                                  shape: const CircleBorder(),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.arrow_back_rounded,
-                                      color: Colors.white,
-                                      size: 22,
-                                    ),
-                                    onPressed: _toggleFullscreen,
-                                    tooltip: 'Exit Fullscreen',
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFDC2626)
-                                        .withValues(alpha: 0.95),
-                                    borderRadius: BorderRadius.circular(6),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            Colors.red.withValues(alpha: 0.4),
-                                        blurRadius: 6,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.fiber_manual_record,
-                                          color: Colors.white, size: 8),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'LIVE',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.65),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                          color: Colors.white24, width: 0.8),
-                                    ),
-                                    child: Text(
-                                      '${_channelNames[_selectedChannel] ?? 'Camera $_selectedChannel'} • ${_selectedQuality == 'sub' ? 'SD' : 'HD 1080p'}',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Bottom Right Exit Fullscreen Button
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black.withValues(alpha: 0.0),
-                              Colors.black.withValues(alpha: 0.85),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                        child: SafeArea(
-                          top: false,
-                          bottom: true,
-                          left: true,
-                          right: true,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Material(
-                                  color: Colors.black.withValues(alpha: 0.65),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: InkWell(
-                                    onTap: _toggleFullscreen,
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                            color: Colors.white24, width: 0.8),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.fullscreen_exit_rounded,
-                                            color: Colors.white,
-                                            size: 20,
-                                          ),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'Exit Fullscreen',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-
-      if (!isPhysicallyLandscape) {
-        fullscreenBody = RotatedBox(
-          quarterTurns: 1,
-          child: fullscreenBody,
-        );
-      }
-
-      return PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, result) {
-          if (!didPop) {
-            _toggleFullscreen();
-          }
-        },
-        child: Scaffold(
-          backgroundColor: Colors.black,
-          body: fullscreenBody,
-        ),
-      );
-    }
     final isDark = context.isDark;
     final bgColor = context.backgroundColor;
     final cardColor = context.cardColor;
@@ -1107,6 +910,25 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   }
 
   Widget _buildPlayerContent() {
+    if (_isCurrentlyInFullscreenPage) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.fullscreen_rounded, color: Colors.white70, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Playing in Fullscreen Mode',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_hasError) {
       return LayoutBuilder(
         builder: (context, constraints) {
@@ -1246,20 +1068,27 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onDoubleTap: _handleDoubleTap,
       onTap: _toggleControlsOverlayVisibility,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Video background container
+          // Video background container with Pinch-to-Zoom
           Container(
             color: Colors.black,
             width: double.infinity,
             height: double.infinity,
             child: Center(
               child: isPlayerReady
-                  ? AspectRatio(
-                      aspectRatio: videoRatio,
-                      child: VideoPlayer(_controller!),
+                  ? InteractiveViewer(
+                      minScale: 1.0,
+                      maxScale: 4.0,
+                      clipBehavior: Clip.hardEdge,
+                      transformationController: _transformationController,
+                      child: AspectRatio(
+                        aspectRatio: videoRatio,
+                        child: VideoPlayer(_controller!),
+                      ),
                     )
                   : const CircularProgressIndicator(
                       color: AppColors.primary,
@@ -1390,6 +1219,60 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              // Zoom Controls Pill
+                              Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: Colors.white24, width: 0.8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    InkWell(
+                                      onTap: _zoomOut,
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(4),
+                                        child: Icon(Icons.zoom_out_rounded,
+                                            color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      child: Text(
+                                        '${_currentZoomScale.toStringAsFixed(1)}x',
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: _zoomIn,
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(4),
+                                        child: Icon(Icons.zoom_in_rounded,
+                                            color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                    if (_currentZoomScale > 1.0) ...[
+                                      InkWell(
+                                        onTap: _resetZoom,
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(Icons.restart_alt_rounded,
+                                              color: Colors.white70, size: 15),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
                               Material(
                                 color: Colors.black.withValues(alpha: 0.65),
                                 borderRadius: BorderRadius.circular(8),
@@ -1864,6 +1747,343 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           },
         );
       },
+    );
+  }
+}
+
+/// Standalone Fullscreen Landscape Video Player Page.
+/// Pushed via root navigator so it covers the entire app (including bottom bars).
+class CctvFullscreenPlayerPage extends StatefulWidget {
+  final VideoPlayerController controller;
+  final int channel;
+  final String quality;
+  final String channelName;
+
+  const CctvFullscreenPlayerPage({
+    super.key,
+    required this.controller,
+    required this.channel,
+    required this.quality,
+    required this.channelName,
+  });
+
+  @override
+  State<CctvFullscreenPlayerPage> createState() =>
+      _CctvFullscreenPlayerPageState();
+}
+
+class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
+  bool _showOverlay = true;
+  Timer? _overlayTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // 1. Hide Android System Navigation Bar & Status Bar completely
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    // 2. Lock Orientation to Landscape
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
+    _resetOverlayTimer();
+  }
+
+  void _restoreSystemUIAndOrientations() {
+    // Restore Android System Navigation Bar & Status Bar
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
+
+    // Restore Orientations to allow portrait/landscape
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    _overlayTimer?.cancel();
+    _restoreSystemUIAndOrientations();
+    super.dispose();
+  }
+
+  void _toggleOverlay() {
+    setState(() {
+      _showOverlay = !_showOverlay;
+    });
+    if (_showOverlay) {
+      _resetOverlayTimer();
+    }
+  }
+
+  void _resetOverlayTimer() {
+    _overlayTimer?.cancel();
+    if (_showOverlay) {
+      _overlayTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _showOverlay = false;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isControllerValid =
+        _MediaServerCctvScreenState._isControllerValid(widget.controller);
+    final double videoRatio =
+        _MediaServerCctvScreenState._getControllerAspectRatio(
+            widget.controller);
+
+    final Orientation orientation = MediaQuery.of(context).orientation;
+    final bool isPhysicallyLandscape = orientation == Orientation.landscape;
+
+    Widget playerBody = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleOverlay,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Black Background + Centered Video
+          Container(
+            color: Colors.black,
+            width: double.infinity,
+            height: double.infinity,
+            child: Center(
+              child: isControllerValid
+                  ? AspectRatio(
+                      aspectRatio: videoRatio,
+                      child: VideoPlayer(widget.controller),
+                    )
+                  : const CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2.5,
+                    ),
+            ),
+          ),
+
+          // Animated Controls Overlay
+          AnimatedOpacity(
+            opacity: _showOverlay ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: IgnorePointer(
+              ignoring: !_showOverlay,
+              child: Stack(
+                children: [
+                  // Top Gradient Header Bar
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.85),
+                            Colors.black.withValues(alpha: 0.0),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        top: true,
+                        left: true,
+                        right: true,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: Row(
+                            children: [
+                              Material(
+                                color: Colors.black45,
+                                shape: const CircleBorder(),
+                                clipBehavior: Clip.antiAlias,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.arrow_back_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                  onPressed: () {
+                                    _restoreSystemUIAndOrientations();
+                                    Navigator.of(context, rootNavigator: true)
+                                        .pop();
+                                  },
+                                  tooltip: 'Exit Fullscreen',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC2626)
+                                      .withValues(alpha: 0.95),
+                                  borderRadius: BorderRadius.circular(6),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withValues(alpha: 0.4),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.fiber_manual_record,
+                                        color: Colors.white, size: 8),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'LIVE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.65),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: Colors.white24, width: 0.8),
+                                  ),
+                                  child: Text(
+                                    '${widget.channelName} • ${widget.quality == 'sub' ? 'SD' : 'HD 1080p'}',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Right Exit Fullscreen Button
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.0),
+                            Colors.black.withValues(alpha: 0.85),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: SafeArea(
+                        top: false,
+                        bottom: true,
+                        left: true,
+                        right: true,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Material(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(8),
+                                child: InkWell(
+                                  onTap: () {
+                                    _restoreSystemUIAndOrientations();
+                                    Navigator.of(context, rootNavigator: true)
+                                        .pop();
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: Colors.white24, width: 0.8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.fullscreen_exit_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'Exit Fullscreen',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!isPhysicallyLandscape) {
+      playerBody = RotatedBox(
+        quarterTurns: 1,
+        child: playerBody,
+      );
+    }
+
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        _restoreSystemUIAndOrientations();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: playerBody,
+      ),
     );
   }
 }
