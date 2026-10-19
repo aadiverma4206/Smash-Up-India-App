@@ -1,4 +1,4 @@
-import { dbPool } from '../../config/db.config.js';
+import { dbPool } from "../../config/db.config.js";
 
 export class WalletRepository {
   /**
@@ -10,7 +10,7 @@ export class WalletRepository {
               (wallet_pin_hash IS NOT NULL) as is_pin_set
        FROM public.player_details
        WHERE user_id = $1::VARCHAR;`,
-      [userId]
+      [userId],
     );
     return res.rows[0] || null;
   }
@@ -19,7 +19,10 @@ export class WalletRepository {
    * Call DB function set_wallet_pin
    */
   static async setWalletPin(userId: string, pin: string) {
-    await dbPool.query('SELECT public.set_wallet_pin($1::VARCHAR, $2::VARCHAR);', [userId, pin]);
+    await dbPool.query(
+      "SELECT public.set_wallet_pin($1::VARCHAR, $2::VARCHAR);",
+      [userId, pin],
+    );
   }
 
   /**
@@ -27,8 +30,8 @@ export class WalletRepository {
    */
   static async verifyWalletPin(userId: string, pin: string): Promise<boolean> {
     const res = await dbPool.query(
-      'SELECT public.verify_wallet_pin($1::VARCHAR, $2::VARCHAR) as is_valid;',
-      [userId, pin]
+      "SELECT public.verify_wallet_pin($1::VARCHAR, $2::VARCHAR) as is_valid;",
+      [userId, pin],
     );
     return res.rows[0]?.is_valid === true;
   }
@@ -44,14 +47,14 @@ export class WalletRepository {
     walletPin?: string;
   }) {
     const res = await dbPool.query(
-      'SELECT public.create_payment_order($1::VARCHAR, $2::VARCHAR, $3::INT, $4::VARCHAR, $5::VARCHAR) as payment_order_id;',
+      "SELECT public.create_payment_order($1::VARCHAR, $2::VARCHAR, $3::INT, $4::VARCHAR, $5::VARCHAR) as payment_order_id;",
       [
         data.userId,
         data.provider,
         data.amountPaise,
         data.idempotencyKey,
         data.walletPin || null,
-      ]
+      ],
     );
     return res.rows[0]?.payment_order_id;
   }
@@ -59,22 +62,28 @@ export class WalletRepository {
   /**
    * Update Provider Order ID in payment_orders
    */
-  static async updateProviderOrderId(paymentOrderId: string, providerOrderId: string) {
+  static async updateProviderOrderId(
+    paymentOrderId: string,
+    providerOrderId: string,
+  ) {
     await dbPool.query(
       `UPDATE public.payment_orders
        SET provider_order_id = $1::VARCHAR, status = 'PENDING', updated_at = CURRENT_TIMESTAMP
        WHERE id = $2::VARCHAR;`,
-      [providerOrderId, paymentOrderId]
+      [providerOrderId, paymentOrderId],
     );
   }
 
   /**
    * Call DB function settle_wallet_payment
    */
-  static async settleWalletPayment(paymentOrderId: string, providerPaymentId: string) {
+  static async settleWalletPayment(
+    paymentOrderId: string,
+    providerPaymentId: string,
+  ) {
     const res = await dbPool.query(
-      'SELECT public.settle_wallet_payment($1::VARCHAR, $2::VARCHAR) as tx_id;',
-      [paymentOrderId, providerPaymentId]
+      "SELECT public.settle_wallet_payment($1::VARCHAR, $2::VARCHAR) as tx_id;",
+      [paymentOrderId, providerPaymentId],
     );
     return res.rows[0]?.tx_id;
   }
@@ -84,8 +93,8 @@ export class WalletRepository {
    */
   static async getPaymentOrderStatus(userId: string, paymentOrderId: string) {
     const res = await dbPool.query(
-      'SELECT * FROM public.get_payment_order_status($1::VARCHAR, $2::VARCHAR);',
-      [userId, paymentOrderId]
+      "SELECT * FROM public.get_payment_order_status($1::VARCHAR, $2::VARCHAR);",
+      [userId, paymentOrderId],
     );
     return res.rows[0] || null;
   }
@@ -114,7 +123,7 @@ export class WalletRepository {
         data.paymentOrderId || null,
         data.signatureVerified,
         JSON.stringify(data.payload),
-      ]
+      ],
     );
     return res.rows[0]?.id || null;
   }
@@ -127,19 +136,23 @@ export class WalletRepository {
       `UPDATE public.payment_webhook_events
        SET processing_status = $1::VARCHAR, processed_at = CURRENT_TIMESTAMP
        WHERE event_id = $2::VARCHAR;`,
-      [status, eventId]
+      [status, eventId],
     );
   }
 
   /**
    * Mark Payment Order as FAILED or REFUNDED
    */
-  static async updatePaymentOrderStatus(paymentOrderId: string, status: string, metadata: any = {}) {
+  static async updatePaymentOrderStatus(
+    paymentOrderId: string,
+    status: string,
+    metadata: any = {},
+  ) {
     await dbPool.query(
       `UPDATE public.payment_orders
        SET status = $1::VARCHAR, metadata = metadata || $2::jsonb, updated_at = CURRENT_TIMESTAMP
        WHERE id = $3::VARCHAR;`,
-      [status, JSON.stringify(metadata), paymentOrderId]
+      [status, JSON.stringify(metadata), paymentOrderId],
     );
   }
 
@@ -148,8 +161,8 @@ export class WalletRepository {
    */
   static async getTransactionHistory(userId: string, limit = 50, offset = 0) {
     const res = await dbPool.query(
-      'SELECT * FROM public.get_wallet_transaction_history($1::VARCHAR, $2::INT, $3::INT);',
-      [userId, limit, offset]
+      "SELECT * FROM public.get_wallet_transaction_history($1::VARCHAR, $2::INT, $3::INT);",
+      [userId, limit, offset],
     );
     return res.rows;
   }

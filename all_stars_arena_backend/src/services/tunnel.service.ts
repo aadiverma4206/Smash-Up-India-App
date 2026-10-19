@@ -1,7 +1,7 @@
-import { spawn, ChildProcess } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import { logger } from '../utils/logger.js';
+import { spawn, ChildProcess } from "child_process";
+import path from "path";
+import fs from "fs";
+import { logger } from "../utils/logger.js";
 
 /**
  * Universal Cloudflare Tunnel Service for Outside-Network Access.
@@ -18,17 +18,19 @@ export class TunnelService {
    * Start or detect running Cloudflare Quick Tunnel on backend port
    */
   public static async start(port = 5000): Promise<string | null> {
-    const cloudflaredPath = path.resolve(process.cwd(), 'cloudflared.exe');
+    const cloudflaredPath = path.resolve(process.cwd(), "cloudflared.exe");
     if (!fs.existsSync(cloudflaredPath)) {
-      logger.info('cloudflared.exe not found in backend directory. Tunnel auto-start skipped.');
+      logger.info(
+        "cloudflared.exe not found in backend directory. Tunnel auto-start skipped.",
+      );
       return null;
     }
 
     // Check if active_tunnel.json exists and is fresh (< 4 hours old)
-    const infoPath = path.resolve(process.cwd(), 'active_tunnel.json');
+    const infoPath = path.resolve(process.cwd(), "active_tunnel.json");
     if (fs.existsSync(infoPath)) {
       try {
-        const cached = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+        const cached = JSON.parse(fs.readFileSync(infoPath, "utf8"));
         if (cached && cached.url) {
           TunnelService.activeUrl = cached.url;
         }
@@ -37,21 +39,25 @@ export class TunnelService {
 
     // If tunnel is already alive, return it
     if (TunnelService.activeUrl) {
-      logger.info(`🌐 Existing Cloudflare Tunnel active: ${TunnelService.activeUrl}`);
+      logger.info(
+        `🌐 Existing Cloudflare Tunnel active: ${TunnelService.activeUrl}`,
+      );
       return TunnelService.activeUrl;
     }
 
     return new Promise((resolve) => {
-      logger.info('🚀 Starting Cloudflare Tunnel for universal multi-network CCTV streaming...');
+      logger.info(
+        "🚀 Starting Cloudflare Tunnel for universal multi-network CCTV streaming...",
+      );
 
       try {
         const child = spawn(
           cloudflaredPath,
-          ['tunnel', '--url', `http://127.0.0.1:${port}`],
+          ["tunnel", "--url", `http://127.0.0.1:${port}`],
           {
             windowsHide: true,
-            stdio: ['ignore', 'pipe', 'pipe'],
-          }
+            stdio: ["ignore", "pipe", "pipe"],
+          },
         );
 
         TunnelService.process = child;
@@ -61,12 +67,20 @@ export class TunnelService {
           const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
           if (match && !TunnelService.activeUrl) {
             TunnelService.activeUrl = match[0];
-            logger.info('════════════════════════════════════════════════════════════════');
+            logger.info(
+              "════════════════════════════════════════════════════════════════",
+            );
             logger.info(`🌐 UNIVERSAL CLOUDFLARE TUNNEL ONLINE!`);
             logger.info(`   Public URL: ${TunnelService.activeUrl}`);
-            logger.info(`   CCTV Live Stream: ${TunnelService.activeUrl}/cctv-stream/cam1_sub/index.m3u8`);
-            logger.info(`   (Works across MGMT BOTIVATE, 5G Mobile Data, & All WiFis)`);
-            logger.info('════════════════════════════════════════════════════════════════');
+            logger.info(
+              `   CCTV Live Stream: ${TunnelService.activeUrl}/cctv-stream/cam1_sub/index.m3u8`,
+            );
+            logger.info(
+              `   (Works across MGMT BOTIVATE, 5G Mobile Data, & All WiFis)`,
+            );
+            logger.info(
+              "════════════════════════════════════════════════════════════════",
+            );
 
             try {
               fs.writeFileSync(
@@ -80,8 +94,8 @@ export class TunnelService {
                     updatedAt: new Date().toISOString(),
                   },
                   null,
-                  2
-                )
+                  2,
+                ),
               );
             } catch (_) {}
 
@@ -89,15 +103,15 @@ export class TunnelService {
           }
         };
 
-        child.stdout?.on('data', checkOutput);
-        child.stderr?.on('data', checkOutput);
+        child.stdout?.on("data", checkOutput);
+        child.stderr?.on("data", checkOutput);
 
-        child.on('error', (err) => {
-          logger.warn({ err }, 'Could not launch cloudflared tunnel process');
+        child.on("error", (err) => {
+          logger.warn({ err }, "Could not launch cloudflared tunnel process");
           resolve(TunnelService.activeUrl);
         });
 
-        child.on('exit', (code) => {
+        child.on("exit", (code) => {
           if (code !== 0 && code !== null) {
             logger.warn(`Cloudflare Tunnel stopped (code ${code})`);
           }
@@ -109,7 +123,7 @@ export class TunnelService {
           resolve(TunnelService.activeUrl);
         }, 8000);
       } catch (err) {
-        logger.error({ err }, 'Failed to start tunnel service');
+        logger.error({ err }, "Failed to start tunnel service");
         resolve(null);
       }
     });
@@ -117,10 +131,10 @@ export class TunnelService {
 
   public static getUrl(): string | null {
     if (!TunnelService.activeUrl) {
-      const infoPath = path.resolve(process.cwd(), 'active_tunnel.json');
+      const infoPath = path.resolve(process.cwd(), "active_tunnel.json");
       if (fs.existsSync(infoPath)) {
         try {
-          const cached = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+          const cached = JSON.parse(fs.readFileSync(infoPath, "utf8"));
           if (cached && cached.url) {
             TunnelService.activeUrl = cached.url;
           }
@@ -132,7 +146,7 @@ export class TunnelService {
 
   public static setUrl(url: string): void {
     TunnelService.activeUrl = url;
-    const infoPath = path.resolve(process.cwd(), 'active_tunnel.json');
+    const infoPath = path.resolve(process.cwd(), "active_tunnel.json");
     try {
       fs.writeFileSync(
         infoPath,
@@ -144,8 +158,8 @@ export class TunnelService {
             updatedAt: new Date().toISOString(),
           },
           null,
-          2
-        )
+          2,
+        ),
       );
     } catch (_) {}
   }

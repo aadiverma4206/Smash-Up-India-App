@@ -1,7 +1,7 @@
-import path from 'path';
-import fs from 'fs';
-import { logger } from '../utils/logger.js';
-import { MediaMtxService } from './mediaMtx.service.js';
+import path from "path";
+import fs from "fs";
+import { logger } from "../utils/logger.js";
+import { MediaMtxService } from "./mediaMtx.service.js";
 
 export interface HlsSession {
   sessionId: string;
@@ -22,7 +22,7 @@ export interface HlsSession {
  */
 export class HlsStreamingService {
   private static activeSessions = new Map<string, HlsSession>();
-  private static hlsBaseDir = path.resolve(process.cwd(), 'temp_hls');
+  private static hlsBaseDir = path.resolve(process.cwd(), "temp_hls");
   private static readonly SESSION_IDLE_TTL_MS = 2 * 60 * 1000;
   private static cleanupTimer: NodeJS.Timeout | null = null;
 
@@ -72,16 +72,16 @@ export class HlsStreamingService {
     }
     fs.mkdirSync(outputDir, { recursive: true });
 
-    const playlistPath = path.join(outputDir, 'playlist.m3u8');
+    const playlistPath = path.join(outputDir, "playlist.m3u8");
     const streamKey = `cam${channel}_${streamType}`;
 
     // Write standard HLS master playlist linking to MediaMTX stream
     const masterPlaylist = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=1920x1080
-http://${params.host || '127.0.0.1'}:8888/${streamKey}/index.m3u8
+http://${params.host || "127.0.0.1"}:8888/${streamKey}/index.m3u8
 `;
-    fs.writeFileSync(playlistPath, masterPlaylist, 'utf8');
+    fs.writeFileSync(playlistPath, masterPlaylist, "utf8");
 
     const session: HlsSession = {
       sessionId,
@@ -95,7 +95,9 @@ http://${params.host || '127.0.0.1'}:8888/${streamKey}/index.m3u8
     };
 
     this.activeSessions.set(sessionId, session);
-    logger.info(`[HLS] Session ${sessionId} ready via MediaMTX (Channel ${channel}, ${streamType})`);
+    logger.info(
+      `[HLS] Session ${sessionId} ready via MediaMTX (Channel ${channel}, ${streamType})`,
+    );
     this.startCleanupTimer();
 
     return {

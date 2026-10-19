@@ -1,16 +1,17 @@
-import { spawn, ChildProcess } from 'child_process';
-import net from 'net';
-import path from 'path';
-import fs from 'fs';
-import { dbPool } from '../config/db.config.js';
-import { env, getDefaultRtspUrl } from '../config/env.config.js';
-import { logger } from '../utils/logger.js';
-import { decryptSecret, redactRtspUrl } from '../utils/crypto.utils.js';
-import { uploadLocalFileToS3, safeDeleteLocalFile } from './storage.service.js';
-import { getSocketIO } from '../config/socket.config.js';
-import { ApiError } from '../utils/apiResponse.js';
+import { spawn, ChildProcess } from "child_process";
+import net from "net";
+import path from "path";
+import fs from "fs";
+import { dbPool } from "../config/db.config.js";
+import { env, getDefaultRtspUrl } from "../config/env.config.js";
+import { logger } from "../utils/logger.js";
+import { decryptSecret, redactRtspUrl } from "../utils/crypto.utils.js";
+import { uploadLocalFileToS3, safeDeleteLocalFile } from "./storage.service.js";
+import { getSocketIO } from "../config/socket.config.js";
+import { ApiError } from "../utils/apiResponse.js";
 
-export type RecordingState = 'starting' | 'recording' | 'stopping' | 'completed' | 'failed';
+export type RecordingState =
+  "starting" | "recording" | "stopping" | "completed" | "failed";
 
 export interface ActiveRecording {
   recordingId: string;
@@ -38,7 +39,7 @@ export class CctvRecordingService {
   private static recordingIdToGameId = new Map<string, string>(); // recordingId -> gameId
   private static ffmpegChecked = false;
   private static ffmpegAvailable = false;
-  private static ffmpegVersionStr = '';
+  private static ffmpegVersionStr = "";
 
   /**
    * Returns true if FFmpeg binary is available on the host
@@ -56,35 +57,41 @@ export class CctvRecordingService {
     binaryPath: string;
     supportsLibx264: boolean;
   }> {
-    const binary = env.FFMPEG_PATH || 'ffmpeg';
+    const binary = env.FFMPEG_PATH || "ffmpeg";
     return new Promise((resolve) => {
       try {
-        const proc = spawn(binary, ['-version']);
-        let output = '';
-        proc.stdout.on('data', (d) => {
+        const proc = spawn(binary, ["-version"]);
+        let output = "";
+        proc.stdout.on("data", (d) => {
           output += d.toString();
         });
-        proc.stderr.on('data', (d) => {
+        proc.stderr.on("data", (d) => {
           output += d.toString();
         });
-        proc.on('error', (err) => {
+        proc.on("error", (err) => {
           logger.warn(`[FFmpeg] Binary check error: ${err.message}`);
           this.ffmpegChecked = true;
           this.ffmpegAvailable = false;
           resolve({
             available: false,
-            version: 'Not Found',
+            version: "Not Found",
             binaryPath: binary,
             supportsLibx264: false,
           });
         });
-        proc.on('close', (code) => {
+        proc.on("close", (code) => {
           this.ffmpegChecked = true;
           this.ffmpegAvailable = code === 0;
           const versionMatch = output.match(/ffmpeg version ([^\s]+)/i);
-          this.ffmpegVersionStr = versionMatch ? versionMatch[1] : (this.ffmpegAvailable ? 'OK' : 'Unknown');
-          const supportsLibx264 = output.includes('--enable-libx264');
-          logger.info(`📹 [FFmpeg] Status: Available=${this.ffmpegAvailable}, Version=${this.ffmpegVersionStr}, Binary=${binary}`);
+          this.ffmpegVersionStr = versionMatch
+            ? versionMatch[1]
+            : this.ffmpegAvailable
+              ? "OK"
+              : "Unknown";
+          const supportsLibx264 = output.includes("--enable-libx264");
+          logger.info(
+            `📹 [FFmpeg] Status: Available=${this.ffmpegAvailable}, Version=${this.ffmpegVersionStr}, Binary=${binary}`,
+          );
           resolve({
             available: this.ffmpegAvailable,
             version: this.ffmpegVersionStr,
@@ -97,7 +104,7 @@ export class CctvRecordingService {
         this.ffmpegAvailable = false;
         resolve({
           available: false,
-          version: 'Error: ' + err.message,
+          version: "Error: " + err.message,
           binaryPath: binary,
           supportsLibx264: false,
         });
@@ -113,9 +120,13 @@ export class CctvRecordingService {
     ip_address?: string;
     port?: number;
     rtsp_url_encrypted?: string;
-  }): Promise<{ status: 'ONLINE' | 'OFFLINE'; message: string; latencyMs?: number }> {
+  }): Promise<{
+    status: "ONLINE" | "OFFLINE";
+    message: string;
+    latencyMs?: number;
+  }> {
     const startTime = Date.now();
-    let host = camera.ip_address || '';
+    let host = camera.ip_address || "";
     let port = camera.port || 554;
 
     try {
@@ -130,7 +141,7 @@ export class CctvRecordingService {
     } catch (_) {}
 
     if (!host) {
-      host = env.CAMERA_HOST || '192.168.1.2';
+      host = env.CAMERA_HOST || "192.168.1.2";
     }
 
     const timeoutMs = env.CAMERA_CONNECTION_TIMEOUT_MS || 5000;
@@ -144,55 +155,61 @@ export class CctvRecordingService {
         socket.destroy();
       };
 
-      socket.on('connect', async () => {
+      socket.on("connect", async () => {
         const latencyMs = Date.now() - startTime;
         cleanup();
-        await dbPool.query(
-          `UPDATE public.cctv_cameras
+        await dbPool
+          .query(
+            `UPDATE public.cctv_cameras
            SET status = 'ONLINE', health_status = 'ONLINE',
                last_connection_at = CURRENT_TIMESTAMP,
                last_successful_connection = CURRENT_TIMESTAMP,
                last_error = NULL
            WHERE id = $1;`,
-          [camera.id]
-        ).catch(() => {});
+            [camera.id],
+          )
+          .catch(() => {});
         resolve({
-          status: 'ONLINE',
+          status: "ONLINE",
           message: `Camera connection verified successfully (${latencyMs}ms)`,
           latencyMs,
         });
       });
 
-      socket.on('error', async (err) => {
+      socket.on("error", async (err) => {
         cleanup();
         const sanitizedErr = `Connection failed to ${host}:${port}: ${err.message}`;
-        await dbPool.query(
-          `UPDATE public.cctv_cameras
+        await dbPool
+          .query(
+            `UPDATE public.cctv_cameras
            SET status = 'OFFLINE', health_status = 'OFFLINE',
                last_connection_at = CURRENT_TIMESTAMP,
                last_error = $1
            WHERE id = $2;`,
-          [sanitizedErr, camera.id]
-        ).catch(() => {});
+            [sanitizedErr, camera.id],
+          )
+          .catch(() => {});
         resolve({
-          status: 'OFFLINE',
+          status: "OFFLINE",
           message: sanitizedErr,
         });
       });
 
-      socket.on('timeout', async () => {
+      socket.on("timeout", async () => {
         cleanup();
         const sanitizedErr = `Connection timed out after ${timeoutMs}ms to ${host}:${port}`;
-        await dbPool.query(
-          `UPDATE public.cctv_cameras
+        await dbPool
+          .query(
+            `UPDATE public.cctv_cameras
            SET status = 'OFFLINE', health_status = 'OFFLINE',
                last_connection_at = CURRENT_TIMESTAMP,
                last_error = $1
            WHERE id = $2;`,
-          [sanitizedErr, camera.id]
-        ).catch(() => {});
+            [sanitizedErr, camera.id],
+          )
+          .catch(() => {});
         resolve({
-          status: 'OFFLINE',
+          status: "OFFLINE",
           message: sanitizedErr,
         });
       });
@@ -236,30 +253,30 @@ export class CctvRecordingService {
         const parsed = new URL(suppliedRtspUrl);
         const allowedHosts = [
           env.CAMERA_HOST,
-          '127.0.0.1',
-          'localhost',
-          '192.168.1.2',
+          "127.0.0.1",
+          "localhost",
+          "192.168.1.2",
         ].filter(Boolean);
 
         if (!allowedHosts.includes(parsed.hostname)) {
           throw new ApiError(
             400,
             `RTSP host '${parsed.hostname}' is not permitted. Only authorized camera hosts are allowed.`,
-            'FORBIDDEN_RTSP_HOST'
+            "FORBIDDEN_RTSP_HOST",
           );
         }
         return { rtspUrl: suppliedRtspUrl, cameraId };
       } catch (err: any) {
         if (err instanceof ApiError) throw err;
-        throw new ApiError(400, 'Invalid RTSP URL format', 'INVALID_RTSP_URL');
+        throw new ApiError(400, "Invalid RTSP URL format", "INVALID_RTSP_URL");
       }
     }
 
     // 2. Check camera in DB if cameraId provided
     if (cameraId) {
       const camRes = await dbPool.query(
-        'SELECT * FROM public.cctv_cameras WHERE id = $1;',
-        [cameraId]
+        "SELECT * FROM public.cctv_cameras WHERE id = $1;",
+        [cameraId],
       );
       if (camRes.rows.length > 0) {
         const cam = camRes.rows[0];
@@ -276,31 +293,35 @@ export class CctvRecordingService {
     const mediaMtxAvailable = await new Promise<boolean>((resolve) => {
       const sock = new net.Socket();
       sock.setTimeout(800);
-      sock.on('connect', () => {
+      sock.on("connect", () => {
         sock.destroy();
         resolve(true);
       });
-      sock.on('error', () => {
+      sock.on("error", () => {
         sock.destroy();
         resolve(false);
       });
-      sock.on('timeout', () => {
+      sock.on("timeout", () => {
         sock.destroy();
         resolve(false);
       });
-      sock.connect(8555, '127.0.0.1');
+      sock.connect(8555, "127.0.0.1");
     });
 
     if (mediaMtxAvailable) {
       const pathName = `cam${channel}_main`;
       const relayUrl = `rtsp://127.0.0.1:8555/${pathName}`;
-      logger.info(`📹 [CCTV Recorder] Using local MediaMTX relay stream: ${relayUrl}`);
+      logger.info(
+        `📹 [CCTV Recorder] Using local MediaMTX relay stream: ${relayUrl}`,
+      );
       return { rtspUrl: relayUrl, cameraId };
     }
 
     // 4. Direct Dahua XVR RTSP URL fallback
     const directUrl = getDefaultRtspUrl(channel, 0);
-    logger.info(`📹 [CCTV Recorder] Using direct Dahua XVR stream for Channel ${channel}`);
+    logger.info(
+      `📹 [CCTV Recorder] Using direct Dahua XVR stream for Channel ${channel}`,
+    );
     return { rtspUrl: directUrl, cameraId };
   }
 
@@ -338,8 +359,14 @@ export class CctvRecordingService {
 
     // 1. Check if recording is already active for this game
     const existingSession = this.activeRecordings.get(gameId);
-    if (existingSession && (existingSession.state === 'starting' || existingSession.state === 'recording')) {
-      logger.info(`Recording already active for match ${gameId} (state: ${existingSession.state})`);
+    if (
+      existingSession &&
+      (existingSession.state === "starting" ||
+        existingSession.state === "recording")
+    ) {
+      logger.info(
+        `Recording already active for match ${gameId} (state: ${existingSession.state})`,
+      );
       return {
         recordingId: existingSession.recordingId,
         matchId: gameId,
@@ -351,24 +378,29 @@ export class CctvRecordingService {
     }
 
     // 2. Fetch game details from DB
-    const gameRes = await dbPool.query('SELECT * FROM public.games WHERE id = $1;', [gameId]);
+    const gameRes = await dbPool.query(
+      "SELECT * FROM public.games WHERE id = $1;",
+      [gameId],
+    );
     if (gameRes.rows.length === 0) {
-      throw new ApiError(404, `Match not found: ${gameId}`, 'MATCH_NOT_FOUND');
+      throw new ApiError(404, `Match not found: ${gameId}`, "MATCH_NOT_FOUND");
     }
     const game = gameRes.rows[0];
-    const clubId = params.clubId || game.club_id || 'all_stars_arena_club';
-    const courtId = params.courtId || game.court_id || 'court_1';
+    const clubId = params.clubId || game.club_id || "all_stars_arena_club";
+    const courtId = params.courtId || game.court_id || "court_1";
     const title = matchTitle || game.title || `Match - ${gameId}`;
-    const channel = params.channel || (courtId === 'court_2' ? 3 : 1);
+    const channel = params.channel || (courtId === "court_2" ? 3 : 1);
 
     // 3. Enforce server concurrency limits
     const maxConcurrent = env.RECORDING_MAX_CONCURRENT || 5;
     if (this.activeRecordings.size >= maxConcurrent) {
-      logger.warn(`⚠️ [CCTV Recorder] Concurrent recording limit (${maxConcurrent}) reached.`);
+      logger.warn(
+        `⚠️ [CCTV Recorder] Concurrent recording limit (${maxConcurrent}) reached.`,
+      );
       throw new ApiError(
         429,
         `Maximum simultaneous CCTV recording capacity (${maxConcurrent}) reached. Please try again later.`,
-        'CONCURRENCY_LIMIT_REACHED'
+        "CONCURRENCY_LIMIT_REACHED",
       );
     }
 
@@ -376,7 +408,7 @@ export class CctvRecordingService {
     if (!this.ffmpegChecked) {
       await this.checkFfmpeg();
     }
-    const ffmpegPath = env.FFMPEG_PATH || 'ffmpeg';
+    const ffmpegPath = env.FFMPEG_PATH || "ffmpeg";
 
     // 5. Resolve stream RTSP URL
     const { rtspUrl, cameraId } = await this.resolveRtspUrl({
@@ -386,26 +418,42 @@ export class CctvRecordingService {
     });
 
     if (!rtspUrl) {
-      throw new ApiError(400, 'No valid RTSP URL could be resolved for this camera/court', 'NO_RTSP_URL');
+      throw new ApiError(
+        400,
+        "No valid RTSP URL could be resolved for this camera/court",
+        "NO_RTSP_URL",
+      );
     }
 
     // 6. Ensure recordings directory exists safely
-    const outputBaseDir = path.resolve(process.cwd(), env.RECORDING_OUTPUT_DIR || './recordings');
+    const outputBaseDir = path.resolve(
+      process.cwd(),
+      env.RECORDING_OUTPUT_DIR || "./recordings",
+    );
     try {
       if (!fs.existsSync(outputBaseDir)) {
         fs.mkdirSync(outputBaseDir, { recursive: true });
       }
     } catch (fsErr: any) {
-      logger.error({ fsErr }, `Failed to create recordings directory: ${outputBaseDir}`);
-      throw new ApiError(500, 'Storage permission denied creating recording directory', 'STORAGE_PERMISSION_DENIED');
+      logger.error(
+        { fsErr },
+        `Failed to create recordings directory: ${outputBaseDir}`,
+      );
+      throw new ApiError(
+        500,
+        "Storage permission denied creating recording directory",
+        "STORAGE_PERMISSION_DENIED",
+      );
     }
 
-    const sanitizedGameId = gameId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const sanitizedGameId = gameId.replace(/[^a-zA-Z0-9_-]/g, "_");
     const filename = `match_${sanitizedGameId}_${Date.now()}.mp4`;
     const outputFile = path.join(outputBaseDir, filename);
 
     const now = new Date();
-    const scheduledStopAt = params.scheduledStopAt || new Date(now.getTime() + durationSeconds * 1000);
+    const scheduledStopAt =
+      params.scheduledStopAt ||
+      new Date(now.getTime() + durationSeconds * 1000);
 
     // 7. Insert DB record in cctv_recordings with state 'STARTING'
     let recordingId = params.recordingId;
@@ -427,7 +475,7 @@ export class CctvRecordingService {
           scheduledStopAt,
           scheduledStopAt,
           outputFile,
-        ]
+        ],
       );
       recordingId = insertRes.rows[0].id;
     } else {
@@ -436,7 +484,7 @@ export class CctvRecordingService {
          SET status = 'STARTING', recording_status = 'STARTING',
              local_temp_path = $1, error_code = NULL, error_message = NULL
          WHERE id = $2;`,
-        [outputFile, recordingId]
+        [outputFile, recordingId],
       );
     }
 
@@ -452,7 +500,7 @@ export class CctvRecordingService {
       tempDir: outputBaseDir,
       startedAt: now,
       scheduledStopAt,
-      state: 'starting',
+      state: "starting",
       firstFrameDetected: false,
       retryCount: 0,
       errorLogs: [],
@@ -460,45 +508,54 @@ export class CctvRecordingService {
 
     // 8. Launch FFmpeg child process with pipe stdio
     const ffmpegArgs = [
-      '-y',
-      '-rtsp_transport',
-      'tcp',
-      '-i',
+      "-y",
+      "-rtsp_transport",
+      "tcp",
+      "-i",
       rtspUrl,
-      '-c:v',
-      'libx264',
-      '-preset',
-      'veryfast',
-      '-crf',
-      '23',
-      '-pix_fmt',
-      'yuv420p',
-      '-an',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "23",
+      "-pix_fmt",
+      "yuv420p",
+      "-an",
+      "-movflags",
+      "+faststart",
       outputFile,
     ];
 
     const sanitizedLogUrl = redactRtspUrl(rtspUrl);
-    logger.info(`🎬 [CCTV Recorder] Spawning FFmpeg for Match ${gameId} from ${sanitizedLogUrl}`);
+    logger.info(
+      `🎬 [CCTV Recorder] Spawning FFmpeg for Match ${gameId} from ${sanitizedLogUrl}`,
+    );
 
     let proc: ChildProcess;
     try {
       proc = spawn(ffmpegPath, ffmpegArgs, {
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: ["pipe", "pipe", "pipe"],
       });
       activeRec.process = proc;
       activeRec.pid = proc.pid;
     } catch (spawnErr: any) {
-      logger.error({ spawnErr }, `[CCTV Recorder] Failed to spawn FFmpeg process: ${spawnErr.message}`);
+      logger.error(
+        { spawnErr },
+        `[CCTV Recorder] Failed to spawn FFmpeg process: ${spawnErr.message}`,
+      );
       await dbPool.query(
         `UPDATE public.cctv_recordings
          SET status = 'FAILED', recording_status = 'FAILED',
              error_code = 'FFMPEG_SPAWN_ERROR', error_message = $1
          WHERE id = $2;`,
-        [spawnErr.message, recordingId]
+        [spawnErr.message, recordingId],
       );
-      throw new ApiError(500, `Failed to launch FFmpeg: ${spawnErr.message}`, 'FFMPEG_LAUNCH_FAILED');
+      throw new ApiError(
+        500,
+        `Failed to launch FFmpeg: ${spawnErr.message}`,
+        "FFMPEG_LAUNCH_FAILED",
+      );
     }
 
     // Register active recording in memory
@@ -507,14 +564,16 @@ export class CctvRecordingService {
 
     // Update PID in DB
     if (proc.pid) {
-      dbPool.query('UPDATE public.cctv_recordings SET ffmpeg_pid = $1 WHERE id = $2;', [
-        proc.pid,
-        recordingId,
-      ]).catch(() => {});
+      dbPool
+        .query(
+          "UPDATE public.cctv_recordings SET ffmpeg_pid = $1 WHERE id = $2;",
+          [proc.pid, recordingId],
+        )
+        .catch(() => {});
     }
 
     // Listen to stderr for video-frame confirmation
-    proc.stderr?.on('data', async (data: Buffer) => {
+    proc.stderr?.on("data", async (data: Buffer) => {
       const text = data.toString();
       activeRec.errorLogs.push(text.trim());
       if (activeRec.errorLogs.length > 25) {
@@ -522,24 +581,31 @@ export class CctvRecordingService {
       }
 
       // Check for first confirmed video frame
-      if (!activeRec.firstFrameDetected && (text.includes('frame=') || text.includes('size='))) {
+      if (
+        !activeRec.firstFrameDetected &&
+        (text.includes("frame=") || text.includes("size="))
+      ) {
         activeRec.firstFrameDetected = true;
-        activeRec.state = 'recording';
-        logger.info(`🎥 [CCTV Recorder] First video frames captured for Match ${gameId} (Recording Active)`);
+        activeRec.state = "recording";
+        logger.info(
+          `🎥 [CCTV Recorder] First video frames captured for Match ${gameId} (Recording Active)`,
+        );
 
-        await dbPool.query(
-          `UPDATE public.cctv_recordings
+        await dbPool
+          .query(
+            `UPDATE public.cctv_recordings
            SET status = 'RECORDING', recording_status = 'RECORDING', error_code = NULL, error_message = NULL
            WHERE id = $1;`,
-          [recordingId]
-        ).catch(() => {});
+            [recordingId],
+          )
+          .catch(() => {});
 
         try {
           const io = getSocketIO();
-          io.emit('match:recording_started', {
+          io.emit("match:recording_started", {
             matchId: gameId,
             recordingId,
-            status: 'recording',
+            status: "recording",
             startedAt: now.toISOString(),
           });
         } catch (_) {}
@@ -547,53 +613,66 @@ export class CctvRecordingService {
     });
 
     // Handle unexpected process exit while active
-    proc.on('exit', async (code, signal) => {
-      logger.info(`[CCTV Recorder] FFmpeg process exited for Match ${gameId} with code ${code}, signal ${signal}`);
-      if (activeRec.state === 'starting' || activeRec.state === 'recording') {
-        const lastErr = activeRec.errorLogs.slice(-3).join(' ') || `FFmpeg exited prematurely with code ${code}`;
-        activeRec.state = 'failed';
+    proc.on("exit", async (code, signal) => {
+      logger.info(
+        `[CCTV Recorder] FFmpeg process exited for Match ${gameId} with code ${code}, signal ${signal}`,
+      );
+      if (activeRec.state === "starting" || activeRec.state === "recording") {
+        const lastErr =
+          activeRec.errorLogs.slice(-3).join(" ") ||
+          `FFmpeg exited prematurely with code ${code}`;
+        activeRec.state = "failed";
         this.activeRecordings.delete(gameId);
         this.recordingIdToGameId.delete(recordingId!);
 
-        await dbPool.query(
-          `UPDATE public.cctv_recordings
+        await dbPool
+          .query(
+            `UPDATE public.cctv_recordings
            SET status = 'FAILED', recording_status = 'FAILED',
                error_code = 'PREMATURE_PROCESS_EXIT', error_message = $1
            WHERE id = $2;`,
-          [lastErr.substring(0, 500), recordingId]
-        ).catch(() => {});
+            [lastErr.substring(0, 500), recordingId],
+          )
+          .catch(() => {});
       }
     });
 
-    proc.on('error', async (err: Error) => {
-      logger.error({ err }, `[CCTV Recorder] FFmpeg runtime error for Match ${gameId}`);
-      activeRec.state = 'failed';
+    proc.on("error", async (err: Error) => {
+      logger.error(
+        { err },
+        `[CCTV Recorder] FFmpeg runtime error for Match ${gameId}`,
+      );
+      activeRec.state = "failed";
       this.activeRecordings.delete(gameId);
       this.recordingIdToGameId.delete(recordingId!);
 
-      await dbPool.query(
-        `UPDATE public.cctv_recordings
+      await dbPool
+        .query(
+          `UPDATE public.cctv_recordings
          SET status = 'FAILED', recording_status = 'FAILED',
              error_code = 'FFMPEG_RUNTIME_ERROR', error_message = $1
          WHERE id = $2;`,
-        [err.message, recordingId]
-      ).catch(() => {});
+          [err.message, recordingId],
+        )
+        .catch(() => {});
     });
 
     // Auto-stop timer when deadline expires
     const delayMs = Math.max(scheduledStopAt.getTime() - Date.now(), 5000);
     activeRec.stopTimer = setTimeout(async () => {
-      logger.info(`⏰ [CCTV Recorder] Auto-stop duration deadline reached for Match ${gameId}`);
+      logger.info(
+        `⏰ [CCTV Recorder] Auto-stop duration deadline reached for Match ${gameId}`,
+      );
       await CctvRecordingService.stopRecording(recordingId!, {
-        reason: 'SCHEDULED_DEADLINE_EXPIRED',
-      }).catch((e) => logger.error({ e }, 'Error in auto-stop handler'));
+        reason: "SCHEDULED_DEADLINE_EXPIRED",
+      }).catch((e) => logger.error({ e }, "Error in auto-stop handler"));
     }, delayMs);
 
     return {
       recordingId: recordingId!,
       matchId: gameId,
       title,
-      status: 'recording',
+      status: "recording",
       startedAt: now.toISOString(),
       statusEndpoint: `/api/matches/${gameId}/recording-status`,
     };
@@ -608,7 +687,7 @@ export class CctvRecordingService {
       userId?: string;
       reason?: string;
       manualStop?: boolean;
-    }
+    },
   ): Promise<{
     matchId: string;
     recordingId: string;
@@ -631,11 +710,15 @@ export class CctvRecordingService {
        LEFT JOIN public.games g ON g.id = rec.game_id
        WHERE rec.game_id = $1 OR rec.id = $1
        ORDER BY rec.created_at DESC LIMIT 1;`,
-      [matchOrRecId]
+      [matchOrRecId],
     );
 
     if (recRes.rows.length === 0) {
-      throw new ApiError(404, `No recording found for match or ID: ${matchOrRecId}`, 'RECORDING_NOT_FOUND');
+      throw new ApiError(
+        404,
+        `No recording found for match or ID: ${matchOrRecId}`,
+        "RECORDING_NOT_FOUND",
+      );
     }
 
     const rec = recRes.rows[0];
@@ -645,16 +728,18 @@ export class CctvRecordingService {
 
     // 2. Gracefully signal FFmpeg process to close MP4 container safely
     if (session) {
-      session.state = 'stopping';
+      session.state = "stopping";
       if (session.stopTimer) {
         clearTimeout(session.stopTimer);
       }
 
       if (session.process && !session.process.killed) {
-        logger.info(`[CCTV Recorder] Sending graceful 'q' to FFmpeg stdin for match ${actualGameId}...`);
+        logger.info(
+          `[CCTV Recorder] Sending graceful 'q' to FFmpeg stdin for match ${actualGameId}...`,
+        );
         try {
           if (session.process.stdin && session.process.stdin.writable) {
-            session.process.stdin.write('q\n');
+            session.process.stdin.write("q\n");
             session.process.stdin.end();
           }
         } catch (_) {}
@@ -665,14 +750,16 @@ export class CctvRecordingService {
           const timer = setTimeout(() => {
             if (!resolved) {
               resolved = true;
-              logger.warn(`[CCTV Recorder] FFmpeg graceful exit timed out for ${actualGameId}. Sending SIGINT...`);
+              logger.warn(
+                `[CCTV Recorder] FFmpeg graceful exit timed out for ${actualGameId}. Sending SIGINT...`,
+              );
               try {
-                session.process?.kill('SIGINT');
+                session.process?.kill("SIGINT");
               } catch (_) {}
               setTimeout(() => {
                 try {
                   if (!session.process?.killed) {
-                    session.process?.kill('SIGTERM');
+                    session.process?.kill("SIGTERM");
                   }
                 } catch (_) {}
                 resolve();
@@ -680,7 +767,7 @@ export class CctvRecordingService {
             }
           }, 5000);
 
-          session.process?.once('exit', () => {
+          session.process?.once("exit", () => {
             if (!resolved) {
               resolved = true;
               clearTimeout(timer);
@@ -703,31 +790,47 @@ export class CctvRecordingService {
         fileSizeBytes = stats.size;
         isValidFile = stats.size > 1024; // At least 1KB
       } catch (err: any) {
-        logger.error({ err }, `Error reading recording file stats for ${localPath}`);
+        logger.error(
+          { err },
+          `Error reading recording file stats for ${localPath}`,
+        );
       }
     }
 
-    const startedAt = session?.startedAt || new Date(rec.started_at || rec.start_time || Date.now());
-    const durationSeconds = Math.max(1, Math.round((stoppedAt.getTime() - startedAt.getTime()) / 1000));
-    const safeFilename = localPath ? path.basename(localPath) : `match_${actualGameId}.mp4`;
+    const startedAt =
+      session?.startedAt ||
+      new Date(rec.started_at || rec.start_time || Date.now());
+    const durationSeconds = Math.max(
+      1,
+      Math.round((stoppedAt.getTime() - startedAt.getTime()) / 1000),
+    );
+    const safeFilename = localPath
+      ? path.basename(localPath)
+      : `match_${actualGameId}.mp4`;
     const videoUrl = `/api/videos/${safeFilename}`;
 
     if (!isValidFile) {
-      logger.error(`[CCTV Recorder] Finalized recording file is missing or empty (${fileSizeBytes} bytes): ${localPath}`);
+      logger.error(
+        `[CCTV Recorder] Finalized recording file is missing or empty (${fileSizeBytes} bytes): ${localPath}`,
+      );
       await dbPool.query(
         `UPDATE public.cctv_recordings
          SET status = 'FAILED', recording_status = 'FAILED',
              actual_stopped_at = $1, error_code = 'EMPTY_RECORDING_FILE',
              error_message = 'Recorded video file is missing or empty'
          WHERE id = $2;`,
-        [stoppedAt, recordingId]
+        [stoppedAt, recordingId],
       );
-      throw new ApiError(500, 'Recording failed to produce a valid video file', 'RECORDING_FILE_EMPTY');
+      throw new ApiError(
+        500,
+        "Recording failed to produce a valid video file",
+        "RECORDING_FILE_EMPTY",
+      );
     }
 
     // 4. Update cctv_recordings in DB
-    const finalStatus = 'COMPLETED';
-    const finalRecStatus = isManual ? 'STOPPED_MANUALLY' : 'COMPLETED';
+    const finalStatus = "COMPLETED";
+    const finalRecStatus = isManual ? "STOPPED_MANUALLY" : "COMPLETED";
 
     await dbPool.query(
       `UPDATE public.cctv_recordings
@@ -746,7 +849,7 @@ export class CctvRecordingService {
         durationSeconds,
         localPath,
         recordingId,
-      ]
+      ],
     );
 
     // 5. Insert segment metadata into cctv_recording_segments
@@ -756,65 +859,64 @@ export class CctvRecordingService {
            recording_id, game_id, segment_order,
            local_file_path, duration_seconds, file_size_bytes, status
          ) VALUES ($1, $2, 1, $3, $4, $5, 'READY');`,
-        [
-          recordingId,
-          actualGameId,
-          localPath,
-          durationSeconds,
-          fileSizeBytes,
-        ]
+        [recordingId, actualGameId, localPath, durationSeconds, fileSizeBytes],
       );
     } catch (segErr) {
-      logger.warn({ segErr }, 'Non-fatal error inserting segment metadata');
+      logger.warn({ segErr }, "Non-fatal error inserting segment metadata");
     }
 
     // 6. Insert or update in game_videos catalog
-    const videoTitle = session?.title || rec.game_title || `Match Recording - ${actualGameId}`;
+    const videoTitle =
+      session?.title || rec.game_title || `Match Recording - ${actualGameId}`;
     await dbPool.query(
       `INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, uploaded_by_id, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')
        ON CONFLICT DO NOTHING;`,
       [
         actualGameId,
-        rec.club_id || rec.g_club_id || 'all_stars_arena_club',
+        rec.club_id || rec.g_club_id || "all_stars_arena_club",
         rec.court_id || rec.g_court_id || null,
         rec.camera_id || null,
         videoTitle,
         videoUrl,
         options?.userId || null,
-      ]
+      ],
     );
 
     // 7. Update games table video_playback_url
-    await dbPool.query(
-      `UPDATE public.games
+    await dbPool
+      .query(
+        `UPDATE public.games
        SET video_playback_url = $1
        WHERE id = $2;`,
-      [videoUrl, actualGameId]
-    ).catch(() => {});
+        [videoUrl, actualGameId],
+      )
+      .catch(() => {});
 
     // 8. Audit event
-    await dbPool.query(
-      `INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)
+    await dbPool
+      .query(
+        `INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)
        VALUES ($1, $2, $3, $4);`,
-      [
-        recordingId,
-        isManual ? 'MANUAL_STOP_TRIGGERED' : 'AUTO_STOP_TRIGGERED',
-        options?.userId || null,
-        JSON.stringify({
-          reason: options?.reason || 'Recording stopped and finalized',
-          stoppedAt: stoppedAt.toISOString(),
-          durationSeconds,
-          fileSizeBytes,
-          videoUrl,
-        }),
-      ]
-    ).catch(() => {});
+        [
+          recordingId,
+          isManual ? "MANUAL_STOP_TRIGGERED" : "AUTO_STOP_TRIGGERED",
+          options?.userId || null,
+          JSON.stringify({
+            reason: options?.reason || "Recording stopped and finalized",
+            stoppedAt: stoppedAt.toISOString(),
+            durationSeconds,
+            fileSizeBytes,
+            videoUrl,
+          }),
+        ],
+      )
+      .catch(() => {});
 
     // 9. Real-time broadcast
     try {
       const io = getSocketIO();
-      io.emit('match:recording_completed', {
+      io.emit("match:recording_completed", {
         matchId: actualGameId,
         recordingId,
         title: videoTitle,
@@ -824,7 +926,9 @@ export class CctvRecordingService {
       });
     } catch (_) {}
 
-    logger.info(`✅ [CCTV Recorder] Successfully finalized MP4 recording for match ${actualGameId} (${fileSizeBytes} bytes, ${durationSeconds}s)`);
+    logger.info(
+      `✅ [CCTV Recorder] Successfully finalized MP4 recording for match ${actualGameId} (${fileSizeBytes} bytes, ${durationSeconds}s)`,
+    );
 
     return {
       matchId: actualGameId,
@@ -832,7 +936,7 @@ export class CctvRecordingService {
       title: videoTitle,
       durationSeconds,
       timestamp: startedAt.toISOString(),
-      status: 'completed',
+      status: "completed",
       fileSizeBytes,
       videoUrl,
     };
@@ -853,7 +957,9 @@ export class CctvRecordingService {
     // 1. Check in-memory active session first
     const active = this.activeRecordings.get(matchId);
     if (active) {
-      const elapsed = Math.floor((Date.now() - active.startedAt.getTime()) / 1000);
+      const elapsed = Math.floor(
+        (Date.now() - active.startedAt.getTime()) / 1000,
+      );
       return {
         matchId,
         recordingId: active.recordingId,
@@ -872,26 +978,31 @@ export class CctvRecordingService {
        LEFT JOIN public.cctv_recording_segments seg ON seg.recording_id = rec.id
        WHERE rec.game_id = $1
        ORDER BY rec.created_at DESC LIMIT 1;`,
-      [matchId]
+      [matchId],
     );
 
     if (recRes.rows.length === 0) {
       return {
         matchId,
         recordingId: null,
-        status: 'none',
+        status: "none",
       };
     }
 
     const row = recRes.rows[0];
-    const safeFilename = row.local_temp_path ? path.basename(row.local_temp_path) : null;
-    const videoUrl = row.video_url || (safeFilename ? `/api/videos/${safeFilename}` : null);
+    const safeFilename = row.local_temp_path
+      ? path.basename(row.local_temp_path)
+      : null;
+    const videoUrl =
+      row.video_url || (safeFilename ? `/api/videos/${safeFilename}` : null);
 
     return {
       matchId,
       recordingId: row.id,
-      status: (row.status || 'unknown').toLowerCase(),
-      startedAt: row.started_at ? new Date(row.started_at).toISOString() : undefined,
+      status: (row.status || "unknown").toLowerCase(),
+      startedAt: row.started_at
+        ? new Date(row.started_at).toISOString()
+        : undefined,
       elapsedSeconds: row.duration_seconds || undefined,
       fileSizeBytes: row.file_size_bytes || undefined,
       videoUrl,
@@ -923,9 +1034,15 @@ export class CctvRecordingService {
 
     const res = await dbPool.query(query, [limit, offset]);
     return res.rows.map((row) => {
-      const filename = row.local_temp_path ? path.basename(row.local_temp_path) : `match_${row.matchId}.mp4`;
+      const filename = row.local_temp_path
+        ? path.basename(row.local_temp_path)
+        : `match_${row.matchId}.mp4`;
       let fileSizeBytes = Number(row.fileSizeBytes) || 0;
-      if (fileSizeBytes === 0 && row.local_temp_path && fs.existsSync(row.local_temp_path)) {
+      if (
+        fileSizeBytes === 0 &&
+        row.local_temp_path &&
+        fs.existsSync(row.local_temp_path)
+      ) {
         try {
           fileSizeBytes = fs.statSync(row.local_temp_path).size;
         } catch (_) {}
@@ -934,7 +1051,10 @@ export class CctvRecordingService {
         matchId: row.matchId,
         title: row.title,
         durationSeconds: Number(row.durationSeconds) || 0,
-        timestamp: row.timestamp instanceof Date ? row.timestamp.toISOString() : String(row.timestamp),
+        timestamp:
+          row.timestamp instanceof Date
+            ? row.timestamp.toISOString()
+            : String(row.timestamp),
         status: row.status,
         fileSizeBytes,
         videoUrl: `/api/videos/${filename}`,
@@ -952,11 +1072,11 @@ export class CctvRecordingService {
        LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        WHERE g.id = $1;`,
-      [matchId]
+      [matchId],
     );
 
     if (gameRes.rows.length === 0) {
-      throw new ApiError(404, `Match not found: ${matchId}`, 'MATCH_NOT_FOUND');
+      throw new ApiError(404, `Match not found: ${matchId}`, "MATCH_NOT_FOUND");
     }
 
     const game = gameRes.rows[0];
@@ -968,7 +1088,7 @@ export class CctvRecordingService {
        LEFT JOIN public.cctv_recording_segments seg ON seg.recording_id = rec.id
        WHERE rec.game_id = $1
        ORDER BY rec.created_at DESC LIMIT 1;`,
-      [matchId]
+      [matchId],
     );
 
     const active = this.activeRecordings.get(matchId);
@@ -979,19 +1099,27 @@ export class CctvRecordingService {
         recordingId: active.recordingId,
         status: active.state,
         startedAt: active.startedAt.toISOString(),
-        elapsedSeconds: Math.floor((Date.now() - active.startedAt.getTime()) / 1000),
+        elapsedSeconds: Math.floor(
+          (Date.now() - active.startedAt.getTime()) / 1000,
+        ),
         durationSeconds: null,
         fileSizeBytes: null,
         videoUrl: null,
       };
     } else if (recRes.rows.length > 0) {
       const rec = recRes.rows[0];
-      const filename = rec.local_temp_path ? path.basename(rec.local_temp_path) : `match_${matchId}.mp4`;
+      const filename = rec.local_temp_path
+        ? path.basename(rec.local_temp_path)
+        : `match_${matchId}.mp4`;
       recordingData = {
         recordingId: rec.id,
-        status: (rec.status || 'unknown').toLowerCase(),
-        startedAt: rec.started_at ? new Date(rec.started_at).toISOString() : null,
-        stoppedAt: rec.actual_stopped_at ? new Date(rec.actual_stopped_at).toISOString() : null,
+        status: (rec.status || "unknown").toLowerCase(),
+        startedAt: rec.started_at
+          ? new Date(rec.started_at).toISOString()
+          : null,
+        stoppedAt: rec.actual_stopped_at
+          ? new Date(rec.actual_stopped_at).toISOString()
+          : null,
         durationSeconds: rec.duration_seconds || 0,
         fileSizeBytes: rec.file_size_bytes || 0,
         videoUrl: `/api/videos/${filename}`,
@@ -1021,19 +1149,25 @@ export class CctvRecordingService {
   static getVideoFilePath(filename: string): string {
     // 1. Sanitize to prevent path traversal
     const safeBase = path.basename(filename);
-    if (!safeBase || safeBase !== filename || filename.includes('..')) {
-      throw new ApiError(400, 'Invalid filename requested', 'INVALID_FILENAME');
+    if (!safeBase || safeBase !== filename || filename.includes("..")) {
+      throw new ApiError(400, "Invalid filename requested", "INVALID_FILENAME");
     }
 
     // 2. Check primary recordings directory
-    const primaryDir = path.resolve(process.cwd(), env.RECORDING_OUTPUT_DIR || './recordings');
+    const primaryDir = path.resolve(
+      process.cwd(),
+      env.RECORDING_OUTPUT_DIR || "./recordings",
+    );
     const primaryPath = path.join(primaryDir, safeBase);
     if (fs.existsSync(primaryPath)) {
       return primaryPath;
     }
 
     // 3. Check temp recordings directory
-    const tempDir = path.resolve(process.cwd(), env.RECORDING_TEMP_DIR || 'temp_recordings');
+    const tempDir = path.resolve(
+      process.cwd(),
+      env.RECORDING_TEMP_DIR || "temp_recordings",
+    );
     const tempPath = path.join(tempDir, safeBase);
     if (fs.existsSync(tempPath)) {
       return tempPath;
@@ -1052,20 +1186,31 @@ export class CctvRecordingService {
       }
     }
 
-    throw new ApiError(404, `Video file not found: ${safeBase}`, 'VIDEO_FILE_NOT_FOUND');
+    throw new ApiError(
+      404,
+      `Video file not found: ${safeBase}`,
+      "VIDEO_FILE_NOT_FOUND",
+    );
   }
 
   /**
    * Gracefully stop all active recordings on server shutdown
    */
-  static async stopAllActiveRecordings(reason = 'SERVER_SHUTDOWN'): Promise<void> {
+  static async stopAllActiveRecordings(
+    reason = "SERVER_SHUTDOWN",
+  ): Promise<void> {
     if (this.activeRecordings.size === 0) return;
-    logger.info(`🛑 [CCTV Recorder] Gracefully finalizing ${this.activeRecordings.size} active recording(s)...`);
+    logger.info(
+      `🛑 [CCTV Recorder] Gracefully finalizing ${this.activeRecordings.size} active recording(s)...`,
+    );
 
     const promises = Array.from(this.activeRecordings.keys()).map((gameId) =>
       this.stopRecording(gameId, { reason, manualStop: false }).catch((err) => {
-        logger.error({ err }, `Failed to stop recording for match ${gameId} on shutdown`);
-      })
+        logger.error(
+          { err },
+          `Failed to stop recording for match ${gameId} on shutdown`,
+        );
+      }),
     );
 
     await Promise.all(promises);
@@ -1081,19 +1226,23 @@ export class CctvRecordingService {
          FROM public.cctv_recordings rec
          LEFT JOIN public.cctv_cameras cam ON cam.id = rec.camera_id
          WHERE rec.status IN ('RECORDING', 'STARTING')
-            OR rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING');`
+            OR rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING');`,
       );
 
       for (const rec of activeFromDb.rows) {
-        const deadline = new Date(rec.stop_deadline || rec.post_match_stop_at || Date.now());
+        const deadline = new Date(
+          rec.stop_deadline || rec.post_match_stop_at || Date.now(),
+        );
         if (deadline.getTime() <= Date.now()) {
           logger.info(`Reconciling expired recording ${rec.id} on boot...`);
           await this.stopRecording(rec.id, {
-            reason: 'RECONCILED_DEADLINE_EXPIRED_ON_BOOT',
+            reason: "RECONCILED_DEADLINE_EXPIRED_ON_BOOT",
             manualStop: false,
           }).catch(() => {});
         } else {
-          logger.info(`Re-arming active recording ${rec.id} until ${deadline.toISOString()}`);
+          logger.info(
+            `Re-arming active recording ${rec.id} until ${deadline.toISOString()}`,
+          );
           await this.startRecording({
             recordingId: rec.id,
             gameId: rec.game_id,
@@ -1102,12 +1251,15 @@ export class CctvRecordingService {
             cameraId: rec.camera_id,
             scheduledStopAt: deadline,
           }).catch((err) => {
-            logger.warn({ err }, `Could not resume recording ${rec.id} on boot`);
+            logger.warn(
+              { err },
+              `Could not resume recording ${rec.id} on boot`,
+            );
           });
         }
       }
     } catch (err: any) {
-      logger.error({ err }, 'Error during CCTV recording boot reconciliation');
+      logger.error({ err }, "Error during CCTV recording boot reconciliation");
     }
   }
 
@@ -1117,28 +1269,32 @@ export class CctvRecordingService {
   static async extendRecording(
     recordingId: string,
     additionalMinutes: number,
-    userId?: string
+    userId?: string,
   ): Promise<any> {
     const session = this.getActiveSession(recordingId);
 
     const recRes = await dbPool.query(
       `SELECT * FROM public.cctv_recordings WHERE id = $1;`,
-      [recordingId]
+      [recordingId],
     );
     if (recRes.rows.length === 0) {
       throw new Error(`Recording ${recordingId} not found`);
     }
 
     const rec = recRes.rows[0];
-    const currentDeadline = new Date(rec.stop_deadline || rec.post_match_stop_at || Date.now());
-    const newDeadline = new Date(currentDeadline.getTime() + additionalMinutes * 60 * 1000);
+    const currentDeadline = new Date(
+      rec.stop_deadline || rec.post_match_stop_at || Date.now(),
+    );
+    const newDeadline = new Date(
+      currentDeadline.getTime() + additionalMinutes * 60 * 1000,
+    );
 
     const updated = await dbPool.query(
       `UPDATE public.cctv_recordings
        SET stop_deadline = $1, post_match_stop_at = $1, updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
        RETURNING *;`,
-      [newDeadline, recordingId]
+      [newDeadline, recordingId],
     );
 
     if (session) {
@@ -1146,24 +1302,26 @@ export class CctvRecordingService {
       const delayMs = Math.max(newDeadline.getTime() - Date.now(), 1000);
       session.stopTimer = setTimeout(async () => {
         await CctvRecordingService.stopRecording(recordingId, {
-          reason: 'EXTENDED_DEADLINE_EXPIRED',
+          reason: "EXTENDED_DEADLINE_EXPIRED",
         });
       }, delayMs);
       session.scheduledStopAt = newDeadline;
     }
 
-    await dbPool.query(
-      `INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)
+    await dbPool
+      .query(
+        `INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)
        VALUES ($1, 'EXTENDED_DEADLINE', $2, $3);`,
-      [
-        recordingId,
-        userId || null,
-        JSON.stringify({
-          additionalMinutes,
-          newDeadline: newDeadline.toISOString(),
-        }),
-      ]
-    ).catch(() => {});
+        [
+          recordingId,
+          userId || null,
+          JSON.stringify({
+            additionalMinutes,
+            newDeadline: newDeadline.toISOString(),
+          }),
+        ],
+      )
+      .catch(() => {});
 
     const row = updated.rows[0];
     return {
@@ -1181,4 +1339,3 @@ export class CctvRecordingService {
     };
   }
 }
-

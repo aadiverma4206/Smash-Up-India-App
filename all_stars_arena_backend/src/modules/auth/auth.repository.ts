@@ -1,12 +1,15 @@
-import { dbPool } from '../../config/db.config.js';
+import { dbPool } from "../../config/db.config.js";
 
 export class AuthRepository {
   /**
    * Check if email or phone exists in identity history or users table
    */
-  static async checkIdentityExists(normalizedEmail: string, normalizedPhone: string) {
+  static async checkIdentityExists(
+    normalizedEmail: string,
+    normalizedPhone: string,
+  ) {
     const rawTrim = normalizedPhone.trim();
-    const digitsOnly = rawTrim.replace(/\D/g, '');
+    const digitsOnly = rawTrim.replace(/\D/g, "");
 
     const res = await dbPool.query(
       `SELECT id FROM public.users
@@ -23,9 +26,9 @@ export class AuthRepository {
       [
         normalizedEmail,
         rawTrim,
-        rawTrim.startsWith('+91') ? rawTrim.substring(3) : `+91${rawTrim}`,
+        rawTrim.startsWith("+91") ? rawTrim.substring(3) : `+91${rawTrim}`,
         digitsOnly,
-      ]
+      ],
     );
     return res.rows;
   }
@@ -36,7 +39,7 @@ export class AuthRepository {
   static async findUserByIdentifier(identifier: string) {
     const normalized = identifier.trim().toLowerCase();
     const rawTrim = identifier.trim();
-    const digitsOnly = rawTrim.replace(/\D/g, '');
+    const digitsOnly = rawTrim.replace(/\D/g, "");
 
     const res = await dbPool.query(
       `SELECT u.*,
@@ -53,9 +56,9 @@ export class AuthRepository {
       [
         normalized,
         rawTrim,
-        rawTrim.startsWith('+91') ? rawTrim.substring(3) : `+91${rawTrim}`,
+        rawTrim.startsWith("+91") ? rawTrim.substring(3) : `+91${rawTrim}`,
         digitsOnly,
-      ]
+      ],
     );
 
     return res.rows[0] || null;
@@ -67,7 +70,7 @@ export class AuthRepository {
   static async getManagerClubIds(userId: string) {
     const res = await dbPool.query(
       `SELECT club_id FROM public.club_managers WHERE user_id = $1;`,
-      [userId]
+      [userId],
     );
     return res.rows.map((row) => row.club_id);
   }
@@ -78,11 +81,11 @@ export class AuthRepository {
   static async getPlayerInfo(userId: string) {
     const detailsRes = await dbPool.query(
       `SELECT * FROM public.player_details WHERE user_id = $1;`,
-      [userId]
+      [userId],
     );
     const statsRes = await dbPool.query(
       `SELECT * FROM public.player_stats WHERE user_id = $1;`,
-      [userId]
+      [userId],
     );
     return {
       details: detailsRes.rows[0] || null,
@@ -102,7 +105,7 @@ export class AuthRepository {
   }) {
     const res = await dbPool.query(
       `SELECT public.register_player($1, $2, $3, $4, $5) as user_id;`,
-      [data.name, data.email, data.phone, data.passwordHash, data.city]
+      [data.name, data.email, data.phone, data.passwordHash, data.city],
     );
     return res.rows[0]?.user_id;
   }
@@ -125,10 +128,10 @@ export class AuthRepository {
       [
         data.userId,
         data.refreshTokenHash,
-        data.deviceInfo || 'Unknown Device',
-        data.ipAddress || '127.0.0.1',
+        data.deviceInfo || "Unknown Device",
+        data.ipAddress || "127.0.0.1",
         data.expiresAt,
-      ]
+      ],
     );
     return res.rows[0];
   }
@@ -139,7 +142,7 @@ export class AuthRepository {
   static async findSessionByHash(refreshTokenHash: string) {
     const res = await dbPool.query(
       `SELECT * FROM public.user_sessions WHERE refresh_token_hash = $1;`,
-      [refreshTokenHash]
+      [refreshTokenHash],
     );
     return res.rows[0] || null;
   }
@@ -150,7 +153,7 @@ export class AuthRepository {
   static async revokeSession(sessionId: string) {
     await dbPool.query(
       `UPDATE public.user_sessions SET is_revoked = true WHERE id = $1;`,
-      [sessionId]
+      [sessionId],
     );
   }
 
@@ -160,7 +163,7 @@ export class AuthRepository {
   static async revokeAllUserSessions(userId: string) {
     const res = await dbPool.query(
       `SELECT public.logout_all_sessions($1) as revoked_count;`,
-      [userId]
+      [userId],
     );
     return res.rows[0]?.revoked_count || 0;
   }
@@ -171,7 +174,7 @@ export class AuthRepository {
   static async updatePassword(userId: string, newPasswordHash: string) {
     await dbPool.query(
       `UPDATE public.users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;`,
-      [newPasswordHash, userId]
+      [newPasswordHash, userId],
     );
     // Invalidate all active user sessions upon password reset
     await this.revokeAllUserSessions(userId);
@@ -186,7 +189,7 @@ export class AuthRepository {
        FROM public.user_sessions
        WHERE user_id = $1 AND is_revoked = false AND expires_at > CURRENT_TIMESTAMP
        ORDER BY created_at DESC;`,
-      [userId]
+      [userId],
     );
     return res.rows;
   }
@@ -194,12 +197,17 @@ export class AuthRepository {
   /**
    * Upsert Device FCM Token
    */
-  static async upsertDeviceToken(userId: string, token: string, platform = 'ANDROID', deviceInfo?: string) {
+  static async upsertDeviceToken(
+    userId: string,
+    token: string,
+    platform = "ANDROID",
+    deviceInfo?: string,
+  ) {
     try {
       // 1. Clear any existing entry for this token if assigned to another user
       await dbPool.query(
         `DELETE FROM public.user_device_tokens WHERE device_token = $1 AND user_id <> $2;`,
-        [token, userId]
+        [token, userId],
       );
 
       // 2. Upsert token for current user
@@ -208,7 +216,7 @@ export class AuthRepository {
          VALUES ($1, $2, $3, true)
          ON CONFLICT (user_id, device_token)
          DO UPDATE SET is_active = true, device_type = EXCLUDED.device_type, updated_at = CURRENT_TIMESTAMP;`,
-        [userId, token, platform]
+        [userId, token, platform],
       );
     } catch (err: any) {
       // Fallback if the ON CONFLICT constraint specification is missing in DB schema
@@ -216,7 +224,7 @@ export class AuthRepository {
         await dbPool.query(
           `UPDATE public.user_device_tokens SET is_active = true, device_type = $3, updated_at = CURRENT_TIMESTAMP
            WHERE user_id = $1 AND device_token = $2;`,
-          [userId, token, platform]
+          [userId, token, platform],
         );
         await dbPool.query(
           `INSERT INTO public.user_device_tokens (user_id, device_token, device_type, is_active)
@@ -224,7 +232,7 @@ export class AuthRepository {
            WHERE NOT EXISTS (
              SELECT 1 FROM public.user_device_tokens WHERE user_id = $1 AND device_token = $2
            );`,
-          [userId, token, platform]
+          [userId, token, platform],
         );
       } catch (_) {}
     }
@@ -237,7 +245,7 @@ export class AuthRepository {
     try {
       await dbPool.query(
         `DELETE FROM public.user_device_tokens WHERE user_id = $1 AND device_token = $2;`,
-        [userId, token]
+        [userId, token],
       );
     } catch (_) {}
   }

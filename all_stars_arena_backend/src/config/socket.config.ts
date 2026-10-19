@@ -1,41 +1,40 @@
-import { Server as HttpServer } from 'http';
-import { Server, Socket } from 'socket.io';
-import jwt from 'jsonwebtoken';
-import { env } from './env.config.js';
-import { logger } from '../utils/logger.js';
-import { UserPayload } from '../types/index.js';
+import { Server as HttpServer } from "http";
+import { Server, Socket } from "socket.io";
+import jwt from "jsonwebtoken";
+import { env } from "./env.config.js";
+import { logger } from "../utils/logger.js";
+import { UserPayload } from "../types/index.js";
 
 let io: Server | null = null;
 
 export const SOCKET_EVENTS = {
-  CONNECT: 'connection',
-  DISCONNECT: 'disconnect',
-  JOIN_USER_ROOM: 'join:user',
-  JOIN_GAME_ROOM: 'join:game',
-  LEAVE_GAME_ROOM: 'leave:game',
-  MATCH_SCORE_UPDATE: 'match:score_update',
-  MATCH_LIVE_FEED: 'match:live_feed',
-  NOTIFICATION: 'notification',
-  WALLET_UPDATE: 'wallet_update',
-  ORDER_UPDATE: 'order_update',
+  CONNECT: "connection",
+  DISCONNECT: "disconnect",
+  JOIN_USER_ROOM: "join:user",
+  JOIN_GAME_ROOM: "join:game",
+  LEAVE_GAME_ROOM: "leave:game",
+  MATCH_SCORE_UPDATE: "match:score_update",
+  MATCH_LIVE_FEED: "match:live_feed",
+  NOTIFICATION: "notification",
+  WALLET_UPDATE: "wallet_update",
+  ORDER_UPDATE: "order_update",
 };
 
 export const initSocket = (httpServer: HttpServer): Server => {
   io = new Server(httpServer, {
     cors: {
       origin: env.CORS_ORIGIN,
-      methods: ['GET', 'POST'],
+      methods: ["GET", "POST"],
       credentials: true,
     },
-    transports: ['websocket', 'polling'],
+    transports: ["websocket", "polling"],
   });
 
   // JWT Middleware for Socket Connections
   io.use((socket: Socket, next) => {
     try {
       const authHeader =
-        socket.handshake.auth?.token ||
-        socket.handshake.headers?.authorization;
+        socket.handshake.auth?.token || socket.handshake.headers?.authorization;
 
       if (!authHeader) {
         // Allow unauthenticated socket connection for public match live streams if needed,
@@ -44,8 +43,8 @@ export const initSocket = (httpServer: HttpServer): Server => {
         return next();
       }
 
-      const token = authHeader.startsWith('Bearer ')
-        ? authHeader.split(' ')[1]
+      const token = authHeader.startsWith("Bearer ")
+        ? authHeader.split(" ")[1]
         : authHeader;
 
       if (token) {
@@ -63,7 +62,7 @@ export const initSocket = (httpServer: HttpServer): Server => {
   io.on(SOCKET_EVENTS.CONNECT, (socket: Socket) => {
     const authUser = socket.data.user as UserPayload | null;
     logger.info(
-      `⚡ [Real-Time Socket Connected]: ID=${socket.id}, User=${authUser ? authUser.id : 'ANONYMOUS'}`
+      `⚡ [Real-Time Socket Connected]: ID=${socket.id}, User=${authUser ? authUser.id : "ANONYMOUS"}`,
     );
 
     // Join specific user notification room (Protected: Users can only join their own room or Admins)
@@ -72,15 +71,18 @@ export const initSocket = (httpServer: HttpServer): Server => {
 
       if (authUser && (authUser.id === targetUserId || authUser.roleId === 1)) {
         socket.join(`user:${targetUserId}`);
-        logger.info(`Socket ${socket.id} joined authenticated user room: user:${targetUserId}`);
+        logger.info(
+          `Socket ${socket.id} joined authenticated user room: user:${targetUserId}`,
+        );
       } else {
         logger.warn(
-          `Unauthorized socket room join attempt by socket ${socket.id} for user:${targetUserId}`
+          `Unauthorized socket room join attempt by socket ${socket.id} for user:${targetUserId}`,
         );
         socket.emit(SOCKET_EVENTS.NOTIFICATION, {
-          title: '⚠️ Unauthorized Room Access',
-          message: 'You can only subscribe to your own private notification channel.',
-          type: 'WARNING',
+          title: "⚠️ Unauthorized Room Access",
+          message:
+            "You can only subscribe to your own private notification channel.",
+          type: "WARNING",
           timestamp: new Date().toISOString(),
         });
       }
@@ -102,7 +104,9 @@ export const initSocket = (httpServer: HttpServer): Server => {
     });
 
     socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
-      logger.info(`⚡ [Real-Time Socket Disconnected]: ID=${socket.id}, Reason=${reason}`);
+      logger.info(
+        `⚡ [Real-Time Socket Disconnected]: ID=${socket.id}, Reason=${reason}`,
+      );
     });
   });
 
@@ -111,7 +115,7 @@ export const initSocket = (httpServer: HttpServer): Server => {
 
 export const getSocketIO = (): Server => {
   if (!io) {
-    throw new Error('Socket.io has not been initialized yet');
+    throw new Error("Socket.io has not been initialized yet");
   }
   return io;
 };

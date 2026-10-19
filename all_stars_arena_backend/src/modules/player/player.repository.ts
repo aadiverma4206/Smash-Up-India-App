@@ -1,4 +1,4 @@
-import { dbPool } from '../../config/db.config.js';
+import { dbPool } from "../../config/db.config.js";
 
 export class PlayerRepository {
   static async getProfile(userId: string) {
@@ -10,7 +10,7 @@ export class PlayerRepository {
        FROM public.users u
        LEFT JOIN public.player_details pd ON pd.user_id = u.id
        WHERE u.id = $1;`,
-      [userId]
+      [userId],
     );
     const row = res.rows[0];
     if (!row) return null;
@@ -20,24 +20,26 @@ export class PlayerRepository {
       name: row.name,
       email: row.email,
       phone: row.phone,
-      city: row.city || 'Raipur',
+      city: row.city || "Raipur",
       bio: row.bio || null,
       avatarUrl: row.avatar_url || null,
       avatar_url: row.avatar_url || null,
-      dateOfBirth: row.date_of_birth ? row.date_of_birth.toISOString().split('T')[0] : null,
-      position: row.position || 'ST',
+      dateOfBirth: row.date_of_birth
+        ? row.date_of_birth.toISOString().split("T")[0]
+        : null,
+      position: row.position || "ST",
       secondaryPosition: row.secondary_position || null,
-      preferredFoot: row.preferred_foot || 'Right',
-      preferred_foot: row.preferred_foot || 'Right',
-      skillLevel: row.skill_level || 'AMATEUR',
-      skill_level: row.skill_level || 'AMATEUR',
+      preferredFoot: row.preferred_foot || "Right",
+      preferred_foot: row.preferred_foot || "Right",
+      skillLevel: row.skill_level || "AMATEUR",
+      skill_level: row.skill_level || "AMATEUR",
       ovr: row.ovr_rating || 75,
       ovr_rating: row.ovr_rating || 75,
       elo: row.elo_rating || 1200,
       elo_rating: row.elo_rating || 1200,
-      walletBalance: parseFloat(row.wallet_balance || '0.00'),
-      wallet_balance: parseFloat(row.wallet_balance || '0.00'),
-      accountStatus: row.account_status || 'ACTIVE',
+      walletBalance: parseFloat(row.wallet_balance || "0.00"),
+      wallet_balance: parseFloat(row.wallet_balance || "0.00"),
+      accountStatus: row.account_status || "ACTIVE",
     };
   }
 
@@ -53,42 +55,80 @@ export class PlayerRepository {
       secondaryPosition?: string;
       preferredFoot?: string;
       skillLevel?: string;
-    }
+    },
   ) {
-    if (data.name || data.bio || data.city || data.avatarUrl || data.dateOfBirth) {
+    if (
+      data.name ||
+      data.bio ||
+      data.city ||
+      data.avatarUrl ||
+      data.dateOfBirth
+    ) {
       const userFields: string[] = [];
       const userVals: any[] = [];
       let idx = 1;
 
-      if (data.name) { userFields.push(`name = $${idx++}`); userVals.push(data.name); }
-      if (data.bio !== undefined) { userFields.push(`bio = $${idx++}`); userVals.push(data.bio); }
-      if (data.city) { userFields.push(`city = $${idx++}`); userVals.push(data.city); }
-      if (data.avatarUrl) { userFields.push(`profile_image_url = $${idx++}`); userVals.push(data.avatarUrl); }
-      if (data.dateOfBirth) { userFields.push(`date_of_birth = $${idx++}`); userVals.push(data.dateOfBirth); }
+      if (data.name) {
+        userFields.push(`name = $${idx++}`);
+        userVals.push(data.name);
+      }
+      if (data.bio !== undefined) {
+        userFields.push(`bio = $${idx++}`);
+        userVals.push(data.bio);
+      }
+      if (data.city) {
+        userFields.push(`city = $${idx++}`);
+        userVals.push(data.city);
+      }
+      if (data.avatarUrl) {
+        userFields.push(`profile_image_url = $${idx++}`);
+        userVals.push(data.avatarUrl);
+      }
+      if (data.dateOfBirth) {
+        userFields.push(`date_of_birth = $${idx++}`);
+        userVals.push(data.dateOfBirth);
+      }
       userFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
       userVals.push(userId);
       await dbPool.query(
-        `UPDATE public.users SET ${userFields.join(', ')} WHERE id = $${idx};`,
-        userVals
+        `UPDATE public.users SET ${userFields.join(", ")} WHERE id = $${idx};`,
+        userVals,
       );
     }
 
-    if (data.position || data.secondaryPosition || data.preferredFoot || data.skillLevel) {
+    if (
+      data.position ||
+      data.secondaryPosition ||
+      data.preferredFoot ||
+      data.skillLevel
+    ) {
       const pdFields: string[] = [];
       const pdVals: any[] = [];
       let idx = 1;
 
-      if (data.position) { pdFields.push(`position = $${idx++}`); pdVals.push(data.position); }
-      if (data.secondaryPosition !== undefined) { pdFields.push(`secondary_position = $${idx++}`); pdVals.push(data.secondaryPosition); }
-      if (data.preferredFoot) { pdFields.push(`preferred_foot = $${idx++}`); pdVals.push(data.preferredFoot); }
-      if (data.skillLevel) { pdFields.push(`skill_level = $${idx++}`); pdVals.push(data.skillLevel); }
+      if (data.position) {
+        pdFields.push(`position = $${idx++}`);
+        pdVals.push(data.position);
+      }
+      if (data.secondaryPosition !== undefined) {
+        pdFields.push(`secondary_position = $${idx++}`);
+        pdVals.push(data.secondaryPosition);
+      }
+      if (data.preferredFoot) {
+        pdFields.push(`preferred_foot = $${idx++}`);
+        pdVals.push(data.preferredFoot);
+      }
+      if (data.skillLevel) {
+        pdFields.push(`skill_level = $${idx++}`);
+        pdVals.push(data.skillLevel);
+      }
       pdFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
       pdVals.push(userId);
       await dbPool.query(
-        `UPDATE public.player_details SET ${pdFields.join(', ')} WHERE user_id = $${idx};`,
-        pdVals
+        `UPDATE public.player_details SET ${pdFields.join(", ")} WHERE user_id = $${idx};`,
+        pdVals,
       );
     }
 
@@ -98,7 +138,7 @@ export class PlayerRepository {
   static async updateAvatar(userId: string, avatarUrl: string) {
     await dbPool.query(
       `UPDATE public.users SET profile_image_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;`,
-      [avatarUrl, userId]
+      [avatarUrl, userId],
     );
     return await this.getProfile(userId);
   }
@@ -106,12 +146,14 @@ export class PlayerRepository {
   static async getStats(userId: string) {
     const res = await dbPool.query(
       `SELECT * FROM public.player_stats WHERE user_id = $1;`,
-      [userId]
+      [userId],
     );
-    const joinedRes = await dbPool.query(
-      `SELECT COUNT(*)::int as joined_count FROM public.game_players WHERE user_id = $1;`,
-      [userId]
-    ).catch(() => ({ rows: [{ joined_count: 0 }] }));
+    const joinedRes = await dbPool
+      .query(
+        `SELECT COUNT(*)::int as joined_count FROM public.game_players WHERE user_id = $1;`,
+        [userId],
+      )
+      .catch(() => ({ rows: [{ joined_count: 0 }] }));
 
     const matchesJoined = joinedRes.rows[0]?.joined_count || 0;
     const row = res.rows[0];
@@ -208,7 +250,7 @@ export class PlayerRepository {
        WHERE gp.user_id = $1 AND UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')
        ORDER BY history_event_date DESC, g.start_time DESC
        LIMIT $2 OFFSET $3;`,
-      [userId, limit, offset]
+      [userId, limit, offset],
     );
     return res.rows;
   }
@@ -226,7 +268,7 @@ export class PlayerRepository {
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        WHERE gp.user_id = $1 AND g.status = 'ONGOING'
        ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
-      [userId]
+      [userId],
     );
 
     // Upcoming match
@@ -238,7 +280,7 @@ export class PlayerRepository {
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        WHERE gp.user_id = $1 AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))
        ORDER BY g.match_date ASC, g.start_time ASC LIMIT 1;`,
-      [userId]
+      [userId],
     );
 
     // Recent match
@@ -255,7 +297,7 @@ export class PlayerRepository {
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        WHERE gp.user_id = $1 AND g.status = 'COMPLETED'
        ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
-      [userId]
+      [userId],
     );
 
     return {
@@ -269,10 +311,10 @@ export class PlayerRepository {
   }
 
   static async getMyMatches(userId: string, tab: string) {
-    let query = '';
+    let query = "";
     let params: any[] = [userId];
 
-    if (tab === 'WAITLISTED') {
+    if (tab === "WAITLISTED") {
       query = `
         SELECT g.*, c.name as club_name, crt.name as court_name, gw.position as waitlist_position, gw.status as waitlist_status, gw.joined_at as waitlist_joined_at
         FROM public.game_waitlist gw
@@ -283,14 +325,15 @@ export class PlayerRepository {
         ORDER BY g.match_date ASC, g.start_time ASC;
       `;
     } else {
-      let statusCondition = '';
-      if (tab === 'UPCOMING') {
-        statusCondition = "AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))";
-      } else if (tab === 'ONGOING') {
+      let statusCondition = "";
+      if (tab === "UPCOMING") {
+        statusCondition =
+          "AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))";
+      } else if (tab === "ONGOING") {
         statusCondition = "AND g.status = 'ONGOING'";
-      } else if (tab === 'COMPLETED') {
+      } else if (tab === "COMPLETED") {
         statusCondition = "AND g.status = 'COMPLETED'";
-      } else if (tab === 'CANCELLED') {
+      } else if (tab === "CANCELLED") {
         statusCondition = "AND g.status = 'CANCELLED'";
       }
 

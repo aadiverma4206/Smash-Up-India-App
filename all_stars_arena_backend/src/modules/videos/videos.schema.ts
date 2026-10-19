@@ -1,13 +1,13 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const getVideoMetadataSchema = z.object({
   params: z.object({
-    id: z.string().min(1, 'Video ID is required'),
+    id: z.string().min(1, "Video ID is required"),
   }),
 });
 
 export const getVideoPlaybackUrlSchema = z.object({
   params: z.object({
-    id: z.string().min(1, 'Video ID is required'),
+    id: z.string().min(1, "Video ID is required"),
   }),
 });

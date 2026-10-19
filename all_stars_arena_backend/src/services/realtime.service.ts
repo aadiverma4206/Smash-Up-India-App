@@ -1,13 +1,13 @@
-import { getSocketIO, SOCKET_EVENTS } from '../config/socket.config.js';
-import { dbPool } from '../config/db.config.js';
-import { logger } from '../utils/logger.js';
-import { getFirebaseMessaging } from '../config/firebase.config.js';
+import { getSocketIO, SOCKET_EVENTS } from "../config/socket.config.js";
+import { dbPool } from "../config/db.config.js";
+import { logger } from "../utils/logger.js";
+import { getFirebaseMessaging } from "../config/firebase.config.js";
 
 export interface NotificationPayload {
   id?: string;
   title: string;
   message: string;
-  type?: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT' | string;
+  type?: "INFO" | "SUCCESS" | "WARNING" | "ALERT" | string;
   data?: any;
   timestamp?: string;
 }
@@ -22,7 +22,7 @@ export interface SendNotificationOptions {
 export const sendUserNotification = async (
   userId: string,
   notification: NotificationPayload,
-  options?: SendNotificationOptions
+  options?: SendNotificationOptions,
 ) => {
   try {
     const payload = {
@@ -34,9 +34,13 @@ export const sendUserNotification = async (
     try {
       const io = getSocketIO();
       io.to(`user:${userId}`).emit(SOCKET_EVENTS.NOTIFICATION, payload);
-      logger.info(`[Real-Time Socket] Notification emitted to user:${userId} - ${notification.title}`);
+      logger.info(
+        `[Real-Time Socket] Notification emitted to user:${userId} - ${notification.title}`,
+      );
     } catch (socketErr: any) {
-      logger.warn(`Socket.IO emit skipped or failed for user:${userId}: ${socketErr.message}`);
+      logger.warn(
+        `Socket.IO emit skipped or failed for user:${userId}: ${socketErr.message}`,
+      );
     }
 
     // 2. PostgreSQL DB Persistence (Deduplicated via skipDbInsert)
@@ -51,34 +55,44 @@ export const sendUserNotification = async (
             notification.title,
             notification.message,
             notification.message,
-            notification.type || 'SYSTEM',
+            notification.type || "SYSTEM",
             JSON.stringify(notification.data || {}),
-          ]
+          ],
         )
         .catch((dbErr: any) => {
-          logger.warn(`Failed to persist notification to DB for user:${userId}: ${dbErr.message}`);
+          logger.warn(
+            `Failed to persist notification to DB for user:${userId}: ${dbErr.message}`,
+          );
         });
     }
 
     // 3. FCM Push Dispatch to User's Active Devices
     dispatchFcmPushNotification(userId, notification).catch((fcmErr) => {
-      logger.warn(`FCM async dispatch notice for user:${userId}: ${fcmErr.message}`);
+      logger.warn(
+        `FCM async dispatch notice for user:${userId}: ${fcmErr.message}`,
+      );
     });
   } catch (err: any) {
-    logger.error(`Failed to send user notification to user:${userId}:`, err.message);
+    logger.error(
+      `Failed to send user notification to user:${userId}:`,
+      err.message,
+    );
   }
 };
 
 /**
  * Dispatches FCM Push Message to user active tokens and cleans up invalid/expired tokens
  */
-async function dispatchFcmPushNotification(userId: string, notification: NotificationPayload) {
+async function dispatchFcmPushNotification(
+  userId: string,
+  notification: NotificationPayload,
+) {
   const messaging = getFirebaseMessaging();
   if (!messaging) return;
 
   const tokenRes = await dbPool.query(
     `SELECT device_token FROM public.user_device_tokens WHERE user_id = $1 AND is_active = true;`,
-    [userId]
+    [userId],
   );
 
   if (tokenRes.rows.length === 0) {
@@ -90,20 +104,20 @@ async function dispatchFcmPushNotification(userId: string, notification: Notific
 
   const routePath =
     notification.data?.route ||
-    (notification.data?.link ? notification.data.link : '/notifications');
+    (notification.data?.link ? notification.data.link : "/notifications");
 
   const payloadData: Record<string, string> = {
-    id: notification.id || '',
-    type: notification.type || 'SYSTEM',
-    title: notification.title || '',
-    body: notification.message || '',
+    id: notification.id || "",
+    type: notification.type || "SYSTEM",
+    title: notification.title || "",
+    body: notification.message || "",
     route: String(routePath),
   };
 
-  if (notification.data && typeof notification.data === 'object') {
+  if (notification.data && typeof notification.data === "object") {
     for (const [k, v] of Object.entries(notification.data)) {
       if (v !== undefined && v !== null) {
-        payloadData[k] = typeof v === 'object' ? JSON.stringify(v) : String(v);
+        payloadData[k] = typeof v === "object" ? JSON.stringify(v) : String(v);
       }
     }
   }
@@ -116,10 +130,10 @@ async function dispatchFcmPushNotification(userId: string, notification: Notific
     },
     data: payloadData,
     android: {
-      priority: 'high' as const,
+      priority: "high" as const,
       notification: {
-        sound: 'default',
-        channelId: 'high_importance_channel',
+        sound: "default",
+        channelId: "high_importance_channel",
       },
     },
   };
@@ -127,7 +141,7 @@ async function dispatchFcmPushNotification(userId: string, notification: Notific
   try {
     const response = await messaging.sendEachForMulticast(multicastMessage);
     logger.info(
-      `🔥 [FCM Push] Sent to user:${userId} | Success: ${response.successCount}/${tokens.length}`
+      `🔥 [FCM Push] Sent to user:${userId} | Success: ${response.successCount}/${tokens.length}`,
     );
 
     // Clean up invalid or expired registration tokens
@@ -137,8 +151,8 @@ async function dispatchFcmPushNotification(userId: string, notification: Notific
         if (!resp.success && resp.error) {
           const code = resp.error.code;
           if (
-            code === 'messaging/registration-token-not-registered' ||
-            code === 'messaging/invalid-registration-token'
+            code === "messaging/registration-token-not-registered" ||
+            code === "messaging/invalid-registration-token"
           ) {
             tokensToRemove.push(tokens[idx]!);
           }
@@ -148,13 +162,17 @@ async function dispatchFcmPushNotification(userId: string, notification: Notific
       if (tokensToRemove.length > 0) {
         await dbPool.query(
           `UPDATE public.user_device_tokens SET is_active = false WHERE user_id = $1 AND device_token = ANY($2::text[]);`,
-          [userId, tokensToRemove]
+          [userId, tokensToRemove],
         );
-        logger.info(`Cleaned up ${tokensToRemove.length} inactive FCM tokens for user:${userId}`);
+        logger.info(
+          `Cleaned up ${tokensToRemove.length} inactive FCM tokens for user:${userId}`,
+        );
       }
     }
   } catch (pushErr: any) {
-    logger.warn(`Failed to dispatch FCM multicast push for user:${userId}: ${pushErr.message}`);
+    logger.warn(
+      `Failed to dispatch FCM multicast push for user:${userId}: ${pushErr.message}`,
+    );
   }
 }
 
@@ -170,9 +188,11 @@ export const broadcastNotification = (notification: NotificationPayload) => {
     };
 
     io.emit(SOCKET_EVENTS.NOTIFICATION, payload);
-    logger.info(`[Real-Time] Global notification broadcasted - ${notification.title}`);
+    logger.info(
+      `[Real-Time] Global notification broadcasted - ${notification.title}`,
+    );
   } catch (err: any) {
-    logger.error('Failed to broadcast global notification:', err.message);
+    logger.error("Failed to broadcast global notification:", err.message);
   }
 };
 
@@ -189,7 +209,10 @@ export const sendWalletUpdate = (userId: string, walletData: any) => {
     });
     logger.info(`[Real-Time] Wallet update sent to user:${userId}`);
   } catch (err: any) {
-    logger.error(`Failed to send wallet update to user:${userId}:`, err.message);
+    logger.error(
+      `Failed to send wallet update to user:${userId}:`,
+      err.message,
+    );
   }
 };
 
@@ -210,6 +233,9 @@ export const broadcastLiveMatchScore = (gameId: string, scoreData: any) => {
 
     logger.info(`⚽ [Real-Time Score Broadcast] Game ${gameId}`);
   } catch (err: any) {
-    logger.error(`Failed to broadcast live match score for game ${gameId}:`, err.message);
+    logger.error(
+      `Failed to broadcast live match score for game ${gameId}:`,
+      err.message,
+    );
   }
 };

@@ -3,16 +3,17 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { env } from '../config/env.config.js';
-import { logger } from '../utils/logger.js';
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+import { env } from "../config/env.config.js";
+import { logger } from "../utils/logger.js";
 
-const s3Region = env.AWS_REGION || env.AWS_S3_REGION || 'ap-south-1';
-const s3Bucket = env.AWS_S3_BUCKET || env.AWS_S3_BUCKET_NAME || 'all-stars-arena-recordings';
+const s3Region = env.AWS_REGION || env.AWS_S3_REGION || "ap-south-1";
+const s3Bucket =
+  env.AWS_S3_BUCKET || env.AWS_S3_BUCKET_NAME || "all-stars-arena-recordings";
 const s3AccessKey = env.AWS_ACCESS_KEY_ID || env.AWS_S3_ACCESS_KEY_ID;
 const s3SecretKey = env.AWS_SECRET_ACCESS_KEY || env.AWS_S3_SECRET_ACCESS_KEY;
 
@@ -35,13 +36,13 @@ export const s3Client = new S3Client({
  */
 export const getSignedPlaybackUrl = async (
   objectKey: string,
-  expiresInSeconds = 3600
+  expiresInSeconds = 3600,
 ): Promise<string> => {
-  if (!objectKey) return '';
+  if (!objectKey) return "";
   if (
-    objectKey.startsWith('/api/') ||
-    objectKey.startsWith('http://') ||
-    objectKey.startsWith('https://')
+    objectKey.startsWith("/api/") ||
+    objectKey.startsWith("http://") ||
+    objectKey.startsWith("https://")
   ) {
     return objectKey;
   }
@@ -51,12 +52,16 @@ export const getSignedPlaybackUrl = async (
       Key: objectKey,
     });
 
-    return await getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
+    return await getSignedUrl(s3Client, command, {
+      expiresIn: expiresInSeconds,
+    });
   } catch (err: any) {
     logger.warn(
-      `Could not generate S3 signed URL for key ${objectKey}: ${err.message}. Falling back to local video endpoint.`
+      `Could not generate S3 signed URL for key ${objectKey}: ${err.message}. Falling back to local video endpoint.`,
     );
-    return objectKey.startsWith('/') ? objectKey : `/api/videos/${path.basename(objectKey)}`;
+    return objectKey.startsWith("/")
+      ? objectKey
+      : `/api/videos/${path.basename(objectKey)}`;
   }
 };
 
@@ -66,7 +71,7 @@ export const getSignedPlaybackUrl = async (
 export const uploadRecordingToS3 = async (
   objectKey: string,
   body: Buffer | Uint8Array,
-  contentType = 'video/mp4'
+  contentType = "video/mp4",
 ) => {
   try {
     const command = new PutObjectCommand({
@@ -74,7 +79,7 @@ export const uploadRecordingToS3 = async (
       Key: objectKey,
       Body: body,
       ContentType: contentType,
-      ServerSideEncryption: 'AES256',
+      ServerSideEncryption: "AES256",
     });
 
     await s3Client.send(command);
@@ -93,7 +98,7 @@ export const uploadRecordingToS3 = async (
 export const uploadLocalFileToS3 = async (
   localFilePath: string,
   objectKey: string,
-  options?: { contentType?: string; maxRetries?: number }
+  options?: { contentType?: string; maxRetries?: number },
 ): Promise<{ objectKey: string; bucket: string; sizeBytes: number }> => {
   if (!fs.existsSync(localFilePath)) {
     throw new Error(`Local file not found for S3 upload: ${localFilePath}`);
@@ -105,7 +110,7 @@ export const uploadLocalFileToS3 = async (
   }
 
   const maxRetries = options?.maxRetries ?? env.RECORDING_MAX_RETRIES ?? 3;
-  const contentType = options?.contentType ?? 'video/mp4';
+  const contentType = options?.contentType ?? "video/mp4";
 
   let attempt = 0;
   let lastError: any = null;
@@ -119,18 +124,18 @@ export const uploadLocalFileToS3 = async (
         Key: objectKey,
         Body: fileBuffer,
         ContentType: contentType,
-        ServerSideEncryption: 'AES256',
+        ServerSideEncryption: "AES256",
       });
 
       await s3Client.send(command);
       logger.info(
-        `[S3 Upload] Successfully uploaded recording (${stats.size} bytes) to s3://${s3Bucket}/${objectKey} on attempt ${attempt}`
+        `[S3 Upload] Successfully uploaded recording (${stats.size} bytes) to s3://${s3Bucket}/${objectKey} on attempt ${attempt}`,
       );
       return { objectKey, bucket: s3Bucket, sizeBytes: stats.size };
     } catch (err: any) {
       lastError = err;
       logger.warn(
-        `[S3 Upload] Attempt ${attempt}/${maxRetries} failed for ${objectKey}: ${err.message}`
+        `[S3 Upload] Attempt ${attempt}/${maxRetries} failed for ${objectKey}: ${err.message}`,
       );
       if (attempt < maxRetries) {
         // Exponential backoff
@@ -141,9 +146,12 @@ export const uploadLocalFileToS3 = async (
 
   logger.error(
     { lastError },
-    `[S3 Upload] Failed to upload ${localFilePath} to ${objectKey} after ${maxRetries} attempts`
+    `[S3 Upload] Failed to upload ${localFilePath} to ${objectKey} after ${maxRetries} attempts`,
   );
-  throw lastError || new Error(`Failed to upload ${objectKey} after ${maxRetries} attempts`);
+  throw (
+    lastError ||
+    new Error(`Failed to upload ${objectKey} after ${maxRetries} attempts`)
+  );
 };
 
 /**
@@ -153,7 +161,9 @@ export const safeDeleteLocalFile = async (filePath: string): Promise<void> => {
   try {
     if (filePath && fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);
-      logger.info(`[Cleanup] Deleted local temporary recording file: ${filePath}`);
+      logger.info(
+        `[Cleanup] Deleted local temporary recording file: ${filePath}`,
+      );
 
       // If directory is empty, remove it too
       const dir = path.dirname(filePath);
@@ -163,7 +173,10 @@ export const safeDeleteLocalFile = async (filePath: string): Promise<void> => {
       }
     }
   } catch (err: any) {
-    logger.warn({ err }, `[Cleanup] Non-fatal error cleaning up local file: ${filePath}`);
+    logger.warn(
+      { err },
+      `[Cleanup] Non-fatal error cleaning up local file: ${filePath}`,
+    );
   }
 };
 
@@ -174,10 +187,10 @@ export const uploadProfileImageToS3 = async (
   userId: string,
   buffer: Buffer,
   mimeType: string,
-  extension: string
+  extension: string,
 ): Promise<{ objectKey: string; publicUrl: string }> => {
   const fileUuid = crypto.randomUUID();
-  const safeExtension = (extension || 'jpg').replaceAll(/[^a-zA-Z0-9]/g, '');
+  const safeExtension = (extension || "jpg").replaceAll(/[^a-zA-Z0-9]/g, "");
   const objectKey = `players/${userId}/profile/${fileUuid}.${safeExtension}`;
 
   try {
@@ -186,13 +199,13 @@ export const uploadProfileImageToS3 = async (
       Key: objectKey,
       Body: buffer,
       ContentType: mimeType,
-      ServerSideEncryption: 'AES256',
+      ServerSideEncryption: "AES256",
     });
 
     await s3Client.send(command);
     logger.info(`Successfully uploaded profile image to S3: ${objectKey}`);
 
-    let publicUrl = '';
+    let publicUrl = "";
     if (env.AWS_S3_ENDPOINT) {
       publicUrl = `${env.AWS_S3_ENDPOINT}/${s3Bucket}/${objectKey}`;
     } else {

@@ -1,4 +1,4 @@
-import { dbPool } from '../../config/db.config.js';
+import { dbPool } from "../../config/db.config.js";
 
 export class GamesRepository {
   static async getGames(filters: {
@@ -50,22 +50,37 @@ export class GamesRepository {
       values.push(filters.privacy);
     }
     if (filters.userId) {
-      conditions.push(`(g.creator_id = $${idx++} OR g.id IN (SELECT game_id FROM public.game_players WHERE user_id = $${idx++}))`);
+      conditions.push(
+        `(g.creator_id = $${idx++} OR g.id IN (SELECT game_id FROM public.game_players WHERE user_id = $${idx++}))`,
+      );
       values.push(filters.userId, filters.userId);
     }
-    if (filters.court && filters.court.trim().toUpperCase() !== 'ALL') {
+    if (filters.court && filters.court.trim().toUpperCase() !== "ALL") {
       const courtUpper = filters.court.trim().toUpperCase();
-      if (courtUpper === 'COURT_1' || courtUpper === 'COURT 1' || courtUpper.endsWith('1')) {
-        conditions.push(`(crt.name ILIKE '%Court 1%' OR g.court_id ILIKE '%court_1%' OR g.court_id ILIKE '%1')`);
-      } else if (courtUpper === 'COURT_2' || courtUpper === 'COURT 2' || courtUpper.endsWith('2')) {
-        conditions.push(`(crt.name ILIKE '%Court 2%' OR g.court_id ILIKE '%court_2%' OR g.court_id ILIKE '%2')`);
+      if (
+        courtUpper === "COURT_1" ||
+        courtUpper === "COURT 1" ||
+        courtUpper.endsWith("1")
+      ) {
+        conditions.push(
+          `(crt.name ILIKE '%Court 1%' OR g.court_id ILIKE '%court_1%' OR g.court_id ILIKE '%1')`,
+        );
+      } else if (
+        courtUpper === "COURT_2" ||
+        courtUpper === "COURT 2" ||
+        courtUpper.endsWith("2")
+      ) {
+        conditions.push(
+          `(crt.name ILIKE '%Court 2%' OR g.court_id ILIKE '%court_2%' OR g.court_id ILIKE '%2')`,
+        );
       } else {
         conditions.push(`g.court_id = $${idx++}`);
         values.push(filters.court);
       }
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const limit = filters.limit || 20;
     const offset = filters.offset || 0;
 
@@ -93,12 +108,17 @@ export class GamesRepository {
        LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        WHERE g.id = $1;`,
-      [gameId]
+      [gameId],
     );
     return res.rows[0] || null;
   }
 
-  static async checkCourtOverlap(courtId: string, matchDate: string, startTime: string, endTime: string): Promise<boolean> {
+  static async checkCourtOverlap(
+    courtId: string,
+    matchDate: string,
+    startTime: string,
+    endTime: string,
+  ): Promise<boolean> {
     const res = await dbPool.query(
       `SELECT COUNT(*) as overlap_count
        FROM public.games
@@ -106,9 +126,9 @@ export class GamesRepository {
          AND ((start_time <= $3 AND end_time > $3)
            OR (start_time < $4 AND end_time >= $4)
            OR (start_time >= $3 AND end_time <= $4));`,
-      [courtId, matchDate, startTime, endTime]
+      [courtId, matchDate, startTime, endTime],
     );
-    return parseInt(res.rows[0]?.overlap_count || '0', 10) > 0;
+    return parseInt(res.rows[0]?.overlap_count || "0", 10) > 0;
   }
 
   static async createGame(
@@ -130,10 +150,10 @@ export class GamesRepository {
       endTime: string;
       description?: string;
     },
-    dbClient: any = dbPool
+    dbClient: any = dbPool,
   ) {
     if (data.id) {
-      const approvalStatus = (data as any).approvalStatus || 'APPROVED';
+      const approvalStatus = (data as any).approvalStatus || "APPROVED";
       const query = `
         INSERT INTO public.games
         (id, title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)
@@ -151,8 +171,8 @@ export class GamesRepository {
         data.format,
         data.maxPlayers,
         data.entryFee,
-        data.skillRequirement || 'ANY',
-        data.privacy || 'PUBLIC',
+        data.skillRequirement || "ANY",
+        data.privacy || "PUBLIC",
         data.matchDate,
         data.startTime,
         data.endTime,
@@ -161,7 +181,7 @@ export class GamesRepository {
       ]);
       return res.rows[0];
     } else {
-      const approvalStatus = (data as any).approvalStatus || 'APPROVED';
+      const approvalStatus = (data as any).approvalStatus || "APPROVED";
       const query = `
         INSERT INTO public.games
         (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)
@@ -178,8 +198,8 @@ export class GamesRepository {
         data.format,
         data.maxPlayers,
         data.entryFee,
-        data.skillRequirement || 'ANY',
-        data.privacy || 'PUBLIC',
+        data.skillRequirement || "ANY",
+        data.privacy || "PUBLIC",
         data.matchDate,
         data.startTime,
         data.endTime,
@@ -217,11 +237,11 @@ export class GamesRepository {
     return res.rows[0];
   }
 
-  static async getPlayerRequests(userId: string, statusTab = 'ALL') {
+  static async getPlayerRequests(userId: string, statusTab = "ALL") {
     let whereClause = `WHERE req.user_id = $1`;
     const params: any[] = [userId];
 
-    if (statusTab !== 'ALL') {
+    if (statusTab !== "ALL") {
       whereClause += ` AND req.status = $2`;
       params.push(statusTab);
     }
@@ -250,7 +270,7 @@ export class GamesRepository {
       actionType: string;
       details: string;
     },
-    dbClient: any = dbPool
+    dbClient: any = dbPool,
   ) {
     const query = `
       INSERT INTO public.game_activity_logs
@@ -287,7 +307,7 @@ export class GamesRepository {
        LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
        WHERE gp.game_id = $1
        ORDER BY gp.team ASC, gp.joined_at ASC;`,
-      [gameId]
+      [gameId],
     );
     return res.rows;
   }
@@ -295,7 +315,7 @@ export class GamesRepository {
   static async leaveGame(gameId: string, userId: string) {
     const res = await dbPool.query(
       `DELETE FROM public.game_players WHERE game_id = $1 AND user_id = $2 RETURNING id;`,
-      [gameId, userId]
+      [gameId, userId],
     );
     return Boolean(res.rowCount && res.rowCount > 0);
   }
@@ -307,7 +327,7 @@ export class GamesRepository {
        JOIN public.users u ON u.id = gw.user_id
        WHERE gw.game_id = $1
        ORDER BY gw.joined_at ASC;`,
-      [gameId]
+      [gameId],
     );
     return res.rows;
   }
@@ -315,16 +335,17 @@ export class GamesRepository {
   static async addToWaitlist(gameId: string, userId: string, position: string) {
     const countRes = await dbPool.query(
       `SELECT COUNT(*) as waitlist_count FROM public.game_waitlist WHERE game_id = $1;`,
-      [gameId]
+      [gameId],
     );
-    const queuePosition = parseInt(countRes.rows[0]?.waitlist_count || '0', 10) + 1;
+    const queuePosition =
+      parseInt(countRes.rows[0]?.waitlist_count || "0", 10) + 1;
 
     const res = await dbPool.query(
       `INSERT INTO public.game_waitlist (game_id, user_id, position)
        VALUES ($1, $2, $3)
        ON CONFLICT (game_id, user_id) DO UPDATE SET position = EXCLUDED.position
        RETURNING *;`,
-      [gameId, userId, position]
+      [gameId, userId, position],
     );
     return { ...res.rows[0], queuePosition };
   }
@@ -332,7 +353,7 @@ export class GamesRepository {
   static async removeFromWaitlist(gameId: string, userId: string) {
     const res = await dbPool.query(
       `DELETE FROM public.game_waitlist WHERE game_id = $1 AND user_id = $2;`,
-      [gameId, userId]
+      [gameId, userId],
     );
     return Boolean(res.rowCount && res.rowCount > 0);
   }
@@ -346,7 +367,7 @@ export class GamesRepository {
          ORDER BY joined_at ASC LIMIT 1
        )
        RETURNING *;`,
-      [gameId]
+      [gameId],
     );
     return res.rows[0] || null;
   }
@@ -370,7 +391,7 @@ export class GamesRepository {
        LEFT JOIN public.cctv_recordings rec ON (rec.game_id = gv.game_id AND (rec.camera_id = gv.cctv_id OR gv.cctv_id IS NULL))
        WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'
        ORDER BY gv.created_at ASC;`,
-      [gameId]
+      [gameId],
     );
     return res.rows;
   }
@@ -378,7 +399,7 @@ export class GamesRepository {
   static async isClubManager(clubId: string, userId: string): Promise<boolean> {
     const res = await dbPool.query(
       `SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;`,
-      [clubId, userId]
+      [clubId, userId],
     );
     return (res.rowCount || 0) > 0;
   }

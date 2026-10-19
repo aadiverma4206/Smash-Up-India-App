@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   addCamera,
   editCamera,
@@ -16,8 +16,8 @@ import {
   createLiveSession,
   getLiveChannelStatus,
   releaseLiveSession,
-} from './cctv.controller.js';
-import { validateRequest } from '../../middlewares/validate.middleware.js';
+} from "./cctv.controller.js";
+import { validateRequest } from "../../middlewares/validate.middleware.js";
 import {
   createCctvCameraSchema,
   updateCctvCameraSchema,
@@ -29,111 +29,118 @@ import {
   getPlaybackUrlSchema,
   createLiveStreamSessionSchema,
   getLiveCameraStatusSchema,
-} from './cctv.schema.js';
-import { authenticateToken, requireRole } from '../../middlewares/auth.middleware.js';
+} from "./cctv.schema.js";
+import {
+  authenticateToken,
+  requireRole,
+} from "../../middlewares/auth.middleware.js";
 
 const router = Router();
 
 router.use(authenticateToken);
 
 // Health & Capability Check
-router.get('/health', getFfmpegHealth);
+router.get("/health", getFfmpegHealth);
 
 // Live CCTV Streaming Routes (Authorized Admin & Manager Only: Roles 1 & 2)
-router.get('/live/cameras', requireRole([1, 2]), getLiveCameras);
+router.get("/live/cameras", requireRole([1, 2]), getLiveCameras);
 
 router.post(
-  '/live/session',
+  "/live/session",
   requireRole([1, 2]),
   validateRequest(createLiveStreamSessionSchema),
-  createLiveSession
+  createLiveSession,
 );
 
 router.get(
-  '/live/status/:channel',
+  "/live/status/:channel",
   requireRole([1, 2]),
   validateRequest(getLiveCameraStatusSchema),
-  getLiveChannelStatus
+  getLiveChannelStatus,
 );
 
 router.post(
-  '/live/session/:sessionId/release',
+  "/live/session/:sessionId/release",
   requireRole([1, 2]),
-  releaseLiveSession
+  releaseLiveSession,
 );
 
 // Manager & Admin CCTV Camera Management Routes (Role 1=ADMIN, Role 2=MANAGER)
 router.post(
-  '/cameras',
+  "/cameras",
   requireRole([1, 2]),
   validateRequest(createCctvCameraSchema),
-  addCamera
+  addCamera,
 );
 
 router.patch(
-  '/cameras/:cameraId',
+  "/cameras/:cameraId",
   requireRole([1, 2]),
   validateRequest(updateCctvCameraSchema),
-  editCamera
+  editCamera,
 );
 
 router.post(
-  '/cameras/:cameraId/toggle',
+  "/cameras/:cameraId/toggle",
   requireRole([1, 2]),
   validateRequest(toggleCameraSchema),
-  toggleCamera
+  toggleCamera,
 );
 
 router.post(
-  '/cameras/:cameraId/test',
+  "/cameras/:cameraId/test",
   requireRole([1, 2]),
   validateRequest(testCameraSchema),
-  testCameraConnection
+  testCameraConnection,
 );
 
-router.get('/cameras', requireRole([1, 2]), getClubCameras);
-router.get('/clubs/:clubId/cameras', requireRole([1, 2]), getClubCameras);
+router.get("/cameras", requireRole([1, 2]), getClubCameras);
+router.get("/clubs/:clubId/cameras", requireRole([1, 2]), getClubCameras);
 
 // CCTV Recording Controls
 router.post(
-  '/recordings/start',
+  "/recordings/start",
   requireRole([1, 2]),
   validateRequest(startRecordingSchema),
-  startRecording
+  startRecording,
 );
 
 router.post(
-  '/recordings/:recordingId/stop',
+  "/recordings/:recordingId/stop",
   requireRole([1, 2]),
   validateRequest(stopRecordingSchema),
-  stopRecording
+  stopRecording,
 );
 
 router.post(
-  '/recordings/:recordingId/extend',
+  "/recordings/:recordingId/extend",
   requireRole([1, 2]),
   validateRequest(extendRecordingSchema),
-  extendRecording
+  extendRecording,
 );
 
-router.get('/recordings/game/:gameId', requireRole([1, 2, 3]), getGameRecording);
+router.get(
+  "/recordings/game/:gameId",
+  requireRole([1, 2, 3]),
+  getGameRecording,
+);
 
 // Monitoring / Failure Diagnostics for Admin & Managers
-router.get('/failures', requireRole([1, 2]), getRecordingFailures);
+router.get("/failures", requireRole([1, 2]), getRecordingFailures);
 
 // Player/Manager/Admin Match Video Playback (Both GET and POST supported)
 router.get(
-  '/playback/:gameId',
+  "/playback/:gameId",
   requireRole([1, 2, 3]),
   validateRequest(getPlaybackUrlSchema),
-  getPlaybackUrl
+  getPlaybackUrl,
 );
 
 router.post(
-  '/playback/:gameId',
+  "/playback/:gameId",
   requireRole([1, 2, 3]),
   validateRequest(getPlaybackUrlSchema),
-  getPlaybackUrl
+  getPlaybackUrl,
 );
 
 export default router;

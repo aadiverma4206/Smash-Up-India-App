@@ -1,6 +1,6 @@
-import { dbPool } from '../../config/db.config.js';
-import { calculateCourtPrice } from '../../utils/pricing.js';
-import { ApiError } from '../../utils/apiResponse.js';
+import { dbPool } from "../../config/db.config.js";
+import { calculateCourtPrice } from "../../utils/pricing.js";
+import { ApiError } from "../../utils/apiResponse.js";
 
 export class CourtsService {
   static async getClubs(city?: string) {
@@ -26,9 +26,10 @@ export class CourtsService {
        FROM public.courts crt
        JOIN public.clubs clb ON clb.id = crt.club_id
        WHERE crt.id = $1;`,
-      [courtId]
+      [courtId],
     );
-    if (res.rows.length === 0) throw new ApiError(404, 'Court pitch not found', 'COURT_NOT_FOUND');
+    if (res.rows.length === 0)
+      throw new ApiError(404, "Court pitch not found", "COURT_NOT_FOUND");
     return res.rows[0];
   }
 
@@ -37,18 +38,22 @@ export class CourtsService {
       `SELECT id, start_time, end_time, status
        FROM public.court_bookings
        WHERE court_id = $1 AND booking_date = $2 AND status = 'CONFIRMED';`,
-      [courtId, bookingDate]
+      [courtId, bookingDate],
     );
     return bookingsRes.rows;
   }
 
-  static async calculateQuote(courtId: string, bookingDate: string, startTime: string) {
+  static async calculateQuote(
+    courtId: string,
+    bookingDate: string,
+    startTime: string,
+  ) {
     const court = await this.getCourtById(courtId);
     const dateObj = new Date(bookingDate);
     const dayOfWeek = dateObj.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    const startHour = Number(startTime.split(':')[0]);
+    const startHour = Number(startTime.split(":")[0]);
     const isPeak = startHour >= 17 && startHour < 21;
 
     const baseAmount = calculateCourtPrice(
@@ -56,12 +61,13 @@ export class CourtsService {
       isWeekend,
       isPeak,
       court.peak_multiplier,
-      court.weekend_multiplier
+      court.weekend_multiplier,
     );
 
     const gstAmount = Math.round(baseAmount * 0.18 * 100) / 100; // 18% GST
     const platformFee = 50.0; // ₹50 platform fee
-    const totalAmount = Math.round((baseAmount + gstAmount + platformFee) * 100) / 100;
+    const totalAmount =
+      Math.round((baseAmount + gstAmount + platformFee) * 100) / 100;
 
     return {
       courtId,

@@ -1,5 +1,5 @@
-import { ZodError } from 'zod';
-import { ApiError } from '../utils/apiResponse.js';
+import { ZodError } from "zod";
+import { ApiError } from "../utils/apiResponse.js";
 
 export const validate = (schema) => {
   return async (req, _res, next) => {
@@ -10,21 +10,29 @@ export const validate = (schema) => {
         params: req.params,
       });
 
-      if (parsed && typeof parsed === 'object') {
-        if ('body' in parsed && parsed.body !== undefined) req.body = parsed.body;
-        if ('query' in parsed && parsed.query !== undefined) req.query = parsed.query;
-        if ('params' in parsed && parsed.params !== undefined) req.params = parsed.params;
+      if (parsed && typeof parsed === "object") {
+        if ("body" in parsed && parsed.body !== undefined)
+          req.body = parsed.body;
+        if ("query" in parsed && parsed.query !== undefined)
+          req.query = parsed.query;
+        if ("params" in parsed && parsed.params !== undefined)
+          req.params = parsed.params;
       }
 
       next();
     } catch (error) {
       if (error instanceof ZodError) {
         const formattedErrors = error.errors.map((err) => ({
-          field: err.path.join('.'),
+          field: err.path.join("."),
           message: err.message,
         }));
         return next(
-          new ApiError(400, 'Validation Error', 'VALIDATION_ERROR', formattedErrors)
+          new ApiError(
+            400,
+            "Validation Error",
+            "VALIDATION_ERROR",
+            formattedErrors,
+          ),
         );
       }
       next(error);

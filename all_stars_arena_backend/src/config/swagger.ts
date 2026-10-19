@@ -1,26 +1,26 @@
-import swaggerJSDoc from 'swagger-jsdoc';
+import swaggerJSDoc from "swagger-jsdoc";
 
 const options: swaggerJSDoc.Options = {
   definition: {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
-      title: 'ALL STARS ARENA Football Backend API',
-      version: '2.0.0',
+      title: "ALL STARS ARENA Football Backend API",
+      version: "2.0.0",
       description:
-        'Production-grade API for ALL STARS ARENA - Football Pitch Booking, Match Scheduling, Wallet Top-Ups, Live Football Scores, and CCTV Recording Control.',
+        "Production-grade API for ALL STARS ARENA - Football Pitch Booking, Match Scheduling, Wallet Top-Ups, Live Football Scores, and CCTV Recording Control.",
     },
     servers: [
       {
-        url: 'http://localhost:5000/api/v1',
-        description: 'Development Server',
+        url: "http://localhost:5000/api/v1",
+        description: "Development Server",
       },
     ],
     components: {
       securitySchemes: {
         bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
         },
       },
     },
@@ -30,7 +30,7 @@ const options: swaggerJSDoc.Options = {
       },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/modules/**/*.ts'],
+  apis: ["./src/routes/*.ts", "./src/modules/**/*.ts"],
 };
 
 export const swaggerSpec = swaggerJSDoc(options);

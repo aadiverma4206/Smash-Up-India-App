@@ -3,10 +3,10 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { env } from './env.js';
-import { logger } from './logger.js';
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "./env.js";
+import { logger } from "./logger.js";
 
 export const s3Client = new S3Client({
   region: env.AWS_S3_REGION,
@@ -21,15 +21,23 @@ export const s3Client = new S3Client({
       : undefined,
 });
 
-export const getSignedPlaybackUrl = async (objectKey, expiresInSeconds = 3600) => {
+export const getSignedPlaybackUrl = async (
+  objectKey,
+  expiresInSeconds = 3600,
+) => {
   try {
     const command = new GetObjectCommand({
       Bucket: env.AWS_S3_BUCKET_NAME,
       Key: objectKey,
     });
-    return await getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
+    return await getSignedUrl(s3Client, command, {
+      expiresIn: expiresInSeconds,
+    });
   } catch (err) {
-    logger.error({ err }, `Error generating signed playback URL for key ${objectKey}`);
-    throw new Error('Could not generate playback URL');
+    logger.error(
+      { err },
+      `Error generating signed playback URL for key ${objectKey}`,
+    );
+    throw new Error("Could not generate playback URL");
   }
 };

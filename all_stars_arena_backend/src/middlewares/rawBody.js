@@ -1,9 +1,9 @@
-import express from 'express';
+import express from "express";
 
 export const rawBodySaver = express.json({
   verify: (req, _res, buf, encoding) => {
     if (buf && buf.length) {
-      req.rawBody = buf.toString(encoding || 'utf8');
+      req.rawBody = buf.toString(encoding || "utf8");
     }
   },
 });

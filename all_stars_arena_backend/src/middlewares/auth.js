@@ -1,14 +1,16 @@
-import jwt from 'jsonwebtoken';
-import { env } from '../config/env.js';
-import { dbPool } from '../config/db.js';
-import { ApiError } from '../utils/apiResponse.js';
+import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
+import { dbPool } from "../config/db.js";
+import { ApiError } from "../utils/apiResponse.js";
 
 export const requireAuth = async (req, _res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return next(new ApiError(401, 'Authentication token required', 'UNAUTHORIZED'));
+    return next(
+      new ApiError(401, "Authentication token required", "UNAUTHORIZED"),
+    );
   }
 
   try {
@@ -21,18 +23,24 @@ export const requireAuth = async (req, _res, next) => {
        FROM public.users u
        LEFT JOIN public.admin_details ad ON ad.user_id = u.id
        WHERE u.id = $1;`,
-      [decoded.id]
+      [decoded.id],
     );
 
     if (userRes.rows.length === 0) {
-      return next(new ApiError(401, 'User account not found', 'USER_NOT_FOUND'));
+      return next(
+        new ApiError(401, "User account not found", "USER_NOT_FOUND"),
+      );
     }
 
     const user = userRes.rows[0];
 
-    if (user.status === 'SUSPENDED') {
+    if (user.status === "SUSPENDED") {
       return next(
-        new ApiError(403, 'Account is suspended. Access denied.', 'ACCOUNT_SUSPENDED')
+        new ApiError(
+          403,
+          "Account is suspended. Access denied.",
+          "ACCOUNT_SUSPENDED",
+        ),
       );
     }
 
@@ -47,6 +55,6 @@ export const requireAuth = async (req, _res, next) => {
 
     next();
   } catch (err) {
-    return next(new ApiError(401, 'Invalid or expired token', 'INVALID_TOKEN'));
+    return next(new ApiError(401, "Invalid or expired token", "INVALID_TOKEN"));
   }
 };

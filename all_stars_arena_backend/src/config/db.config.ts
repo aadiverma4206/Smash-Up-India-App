@@ -1,21 +1,21 @@
-import pg from 'pg';
-import { env } from './env.config.js';
-import { logger } from '../utils/logger.js';
+import pg from "pg";
+import { env } from "./env.config.js";
+import { logger } from "../utils/logger.js";
 
 const { Pool } = pg;
 
 export const dbPool = new Pool({
   connectionString: env.DATABASE_URL,
-  ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  options: '-c timezone=Asia/Kolkata',
+  ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+  options: "-c timezone=Asia/Kolkata",
 });
 
-dbPool.on('connect', () => {
-  logger.info('Connected to PostgreSQL Database (all_stars_arena)');
+dbPool.on("connect", () => {
+  logger.info("Connected to PostgreSQL Database (all_stars_arena)");
 });
 
-dbPool.on('error', (err) => {
-  logger.error({ err }, 'Unexpected error on idle PostgreSQL client');
+dbPool.on("error", (err) => {
+  logger.error({ err }, "Unexpected error on idle PostgreSQL client");
 });
 
 export const initDbTables = async () => {
@@ -894,8 +894,10 @@ export const initDbTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.audit_logs(action);
     `);
-    logger.info('Database Schema, Indexes & Stored Functions Synchronized Successfully');
+    logger.info(
+      "Database Schema, Indexes & Stored Functions Synchronized Successfully",
+    );
   } catch (error) {
-    logger.error({ error }, 'Database initialization error');
+    logger.error({ error }, "Database initialization error");
   }
 };

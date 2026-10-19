@@ -1,18 +1,26 @@
-import { Resend } from 'resend';
-import { env } from '../config/env.config.js';
-import { logger } from '../utils/logger.js';
-import { dbPool } from '../config/db.config.js';
+import { Resend } from "resend";
+import { env } from "../config/env.config.js";
+import { logger } from "../utils/logger.js";
+import { dbPool } from "../config/db.config.js";
 
 let cachedResend: Resend | null = null;
-let lastApiKey: string = '';
+let lastApiKey: string = "";
 
 /**
  * Returns a configured Resend instance using current environment variables.
  * Dynamically reloads if process.env.RESEND_API_KEY changes in .env.
  */
 export const getResendClient = (): Resend | null => {
-  const currentKey = (process.env.RESEND_API_KEY || env.RESEND_API_KEY || '').trim();
-  if (!currentKey || currentKey.startsWith('re_1234') || currentKey.includes('dummy')) {
+  const currentKey = (
+    process.env.RESEND_API_KEY ||
+    env.RESEND_API_KEY ||
+    ""
+  ).trim();
+  if (
+    !currentKey ||
+    currentKey.startsWith("re_1234") ||
+    currentKey.includes("dummy")
+  ) {
     return null;
   }
   if (!cachedResend || lastApiKey !== currentKey) {
@@ -29,7 +37,9 @@ export const resend = new Proxy({} as Resend, {
   get(_target, prop) {
     const client = getResendClient();
     if (!client) {
-      throw new Error('Resend client is not configured. Please set RESEND_API_KEY in .env');
+      throw new Error(
+        "Resend client is not configured. Please set RESEND_API_KEY in .env",
+      );
     }
     return (client as any)[prop];
   },
@@ -40,11 +50,15 @@ export const resend = new Proxy({} as Resend, {
  * Supports both raw email ("zold@support.zold.in") and standard RFC format ("All Stars Arena <zold@support.zold.in>").
  */
 export const getSenderEmail = (): string => {
-  const configured = (process.env.EMAIL_FROM || env.EMAIL_FROM || 'zold@support.zold.in').trim();
+  const configured = (
+    process.env.EMAIL_FROM ||
+    env.EMAIL_FROM ||
+    "zold@support.zold.in"
+  ).trim();
   if (!configured) {
-    return 'All Stars Arena <zold@support.zold.in>';
+    return "All Stars Arena <zold@support.zold.in>";
   }
-  if (configured.includes('<') && configured.includes('>')) {
+  if (configured.includes("<") && configured.includes(">")) {
     return configured;
   }
   return `All Stars Arena <${configured}>`;
@@ -53,11 +67,19 @@ export const getSenderEmail = (): string => {
 /**
  * Core email sending function using Resend API with comprehensive diagnostics
  */
-export const sendEmail = async (to: string, subject: string, html: string): Promise<boolean> => {
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  html: string,
+): Promise<boolean> => {
   const client = getResendClient();
-  const apiKey = (process.env.RESEND_API_KEY || env.RESEND_API_KEY || '').trim();
+  const apiKey = (
+    process.env.RESEND_API_KEY ||
+    env.RESEND_API_KEY ||
+    ""
+  ).trim();
 
-  if (client && apiKey && !apiKey.includes('dummy')) {
+  if (client && apiKey && !apiKey.includes("dummy")) {
     try {
       const fromAddress = getSenderEmail();
       const { data, error } = await client.emails.send({
@@ -68,10 +90,20 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
       });
 
       if (error) {
-        logger.error({ error }, `❌ [Resend Error] Failed to send email to ${to}`);
-        if ((error as any).statusCode === 401 || (error as any).message?.toLowerCase().includes('invalid')) {
-          logger.error(`⚠️ [API KEY ERROR] Your RESEND_API_KEY in .env is INVALID or EXPIRED.`);
-          logger.error(`💡 Solution: Replace RESEND_API_KEY in backend/.env with a valid key.`);
+        logger.error(
+          { error },
+          `❌ [Resend Error] Failed to send email to ${to}`,
+        );
+        if (
+          (error as any).statusCode === 401 ||
+          (error as any).message?.toLowerCase().includes("invalid")
+        ) {
+          logger.error(
+            `⚠️ [API KEY ERROR] Your RESEND_API_KEY in .env is INVALID or EXPIRED.`,
+          );
+          logger.error(
+            `💡 Solution: Replace RESEND_API_KEY in backend/.env with a valid key.`,
+          );
         }
         return false;
       }
@@ -79,13 +111,17 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
       logger.info(`✅ [Resend Success] Email sent to ${to} (ID: ${data?.id})`);
       return true;
     } catch (err: any) {
-      logger.error(`❌ [Resend Exception] Error sending email to ${to}: ${err.message}`);
+      logger.error(
+        `❌ [Resend Exception] Error sending email to ${to}: ${err.message}`,
+      );
       return false;
     }
   }
 
   // Fallback log for development when no valid Resend key is set
-  logger.warn(`⚠️ [Email Warning] No active RESEND_API_KEY configured in .env. Falling back to dev logger.`);
+  logger.warn(
+    `⚠️ [Email Warning] No active RESEND_API_KEY configured in .env. Falling back to dev logger.`,
+  );
   logger.info(`\n========================================`);
   logger.info(`📧 [DEV EMAIL FALLBACK] To: ${to} | Subject: ${subject}`);
   logger.info(`========================================\n`);
@@ -99,22 +135,22 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
 export const sendOTP = async (
   userEmailOrUserId: string | null | undefined,
   otpOrEmail: string,
-  maybeOtp?: string
+  maybeOtp?: string,
 ): Promise<boolean> => {
   let userId: string | null = null;
-  let userEmail = '';
-  let otp = '';
+  let userEmail = "";
+  let otp = "";
 
   if (maybeOtp !== undefined) {
     userId = userEmailOrUserId || null;
-    userEmail = (otpOrEmail || '').trim().toLowerCase();
+    userEmail = (otpOrEmail || "").trim().toLowerCase();
     otp = maybeOtp;
   } else {
-    userEmail = (userEmailOrUserId || '').trim().toLowerCase();
+    userEmail = (userEmailOrUserId || "").trim().toLowerCase();
     otp = otpOrEmail;
   }
 
-  const subject = '⚽ All Stars Arena - Your Verification OTP';
+  const subject = "⚽ All Stars Arena - Your Verification OTP";
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0d1117; color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #30363d;">
       <div style="background: linear-gradient(135deg, #1f6feb 0%, #1158c7 100%); padding: 32px 24px; text-align: center;">
@@ -140,7 +176,7 @@ export const sendOTP = async (
     </div>
   `;
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== "production") {
     logger.info(`\n========================================`);
     logger.info(`🔑 DEV OTP for ${userEmail}: ${otp}`);
     logger.info(`========================================\n`);
@@ -151,10 +187,12 @@ export const sendOTP = async (
     try {
       await dbPool.query(
         `UPDATE public.users SET latest_otp = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-        [otp, userId]
+        [otp, userId],
       );
     } catch (err: any) {
-      logger.warn(`Could not update users.latest_otp for userId ${userId}: ${err.message}`);
+      logger.warn(
+        `Could not update users.latest_otp for userId ${userId}: ${err.message}`,
+      );
     }
   }
 
@@ -164,9 +202,9 @@ export const sendOTP = async (
 export const sendPaymentConfirmationEmail = async (
   userEmail: string,
   amountRupees: number,
-  txId: string
+  txId: string,
 ): Promise<boolean> => {
-  const subject = '⚽ All Stars Arena - Wallet Top-Up Successful!';
+  const subject = "⚽ All Stars Arena - Wallet Top-Up Successful!";
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0d1117; color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #30363d;">
       <div style="background: linear-gradient(135deg, #2ea44f 0%, #238636 100%); padding: 32px 24px; text-align: center;">
@@ -195,26 +233,32 @@ export interface AdminDetails {
 
 export const sendAdminApprovalEmail = async (
   adminDetails: AdminDetails,
-  approvalLink: string
+  approvalLink: string,
 ): Promise<boolean> => {
-  const subject = '⚽ All Stars Arena - Admin Approval Required';
+  const subject = "⚽ All Stars Arena - Admin Approval Required";
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #0d1117; color: #ffffff; padding: 24px; border-radius: 8px;">
       <h2 style="color: #2ea44f;">⚽ New Admin Approval Request</h2>
       <p>A new user has registered and requested administrative access:</p>
       <p><strong>Name:</strong> ${adminDetails.name}</p>
       <p><strong>Email:</strong> ${adminDetails.email}</p>
-      ${adminDetails.phone ? `<p><strong>Phone:</strong> ${adminDetails.phone}</p>` : ''}
+      ${adminDetails.phone ? `<p><strong>Phone:</strong> ${adminDetails.phone}</p>` : ""}
       <br/>
       <p>Click below to approve:</p>
       <a href="${approvalLink}" style="padding: 12px 24px; background-color: #2ea44f; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Approve Admin</a>
     </div>
   `;
-  return await sendEmail(process.env.ADMIN_NOTIFY_EMAIL || 'vikashchaudhari103@gmail.com', subject, html);
+  return await sendEmail(
+    process.env.ADMIN_NOTIFY_EMAIL || "vikashchaudhari103@gmail.com",
+    subject,
+    html,
+  );
 };
 
-export const sendApprovalNotificationToAdmin = async (adminEmail: string): Promise<boolean> => {
-  const subject = '⚽ All Stars Arena - Admin Access Approved!';
+export const sendApprovalNotificationToAdmin = async (
+  adminEmail: string,
+): Promise<boolean> => {
+  const subject = "⚽ All Stars Arena - Admin Access Approved!";
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #0d1117; color: #ffffff; padding: 24px; border-radius: 8px;">
       <h2 style="color: #2ea44f;">⚽ Access Approved!</h2>

@@ -1,31 +1,34 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from "express";
 import {
   getVideoMetadata,
   getVideoPlaybackUrl,
   streamVideoFileController,
-} from './videos.controller.js';
-import { validateRequest } from '../../middlewares/validate.middleware.js';
-import { getVideoMetadataSchema, getVideoPlaybackUrlSchema } from './videos.schema.js';
+} from "./videos.controller.js";
+import { validateRequest } from "../../middlewares/validate.middleware.js";
+import {
+  getVideoMetadataSchema,
+  getVideoPlaybackUrlSchema,
+} from "./videos.schema.js";
 import {
   authenticateToken,
   optionalAuthenticateToken,
-} from '../../middlewares/auth.middleware.js';
+} from "../../middlewares/auth.middleware.js";
 
 const router = Router();
 
 // 1. Direct Video Streaming with HTTP Byte-Range support (HEAD & GET)
 // Uses optional token authentication so mobile video_player and ExoPlayer can stream via URI with ?token= or directly
-router.head('/:filename', optionalAuthenticateToken, streamVideoFileController);
+router.head("/:filename", optionalAuthenticateToken, streamVideoFileController);
 
 router.get(
-  '/:id',
+  "/:id",
   optionalAuthenticateToken,
   (req: Request, res: Response, next: NextFunction) => {
     const idOrFilename = req.params.id;
     if (
-      idOrFilename.endsWith('.mp4') ||
-      idOrFilename.startsWith('match_') ||
-      idOrFilename.includes('.')
+      idOrFilename.endsWith(".mp4") ||
+      idOrFilename.startsWith("match_") ||
+      idOrFilename.includes(".")
     ) {
       return streamVideoFileController(req, res, next);
     }
@@ -36,29 +39,29 @@ router.get(
         getVideoMetadata(req as any, res, next);
       });
     });
-  }
+  },
 );
 
 // 2. Playback URL generation for S3 pre-signed objects
 router.get(
-  '/:id/playback-url',
+  "/:id/playback-url",
   authenticateToken,
   validateRequest(getVideoPlaybackUrlSchema),
-  getVideoPlaybackUrl
+  getVideoPlaybackUrl,
 );
 
 router.get(
-  '/:id/playback',
+  "/:id/playback",
   authenticateToken,
   validateRequest(getVideoPlaybackUrlSchema),
-  getVideoPlaybackUrl
+  getVideoPlaybackUrl,
 );
 
 router.post(
-  '/:id/playback',
+  "/:id/playback",
   authenticateToken,
   validateRequest(getVideoPlaybackUrlSchema),
-  getVideoPlaybackUrl
+  getVideoPlaybackUrl,
 );
 
 export default router;

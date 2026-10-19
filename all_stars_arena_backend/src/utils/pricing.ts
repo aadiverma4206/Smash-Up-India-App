@@ -3,7 +3,7 @@ export const calculateCourtPrice = (
   isWeekend: boolean,
   isPeak: boolean,
   peakMultiplier = 1.5,
-  weekendMultiplier = 1.75
+  weekendMultiplier = 1.75,
 ) => {
   let price = Number(basePrice);
   if (isWeekend) {

@@ -1,20 +1,23 @@
-import { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { env } from '../config/env.config.js';
-import { dbPool } from '../config/db.config.js';
-import { ApiError } from '../utils/apiResponse.js';
-import { AuthenticatedRequest, UserPayload } from '../types/index.js';
+import { Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { env } from "../config/env.config.js";
+import { dbPool } from "../config/db.config.js";
+import { ApiError } from "../utils/apiResponse.js";
+import { AuthenticatedRequest, UserPayload } from "../types/index.js";
 
 export const authenticateToken = async (
   req: AuthenticatedRequest,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
-  const authHeader = req.headers['authorization'];
-  const token = (authHeader && authHeader.split(' ')[1]) || (req.query?.token as string);
+  const authHeader = req.headers["authorization"];
+  const token =
+    (authHeader && authHeader.split(" ")[1]) || (req.query?.token as string);
 
   if (!token) {
-    return next(new ApiError(401, 'Authentication token required', 'UNAUTHORIZED'));
+    return next(
+      new ApiError(401, "Authentication token required", "UNAUTHORIZED"),
+    );
   }
 
   try {
@@ -27,18 +30,24 @@ export const authenticateToken = async (
        FROM public.users u
        LEFT JOIN public.admin_details ad ON ad.user_id = u.id
        WHERE u.id = $1;`,
-      [decoded.id]
+      [decoded.id],
     );
 
     if (userRes.rows.length === 0) {
-      return next(new ApiError(401, 'User account not found', 'USER_NOT_FOUND'));
+      return next(
+        new ApiError(401, "User account not found", "USER_NOT_FOUND"),
+      );
     }
 
     const user = userRes.rows[0];
 
-    if (user.status === 'SUSPENDED') {
+    if (user.status === "SUSPENDED") {
       return next(
-        new ApiError(403, 'Account is suspended. Access denied.', 'ACCOUNT_SUSPENDED')
+        new ApiError(
+          403,
+          "Account is suspended. Access denied.",
+          "ACCOUNT_SUSPENDED",
+        ),
       );
     }
 
@@ -56,13 +65,23 @@ export const authenticateToken = async (
     if (err instanceof ApiError) {
       return next(err);
     }
-    if (err.name === 'TokenExpiredError') {
+    if (err.name === "TokenExpiredError") {
       return next(
-        new ApiError(401, 'Authentication token has expired. Please log in again.', 'TOKEN_EXPIRED')
+        new ApiError(
+          401,
+          "Authentication token has expired. Please log in again.",
+          "TOKEN_EXPIRED",
+        ),
       );
     }
-    if (err.name === 'JsonWebTokenError' || err.name === 'NotBeforeError') {
-      return next(new ApiError(401, 'Invalid authentication token provided', 'INVALID_TOKEN'));
+    if (err.name === "JsonWebTokenError" || err.name === "NotBeforeError") {
+      return next(
+        new ApiError(
+          401,
+          "Invalid authentication token provided",
+          "INVALID_TOKEN",
+        ),
+      );
     }
     return next(err);
   }
@@ -77,9 +96,9 @@ export const requireRole = (allowedRoleIds: number[]) => {
       return next(
         new ApiError(
           403,
-          'Forbidden: You do not have permission to perform this action',
-          'FORBIDDEN_ROLE'
-        )
+          "Forbidden: You do not have permission to perform this action",
+          "FORBIDDEN_ROLE",
+        ),
       );
     }
     next();
@@ -100,9 +119,9 @@ export const requireAdminType = (allowedTypes: string[]) => {
       return next(
         new ApiError(
           403,
-          'Forbidden: Specific admin privilege required',
-          'FORBIDDEN_ADMIN_TYPE'
-        )
+          "Forbidden: Specific admin privilege required",
+          "FORBIDDEN_ADMIN_TYPE",
+        ),
       );
     }
     next();
@@ -112,14 +131,18 @@ export const requireAdminType = (allowedTypes: string[]) => {
 /**
  * Require Platform Owner
  */
-export const requireOwner = (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+export const requireOwner = (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction,
+) => {
   if (!req.user || !req.user.isOwner) {
     return next(
       new ApiError(
         403,
-        'Forbidden: Only the Platform Owner can perform this action',
-        'FORBIDDEN_OWNER_ONLY'
-      )
+        "Forbidden: Only the Platform Owner can perform this action",
+        "FORBIDDEN_OWNER_ONLY",
+      ),
     );
   }
 };
@@ -130,10 +153,11 @@ export const requireOwner = (req: AuthenticatedRequest, _res: Response, next: Ne
 export const optionalAuthenticateToken = async (
   req: AuthenticatedRequest,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
-  const authHeader = req.headers['authorization'];
-  const token = (authHeader && authHeader.split(' ')[1]) || (req.query?.token as string);
+  const authHeader = req.headers["authorization"];
+  const token =
+    (authHeader && authHeader.split(" ")[1]) || (req.query?.token as string);
 
   if (!token) {
     return next();
@@ -147,10 +171,10 @@ export const optionalAuthenticateToken = async (
        FROM public.users u
        LEFT JOIN public.admin_details ad ON ad.user_id = u.id
        WHERE u.id = $1;`,
-      [decoded.id]
+      [decoded.id],
     );
 
-    if (userRes.rows.length > 0 && userRes.rows[0].status !== 'SUSPENDED') {
+    if (userRes.rows.length > 0 && userRes.rows[0].status !== "SUSPENDED") {
       const user = userRes.rows[0];
       req.user = {
         id: user.id,
@@ -166,4 +190,3 @@ export const optionalAuthenticateToken = async (
   }
   next();
 };
-

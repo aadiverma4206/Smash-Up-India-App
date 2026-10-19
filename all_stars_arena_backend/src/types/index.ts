@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { Request } from "express";
 
 export interface UserPayload {
   id: string;
@@ -6,7 +6,7 @@ export interface UserPayload {
   name?: string;
   phone?: string;
   roleId: number;
-  adminType?: 'SUPER_ADMIN' | 'OPS_ADMIN' | 'FINANCE_ADMIN' | null;
+  adminType?: "SUPER_ADMIN" | "OPS_ADMIN" | "FINANCE_ADMIN" | null;
   isOwner?: boolean;
 }
 

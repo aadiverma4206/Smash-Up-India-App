@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   registerSendOtpController,
   resendOtpController,
@@ -16,8 +16,8 @@ import {
   getMeController,
   registerFcmTokenController,
   deleteFcmTokenController,
-} from '../modules/auth/auth.controller.js';
-import { validateRequest } from '../middlewares/validate.middleware.js';
+} from "../modules/auth/auth.controller.js";
+import { validateRequest } from "../middlewares/validate.middleware.js";
 import {
   registerSendOtpSchema,
   resendOtpSchema,
@@ -29,70 +29,74 @@ import {
   forgotVerifyOtpSchema,
   resetPasswordSchema,
   fcmTokenSchema,
-} from '../modules/auth/auth.schema.js';
-import { authenticateToken } from '../middlewares/auth.middleware.js';
+} from "../modules/auth/auth.schema.js";
+import { authenticateToken } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
 // Public Registration Flow
 router.post(
-  '/register/send-otp',
+  "/register/send-otp",
   validateRequest(registerSendOtpSchema),
-  registerSendOtpController
+  registerSendOtpController,
 );
 router.post(
-  '/register/resend-otp',
+  "/register/resend-otp",
   validateRequest(resendOtpSchema),
-  resendOtpController
+  resendOtpController,
 );
 router.post(
-  '/resend-otp',
+  "/resend-otp",
   validateRequest(resendOtpSchema),
-  resendOtpController
+  resendOtpController,
 );
 router.post(
-  '/register/verify',
+  "/register/verify",
   validateRequest(registerVerifyOtpSchema),
-  registerVerifyOtpController
+  registerVerifyOtpController,
 );
 router.post(
-  '/register',
+  "/register",
   validateRequest(registerPlayerSchema),
-  registerPlayerController
+  registerPlayerController,
 );
 
 // Public Login & Refresh Flow
-router.post('/login', validateRequest(loginSchema), loginController);
-router.post('/refresh', validateRequest(refreshTokenSchema), refreshController);
+router.post("/login", validateRequest(loginSchema), loginController);
+router.post("/refresh", validateRequest(refreshTokenSchema), refreshController);
 
 // Public Forgot Password & Reset Flow
 router.post(
-  '/forgot/send-otp',
+  "/forgot/send-otp",
   validateRequest(forgotSendOtpSchema),
-  forgotSendOtpController
+  forgotSendOtpController,
 );
 router.post(
-  '/forgot/verify',
+  "/forgot/verify",
   validateRequest(forgotVerifyOtpSchema),
-  forgotVerifyOtpController
+  forgotVerifyOtpController,
 );
 router.post(
-  '/reset-password',
+  "/reset-password",
   validateRequest(resetPasswordSchema),
-  resetPasswordController
+  resetPasswordController,
 );
 
 // Authenticated Session & Device Routes
 router.use(authenticateToken);
 
-router.get('/me', getMeController);
-router.post('/logout', logoutController);
-router.post('/logout-all', logoutAllController);
-router.get('/sessions', getSessionsController);
-router.delete('/sessions/:id', revokeSessionController);
+router.get("/me", getMeController);
+router.post("/logout", logoutController);
+router.post("/logout-all", logoutAllController);
+router.get("/sessions", getSessionsController);
+router.delete("/sessions/:id", revokeSessionController);
 
 // FCM Device Tokens
-router.post('/devices/fcm-token', validateRequest(fcmTokenSchema), registerFcmTokenController);
-router.delete('/devices/fcm-token', deleteFcmTokenController);
+router.post(
+  "/devices/fcm-token",
+  validateRequest(fcmTokenSchema),
+  registerFcmTokenController,
+);
+router.delete("/devices/fcm-token", deleteFcmTokenController);
 
 export default router;

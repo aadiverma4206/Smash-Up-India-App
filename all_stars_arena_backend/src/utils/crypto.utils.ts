@@ -1,7 +1,7 @@
-import crypto from 'crypto';
-import { env } from '../config/env.config.js';
+import crypto from "crypto";
+import { env } from "../config/env.config.js";
 
-const ALGORITHM = 'aes-256-gcm';
+const ALGORITHM = "aes-256-gcm";
 
 /**
  * Derives a valid 32-byte (256-bit) buffer key from environment configuration
@@ -10,14 +10,14 @@ const getKeyBuffer = (): Buffer => {
   const rawKey =
     env.CAMERA_CREDENTIAL_ENCRYPTION_KEY ||
     env.CCTV_CREDENTIAL_ENCRYPTION_KEY ||
-    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
   if (/^[0-9a-fA-F]{64}$/.test(rawKey)) {
-    return Buffer.from(rawKey, 'hex');
+    return Buffer.from(rawKey, "hex");
   }
 
   // Fallback to SHA-256 digest to securely normalize any passphrase to 32 bytes
-  return crypto.createHash('sha256').update(rawKey, 'utf8').digest();
+  return crypto.createHash("sha256").update(rawKey, "utf8").digest();
 };
 
 /**
@@ -25,38 +25,38 @@ const getKeyBuffer = (): Buffer => {
  * Uses AES-256-GCM with a unique 16-byte cryptographically random IV and authentication tag
  */
 export const encryptSecret = (text: string): string => {
-  if (!text) return '';
+  if (!text) return "";
   const key = getKeyBuffer();
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  const authTag = cipher.getAuthTag().toString('hex');
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  const authTag = cipher.getAuthTag().toString("hex");
 
-  return `${iv.toString('hex')}:${authTag}:${encrypted}`;
+  return `${iv.toString("hex")}:${authTag}:${encrypted}`;
 };
 
 /**
  * Decrypt encrypted secret string with authenticated integrity check
  */
 export const decryptSecret = (encryptedText: string): string => {
-  if (!encryptedText) return '';
+  if (!encryptedText) return "";
   const key = getKeyBuffer();
-  const parts = encryptedText.split(':');
+  const parts = encryptedText.split(":");
   if (parts.length !== 3) {
-    throw new Error('Invalid encrypted format. Expected iv:authTag:ciphertext');
+    throw new Error("Invalid encrypted format. Expected iv:authTag:ciphertext");
   }
 
-  const iv = Buffer.from(parts[0], 'hex');
-  const authTag = Buffer.from(parts[1], 'hex');
+  const iv = Buffer.from(parts[0], "hex");
+  const authTag = Buffer.from(parts[1], "hex");
   const encrypted = parts[2];
 
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
 
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
+  let decrypted = decipher.update(encrypted, "hex", "utf8");
+  decrypted += decipher.final("utf8");
 
   return decrypted;
 };
@@ -65,10 +65,10 @@ export const decryptSecret = (encryptedText: string): string => {
  * Redacts credentials (username, password) from RTSP/HTTP URLs for safe structured logging
  */
 export const redactRtspUrl = (rawUrl: string): string => {
-  if (!rawUrl) return '';
+  if (!rawUrl) return "";
   try {
-    const schemeIndex = rawUrl.indexOf('://');
-    const atIndex = rawUrl.lastIndexOf('@');
+    const schemeIndex = rawUrl.indexOf("://");
+    const atIndex = rawUrl.lastIndexOf("@");
     if (schemeIndex !== -1 && atIndex !== -1 && atIndex > schemeIndex) {
       const scheme = rawUrl.slice(0, schemeIndex + 3);
       const hostAndPath = rawUrl.slice(atIndex + 1);
@@ -76,9 +76,9 @@ export const redactRtspUrl = (rawUrl: string): string => {
     }
     return rawUrl.replace(
       /^([a-zA-Z0-9+.-]+:\/\/)([^:]+):(.*)@([^@]+)$/,
-      '$1***:***@$4'
+      "$1***:***@$4",
     );
   } catch (_) {
-    return '[REDACTED_URL]';
+    return "[REDACTED_URL]";
   }
 };

@@ -1,7 +1,7 @@
-import { dbPool } from '../../config/db.config.js';
-import { CourtsService } from '../courts/courts.service.js';
-import { sendUserNotification } from '../../services/realtime.service.js';
-import { ApiError } from '../../utils/apiResponse.js';
+import { dbPool } from "../../config/db.config.js";
+import { CourtsService } from "../courts/courts.service.js";
+import { sendUserNotification } from "../../services/realtime.service.js";
+import { ApiError } from "../../utils/apiResponse.js";
 
 export class BookingsService {
   static async createBooking(
@@ -9,9 +9,13 @@ export class BookingsService {
     courtId: string,
     bookingDate: string,
     startTime: string,
-    endTime: string
+    endTime: string,
   ) {
-    const quote = await CourtsService.calculateQuote(courtId, bookingDate, startTime);
+    const quote = await CourtsService.calculateQuote(
+      courtId,
+      bookingDate,
+      startTime,
+    );
     const court = await CourtsService.getCourtById(courtId);
 
     try {
@@ -20,24 +24,35 @@ export class BookingsService {
          (court_id, club_id, user_id, booking_date, start_time, end_time, amount_paid, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED')
          RETURNING *;`,
-        [courtId, court.club_id, userId, bookingDate, startTime, endTime, quote.totalAmount]
+        [
+          courtId,
+          court.club_id,
+          userId,
+          bookingDate,
+          startTime,
+          endTime,
+          quote.totalAmount,
+        ],
       );
 
       const booking = res.rows[0];
 
       sendUserNotification(userId, {
-        title: '⚽ Turf Booking Confirmed',
+        title: "⚽ Turf Booking Confirmed",
         message: `Booking for ${court.name} on ${bookingDate} (${startTime} - ${endTime}) confirmed!`,
-        type: 'SUCCESS',
+        type: "SUCCESS",
       });
 
       return booking;
     } catch (err: any) {
-      if (err.code === '23505' || err.message?.includes('no_overlapping_confirmed_bookings')) {
+      if (
+        err.code === "23505" ||
+        err.message?.includes("no_overlapping_confirmed_bookings")
+      ) {
         throw new ApiError(
           400,
-          'Selected slot is already booked for this court pitch. Please select another slot.',
-          'SLOT_ALREADY_BOOKED'
+          "Selected slot is already booked for this court pitch. Please select another slot.",
+          "SLOT_ALREADY_BOOKED",
         );
       }
       throw err;
@@ -52,19 +67,23 @@ export class BookingsService {
        JOIN public.clubs clb ON clb.id = b.club_id
        WHERE b.user_id = $1
        ORDER BY b.booking_date DESC, b.start_time DESC;`,
-      [userId]
+      [userId],
     );
     return res.rows;
   }
 
-  static async cancelBooking(userId: string, bookingId: string, cancellationReason?: string) {
+  static async cancelBooking(
+    userId: string,
+    bookingId: string,
+    cancellationReason?: string,
+  ) {
     const bookingRes = await dbPool.query(
       `SELECT * FROM public.court_bookings WHERE id = $1 AND user_id = $2;`,
-      [bookingId, userId]
+      [bookingId, userId],
     );
 
     if (bookingRes.rows.length === 0) {
-      throw new ApiError(404, 'Booking not found', 'BOOKING_NOT_FOUND');
+      throw new ApiError(404, "Booking not found", "BOOKING_NOT_FOUND");
     }
 
     // Trigger trg_apply_refund_tier executes on UPDATE status = 'CANCELLED'
@@ -72,15 +91,15 @@ export class BookingsService {
       `UPDATE public.court_bookings
        SET status = 'CANCELLED', cancellation_reason = $1
        WHERE id = $2 RETURNING *;`,
-      [cancellationReason || 'User cancelled', bookingId]
+      [cancellationReason || "User cancelled", bookingId],
     );
 
     const cancelledBooking = updateRes.rows[0];
 
     sendUserNotification(userId, {
-      title: '⚽ Booking Cancelled',
+      title: "⚽ Booking Cancelled",
       message: `Booking ${bookingId} cancelled. Refund Tier: ${cancelledBooking.refund_tier}, Refund Amount: ₹${cancelledBooking.refund_amount}`,
-      type: 'INFO',
+      type: "INFO",
     });
 
     return cancelledBooking;

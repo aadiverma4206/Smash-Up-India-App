@@ -1,4 +1,4 @@
-import { dbPool } from '../../config/db.config.js';
+import { dbPool } from "../../config/db.config.js";
 
 export class CctvRepository {
   /**
@@ -7,7 +7,7 @@ export class CctvRepository {
   static async isClubManager(clubId: string, userId: string): Promise<boolean> {
     const res = await dbPool.query(
       `SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;`,
-      [clubId, userId]
+      [clubId, userId],
     );
     return (res.rowCount || 0) > 0;
   }
@@ -15,10 +15,13 @@ export class CctvRepository {
   /**
    * Check if court belongs to club
    */
-  static async isCourtInClub(courtId: string, clubId: string): Promise<boolean> {
+  static async isCourtInClub(
+    courtId: string,
+    clubId: string,
+  ): Promise<boolean> {
     const res = await dbPool.query(
       `SELECT 1 FROM public.courts WHERE id = $1 AND club_id = $2;`,
-      [courtId, clubId]
+      [courtId, clubId],
     );
     return (res.rowCount || 0) > 0;
   }
@@ -48,7 +51,7 @@ export class CctvRepository {
       data.ipAddress || null,
       data.port || 554,
       data.serialNumber || null,
-      data.protocol || 'rtsp',
+      data.protocol || "rtsp",
       data.createdBy || null,
     ];
     const res = await dbPool.query(query, values);
@@ -70,7 +73,7 @@ export class CctvRepository {
       lastError?: string | null;
       lastConnectionAt?: Date;
       lastSuccessfulConnection?: Date;
-    }
+    },
   ) {
     const fields: string[] = [];
     const values: any[] = [];
@@ -132,7 +135,7 @@ export class CctvRepository {
     values.push(cameraId);
     const query = `
       UPDATE public.cctv_cameras
-      SET ${fields.join(', ')}
+      SET ${fields.join(", ")}
       WHERE id = $${idx}
       RETURNING *;
     `;
@@ -143,8 +146,8 @@ export class CctvRepository {
 
   static async getCameraById(cameraId: string) {
     const res = await dbPool.query(
-      'SELECT * FROM public.cctv_cameras WHERE id = $1;',
-      [cameraId]
+      "SELECT * FROM public.cctv_cameras WHERE id = $1;",
+      [cameraId],
     );
     return res.rows[0] || null;
   }
@@ -161,7 +164,7 @@ export class CctvRepository {
        LEFT JOIN public.courts crt ON crt.id = cam.court_id
        WHERE cam.club_id = $1
        ORDER BY cam.created_at DESC;`,
-      [clubId]
+      [clubId],
     );
     return res.rows;
   }
@@ -173,7 +176,7 @@ export class CctvRepository {
          AND is_enabled = true
        ORDER BY court_id NULLS LAST
        LIMIT 1;`,
-      [courtId || null, clubId || null]
+      [courtId || null, clubId || null],
     );
     return res.rows[0] || null;
   }
@@ -209,23 +212,26 @@ export class CctvRepository {
   static async updateRecordingStatus(
     recordingId: string,
     status: string,
-    actualStopTime?: Date
+    actualStopTime?: Date,
   ) {
     const res = await dbPool.query(
       `UPDATE public.cctv_recordings
        SET status = $1, recording_status = $1, actual_stop_time = COALESCE($2, CURRENT_TIMESTAMP), actual_stopped_at = COALESCE($2, CURRENT_TIMESTAMP)
        WHERE id = $3 RETURNING *;`,
-      [status, actualStopTime || new Date(), recordingId]
+      [status, actualStopTime || new Date(), recordingId],
     );
     return res.rows[0];
   }
 
-  static async extendRecordingDeadline(recordingId: string, newStopDeadline: Date) {
+  static async extendRecordingDeadline(
+    recordingId: string,
+    newStopDeadline: Date,
+  ) {
     const res = await dbPool.query(
       `UPDATE public.cctv_recordings
        SET stop_deadline = $1, post_match_stop_at = $1
        WHERE id = $2 RETURNING *;`,
-      [newStopDeadline, recordingId]
+      [newStopDeadline, recordingId],
     );
     return res.rows[0];
   }
@@ -237,7 +243,7 @@ export class CctvRepository {
        LEFT JOIN public.cctv_cameras cam ON cam.id = rec.camera_id
        WHERE rec.game_id = $1
        ORDER BY rec.created_at DESC LIMIT 1;`,
-      [gameId]
+      [gameId],
     );
     return res.rows[0] || null;
   }
@@ -245,7 +251,7 @@ export class CctvRepository {
   static async getRecordingById(recordingId: string) {
     const res = await dbPool.query(
       `SELECT * FROM public.cctv_recordings WHERE id = $1;`,
-      [recordingId]
+      [recordingId],
     );
     return res.rows[0] || null;
   }
@@ -310,7 +316,13 @@ export class CctvRepository {
     await dbPool.query(
       `INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)
        VALUES ($1, $2, $3, $4, $5);`,
-      [data.adminId || null, data.adminName, data.action, data.target, data.details]
+      [
+        data.adminId || null,
+        data.adminName,
+        data.action,
+        data.target,
+        data.details,
+      ],
     );
   }
 }

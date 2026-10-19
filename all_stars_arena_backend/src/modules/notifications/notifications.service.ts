@@ -1,6 +1,9 @@
-import { dbPool } from '../../config/db.config.js';
-import { logger } from '../../utils/logger.js';
-import { sendUserNotification, NotificationPayload } from '../../services/realtime.service.js';
+import { dbPool } from "../../config/db.config.js";
+import { logger } from "../../utils/logger.js";
+import {
+  sendUserNotification,
+  NotificationPayload,
+} from "../../services/realtime.service.js";
 
 export interface CreateNotificationParams {
   userId: string;
@@ -33,14 +36,18 @@ export class NotificationService {
     page: number = 1,
     limit: number = 20,
     type?: string,
-    isRead?: boolean
-  ): Promise<{ notifications: FormattedNotification[]; unreadCount: number; totalCount: number }> {
+    isRead?: boolean,
+  ): Promise<{
+    notifications: FormattedNotification[];
+    unreadCount: number;
+    totalCount: number;
+  }> {
     const offset = Math.max(0, (page - 1) * limit);
-    const conditions: string[] = ['user_id = $1'];
+    const conditions: string[] = ["user_id = $1"];
     const values: any[] = [userId];
     let idx = 2;
 
-    if (type && type.toUpperCase() !== 'ALL') {
+    if (type && type.toUpperCase() !== "ALL") {
       conditions.push(`type = $${idx++}`);
       values.push(type.toUpperCase());
     }
@@ -50,7 +57,7 @@ export class NotificationService {
       values.push(isRead);
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.join(" AND ");
 
     // 1. Fetch paginated records
     const query = `
@@ -69,21 +76,21 @@ export class NotificationService {
     // 2. Unread count for badge
     const countRes = await dbPool.query(
       `SELECT COUNT(*) as unread_count FROM public.notifications WHERE user_id = $1 AND is_read = false;`,
-      [userId]
+      [userId],
     );
-    const unreadCount = parseInt(countRes.rows[0]?.unread_count || '0', 10);
+    const unreadCount = parseInt(countRes.rows[0]?.unread_count || "0", 10);
 
     // 3. Total count for pagination
     const totalCountRes = await dbPool.query(
       `SELECT COUNT(*) as total_count FROM public.notifications WHERE ${whereClause};`,
-      values.slice(0, values.length - 2)
+      values.slice(0, values.length - 2),
     );
-    const totalCount = parseInt(totalCountRes.rows[0]?.total_count || '0', 10);
+    const totalCount = parseInt(totalCountRes.rows[0]?.total_count || "0", 10);
 
     // 4. Clean mapping to guarantee Flutter non-null fields
     const formatted: FormattedNotification[] = result.rows.map((row) => {
       let finalData = row.data;
-      if (typeof finalData === 'string') {
+      if (typeof finalData === "string") {
         try {
           finalData = JSON.parse(finalData);
         } catch {
@@ -96,9 +103,9 @@ export class NotificationService {
 
       return {
         id: row.id,
-        title: row.title || 'Notification',
-        body: row.body || row.message || '',
-        type: row.type || 'SYSTEM',
+        title: row.title || "Notification",
+        body: row.body || row.message || "",
+        type: row.type || "SYSTEM",
         data: Object.keys(finalData).length > 0 ? finalData : null,
         isRead: Boolean(row.is_read),
         createdAt: row.created_at
@@ -113,9 +120,11 @@ export class NotificationService {
   /**
    * Creates and stores a notification, then dispatches real-time socket event
    */
-  static async createNotification(params: CreateNotificationParams): Promise<FormattedNotification> {
-    const textBody = params.body || params.message || '';
-    const textType = params.type || 'SYSTEM';
+  static async createNotification(
+    params: CreateNotificationParams,
+  ): Promise<FormattedNotification> {
+    const textBody = params.body || params.message || "";
+    const textType = params.type || "SYSTEM";
     const jsonPayload = params.data || {};
 
     const insertRes = await dbPool.query(
@@ -133,7 +142,7 @@ export class NotificationService {
         params.linkUrl || null,
         params.clubId || null,
         params.gameId || null,
-      ]
+      ],
     );
 
     const row = insertRes.rows[0];
@@ -143,11 +152,11 @@ export class NotificationService {
       id: row.id,
       title: row.title,
       message: row.body,
-      type: (textType.includes('ERROR') || textType.includes('CANCEL')
-        ? 'ALERT'
-        : textType.includes('WARN')
-        ? 'WARNING'
-        : 'SUCCESS') as any,
+      type: (textType.includes("ERROR") || textType.includes("CANCEL")
+        ? "ALERT"
+        : textType.includes("WARN")
+          ? "WARNING"
+          : "SUCCESS") as any,
       data: jsonPayload,
       timestamp: new Date(row.created_at).toISOString(),
     };
@@ -167,10 +176,13 @@ export class NotificationService {
   /**
    * Mark single notification as read
    */
-  static async markNotificationRead(notificationId: string, userId: string): Promise<boolean> {
+  static async markNotificationRead(
+    notificationId: string,
+    userId: string,
+  ): Promise<boolean> {
     const res = await dbPool.query(
       `UPDATE public.notifications SET is_read = true WHERE id = $1 AND user_id = $2 RETURNING id;`,
-      [notificationId, userId]
+      [notificationId, userId],
     );
     return (res.rowCount ?? 0) > 0;
   }
@@ -181,7 +193,7 @@ export class NotificationService {
   static async markAllRead(userId: string): Promise<number> {
     const res = await dbPool.query(
       `UPDATE public.notifications SET is_read = true WHERE user_id = $1 AND is_read = false;`,
-      [userId]
+      [userId],
     );
     return res.rowCount ?? 0;
   }
@@ -189,10 +201,13 @@ export class NotificationService {
   /**
    * Delete a notification
    */
-  static async deleteNotification(notificationId: string, userId: string): Promise<boolean> {
+  static async deleteNotification(
+    notificationId: string,
+    userId: string,
+  ): Promise<boolean> {
     const res = await dbPool.query(
       `DELETE FROM public.notifications WHERE id = $1 AND user_id = $2;`,
-      [notificationId, userId]
+      [notificationId, userId],
     );
     return (res.rowCount ?? 0) > 0;
   }
