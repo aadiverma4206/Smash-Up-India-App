@@ -10,6 +10,7 @@ import '../../modules/auth/views/forgot_password_view.dart';
 import '../../modules/auth/views/otp_verification_view.dart';
 import '../../modules/auth/views/reset_password_view.dart';
 import '../../modules/auth/views/sessions_view.dart';
+import '../../modules/auth/views/privacy_policy.dart';
 import '../../modules/player/bindings/player_binding.dart';
 import '../../modules/player/views/player_home_view.dart';
 import '../../modules/player/views/profile_view.dart';
@@ -70,7 +71,6 @@ import '../../modules/support/views/faq_view.dart';
 import '../../modules/support/views/chat_support_view.dart';
 import '../../modules/support/views/call_support_view.dart';
 import '../../modules/support/views/terms_conditions_view.dart';
-import '../../modules/support/views/privacy_policy_view.dart';
 import '../../modules/support/views/risk_disclosure_view.dart';
 import '../../modules/videos/controllers/video_player_controller.dart';
 import '../../modules/videos/views/video_player_view.dart';
@@ -424,7 +424,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.privacyPolicy,
-      page: () => const PrivacyPolicyView(),
+      page: () => const PrivacyPolicyScreen(),
     ),
     GetPage(
       name: Routes.riskDisclosure,

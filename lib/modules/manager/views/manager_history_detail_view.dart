@@ -1672,7 +1672,8 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                     const SizedBox(height: 8),
                     Text(
                       'No CCTV footage recorded for this match.',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                      style:
+                          TextStyle(color: Colors.grey.shade500, fontSize: 12),
                     ),
                   ],
                 ),
