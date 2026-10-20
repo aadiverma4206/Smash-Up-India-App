@@ -3,20 +3,10 @@ import path from "path";
 import fs from "fs";
 import { logger } from "../utils/logger.js";
 
-/**
- * Universal Cloudflare Tunnel Service for Outside-Network Access.
- * Allows CCTV video streaming and REST API access from:
- * 1. ANY WiFi network (even isolated subnets like MGMT BOTIVATE)
- * 2. Mobile Cellular Data (5G / 4G)
- * 3. Remote/external locations without port forwarding
- */
 export class TunnelService {
   private static process: ChildProcess | null = null;
   private static activeUrl: string | null = null;
 
-  /**
-   * Start or detect running Cloudflare Quick Tunnel on backend port
-   */
   public static async start(port = 5000): Promise<string | null> {
     const cloudflaredPath = path.resolve(process.cwd(), "cloudflared.exe");
     if (!fs.existsSync(cloudflaredPath)) {
@@ -26,7 +16,6 @@ export class TunnelService {
       return null;
     }
 
-    // Check if active_tunnel.json exists and is fresh (< 4 hours old)
     const infoPath = path.resolve(process.cwd(), "active_tunnel.json");
     if (fs.existsSync(infoPath)) {
       try {
@@ -37,7 +26,6 @@ export class TunnelService {
       } catch (_) {}
     }
 
-    // If tunnel is already alive, return it
     if (TunnelService.activeUrl) {
       logger.info(
         `🌐 Existing Cloudflare Tunnel active: ${TunnelService.activeUrl}`,
@@ -118,7 +106,6 @@ export class TunnelService {
           TunnelService.process = null;
         });
 
-        // Resolve within 8s even if detection is still pending
         setTimeout(() => {
           resolve(TunnelService.activeUrl);
         }, 8000);

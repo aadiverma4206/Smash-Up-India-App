@@ -64,8 +64,8 @@ export class CourtsService {
       court.weekend_multiplier,
     );
 
-    const gstAmount = Math.round(baseAmount * 0.18 * 100) / 100; // 18% GST
-    const platformFee = 50.0; // ₹50 platform fee
+    const gstAmount = Math.round(baseAmount * 0.18 * 100) / 100;
+    const platformFee = 50.0;
     const totalAmount =
       Math.round((baseAmount + gstAmount + platformFee) * 100) / 100;
 

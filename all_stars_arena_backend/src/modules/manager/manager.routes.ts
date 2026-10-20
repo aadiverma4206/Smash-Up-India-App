@@ -60,13 +60,11 @@ import {
 const router = Router();
 
 router.use(authenticateToken);
-router.use(requireRole([1, 2])); // For MANAGER (Role 2) and ADMIN (Role 1)
+router.use(requireRole([1, 2]));
 
-// Dashboard & Club Scope
 router.get("/dashboard", getDashboardController);
 router.get("/club", getManagerClubController);
 
-// Court Pitch Management & Slots
 router.get("/courts", getManagerCourtsController);
 router.get("/courts/:courtId/slots", getCourtSlotsController);
 router.post(
@@ -85,7 +83,6 @@ router.post(
   simulatePricingController,
 );
 
-// Match & Game Management
 router.get("/games/pending", getPendingGamesController);
 router.get("/games", getClubMatchesController);
 router.get("/games/:id", getGameDetailsController);
@@ -99,7 +96,6 @@ router.post("/games/:id/complete", completeGameController);
 router.post("/games/:id/cancel", cancelGameController);
 router.post("/games/:id/score", submitMatchScoreController);
 
-// CCTV & Camera Management
 router.get("/cameras", getManagerCamerasController);
 router.post("/cameras", validateRequest(createCctvCameraSchema), addCamera);
 router.patch(
@@ -113,28 +109,23 @@ router.post(
   testCameraConnection,
 );
 
-// CCTV & Recording Management for Match
 router.get("/games/:id/recording", getMatchRecordingController);
 router.post("/games/:id/recording/stop", stopMatchRecordingController);
 router.post("/games/:id/recording/extend", extendMatchRecordingController);
 
-// Slot Requests (Player waitlist & slot invites)
 router.get("/requests", getPendingRequestsController);
 router.post("/requests/:id/approve", approveSlotRequestController);
 router.post("/requests/:id/reject", rejectSlotRequestController);
 
-// Matches & Bookings
 router.get("/matches", getClubMatchesController);
 router.get("/history", getClubHistoryController);
 router.get("/bookings", getManagerBookingsController);
 
-// All Players & Player Moderation (Block/Unblock)
 router.get("/players", getAllPlayersController);
 router.get("/players/:id", getPlayerDetailHistoryController);
 router.post("/players/:id/block", blockPlayerController);
 router.post("/players/:id/unblock", unblockPlayerController);
 
-// Manager Profile & AWS S3 Avatar Upload
 router.get("/profile", getManagerProfileController);
 router.post(
   "/profile/avatar",

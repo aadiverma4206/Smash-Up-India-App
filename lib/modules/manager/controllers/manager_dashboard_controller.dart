@@ -27,10 +27,8 @@ class ManagerDashboardController extends GetxController
   final RxList<Map<String, dynamic>> playersList = <Map<String, dynamic>>[].obs;
 
   final RxInt selectedCourtIndex = 0.obs;
-  final RxString selectedMatchTab =
-      'TODAY'.obs; // TODAY, UPCOMING, ONGOING, CANCELLED
-  final RxString selectedDateFilter =
-      'ALL'.obs; // ALL, TODAY, TOMORROW, or YYYY-MM-DD
+  final RxString selectedMatchTab = 'TODAY'.obs;
+  final RxString selectedDateFilter = 'ALL'.obs;
   final Rxn<DateTime> customSelectedDate = Rxn<DateTime>();
   final RxBool isLoading = false.obs;
   final RxBool isSlotsLoading = false.obs;
@@ -40,7 +38,7 @@ class ManagerDashboardController extends GetxController
 
   List<Map<String, dynamic>> get filteredCourtSlots {
     List<Map<String, dynamic>> list = List.from(currentCourtSlots);
-    // Exclude COMPLETED and CANCELLED matches from active court matches view (they appear in History view)
+
     list = list.where((slot) {
       final status = (slot['status'] ?? '').toString().toUpperCase();
       final approvalStatus =
@@ -101,7 +99,7 @@ class ManagerDashboardController extends GetxController
       final picked = await showDatePicker(
         context: Get.context!,
         initialDate: initial,
-        firstDate: today, // Disables all past dates before today
+        firstDate: today,
         lastDate: DateTime(2030),
       );
       if (picked != null) {
@@ -372,7 +370,7 @@ class ManagerDashboardController extends GetxController
     try {
       final list =
           await repository.getAllPlayers(search: search, status: status);
-      // Sort A to Z alphabetically by player name
+
       list.sort((a, b) {
         final nameA = (a['name'] ?? '').toString().toLowerCase();
         final nameB = (b['name'] ?? '').toString().toLowerCase();

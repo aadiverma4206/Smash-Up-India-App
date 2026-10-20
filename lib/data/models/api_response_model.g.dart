@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'api_response_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 ApiResponseModel<T> _$ApiResponseModelFromJson<T>(
   Map<String, dynamic> json,

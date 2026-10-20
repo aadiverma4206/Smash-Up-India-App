@@ -6,7 +6,7 @@ class ThemeService extends GetxService {
   static ThemeService get to => Get.find();
 
   final PreferencesService _prefs = Get.find<PreferencesService>();
-  final Rx<ThemeMode> themeMode = ThemeMode.light.obs; // Light mode default
+  final Rx<ThemeMode> themeMode = ThemeMode.light.obs;
 
   @override
   void onInit() {

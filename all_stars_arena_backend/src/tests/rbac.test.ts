@@ -16,15 +16,15 @@ describe("RBAC Middleware Tests", () => {
   });
 
   it("requireRole should allow authorized roles", () => {
-    req.user = { roleId: 3 }; // PLAYER
+    req.user = { roleId: 3 };
     const middleware = requireRole([3]);
     middleware(req, res, next);
     expect(next).toHaveBeenCalledWith();
   });
 
   it("requireRole should deny unauthorized roles", () => {
-    req.user = { roleId: 3 }; // PLAYER
-    const middleware = requireRole([1, 2]); // ADMIN/MANAGER
+    req.user = { roleId: 3 };
+    const middleware = requireRole([1, 2]);
     middleware(req, res, next);
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({ statusCode: 403 }),

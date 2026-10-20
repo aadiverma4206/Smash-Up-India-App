@@ -19,7 +19,7 @@ class BookingModel {
   final String startTime;
   final String endTime;
   final double totalAmount;
-  final String status; // CONFIRMED, CANCELLED, COMPLETED
+  final String status;
   final String? playerName;
   final String? playerPhone;
 

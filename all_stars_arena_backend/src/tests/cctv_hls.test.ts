@@ -3,7 +3,6 @@ import { CctvDiscoveryService } from "../services/cctvDiscovery.service.js";
 
 describe("CCTV Live RTSP Direct Playback Unit Tests", () => {
   it("creates authorized live RTSP session for Manager (roleId=2)", async () => {
-    // Pass empty userId so audit_logs records admin_id as null without violating FK constraint in test DB
     const session = await CctvService.createLiveSession("", 2, 1, "sub");
     expect(session).toHaveProperty("sessionId");
     expect(session.channel).toBe(1);

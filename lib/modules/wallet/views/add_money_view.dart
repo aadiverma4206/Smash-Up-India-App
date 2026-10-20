@@ -62,7 +62,6 @@ class AddMoneyView extends GetView<WalletController> {
                       style: TextStyle(color: context.textSecondary),
                     ),
                     const SizedBox(height: 20),
-
                     AppTextField(
                       label: 'Amount (₹)',
                       hint: 'Enter Amount',
@@ -72,8 +71,6 @@ class AddMoneyView extends GetView<WalletController> {
                           color: AppColors.primary),
                     ),
                     const SizedBox(height: 20),
-
-                    // Quick Preset Chips
                     Text(
                       'Quick Add Options',
                       style: TextStyle(
@@ -94,9 +91,7 @@ class AddMoneyView extends GetView<WalletController> {
                         );
                       }).toList(),
                     ),
-
                     const SizedBox(height: 36),
-
                     Obx(
                       () => AppButton(
                         text: 'Proceed to Pay with Razorpay',

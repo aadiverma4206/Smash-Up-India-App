@@ -55,7 +55,6 @@ class NotificationsController extends GetxController {
         );
       }
 
-      // Handle deep links based on notification payload data
       if (item.data != null && item.data!['link'] != null) {
         final uri = Uri.parse(item.data!['link']);
         DeepLinkService.handleUri(uri);

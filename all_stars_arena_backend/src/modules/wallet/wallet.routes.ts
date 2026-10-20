@@ -24,7 +24,7 @@ import {
 const router = Router();
 
 router.use(authenticateToken);
-router.use(requireRole([3])); // Exclusively for PLAYER (Role ID 3)
+router.use(requireRole([3]));
 
 router.get("/", getWalletController);
 router.get("/transactions", getTransactionsController);

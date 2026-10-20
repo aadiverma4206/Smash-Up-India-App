@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'manager_models.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 ManagerClubModel _$ManagerClubModelFromJson(Map<String, dynamic> json) =>
     ManagerClubModel(

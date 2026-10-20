@@ -15,7 +15,6 @@ class CctvController extends GetxController {
   final Rxn<CctvRecordingModel> currentRecording = Rxn<CctvRecordingModel>();
   final RxBool isLoading = false.obs;
 
-  // Visual countdown timer for POST_MATCH window (+15 min)
   final RxInt remainingCountdownSeconds = 0.obs;
   Timer? _countdownTimer;
 

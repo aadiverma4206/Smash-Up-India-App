@@ -1,9 +1,6 @@
 import { dbPool } from "../../config/db.config.js";
 
 export class CctvRepository {
-  /**
-   * Check if a user is authorized manager for a club
-   */
   static async isClubManager(clubId: string, userId: string): Promise<boolean> {
     const res = await dbPool.query(
       `SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;`,
@@ -12,9 +9,6 @@ export class CctvRepository {
     return (res.rowCount || 0) > 0;
   }
 
-  /**
-   * Check if court belongs to club
-   */
   static async isCourtInClub(
     courtId: string,
     clubId: string,

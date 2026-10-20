@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'leaderboard_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 LeaderboardEntryModel _$LeaderboardEntryModelFromJson(
         Map<String, dynamic> json) =>

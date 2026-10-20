@@ -8,9 +8,6 @@ import { ApiResponse, ApiError } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AuthenticatedRequest } from "../types/index.js";
 
-/**
- * Send OTP to Email for Registration / Login
- */
 export const sendOtpController = asyncHandler(
   async (req: Request, res: Response) => {
     const { email, purpose = "LOGIN" } = req.body;
@@ -24,9 +21,6 @@ export const sendOtpController = asyncHandler(
   },
 );
 
-/**
- * Verify OTP Code
- */
 export const verifyOtpController = asyncHandler(
   async (req: Request, res: Response) => {
     const { email, otp, purpose = "LOGIN" } = req.body;
@@ -40,9 +34,6 @@ export const verifyOtpController = asyncHandler(
   },
 );
 
-/**
- * Register New Football Player Account
- */
 export const registerPlayerController = asyncHandler(
   async (req: Request, res: Response) => {
     const { name, email, phone, password, city = "Raipur" } = req.body;
@@ -53,7 +44,6 @@ export const registerPlayerController = asyncHandler(
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Call PostgreSQL Stored Function register_player
     const dbRes = await dbPool.query(
       "SELECT public.register_player($1, $2, $3, $4, $5) as user_id;",
       [name, email, phone, passwordHash, city],
@@ -80,9 +70,6 @@ export const registerPlayerController = asyncHandler(
   },
 );
 
-/**
- * Login Player / User with Email or Phone
- */
 export const loginPlayerController = asyncHandler(
   async (req: Request, res: Response) => {
     const { identifier, password } = req.body;
@@ -94,7 +81,6 @@ export const loginPlayerController = asyncHandler(
       );
     }
 
-    // Query Stored Function get_login_user
     const userRes = await dbPool.query(
       "SELECT * FROM public.get_login_user($1);",
       [identifier.trim()],
@@ -117,7 +103,6 @@ export const loginPlayerController = asyncHandler(
       );
     }
 
-    // Verify bcrypt password
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
@@ -125,7 +110,6 @@ export const loginPlayerController = asyncHandler(
       throw new ApiError(401, "Invalid credentials");
     }
 
-    // Record successful login
     await dbPool.query("SELECT public.record_successful_login($1);", [user.id]);
 
     const signOptions: SignOptions = { expiresIn: "7d" };
@@ -135,7 +119,6 @@ export const loginPlayerController = asyncHandler(
       signOptions,
     );
 
-    // Get Player details
     const playerRes = await dbPool.query(
       "SELECT * FROM public.player_details WHERE user_id = $1;",
       [user.id],
@@ -157,9 +140,6 @@ export const loginPlayerController = asyncHandler(
   },
 );
 
-/**
- * Logout User Session
- */
 export const logoutController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;

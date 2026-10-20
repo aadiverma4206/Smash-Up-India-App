@@ -10,16 +10,10 @@ import { logger } from "../../utils/logger.js";
 import { dbPool } from "../../config/db.config.js";
 
 export class AuthService {
-  /**
-   * Helper: Hash refresh token with SHA-256
-   */
   private static hashToken(token: string): string {
     return crypto.createHash("sha256").update(token).digest("hex");
   }
 
-  /**
-   * Step 1: Send Registration OTP
-   */
   static async sendRegisterOtp(data: {
     name: string;
     email: string;
@@ -29,7 +23,6 @@ export class AuthService {
     const normalizedEmail = data.email.trim().toLowerCase();
     const normalizedPhone = data.phone.trim();
 
-    // Check duplicate email or phone in user_identity_history
     const existing = await AuthRepository.checkIdentityExists(
       normalizedEmail,
       normalizedPhone,
@@ -42,10 +35,8 @@ export class AuthService {
       );
     }
 
-    // Send Email OTP
     await createAndSendOTP(normalizedEmail, "REGISTRATION");
 
-    // Also update users.latest_otp if user exists by phone
     try {
       const digitsOnly = normalizedPhone.replace(/[^0-9]/g, "");
       await dbPool.query(
@@ -60,9 +51,7 @@ export class AuthService {
             OR ($3 <> '' AND LENGTH($3) >= 10 AND RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = RIGHT($3, 10))`,
         [normalizedEmail, normalizedPhone, digitsOnly],
       );
-    } catch (err: any) {
-      // Non-critical
-    }
+    } catch (err: any) {}
 
     return {
       message: "Verification OTP sent to email and phone number",
@@ -71,9 +60,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Resend OTP (Registration or Account Verification)
-   */
   static async resendOtp(data: { email?: string; identifier?: string }) {
     const rawTarget = data.email || data.identifier || "";
     const normalizedTarget = rawTarget.trim().toLowerCase();
@@ -98,9 +84,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Step 2: Verify Registration OTP
-   */
   static async verifyRegisterOtp(data: {
     email: string;
     phone: string;
@@ -109,10 +92,8 @@ export class AuthService {
     const normalizedEmail = data.email.trim().toLowerCase();
     const normalizedPhone = data.phone.trim();
 
-    // Verify Email OTP against DB
     await verifyOTP(normalizedEmail, data.emailOtp, "REGISTRATION");
 
-    // Generate Short-Lived Verification Token (15 minutes expiry)
     const signOptions: SignOptions = { expiresIn: "15m" };
     const verificationToken = jwt.sign(
       {
@@ -130,9 +111,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Step 3: Complete Player Registration (PLAYER ONLY)
-   */
   static async registerPlayer(data: {
     name: string;
     email: string;
@@ -141,7 +119,6 @@ export class AuthService {
     city: string;
     verificationToken: string;
   }) {
-    // Verify Short-Lived Registration Verification Token
     try {
       const decoded = jwt.verify(data.verificationToken, env.JWT_SECRET) as any;
       if (
@@ -165,7 +142,6 @@ export class AuthService {
     const normalizedEmail = data.email.trim().toLowerCase();
     const normalizedPhone = data.phone.trim();
 
-    // Double check if account exists before completing registration
     const existing = await AuthRepository.checkIdentityExists(
       normalizedEmail,
       normalizedPhone,
@@ -178,10 +154,8 @@ export class AuthService {
       );
     }
 
-    // Hash Password with Bcrypt Cost Factor 12
     const passwordHash = await bcrypt.hash(data.password, 12);
 
-    // Call DB Stored Function register_player (Role ID 3 = PLAYER only)
     const userId = await AuthRepository.registerPlayer({
       name: data.name.trim(),
       email: normalizedEmail,
@@ -194,7 +168,6 @@ export class AuthService {
       throw new ApiError(500, "Failed to create player account");
     }
 
-    // Set latest_otp on the newly registered player in public.users
     try {
       await dbPool.query(
         `UPDATE public.users
@@ -206,11 +179,8 @@ export class AuthService {
          WHERE id = $2;`,
         [data.email.trim().toLowerCase(), userId],
       );
-    } catch (err: any) {
-      // Non-critical
-    }
+    } catch (err: any) {}
 
-    // Create Access & Refresh Tokens
     const tokenData = await this.generateTokensAndSession(
       userId,
       normalizedEmail,
@@ -224,9 +194,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Login User (Email OR Phone + Password)
-   */
   static async loginUser(
     identifier: string,
     password: string,
@@ -255,7 +222,6 @@ export class AuthService {
       );
     }
 
-    // Verify Password with Bcrypt
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
@@ -263,27 +229,22 @@ export class AuthService {
       throw new ApiError(401, "Invalid credentials", "INVALID_CREDENTIALS");
     }
 
-    // Record Successful Login
     await dbPool.query("SELECT public.record_successful_login($1);", [user.id]);
 
-    // Build Role Payload
     let roleSpecificData: any = {};
 
     if (user.role_id === 1) {
-      // ADMIN
       roleSpecificData = {
         adminType: user.admin_type,
         isOwner: Boolean(user.is_owner),
       };
     } else if (user.role_id === 2) {
-      // MANAGER
       const clubIds = await AuthRepository.getManagerClubIds(user.id);
       roleSpecificData = {
         employeeCode: user.employee_code,
         assignedClubIds: clubIds,
       };
     } else if (user.role_id === 3) {
-      // PLAYER
       const playerInfo = await AuthRepository.getPlayerInfo(user.id);
       roleSpecificData = {
         playerDetails: playerInfo.details,
@@ -321,9 +282,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Refresh Access & Rotating Refresh Token
-   */
   static async refreshTokens(refreshToken: string) {
     const refreshTokenHash = this.hashToken(refreshToken);
     const session = await AuthRepository.findSessionByHash(refreshTokenHash);
@@ -332,7 +290,6 @@ export class AuthService {
       throw new ApiError(401, "Invalid refresh token", "INVALID_REFRESH_TOKEN");
     }
 
-    // Reuse Detection: If session was already revoked, revoke ENTIRE session family
     if (session.is_revoked) {
       logger.warn(
         `🚨 Refresh Token Reuse Detected! Revoking all sessions for user ${session.user_id}`,
@@ -349,17 +306,14 @@ export class AuthService {
       throw new ApiError(401, "Refresh token expired", "EXPIRED_REFRESH_TOKEN");
     }
 
-    // Revoke current session (Rotation)
     await AuthRepository.revokeSession(session.id);
 
-    // Fetch User
     const userRes = await dbPool.query(
       "SELECT email, role_id FROM public.users WHERE id = $1;",
       [session.user_id],
     );
     const user = userRes.rows[0];
 
-    // Issue New Rotating Tokens
     return await this.generateTokensAndSession(
       session.user_id,
       user.email,
@@ -369,9 +323,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * Helper: Generate Access Token + Rotating Refresh Token & Session
-   */
   private static async generateTokensAndSession(
     userId: string,
     email: string,
@@ -398,7 +349,7 @@ export class AuthService {
     );
 
     const refreshTokenHash = this.hashToken(refreshToken);
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     await AuthRepository.createSession({
       userId,
@@ -415,13 +366,9 @@ export class AuthService {
     };
   }
 
-  /**
-   * Forgot Password - Step 1: Send OTP
-   */
   static async forgotPasswordSendOtp(identifier: string) {
     const user = await AuthRepository.findUserByIdentifier(identifier);
     if (!user) {
-      // Generic response to prevent account enumeration
       return {
         message: "If an account exists, a password reset OTP has been sent.",
       };
@@ -433,9 +380,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Forgot Password - Step 2: Verify OTP & Return Reset Token
-   */
   static async forgotPasswordVerifyOtp(identifier: string, otp: string) {
     const user = await AuthRepository.findUserByIdentifier(identifier);
     if (!user) {
@@ -457,9 +401,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Forgot Password - Step 3: Reset Password (Invalidates all active user sessions)
-   */
   static async resetPassword(resetToken: string, newPassword: string) {
     let userId = "";
     try {
@@ -492,9 +433,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Get User Profile (`/auth/me`)
-   */
   static async getMe(userId: string) {
     const userRes = await dbPool.query(
       `SELECT u.id, u.name, u.email, u.phone, u.role_id, u.status, u.city, u.profile_image_url,

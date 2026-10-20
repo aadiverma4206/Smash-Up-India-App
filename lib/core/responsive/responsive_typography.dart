@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Centralized responsive typography and accessibility scaling system.
 class ResponsiveTypography {
-  /// Returns a [TextScaler] clamped between [minScale] and [maxScale].
-  /// This supports system accessibility scaling while preventing catastrophic layout breakage at 3.0x scale.
   static TextScaler getClampedTextScaler(
     BuildContext context, {
     double minScale = 0.85,
@@ -15,7 +12,6 @@ class ResponsiveTypography {
     return TextScaler.linear(clampedScale);
   }
 
-  /// Calculates a responsive font size based on screen width bounds and system scale factor.
   static double responsiveFontSize(
     BuildContext context, {
     required double baseSize,

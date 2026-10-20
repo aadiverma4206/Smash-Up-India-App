@@ -13,12 +13,12 @@ class PlayerProfileModel {
   final String? bio;
   final String? avatarUrl;
   final String? dateOfBirth;
-  final String position; // ST, CM, CB, GK, etc.
+  final String position;
   final String? secondaryPosition;
-  final String preferredFoot; // RIGHT, LEFT, BOTH
-  final String skillLevel; // AMATEUR, SEMI_PRO, PRO
-  final int ovr; // Overall Rating (50 - 99)
-  final int elo; // ELO Rating (e.g. 1200)
+  final String preferredFoot;
+  final String skillLevel;
+  final int ovr;
+  final int elo;
   final double walletBalance;
   final String accountStatus;
 

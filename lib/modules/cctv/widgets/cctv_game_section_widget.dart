@@ -39,7 +39,6 @@ class _CctvGameSectionWidgetState extends State<CctvGameSectionWidget> {
       final rec = controller.currentRecording.value;
       final isDark = Theme.of(context).brightness == Brightness.dark;
 
-      // 1. No Active or Completed Recording -> Allow Starting
       if (rec == null ||
           rec.recordingStatus == 'NONE' ||
           rec.recordingStatus == 'FAILED') {
@@ -91,8 +90,6 @@ class _CctvGameSectionWidgetState extends State<CctvGameSectionWidget> {
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 12),
-
-              // Camera Channel Selector
               Row(
                 children: [
                   const Text('Select Camera: ',
@@ -119,7 +116,6 @@ class _CctvGameSectionWidgetState extends State<CctvGameSectionWidget> {
                 ],
               ),
               const SizedBox(height: 14),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -237,8 +233,6 @@ class _CctvGameSectionWidgetState extends State<CctvGameSectionWidget> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // Live Recording Active View
             if (isRecording) ...[
               Container(
                 width: double.infinity,
@@ -280,8 +274,6 @@ class _CctvGameSectionWidgetState extends State<CctvGameSectionWidget> {
                 ),
               ),
             ],
-
-            // Post Match Active View
             if (isPostMatch) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -326,8 +318,6 @@ class _CctvGameSectionWidgetState extends State<CctvGameSectionWidget> {
                 ],
               ),
             ],
-
-            // Completed State -> Watch Video Button
             if (isCompleted) ...[
               Container(
                 width: double.infinity,

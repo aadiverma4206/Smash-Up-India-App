@@ -36,13 +36,11 @@ class RefreshTokenInterceptor extends Interceptor {
     if (isUnauthorized) {
       final requestOptions = err.requestOptions;
 
-      // Check if this request was already retried once
       if (requestOptions.extra['isRetry'] == true) {
         return handler.next(err);
       }
 
       if (_isRefreshing) {
-        // Queue pending requests while refresh is in progress
         _pendingRequests.add(_PendingRequest(requestOptions, handler));
         return;
       }
@@ -56,7 +54,6 @@ class RefreshTokenInterceptor extends Interceptor {
           throw Exception('No refresh token available');
         }
 
-        // Dedicated un-intercepted Dio instance for refresh call
         final refreshDio = Dio(
           BaseOptions(
             baseUrl: EnvConfig.baseUrl,
@@ -98,12 +95,10 @@ class RefreshTokenInterceptor extends Interceptor {
           AppLogger.info(
               '🔑 Tokens rotated successfully via RefreshTokenInterceptor');
 
-          // Retry the original request
           requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
           final retriedResponse = await dio.fetch(requestOptions);
           handler.resolve(retriedResponse);
 
-          // Resolve all queued pending requests
           for (final pending in _pendingRequests) {
             pending.options.headers['Authorization'] = 'Bearer $newAccessToken';
             pending.options.extra['isRetry'] = true;

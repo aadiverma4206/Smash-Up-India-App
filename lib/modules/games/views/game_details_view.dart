@@ -43,27 +43,16 @@ class GameDetailsView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Scoreboard & Header Banner
               _buildScoreboard(context, game),
               const SizedBox(height: 16),
-
-              // Match Info Card
               _buildMatchInfoCard(context, game),
               const SizedBox(height: 20),
-
-              // Pitch & Team Rosters Visuals (Team A vs Team B)
               _buildPitchRosters(context, controller, game),
               const SizedBox(height: 20),
-
-              // Action Buttons (Join / Switch Team / Leave / Waitlist)
               _buildMatchActions(context, controller, game),
               const SizedBox(height: 10),
-
-              // Host Cancel Match Card (If current user is host)
               _buildHostCancelCard(context, controller, game),
               const SizedBox(height: 20),
-
-              // CCTV Match Recordings Section
               _buildVideoSection(context, controller, game),
               const SizedBox(height: 20),
             ],
@@ -124,11 +113,9 @@ class GameDetailsView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Score Display: Team A vs Team B
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Team A
               Column(
                 children: [
                   const Icon(Icons.shield_rounded,
@@ -151,7 +138,6 @@ class GameDetailsView extends StatelessWidget {
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: context.textSecondary)),
-              // Team B
               Column(
                 children: [
                   const Icon(Icons.shield_rounded, color: Colors.red, size: 36),
@@ -259,7 +245,6 @@ class GameDetailsView extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Team A Column
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -289,7 +274,6 @@ class GameDetailsView extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Team B Column
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -416,7 +400,6 @@ class GameDetailsView extends StatelessWidget {
       );
     }
 
-    // Position Selection Dropdown
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -462,7 +445,6 @@ class GameDetailsView extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         if (game.status == 'FULL') ...[
-          // Waitlist / Reserve Join
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -476,7 +458,6 @@ class GameDetailsView extends StatelessWidget {
             ),
           ),
         ] else ...[
-          // Join Game Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -538,8 +519,6 @@ class GameDetailsView extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Match Summary Box
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -580,8 +559,6 @@ class GameDetailsView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Select Payment Option
                   Text(
                     'Select Payment Method',
                     style: TextStyle(
@@ -590,7 +567,6 @@ class GameDetailsView extends StatelessWidget {
                         color: context.textPrimary),
                   ),
                   const SizedBox(height: 8),
-
                   Obx(() {
                     final selected = controller.selectedJoinPaymentMethod.value;
                     return Container(
@@ -698,8 +674,6 @@ class GameDetailsView extends StatelessWidget {
                     );
                   }),
                   const SizedBox(height: 20),
-
-                  // Pay Action Button
                   Obx(
                     () => AppButton(
                       text:
@@ -709,8 +683,6 @@ class GameDetailsView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // Instant Test Payment Button
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 44),
@@ -734,8 +706,6 @@ class GameDetailsView extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Payment Processing Overlay
             Obx(
               () => PaymentProcessingOverlay(
                 isVisible: controller.isProcessingPayment.value,
@@ -927,8 +897,6 @@ class GameDetailsView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-
-          // Only Admin and Manager get the multi-camera switcher options!
           if (showMultiCam) ...[
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -985,7 +953,6 @@ class GameDetailsView extends StatelessWidget {
             ),
             const SizedBox(height: 6),
           ],
-
           Container(
             width: double.infinity,
             height: 190,

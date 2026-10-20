@@ -24,7 +24,6 @@ const envSchema = z.object({
     .string()
     .default("ALL STARS ARENA <no-reply@allstarsarena.com>"),
 
-  // CCTV Camera Configuration
   CAMERA_HOST: z.string().optional().default("192.168.1.2"),
   CAMERA_RTSP_PORT: z.coerce.number().default(554),
   CAMERA_TCP_PORT: z.coerce.number().default(37777),
@@ -39,7 +38,6 @@ const envSchema = z.object({
   CAMERA_SERIAL_NUMBER: z.string().optional().default("3L04789PAZ01138"),
   CAMERA_DEVICE_NAME: z.string().optional().default("Botivate"),
 
-  // CCTV Security & Networking
   CCTV_CREDENTIAL_ENCRYPTION_KEY: z
     .string()
     .default(
@@ -55,7 +53,6 @@ const envSchema = z.object({
   CAMERA_CONNECTION_TIMEOUT_MS: z.coerce.number().default(5000),
   CAMERA_RECONNECT_INTERVAL_MS: z.coerce.number().default(5000),
 
-  // Recording
   RECORDING_OUTPUT_DIR: z.string().default("./recordings"),
   RECORDING_TEMP_DIR: z.string().default("temp_recordings"),
   RECORDING_DURATION_MINUTES: z.coerce.number().default(120),
@@ -65,7 +62,6 @@ const envSchema = z.object({
   RECORDING_MAX_CONCURRENT: z.coerce.number().default(5),
   FFMPEG_PATH: z.string().default("ffmpeg"),
 
-  // AWS S3
   AWS_REGION: z.string().default(process.env.AWS_S3_REGION || "ap-south-1"),
   AWS_S3_REGION: z.string().default(process.env.AWS_REGION || "ap-south-1"),
   AWS_S3_BUCKET: z

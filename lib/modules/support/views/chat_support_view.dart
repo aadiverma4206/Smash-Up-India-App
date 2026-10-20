@@ -45,7 +45,6 @@ class _ChatSupportViewState extends State<ChatSupportView> {
 
     _scrollToBottom();
 
-    // Simulate Agent Automated Response after 1 second
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
       setState(() {
@@ -137,7 +136,6 @@ class _ChatSupportViewState extends State<ChatSupportView> {
       body: SafeArea(
         child: Column(
           children: [
-            // SUGGESTION CHIPS
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               color: isDark ? const Color(0xFF130722) : const Color(0xFFF8FAFC),
@@ -164,8 +162,6 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                 ),
               ),
             ),
-
-            // CHAT MESSAGES
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
@@ -244,8 +240,6 @@ class _ChatSupportViewState extends State<ChatSupportView> {
                 },
               ),
             ),
-
-            // MESSAGE INPUT BAR
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

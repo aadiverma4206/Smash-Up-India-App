@@ -32,7 +32,6 @@ class ForgotPasswordView extends GetView<AuthController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Sports Banner Header extending to top of screen
             Stack(
               children: [
                 Container(
@@ -63,8 +62,6 @@ class ForgotPasswordView extends GetView<AuthController> {
                     ),
                   ),
                 ),
-
-                // Gradient Overlay
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
@@ -85,8 +82,6 @@ class ForgotPasswordView extends GetView<AuthController> {
                 ),
               ],
             ),
-
-            // Form Body
             SafeArea(
               top: false,
               child: Padding(

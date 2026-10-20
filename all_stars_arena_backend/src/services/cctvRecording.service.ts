@@ -35,22 +35,16 @@ export interface ActiveRecording {
 }
 
 export class CctvRecordingService {
-  private static activeRecordings = new Map<string, ActiveRecording>(); // keyed by gameId (matchId)
-  private static recordingIdToGameId = new Map<string, string>(); // recordingId -> gameId
+  private static activeRecordings = new Map<string, ActiveRecording>();
+  private static recordingIdToGameId = new Map<string, string>();
   private static ffmpegChecked = false;
   private static ffmpegAvailable = false;
   private static ffmpegVersionStr = "";
 
-  /**
-   * Returns true if FFmpeg binary is available on the host
-   */
   static isFfmpegAvailable(): boolean {
     return this.ffmpegAvailable;
   }
 
-  /**
-   * Health check for media recording engine (FFmpeg)
-   */
   static async checkFfmpeg(): Promise<{
     available: boolean;
     version: string;
@@ -112,9 +106,6 @@ export class CctvRecordingService {
     });
   }
 
-  /**
-   * Real network connection test to camera via TCP RTSP port
-   */
   static async testCameraConnection(camera: {
     id: string;
     ip_address?: string;
@@ -218,9 +209,6 @@ export class CctvRecordingService {
     });
   }
 
-  /**
-   * Helper to resolve active recording by matchId or recordingId
-   */
   static getActiveSession(matchOrRecId: string): ActiveRecording | undefined {
     if (this.activeRecordings.has(matchOrRecId)) {
       return this.activeRecordings.get(matchOrRecId);
@@ -232,14 +220,6 @@ export class CctvRecordingService {
     return undefined;
   }
 
-  /**
-   * Resolve best reachable RTSP URL for a camera/channel
-   * Priority:
-   * 1. If explicit rtspUrl supplied, validate against allowed hosts.
-   * 2. If camera record exists in DB, decrypt rtsp_url_encrypted.
-   * 3. Local MediaMTX relay (rtsp://127.0.0.1:8555/cam{N}_main or cctv_live)
-   * 4. Direct Dahua XVR RTSP URL
-   */
   static async resolveRtspUrl(params: {
     channel: number;
     cameraId?: string;
@@ -247,7 +227,6 @@ export class CctvRecordingService {
   }): Promise<{ rtspUrl: string; cameraId?: string }> {
     const { channel, cameraId, suppliedRtspUrl } = params;
 
-    // 1. If user supplied an RTSP URL, validate strictly against permitted camera hosts
     if (suppliedRtspUrl) {
       try {
         const parsed = new URL(suppliedRtspUrl);
@@ -272,7 +251,6 @@ export class CctvRecordingService {
       }
     }
 
-    // 2. Check camera in DB if cameraId provided
     if (cameraId) {
       const camRes = await dbPool.query(
         "SELECT * FROM public.cctv_cameras WHERE id = $1;",
@@ -289,7 +267,6 @@ export class CctvRecordingService {
       }
     }
 
-    // 3. Check if local MediaMTX relay is responding on port 8555
     const mediaMtxAvailable = await new Promise<boolean>((resolve) => {
       const sock = new net.Socket();
       sock.setTimeout(800);
@@ -317,7 +294,6 @@ export class CctvRecordingService {
       return { rtspUrl: relayUrl, cameraId };
     }
 
-    // 4. Direct Dahua XVR RTSP URL fallback
     const directUrl = getDefaultRtspUrl(channel, 0);
     logger.info(
       `📹 [CCTV Recorder] Using direct Dahua XVR stream for Channel ${channel}`,
@@ -325,9 +301,6 @@ export class CctvRecordingService {
     return { rtspUrl: directUrl, cameraId };
   }
 
-  /**
-   * Start server-side FFmpeg RTSP recording for a match
-   */
   static async startRecording(params: {
     recordingId?: string;
     gameId: string;
@@ -357,7 +330,6 @@ export class CctvRecordingService {
       userId,
     } = params;
 
-    // 1. Check if recording is already active for this game
     const existingSession = this.activeRecordings.get(gameId);
     if (
       existingSession &&
@@ -377,7 +349,6 @@ export class CctvRecordingService {
       };
     }
 
-    // 2. Fetch game details from DB
     const gameRes = await dbPool.query(
       "SELECT * FROM public.games WHERE id = $1;",
       [gameId],
@@ -391,7 +362,6 @@ export class CctvRecordingService {
     const title = matchTitle || game.title || `Match - ${gameId}`;
     const channel = params.channel || (courtId === "court_2" ? 3 : 1);
 
-    // 3. Enforce server concurrency limits
     const maxConcurrent = env.RECORDING_MAX_CONCURRENT || 5;
     if (this.activeRecordings.size >= maxConcurrent) {
       logger.warn(
@@ -404,13 +374,11 @@ export class CctvRecordingService {
       );
     }
 
-    // 4. Ensure FFmpeg is available
     if (!this.ffmpegChecked) {
       await this.checkFfmpeg();
     }
     const ffmpegPath = env.FFMPEG_PATH || "ffmpeg";
 
-    // 5. Resolve stream RTSP URL
     const { rtspUrl, cameraId } = await this.resolveRtspUrl({
       channel,
       cameraId: params.cameraId || params.camera?.id,
@@ -425,7 +393,6 @@ export class CctvRecordingService {
       );
     }
 
-    // 6. Ensure recordings directory exists safely
     const outputBaseDir = path.resolve(
       process.cwd(),
       env.RECORDING_OUTPUT_DIR || "./recordings",
@@ -455,7 +422,6 @@ export class CctvRecordingService {
       params.scheduledStopAt ||
       new Date(now.getTime() + durationSeconds * 1000);
 
-    // 7. Insert DB record in cctv_recordings with state 'STARTING'
     let recordingId = params.recordingId;
     if (!recordingId) {
       const insertRes = await dbPool.query(
@@ -506,7 +472,6 @@ export class CctvRecordingService {
       errorLogs: [],
     };
 
-    // 8. Launch FFmpeg child process with pipe stdio
     const ffmpegArgs = [
       "-y",
       "-rtsp_transport",
@@ -558,11 +523,9 @@ export class CctvRecordingService {
       );
     }
 
-    // Register active recording in memory
     this.activeRecordings.set(gameId, activeRec);
     this.recordingIdToGameId.set(recordingId!, gameId);
 
-    // Update PID in DB
     if (proc.pid) {
       dbPool
         .query(
@@ -572,7 +535,6 @@ export class CctvRecordingService {
         .catch(() => {});
     }
 
-    // Listen to stderr for video-frame confirmation
     proc.stderr?.on("data", async (data: Buffer) => {
       const text = data.toString();
       activeRec.errorLogs.push(text.trim());
@@ -580,7 +542,6 @@ export class CctvRecordingService {
         activeRec.errorLogs.shift();
       }
 
-      // Check for first confirmed video frame
       if (
         !activeRec.firstFrameDetected &&
         (text.includes("frame=") || text.includes("size="))
@@ -612,7 +573,6 @@ export class CctvRecordingService {
       }
     });
 
-    // Handle unexpected process exit while active
     proc.on("exit", async (code, signal) => {
       logger.info(
         `[CCTV Recorder] FFmpeg process exited for Match ${gameId} with code ${code}, signal ${signal}`,
@@ -657,7 +617,6 @@ export class CctvRecordingService {
         .catch(() => {});
     });
 
-    // Auto-stop timer when deadline expires
     const delayMs = Math.max(scheduledStopAt.getTime() - Date.now(), 5000);
     activeRec.stopTimer = setTimeout(async () => {
       logger.info(
@@ -678,9 +637,6 @@ export class CctvRecordingService {
     };
   }
 
-  /**
-   * Gracefully stop recording session, finalize MP4 file, and persist database metadata
-   */
   static async stopRecording(
     matchOrRecId: string,
     options?: {
@@ -703,7 +659,6 @@ export class CctvRecordingService {
     const isManual = options?.manualStop ?? true;
     const stoppedAt = new Date();
 
-    // 1. Fetch DB recording row
     let recRes = await dbPool.query(
       `SELECT rec.*, g.title as game_title, g.club_id as g_club_id, g.court_id as g_court_id
        FROM public.cctv_recordings rec
@@ -726,7 +681,6 @@ export class CctvRecordingService {
     const actualGameId = session?.gameId || rec.game_id;
     const localPath = session?.outputFile || rec.local_temp_path;
 
-    // 2. Gracefully signal FFmpeg process to close MP4 container safely
     if (session) {
       session.state = "stopping";
       if (session.stopTimer) {
@@ -744,7 +698,6 @@ export class CctvRecordingService {
           }
         } catch (_) {}
 
-        // Wait up to 5000ms for graceful exit & moov atom write
         await new Promise<void>((resolve) => {
           let resolved = false;
           const timer = setTimeout(() => {
@@ -781,14 +734,13 @@ export class CctvRecordingService {
       this.recordingIdToGameId.delete(recordingId);
     }
 
-    // 3. Validate output file
     let fileSizeBytes = 0;
     let isValidFile = false;
     if (localPath && fs.existsSync(localPath)) {
       try {
         const stats = await fs.promises.stat(localPath);
         fileSizeBytes = stats.size;
-        isValidFile = stats.size > 1024; // At least 1KB
+        isValidFile = stats.size > 1024;
       } catch (err: any) {
         logger.error(
           { err },
@@ -828,7 +780,6 @@ export class CctvRecordingService {
       );
     }
 
-    // 4. Update cctv_recordings in DB
     const finalStatus = "COMPLETED";
     const finalRecStatus = isManual ? "STOPPED_MANUALLY" : "COMPLETED";
 
@@ -852,7 +803,6 @@ export class CctvRecordingService {
       ],
     );
 
-    // 5. Insert segment metadata into cctv_recording_segments
     try {
       await dbPool.query(
         `INSERT INTO public.cctv_recording_segments (
@@ -865,7 +815,6 @@ export class CctvRecordingService {
       logger.warn({ segErr }, "Non-fatal error inserting segment metadata");
     }
 
-    // 6. Insert or update in game_videos catalog
     const videoTitle =
       session?.title || rec.game_title || `Match Recording - ${actualGameId}`;
     await dbPool.query(
@@ -883,7 +832,6 @@ export class CctvRecordingService {
       ],
     );
 
-    // 7. Update games table video_playback_url
     await dbPool
       .query(
         `UPDATE public.games
@@ -893,7 +841,6 @@ export class CctvRecordingService {
       )
       .catch(() => {});
 
-    // 8. Audit event
     await dbPool
       .query(
         `INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)
@@ -913,7 +860,6 @@ export class CctvRecordingService {
       )
       .catch(() => {});
 
-    // 9. Real-time broadcast
     try {
       const io = getSocketIO();
       io.emit("match:recording_completed", {
@@ -942,9 +888,6 @@ export class CctvRecordingService {
     };
   }
 
-  /**
-   * Get current recording status for a specific match
-   */
   static async getMatchRecordingStatus(matchId: string): Promise<{
     matchId: string;
     recordingId: string | null;
@@ -954,7 +897,6 @@ export class CctvRecordingService {
     fileSizeBytes?: number;
     videoUrl?: string | null;
   }> {
-    // 1. Check in-memory active session first
     const active = this.activeRecordings.get(matchId);
     if (active) {
       const elapsed = Math.floor(
@@ -970,7 +912,6 @@ export class CctvRecordingService {
       };
     }
 
-    // 2. Check DB records
     const recRes = await dbPool.query(
       `SELECT rec.*, gv.video_url, seg.file_size_bytes
        FROM public.cctv_recordings rec
@@ -1009,9 +950,6 @@ export class CctvRecordingService {
     };
   }
 
-  /**
-   * List all recorded matches with real database metadata
-   */
   static async listRecordedMatches(limit = 50, offset = 0) {
     const query = `
       SELECT DISTINCT ON (rec.game_id)
@@ -1062,9 +1000,6 @@ export class CctvRecordingService {
     });
   }
 
-  /**
-   * Get detailed match information including recording and video stream endpoint
-   */
   static async getMatchRecordingDetails(matchId: string) {
     const gameRes = await dbPool.query(
       `SELECT g.*, c.name as club_name, crt.name as court_name
@@ -1081,7 +1016,6 @@ export class CctvRecordingService {
 
     const game = gameRes.rows[0];
 
-    // Check active or persisted recording
     const recRes = await dbPool.query(
       `SELECT rec.*, seg.file_size_bytes
        FROM public.cctv_recordings rec
@@ -1143,17 +1077,12 @@ export class CctvRecordingService {
     };
   }
 
-  /**
-   * Safely resolve local video file for streaming/download
-   */
   static getVideoFilePath(filename: string): string {
-    // 1. Sanitize to prevent path traversal
     const safeBase = path.basename(filename);
     if (!safeBase || safeBase !== filename || filename.includes("..")) {
       throw new ApiError(400, "Invalid filename requested", "INVALID_FILENAME");
     }
 
-    // 2. Check primary recordings directory
     const primaryDir = path.resolve(
       process.cwd(),
       env.RECORDING_OUTPUT_DIR || "./recordings",
@@ -1163,7 +1092,6 @@ export class CctvRecordingService {
       return primaryPath;
     }
 
-    // 3. Check temp recordings directory
     const tempDir = path.resolve(
       process.cwd(),
       env.RECORDING_TEMP_DIR || "temp_recordings",
@@ -1173,7 +1101,6 @@ export class CctvRecordingService {
       return tempPath;
     }
 
-    // 4. Recursive search inside temp_recordings subdirectories (session folders)
     if (fs.existsSync(tempDir)) {
       const entries = fs.readdirSync(tempDir, { withFileTypes: true });
       for (const entry of entries) {
@@ -1193,9 +1120,6 @@ export class CctvRecordingService {
     );
   }
 
-  /**
-   * Gracefully stop all active recordings on server shutdown
-   */
   static async stopAllActiveRecordings(
     reason = "SERVER_SHUTDOWN",
   ): Promise<void> {
@@ -1216,9 +1140,6 @@ export class CctvRecordingService {
     await Promise.all(promises);
   }
 
-  /**
-   * Reconcile pending/active recordings on server reboot to recover state safely
-   */
   static async reconcileOnBoot(): Promise<void> {
     try {
       const activeFromDb = await dbPool.query(
@@ -1263,9 +1184,6 @@ export class CctvRecordingService {
     }
   }
 
-  /**
-   * Extend an active recording deadline by N minutes
-   */
   static async extendRecording(
     recordingId: string,
     additionalMinutes: number,

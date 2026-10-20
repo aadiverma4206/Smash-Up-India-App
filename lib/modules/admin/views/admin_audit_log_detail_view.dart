@@ -104,7 +104,6 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                   ),
                   child: Column(
                     children: [
-                      // Header Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -127,7 +126,6 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                         ),
                         child: Column(
                           children: [
-                            // Circle Icon Badge
                             Container(
                               width: 64,
                               height: 64,
@@ -142,8 +140,6 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               ),
                             ),
                             const SizedBox(height: 14),
-
-                            // Action Title
                             Text(
                               log.action,
                               textAlign: TextAlign.center,
@@ -156,8 +152,6 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               ),
                             ),
                             const SizedBox(height: 8),
-
-                            // Event Time
                             if (log.createdAt.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -183,8 +177,6 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Event Summary / Details Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -228,8 +220,6 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // System Metadata Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),

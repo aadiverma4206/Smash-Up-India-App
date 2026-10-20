@@ -159,7 +159,6 @@ export class ManagerService {
         );
       }
 
-      // Check slot conflict on the same court
       const conflictRes = await client.query(
         `SELECT id FROM public.games
          WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED' AND approval_status = 'APPROVED' AND id <> $3
@@ -271,7 +270,6 @@ export class ManagerService {
         [reasonText, managerUserId, gameId],
       );
 
-      // Refund paying players
       const entryFee = parseFloat(game.entry_fee || "0.00");
       const playersRes = await client.query(
         `SELECT user_id FROM public.game_players WHERE game_id = $1 AND payment_status = 'PAID';`,
@@ -378,9 +376,6 @@ export class ManagerService {
     }
   }
 
-  /**
-   * Approve Player Slot Request (Atomic DB Transaction)
-   */
   static async approveSlotRequest(
     managerUserId: string,
     managerName: string,
@@ -390,7 +385,6 @@ export class ManagerService {
     try {
       await client.query("BEGIN");
 
-      // Lock request row
       const reqRes = await client.query(
         `SELECT * FROM public.game_slot_requests WHERE id = $1 FOR UPDATE;`,
         [requestId],
@@ -408,7 +402,6 @@ export class ManagerService {
         );
       }
 
-      // Lock game & verify manager club scope
       const gameRes = await client.query(
         `SELECT g.*
          FROM public.games g
@@ -427,7 +420,6 @@ export class ManagerService {
       }
       const game = gameRes.rows[0];
 
-      // Fetch player name
       const userRes = await client.query(
         `SELECT name FROM public.users WHERE id = $1;`,
         [slotReq.user_id],
@@ -442,7 +434,6 @@ export class ManagerService {
         );
       }
 
-      // Check current roster count
       const rosterCountRes = await client.query(
         `SELECT COUNT(*) as roster_count FROM public.game_players WHERE game_id = $1;`,
         [game.id],
@@ -460,7 +451,6 @@ export class ManagerService {
         );
       }
 
-      // Check duplicate joined
       const dupCheck = await client.query(
         `SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;`,
         [game.id, slotReq.user_id],
@@ -473,10 +463,8 @@ export class ManagerService {
         );
       }
 
-      // Process payment if entry fee > 0
       const entryFee = parseFloat(game.entry_fee || "0.00");
       if (entryFee > 0 && slotReq.payment_status !== "PAID") {
-        // Lock player details wallet balance
         const walletRes = await client.query(
           `SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;`,
           [slotReq.user_id],
@@ -493,7 +481,6 @@ export class ManagerService {
           );
         }
 
-        // Record DEBIT in authoritative transactions ledger (trg_apply_transaction validates and updates player_details.wallet_balance securely)
         const txRes = await client.query(
           `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
            VALUES ($1, 'PAYMENT', $2, 0, 'SUCCESS', $3, $4)
@@ -524,7 +511,6 @@ export class ManagerService {
         sendWalletUpdate(slotReq.user_id, { walletBalance: newBalance });
       }
 
-      // Assign team based on current counts
       const teamCountRes = await client.query(
         `SELECT team, COUNT(*) as count FROM public.game_players WHERE game_id = $1 GROUP BY team;`,
         [game.id],
@@ -537,20 +523,17 @@ export class ManagerService {
       }
       const assignedTeam = teamACount <= teamBCount ? "TEAM_A" : "TEAM_B";
 
-      // Insert into game_players
       await client.query(
         `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
          VALUES ($1, $2, $3, $4, 'PAID');`,
         [game.id, slotReq.user_id, assignedTeam, slotReq.position],
       );
 
-      // Update slot request status
       await client.query(
         `UPDATE public.game_slot_requests SET status = 'APPROVED', payment_status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
         [requestId],
       );
 
-      // Update game status to FULL if max players reached
       if (currentRosterCount + 1 >= game.max_players) {
         await client.query(
           `UPDATE public.games SET status = 'FULL', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
@@ -558,7 +541,6 @@ export class ManagerService {
         );
       }
 
-      // Log activity
       await GamesRepository.addActivityLog(
         {
           gameId: game.id,
@@ -573,7 +555,6 @@ export class ManagerService {
 
       await client.query("COMMIT");
 
-      // Send Realtime Notification
       sendUserNotification(slotReq.user_id, {
         title: "🎉 Slot Request Approved!",
         message: `Your request to join "${game.title}" was approved for ${assignedTeam}!`,
@@ -595,9 +576,6 @@ export class ManagerService {
     }
   }
 
-  /**
-   * Reject Player Slot Request (Atomic DB Transaction)
-   */
   static async rejectSlotRequest(
     managerUserId: string,
     managerName: string,
@@ -617,7 +595,6 @@ export class ManagerService {
       }
       const slotReq = reqRes.rows[0];
 
-      // Lock game & verify manager club scope
       const gameRes = await client.query(
         `SELECT g.*
          FROM public.games g
@@ -642,13 +619,11 @@ export class ManagerService {
       );
       const playerName = userRes.rows[0]?.name || "Player";
 
-      // If player was in active game_players, remove them
       await client.query(
         `DELETE FROM public.game_players WHERE game_id = $1 AND user_id = $2;`,
         [game.id, slotReq.user_id],
       );
 
-      // Refund payment if entry fee was paid via authoritative transactions ledger
       const entryFee = parseFloat(
         slotReq.entry_fee || game.entry_fee || "0.00",
       );
@@ -696,7 +671,6 @@ export class ManagerService {
         }
       }
 
-      // Update slot request to REJECTED
       const reasonText =
         rejectionReason && rejectionReason.trim().length > 0
           ? rejectionReason.trim()
@@ -708,7 +682,6 @@ export class ManagerService {
         [reasonText, requestId],
       );
 
-      // Log activity
       await GamesRepository.addActivityLog(
         {
           gameId: game.id,
@@ -727,7 +700,6 @@ export class ManagerService {
         sendWalletUpdate(slotReq.user_id, { walletBalance: newBalance });
       }
 
-      // Send Realtime Notification to player
       sendUserNotification(slotReq.user_id, {
         title: "❌ Slot Request Declined",
         message: `Your request for "${game.title}" was declined: ${reasonText}`,
@@ -749,9 +721,6 @@ export class ManagerService {
     }
   }
 
-  /**
-   * Cancel Match & Process Atomic Refunds
-   */
   static async cancelMatchWithRefunds(
     managerUserId: string,
     managerName: string,
@@ -763,16 +732,13 @@ export class ManagerService {
     try {
       await client.query("BEGIN");
 
-      // Lock game & verify scope
       let gameQuery = "";
       let queryParams: any[] = [];
 
       if (userRole === 1) {
-        // Admin has global authority across all clubs
         gameQuery = `SELECT g.* FROM public.games g WHERE g.id = $1 FOR UPDATE;`;
         queryParams = [gameId];
       } else {
-        // Manager must manage the hosting club
         gameQuery = `SELECT g.*
          FROM public.games g
          JOIN public.club_managers cm ON cm.club_id = g.club_id
@@ -807,13 +773,11 @@ export class ManagerService {
         );
       }
 
-      // Set status = CANCELLED
       await client.query(
         `UPDATE public.games SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
         [gameId],
       );
 
-      // Stop CCTV recording if active
       let activeRecordingId: string | null = null;
       try {
         const recRes = await client.query(
@@ -829,7 +793,6 @@ export class ManagerService {
         }
       } catch (_) {}
 
-      // Process Refunds for all joined players
       const entryFee = parseFloat(game.entry_fee || "0.00");
       const playersRes = await client.query(
         `SELECT user_id FROM public.game_players WHERE game_id = $1 AND payment_status = 'PAID';`,
@@ -845,7 +808,6 @@ export class ManagerService {
         if (entryFee > 0) {
           const refundRef = `MATCH_REFUND:${gameId}:${pUserId}`;
 
-          // Check if already refunded to prevent duplicate refund
           const existingRefund = await client.query(
             `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
             [pUserId, refundRef],
@@ -853,7 +815,6 @@ export class ManagerService {
 
           let newBal = 0;
           if (existingRefund.rows.length === 0) {
-            // Record in authoritative ledger (trg_apply_transaction credits player_details.wallet_balance safely)
             const txRes = await client.query(
               `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
                VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
@@ -897,13 +858,11 @@ export class ManagerService {
         }
       }
 
-      // Update requests & waitlist
       await client.query(
         `UPDATE public.game_slot_requests SET status = 'CANCELLED', payment_status = 'REFUNDED' WHERE game_id = $1;`,
         [gameId],
       );
 
-      // Log activity & audit entry
       await GamesRepository.addActivityLog(
         {
           gameId,
@@ -947,7 +906,6 @@ export class ManagerService {
         } catch (_) {}
       }
 
-      // Emit notifications after successful database commit
       for (const item of refundNotifications) {
         sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
         sendUserNotification(item.userId, {
@@ -966,9 +924,6 @@ export class ManagerService {
     }
   }
 
-  /**
-   * Start Match (Dynamic start_time = NOW, end_time = NOW + 1.5h) & Trigger CCTV Recording
-   */
   static async startMatch(
     managerId: string,
     managerName: string,
@@ -981,10 +936,8 @@ export class ManagerService {
     if (gameRes.rows.length === 0)
       throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
 
-    // Dynamic start_time = current time, match_date = today, end_time = start_time + 1.5 hours (90 mins)
     const updatedGame = await ManagerRepository.startMatchGame(gameId);
 
-    // Trigger CCTV Recording Asynchronously & update camera status
     try {
       const cameras = await CctvRepository.getCamerasByClub(
         gameRes.rows[0].club_id,
@@ -1027,9 +980,6 @@ export class ManagerService {
     return updatedGame;
   }
 
-  /**
-   * Complete Match (Dynamic end_time = NOW) & Enter CCTV POST_MATCH (+10 min buffer) Window
-   */
   static async completeMatch(
     managerId: string,
     managerName: string,
@@ -1047,10 +997,8 @@ export class ManagerService {
       });
     }
 
-    // Dynamic end_time = exact current time when manager stops match
     const completedGame = await ManagerRepository.completeMatchGame(gameId);
 
-    // CCTV enters POST_MATCH window (+10 minutes stop deadline buffer)
     try {
       const recording = await CctvRepository.getRecordingByGame(gameId);
       if (recording) {
@@ -1073,7 +1021,6 @@ export class ManagerService {
         );
       }
 
-      // Reset camera status to ONLINE
       if (completedGame && completedGame.court_id) {
         await dbPool.query(
           `UPDATE public.cctv_cameras SET status = 'ONLINE', updated_at = CURRENT_TIMESTAMP WHERE court_id = $1;`,
@@ -1101,16 +1048,10 @@ export class ManagerService {
     return completedGame;
   }
 
-  /**
-   * Cancel Match
-   */
   static async cancelMatch(gameId: string) {
     return await ManagerRepository.updateGameStatus(gameId, "CANCELLED");
   }
 
-  /**
-   * Manager Player Management: List All Players (Safe fields only)
-   */
   static async getAllPlayers(
     managerUserId: string,
     search?: string,
@@ -1121,9 +1062,6 @@ export class ManagerService {
     return await ManagerRepository.getAllPlayers(search, status, limit, offset);
   }
 
-  /**
-   * Manager Player Management: Get Detailed Player Profile & Full Match/Payment History
-   */
   static async getPlayerDetailHistory(managerUserId: string, playerId: string) {
     const data = await ManagerRepository.getPlayerDetailHistory(playerId);
     if (!data) {
@@ -1132,9 +1070,6 @@ export class ManagerService {
     return data;
   }
 
-  /**
-   * Manager Player Management: Block Player
-   */
   static async blockPlayer(
     managerUserId: string,
     managerName: string,
@@ -1197,9 +1132,6 @@ export class ManagerService {
     };
   }
 
-  /**
-   * Manager Player Management: Unblock Player
-   */
   static async unblockPlayer(
     managerUserId: string,
     managerName: string,
@@ -1245,9 +1177,6 @@ export class ManagerService {
     };
   }
 
-  /**
-   * Submit or Finalize Match Score (Server Authorized for Host, Manager, or Admin)
-   */
   static async submitMatchScore(
     userId: string,
     userName: string,
@@ -1271,7 +1200,6 @@ export class ManagerService {
       );
     }
 
-    // Check if score is already submitted & locked for non-admins (Manager can enter ONCE; Admin can UPDATE anytime)
     const hasExistingScore = game.team_a_score > 0 || game.team_b_score > 0;
     if (hasExistingScore && userRole !== 1) {
       throw new ApiError(
@@ -1281,7 +1209,6 @@ export class ManagerService {
       );
     }
 
-    // Role check: Only match host player (game.creator_id), club manager, or platform admin can submit scores
     if (userRole === 3) {
       if (game.creator_id !== userId) {
         throw new ApiError(
@@ -1314,9 +1241,6 @@ export class ManagerService {
     });
   }
 
-  /**
-   * Get CCTV Recording Status & Presigned Playback URL for Manager
-   */
   static async getMatchRecording(managerUserId: string, gameId: string) {
     const gameRes = await dbPool.query(
       "SELECT * FROM public.games WHERE id = $1;",
@@ -1340,7 +1264,6 @@ export class ManagerService {
 
     const recording = await CctvRepository.getRecordingByGame(gameId);
 
-    // Fetch all cataloged game videos (with multi-camera links)
     const videos = await GamesRepository.getGameVideos(gameId);
     const videoList: Array<any> = [];
 
@@ -1417,9 +1340,6 @@ export class ManagerService {
     };
   }
 
-  /**
-   * Manager Manual Stop CCTV Recording (Only permitted AFTER match scheduled end!)
-   */
   static async stopMatchRecording(
     managerUserId: string,
     managerName: string,
@@ -1445,7 +1365,6 @@ export class ManagerService {
       );
     }
 
-    // Verify scheduled end time: Manager cannot stop recording before match end! (Phase 32)
     let datePart = "";
     if (game.match_date instanceof Date) {
       const year = game.match_date.getFullYear();
@@ -1488,9 +1407,6 @@ export class ManagerService {
     );
   }
 
-  /**
-   * Get Detailed Game info for Manager
-   */
   static async getGameDetails(managerUserId: string, gameId: string) {
     const game = await ManagerRepository.getGameForManager(gameId);
     if (!game) throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");

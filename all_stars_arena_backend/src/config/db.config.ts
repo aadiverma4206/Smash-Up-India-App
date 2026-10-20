@@ -794,10 +794,10 @@ export const initDbTables = async () => {
 
       -- 2. Ensure canonical courts 'court_1' and 'court_2' exist
       INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)
-      VALUES 
+      VALUES
         ('court_1', 'all_stars_arena_club', 'Court 1', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE'),
         ('court_2', 'all_stars_arena_club', 'Court 2', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')
-      ON CONFLICT (id) DO UPDATE SET 
+      ON CONFLICT (id) DO UPDATE SET
         club_id = 'all_stars_arena_club',
         name = EXCLUDED.name,
         surface = EXCLUDED.surface,
@@ -805,9 +805,9 @@ export const initDbTables = async () => {
 
       -- 3. Normalize all games strictly to all_stars_arena_club and court_1 / court_2
       UPDATE public.games
-      SET 
+      SET
         club_id = 'all_stars_arena_club',
-        court_id = CASE 
+        court_id = CASE
           WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
           ELSE 'court_1'
         END
@@ -816,7 +816,7 @@ export const initDbTables = async () => {
       DO $$
       BEGIN
         UPDATE public.court_bookings
-        SET court_id = CASE 
+        SET court_id = CASE
           WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
           ELSE 'court_1'
         END
@@ -837,12 +837,12 @@ export const initDbTables = async () => {
 
       -- Ensure canonical CCTV cameras exist for each court
       INSERT INTO public.cctv_cameras (id, club_id, court_id, name, camera_type, connection_type, rtsp_url_encrypted, is_enabled, status, health_status)
-      VALUES 
+      VALUES
         ('cam_court_1_c1', 'all_stars_arena_club', 'court_1', 'Camera 1 (Main Dome)', 'RTSP_DOME', 'RTSP', 'a85be7a5d2c5ab215dc2c4fe5a4abdb0:090aef5f', true, 'ONLINE', 'ONLINE'),
         ('cam_court_1_c2', 'all_stars_arena_club', 'court_1', 'Camera 2 (Sideline HD)', 'RTSP_DOME', 'RTSP', '7cd81c89947568ffe8fd52db19b6ee0a:741aa07c', true, 'ONLINE', 'ONLINE'),
         ('cam_court_2_c1', 'all_stars_arena_club', 'court_2', 'Camera 1 (Main Dome)', 'RTSP_DOME', 'RTSP', '49f33db91e4007a53c608048539d974c:15158b0', true, 'ONLINE', 'ONLINE'),
         ('cam_court_2_c2', 'all_stars_arena_club', 'court_2', 'Camera 2 (Goalpost HD)', 'RTSP_DOME', 'RTSP', '4e66febba6293e86a1c041d990cea66d:bb3018eb', true, 'ONLINE', 'ONLINE')
-      ON CONFLICT (id) DO UPDATE SET 
+      ON CONFLICT (id) DO UPDATE SET
         club_id = EXCLUDED.club_id,
         court_id = EXCLUDED.court_id,
         name = EXCLUDED.name,

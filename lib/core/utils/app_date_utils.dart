@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Central utility class for robust date and time parsing, formatting, and validation across the app.
 class AppDateUtils {
   AppDateUtils._();
 
-  /// Parses any input (DateTime, String, int timestamp) safely into a local [DateTime].
-  /// Returns `null` if the input cannot be parsed.
   static DateTime? parseDate(dynamic input) {
     if (input == null) return null;
     if (input is DateTime) return input.toLocal();
@@ -21,11 +18,9 @@ class AppDateUtils {
       final trimmed = input.trim();
       if (trimmed.isEmpty) return null;
 
-      // Try standard DateTime parsing (ISO-8601, etc.)
       final direct = DateTime.tryParse(trimmed);
       if (direct != null) return direct.toLocal();
 
-      // Common custom format matchers
       final formats = [
         'yyyy-MM-dd HH:mm:ss',
         'yyyy-MM-dd HH:mm',
@@ -54,8 +49,6 @@ class AppDateUtils {
     return null;
   }
 
-  /// Parses a time string (e.g., "18:00", "18:00:00", "6:00 PM", "06:30 AM") or [DateTime]/[TimeOfDay]
-  /// safely into a [TimeOfDay]. Returns `null` if parsing fails.
   static TimeOfDay? parseTimeOfDay(dynamic input) {
     if (input == null) return null;
     if (input is TimeOfDay) return input;
@@ -67,7 +60,6 @@ class AppDateUtils {
       final trimmed = input.trim();
       if (trimmed.isEmpty) return null;
 
-      // Check regex for HH:mm or HH:mm:ss or h:mm a
       final timeRegex = RegExp(
         r'^(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:\s*([AaPp][Mm]))?$',
       );
@@ -88,7 +80,6 @@ class AppDateUtils {
         }
       }
 
-      // Try DateFormat time parsing
       final timeFormats = [
         'HH:mm:ss',
         'HH:mm',
@@ -109,8 +100,6 @@ class AppDateUtils {
     return null;
   }
 
-  /// Safely combines [matchDate] (ISO string, date string, or DateTime) and
-  /// [startTime] (time string or TimeOfDay) into a single [DateTime].
   static DateTime? parseMatchDateTime(dynamic matchDate, dynamic startTime) {
     if (matchDate == null) return null;
 
@@ -136,8 +125,6 @@ class AppDateUtils {
     );
   }
 
-  /// Formats a date into a clean string (default: "EEE, dd MMM yyyy").
-  /// Returns [fallback] if [input] is invalid/null.
   static String formatDate(
     dynamic input, {
     String format = 'EEE, dd MMM yyyy',
@@ -156,8 +143,6 @@ class AppDateUtils {
     }
   }
 
-  /// Formats a time into 12-hour format with AM/PM (default: "h:mm a").
-  /// Returns [fallback] if [input] is invalid/null.
   static String formatTime(
     dynamic input, {
     String format = 'h:mm a',
@@ -178,7 +163,6 @@ class AppDateUtils {
     }
   }
 
-  /// Formats a start and end time range (e.g. "6:00 PM - 7:30 PM").
   static String formatTimeRange(
     dynamic startTime,
     dynamic endTime, {
@@ -198,7 +182,6 @@ class AppDateUtils {
     return fallback;
   }
 
-  /// Formats full date & time (default: "dd MMM yyyy, h:mm a").
   static String formatDateTime(
     dynamic input, {
     String format = 'dd MMM yyyy, h:mm a',
@@ -217,7 +200,6 @@ class AppDateUtils {
     }
   }
 
-  /// Formats relative time / ago string (e.g. "Just now", "5 mins ago", "2 hours ago", "Yesterday").
   static String formatRelativeTime(
     dynamic input, {
     String fallback = 'Just now',
@@ -249,34 +231,28 @@ class AppDateUtils {
     }
   }
 
-  /// Formats a [DateTime] object to ISO date string "yyyy-MM-dd".
   static String formatIsoDate(DateTime date) {
     return DateFormat('yyyy-MM-dd').format(date);
   }
 
-  /// Formats a [TimeOfDay] object to 24-hour time string "HH:mm:ss".
   static String format24HourTime(TimeOfDay time) {
     final h = time.hour.toString().padLeft(2, '0');
     final m = time.minute.toString().padLeft(2, '0');
     return '$h:$m:00';
   }
 
-  /// Checks if a match start time is in the past.
   static bool isMatchInPast(dynamic matchDate, dynamic startTime) {
     final matchStart = parseMatchDateTime(matchDate, startTime);
     if (matchStart == null) return false;
     return DateTime.now().isAfter(matchStart);
   }
 
-  /// Checks if a match start time is in the future.
   static bool isMatchInFuture(dynamic matchDate, dynamic startTime) {
     final matchStart = parseMatchDateTime(matchDate, startTime);
     if (matchStart == null) return true;
     return DateTime.now().isBefore(matchStart);
   }
 
-  /// Calculates start and end [DateTime] for a match given [selectedDate], [start], and [end].
-  /// Handles overnight matches (e.g., 11:00 PM to 1:00 AM) automatically.
   static Map<String, DateTime> calculateMatchStartAndEnd(
     DateTime selectedDate,
     TimeOfDay start,
@@ -298,7 +274,6 @@ class AppDateUtils {
       end.minute,
     );
 
-    // If end time is earlier or equal to start time, assume match ends next day
     if (!matchEnd.isAfter(matchStart)) {
       matchEnd = matchEnd.add(const Duration(days: 1));
     }
@@ -309,7 +284,6 @@ class AppDateUtils {
     };
   }
 
-  /// Validates game start & end time. Returns an error message if invalid, or `null` if valid.
   static String? validateGameTimes(
     DateTime selectedDate,
     TimeOfDay start,

@@ -18,7 +18,6 @@ class ApiResponseParser {
         String? errCode = errorMap?['code'] as String?;
         dynamic errDetails = errorMap?['details'];
 
-        // Extract individual field validation messages if available
         if (errDetails is List && errDetails.isNotEmpty) {
           final fieldMessages = <String>[];
           for (final item in errDetails) {

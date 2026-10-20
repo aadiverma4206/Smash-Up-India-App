@@ -9,7 +9,6 @@ import '../../../data/models/cctv_models.dart';
 import '../../../core/config/env_config.dart';
 import '../../../core/utils/app_logger.dart';
 
-/// Controller for dynamic live CCTV playback for Manager & Admin.
 class CctvLiveController extends GetxController {
   final CctvRepository repository = Get.find<CctvRepository>();
 
@@ -17,7 +16,6 @@ class CctvLiveController extends GetxController {
       <CctvLiveCameraOptionModel>[].obs;
   final RxInt selectedChannel = 1.obs;
 
-  // Default to 'sub' stream (lower bitrate, optimized for mobile)
   final RxString streamType = 'sub'.obs;
 
   final Rxn<CctvLiveSessionModel> currentSession = Rxn<CctvLiveSessionModel>();
@@ -31,11 +29,9 @@ class CctvLiveController extends GetxController {
   final RxBool isMuted = true.obs;
   final RxString errorMessage = ''.obs;
 
-  // MediaKit primary player
   Player? player;
   VideoController? videoController;
 
-  // VideoPlayer fallback controller (if MediaKit texture is black or stalled)
   vp.VideoPlayerController? fallbackVideoPlayerController;
   final RxBool isUsingFallbackPlayer = false.obs;
 
@@ -68,13 +64,11 @@ class CctvLiveController extends GetxController {
     super.onClose();
   }
 
-  /// Helper to redact embedded credentials from URLs for safe logging and UI display.
   String sanitizeStreamUrl(String raw) {
     if (raw.isEmpty) return raw;
     return raw.replaceAll(RegExp(r'rtsp://[^@]+@'), 'rtsp://***:***@');
   }
 
-  /// Helper to resolve relative URL paths or replace localhost/127.0.0.1 with EnvConfig host IP.
   String resolveStreamUrl(String rawUrl) {
     if (rawUrl.isEmpty) return rawUrl;
 
@@ -253,7 +247,6 @@ class CctvLiveController extends GetxController {
       AppLogger.info(
           'Connecting Player to Channel $channel (${streamType.value.toUpperCase()}): $sanitizedLogUrl');
 
-      // Initialize MediaKit Player with software texture mode for Android compatibility
       final newPlayer = Player(
         configuration: const PlayerConfiguration(
           bufferSize: 32 * 1024 * 1024,
@@ -265,8 +258,7 @@ class CctvLiveController extends GetxController {
         try {
           await mpv.setProperty('rtsp-transport', 'tcp');
           await mpv.setProperty('network-timeout', '10');
-          await mpv.setProperty('hwdec',
-              'no'); // Disable hwdec to prevent black screen on emulator/devices
+          await mpv.setProperty('hwdec', 'no');
           await mpv.setProperty('profile', 'low-latency');
         } catch (e) {
           AppLogger.warning('mpv property error: $e');
@@ -276,8 +268,7 @@ class CctvLiveController extends GetxController {
       final newVideoController = VideoController(
         newPlayer,
         configuration: const VideoControllerConfiguration(
-          enableHardwareAcceleration:
-              false, // Ensure software surface texture works smoothly
+          enableHardwareAcceleration: false,
         ),
       );
 
@@ -320,7 +311,6 @@ class CctvLiveController extends GetxController {
         await newPlayer.setVolume(100.0);
       }
 
-      // Frame Watchdog: If after 4 seconds width is still 0 (black screen/stream stall), switch to video_player fallback
       _frameWatchdogTimer?.cancel();
       _frameWatchdogTimer = Timer(const Duration(seconds: 4), () {
         if (!hasReceivedVideoFrame && player != null) {
@@ -340,14 +330,13 @@ class CctvLiveController extends GetxController {
     }
   }
 
-  /// Fallback Video Player using flutter's video_player package for reliable rendering
   Future<void> _tryFallbackVideoPlayer(int channel, String rawUrl) async {
     AppLogger.info(
         'Attempting fallback VideoPlayerController for Channel $channel...');
     try {
       final targetUrl = rawUrl.isNotEmpty
           ? rawUrl
-          : 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'; // Active fallback stream URL
+          : 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 
       final vpController = vp.VideoPlayerController.networkUrl(
         Uri.parse(targetUrl),

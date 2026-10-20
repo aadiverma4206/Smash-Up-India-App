@@ -44,8 +44,7 @@ class GameDetailsController extends GetxController {
   final RxString paymentStatus = ''.obs;
 
   final RxString selectedPosition = 'ST'.obs;
-  final RxString selectedJoinPaymentMethod =
-      'RAZORPAY'.obs; // 'RAZORPAY' or 'WALLET'
+  final RxString selectedJoinPaymentMethod = 'RAZORPAY'.obs;
   final RxDouble walletBalance = 0.0.obs;
 
   String get gameId {
@@ -113,7 +112,6 @@ class GameDetailsController extends GetxController {
         teamBRoster.value = g.roster!.where((p) => p.team == 'TEAM_B').toList();
       }
 
-      // Fetch CCTV recordings if available
       try {
         final vids = await repository.getGameVideos(gameId);
         matchVideos.value = vids;
@@ -148,20 +146,16 @@ class GameDetailsController extends GetxController {
     return role == 1 || role == 2;
   }
 
-  /// Trigger Join Match Action
   void requestJoinMatch(BuildContext context, VoidCallback showSheetCallback) {
     final fee = game.value?.perPlayerFee ?? 200.0;
 
     if (fee <= 0 || isManagerOrAdmin) {
-      // Free match or Manager/Admin -> Join directly
       _executeJoinGameOnServer(position: selectedPosition.value);
     } else {
-      // Player -> Show Payment Checkout Sheet
       showSheetCallback();
     }
   }
 
-  /// Execute Join Payment via Razorpay or Wallet
   Future<void> executeJoinPaymentAndJoinGame() async {
     final fee = game.value?.perPlayerFee ?? 200.0;
 
@@ -189,7 +183,6 @@ class GameDetailsController extends GetxController {
       return;
     }
 
-    // Razorpay Online Payment Gateway
     isProcessingPayment.value = true;
     paymentStatus.value = 'Creating Order...';
 
@@ -330,7 +323,6 @@ class GameDetailsController extends GetxController {
     );
   }
 
-  /// Instant Test Mode Payment Execution
   Future<void> processTestModeJoinPayment() async {
     isProcessingPayment.value = true;
     paymentStatus.value = 'Opening Razorpay (Test Mode)...';

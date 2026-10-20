@@ -7,7 +7,6 @@ import crypto from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { FfmpegRecorder } from './ffmpeg/recorder.js';
 
-// Load env from multiple possible locations
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 
@@ -83,9 +82,6 @@ const getDefaultRtspUrl = (channel = 1, subtype = 0) => {
   return `${protocol}://${auth}${host}:${port}${formattedPath}`;
 };
 
-/**
- * Main polling loop to trigger pending RTSP stream recording sessions
- */
 const processPendingRecordings = async () => {
   try {
     const res = await dbPool.query(
@@ -149,9 +145,6 @@ const processPendingRecordings = async () => {
   }
 };
 
-/**
- * Checks for expired recordings and finalizes file output & S3 upload
- */
 const processExpiredRecordings = async () => {
   try {
     const res = await dbPool.query(

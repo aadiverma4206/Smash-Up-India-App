@@ -21,7 +21,7 @@ import {
 const router = Router();
 
 router.use(authenticateToken);
-router.use(requireRole([3])); // Exclusively for PLAYER accounts
+router.use(requireRole([3]));
 
 router.get("/profile", getPlayerProfile);
 router.put(

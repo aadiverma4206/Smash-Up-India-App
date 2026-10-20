@@ -6,14 +6,14 @@ part 'tournament_model.g.dart';
 class TournamentModel {
   final String id;
   final String title;
-  final String format; // KNOCKOUT, ROUND_ROBIN
+  final String format;
   final String startDate;
   final String endDate;
   final double prizePool;
   final double entryFee;
   final int maxTeams;
   final int registeredTeamsCount;
-  final String status; // REGISTRATION_OPEN, ONGOING, COMPLETED
+  final String status;
 
   TournamentModel({
     required this.id,

@@ -13,7 +13,6 @@ import '../../../data/models/game_model.dart';
 import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/notification_model.dart';
 
-/// Unified representation for real manager notification & action cards
 class ManagerAlertItem {
   final String id;
   final String title;
@@ -21,7 +20,7 @@ class ManagerAlertItem {
   final String? badgeText;
   final Color? badgeBgColor;
   final Color? badgeTextColor;
-  final String category; // 'MATCH', 'SLOT', 'PAYMENT', 'REFUND', 'SYSTEM'
+  final String category;
   final IconData icon;
   final Color iconColor;
   final Color iconBgLight;
@@ -89,22 +88,17 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     super.dispose();
   }
 
-  /// Syncs notifications with backend when online & loads/upserts to SQLite local storage.
-  /// Prunes records older than 3 days (72 hours).
   Future<void> _fetchAndSyncNotifications() async {
     _isLoadingNotifications.value = true;
     final userId = Get.find<AuthService>().currentUser.value?.id ?? '';
 
     try {
-      // 1. Load pending dashboard actions
       await dashboardController.loadManagerData();
 
-      // 2. Attempt online fetch from server
       final List<NotificationModel> remoteNotifs =
           await repository.getNotifications(page: 1, limit: 100);
       _isOfflineMode.value = false;
 
-      // Upsert into SQLite & prune records older than 3 days
       if (userId.isNotEmpty && remoteNotifs.isNotEmpty) {
         final List<Map<String, dynamic>> jsonList =
             remoteNotifs.map((n) => n.toJson()).toList();
@@ -117,7 +111,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
           'Network error fetching manager notifications, falling back to local SQLite cache: $e');
       _isOfflineMode.value = true;
 
-      // Fallback to SQLite local storage & prune >3 days old records
       if (userId.isNotEmpty) {
         final localRows = await dbService.getLocalNotifications(userId);
         final cachedNotifs =
@@ -129,12 +122,10 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     }
   }
 
-  /// Builds deduplicated alert items combining real database notifications & pending dashboard actions
   List<ManagerAlertItem> _buildAlertItems() {
     final now = DateTime.now();
     final itemsMap = <String, ManagerAlertItem>{};
 
-    // 1. REAL Pending Games awaiting Manager Approval
     for (final game in dashboardController.pendingPlayerGames) {
       final parsedDate =
           AppDateUtils.parseMatchDateTime(game.matchDate, game.startTime) ??
@@ -159,7 +150,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
       );
     }
 
-    // 2. REAL Pending Player Slot Requests
     for (final slot in dashboardController.pendingRequests) {
       final parsedDate = AppDateUtils.parseDate(slot.createdAt) ?? now;
       final key = 'pending_slot_${slot.id}';
@@ -183,7 +173,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
       );
     }
 
-    // 3. REAL Notifications from Database (or SQLite Cache)
     for (final notif in _serverNotifications) {
       final parsedDate = AppDateUtils.parseDate(notif.createdAt) ?? now;
       final typeUpper = notif.type.toUpperCase();
@@ -242,7 +231,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     return resultList;
   }
 
-  /// Filters items based on search query, category, unread toggle, and date
   List<ManagerAlertItem> _getFilteredItems(List<ManagerAlertItem> allItems) {
     final query = _searchQuery.value.trim().toLowerCase();
     final category = _activeCategoryFilter.value;
@@ -305,7 +293,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
       body: SafeArea(
         child: Column(
           children: [
-            // Offline Mode / 3-Day Local Cache Banner
             Obx(() {
               if (!_isOfflineMode.value) return const SizedBox.shrink();
               return Container(
@@ -331,8 +318,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                 ),
               );
             }),
-
-            // Top Search & Filter Bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
@@ -372,8 +357,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // Category Filter Chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -412,8 +395,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
                 ],
               ),
             ),
-
-            // Notifications Feed Body
             Expanded(
               child: Obx(() {
                 if (_isLoadingNotifications.value &&

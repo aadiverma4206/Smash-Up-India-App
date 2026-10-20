@@ -5,8 +5,7 @@ import '../../../data/models/slot_request_model.dart';
 class MyRequestsController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
 
-  final RxString selectedTab =
-      'ALL'.obs; // ALL, PENDING, APPROVED, REJECTED, WAITLISTED
+  final RxString selectedTab = 'ALL'.obs;
   final RxList<SlotRequestModel> requestsList = <SlotRequestModel>[].obs;
   final RxBool isLoading = false.obs;
 

@@ -18,11 +18,8 @@ export interface DiscoveredCamera {
 export class CctvDiscoveryService {
   private static cachedCameras: DiscoveredCamera[] | null = null;
   private static lastDiscoveryTimestamp = 0;
-  private static ttlMs = 30000; // 30 seconds discovery cache
+  private static ttlMs = 30000;
 
-  /**
-   * Discover and probe configured camera channels on the DVR host.
-   */
   static async discoverCameras(
     forceRefresh = false,
   ): Promise<DiscoveredCamera[]> {
@@ -38,7 +35,6 @@ export class CctvDiscoveryService {
     const host = env.CAMERA_HOST || "192.168.1.2";
     const port = env.CAMERA_RTSP_PORT || 554;
 
-    // Test overall DVR host reachability
     const hostTest = await CctvRecordingService.testCameraConnection({
       id: "dvr_host_discovery",
       ip_address: host,
@@ -48,7 +44,6 @@ export class CctvDiscoveryService {
 
     const isHostOnline = hostTest.status === "ONLINE";
 
-    // Configured camera channel descriptors
     const configuredChannels = [
       { channel: 1, name: "Court Camera 1 (Main Pitch)", courtName: "Court 1" },
       {
@@ -67,7 +62,6 @@ export class CctvDiscoveryService {
     const discoveredList: DiscoveredCamera[] = [];
 
     for (const c of configuredChannels) {
-      // Probing individual channel
       let isChannelOnline = isHostOnline;
       if (isHostOnline) {
         const chTest = await CctvRecordingService.testCameraConnection({
@@ -103,9 +97,6 @@ export class CctvDiscoveryService {
     return discoveredList;
   }
 
-  /**
-   * Invalidate cache to force fresh discovery.
-   */
   static clearCache(): void {
     this.cachedCameras = null;
     this.lastDiscoveryTimestamp = 0;

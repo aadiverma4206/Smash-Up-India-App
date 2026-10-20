@@ -18,7 +18,6 @@ class AuthController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
-  // Registration multi-step state
   final RxInt registrationStep = 1.obs;
   final RxString regName = ''.obs;
   final RxString regEmail = ''.obs;
@@ -26,12 +25,10 @@ class AuthController extends GetxController {
   final RxString regCity = 'Raipur'.obs;
   final RxString regVerificationToken = ''.obs;
 
-  // OTP Timer State
   final RxInt otpTimerSeconds = 60.obs;
   final RxBool canResendOtp = false.obs;
   Timer? _timer;
 
-  // Forgot Password State
   final RxString forgotIdentifier = ''.obs;
   final RxString resetToken = ''.obs;
 
@@ -55,7 +52,6 @@ class AuthController extends GetxController {
     });
   }
 
-  /// Startup Session Restore & Role Routing
   Future<void> checkAuthStatusAndRoute() async {
     isLoading.value = true;
     try {
@@ -88,7 +84,6 @@ class AuthController extends GetxController {
     Get.offAllNamed(Routes.login);
   }
 
-  /// Route user strictly by Backend Role ID
   void routeUserByRole(int roleId) {
     if (roleId == 1) {
       Get.offAllNamed(Routes.adminDashboard);
@@ -99,7 +94,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Login (Email OR Mobile + Password - NO OTP) with connection timeout handling
   Future<void> login(String identifier, String password) async {
     isLoading.value = true;
     errorMessage.value = '';
@@ -139,7 +133,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Step 1: Send Registration OTP
   Future<void> sendRegisterOtp(
       String name, String email, String phone, String city) async {
     isLoading.value = true;
@@ -177,7 +170,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Step 2: Verify Registration OTP
   Future<void> verifyRegisterOtp(String emailOtp) async {
     isLoading.value = true;
     errorMessage.value = '';
@@ -208,7 +200,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Step 3: Complete Registration (PLAYER ONLY)
   Future<void> registerPlayer(String password) async {
     isLoading.value = true;
     errorMessage.value = '';
@@ -245,7 +236,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Forgot Password - Send OTP
   Future<void> forgotPasswordSendOtp(String identifier) async {
     isLoading.value = true;
     try {
@@ -265,7 +255,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Forgot Password - Verify OTP
   Future<void> forgotPasswordVerifyOtp(String otp) async {
     isLoading.value = true;
     try {
@@ -284,7 +273,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Forgot Password - Reset Password
   Future<void> resetPassword(String newPassword) async {
     isLoading.value = true;
     try {

@@ -84,7 +84,6 @@ class SkeletonMatchCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          // Left Column Skeleton
           const SizedBox(
             width: 82,
             child: Column(
@@ -98,14 +97,12 @@ class SkeletonMatchCard extends StatelessWidget {
               ],
             ),
           ),
-          // Vertical Divider
           Container(
             width: 1,
             height: 65,
             color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
           ),
           const SizedBox(width: 12),
-          // Right Column Skeleton
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

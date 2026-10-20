@@ -21,8 +21,6 @@ class AdminRepository {
     return response.data!;
   }
 
-  /// Retrieves user list with 5-day SQLite caching, Stale-While-Revalidate network sync,
-  /// 50 limit per batch, alphabetical A-Z sorting, and deduplication.
   Future<List<AdminUserModel>> getUsers({
     String? search,
     int? roleId,
@@ -34,12 +32,10 @@ class AdminRepository {
     final cacheKey =
         'admin_users_role_${roleId ?? 0}_q_${cleanSearch}_p_${page}_l_$limit';
 
-    // 1. Prune expired SQLite records older than 5 days
     try {
       await _dbService.pruneExpiredCache(maxAge: const Duration(days: 5));
     } catch (_) {}
 
-    // 2. Load valid SQLite cached data (max age 5 days) for instant display
     if (page == 1) {
       try {
         final cachedJsonStr = await _dbService.getValidCachedData(
@@ -63,7 +59,6 @@ class AdminRepository {
       }
     }
 
-    // 3. Fetch fresh data from server database over network (Stale-While-Revalidate sync)
     try {
       final response = await remoteDataSource.getUsers(
         search: cleanSearch,
@@ -75,7 +70,6 @@ class AdminRepository {
       final rawList = response.data ?? [];
       final processedList = _processUserList(rawList, limit: limit);
 
-      // 4. Update SQLite local database with fresh server data for 5-day retention
       if (page == 1) {
         try {
           final jsonToStore =
@@ -88,7 +82,6 @@ class AdminRepository {
 
       return processedList;
     } catch (e) {
-      // If network fails on page 1, fallback gracefully to SQLite local cache
       if (page == 1) {
         try {
           final fallbackJson = await _dbService.getCachedData(cacheKey);
@@ -108,7 +101,6 @@ class AdminRepository {
     }
   }
 
-  /// Deduplicates by user ID, sorts alphabetically by name (A-Z), and enforces 50 item limit
   List<AdminUserModel> _processUserList(List<AdminUserModel> list,
       {int limit = 50}) {
     final seenIds = <String>{};
@@ -121,7 +113,6 @@ class AdminRepository {
       }
     }
 
-    // Alphabetical sort by user name (A-Z)
     uniqueList
         .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
@@ -131,7 +122,6 @@ class AdminRepository {
     return uniqueList;
   }
 
-  /// Clears local SQLite cache on administrative status/account changes to ensure 100% sync
   Future<void> clearUserCache() async {
     try {
       await _dbService.clearCache();

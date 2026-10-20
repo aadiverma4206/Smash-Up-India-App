@@ -88,8 +88,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           ],
         );
       }),
-
-      // Bottom Navigation Bar (4 Items: Home, Create, Players, History)
       bottomNavigationBar: showBottomNav
           ? Obx(
               () => Container(
@@ -180,7 +178,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
       return Stack(
         children: [
-          // 1. Scrollable Main Content Body
           NotificationListener<ScrollNotification>(
             onNotification: _onScrollNotification,
             child: RefreshIndicator(
@@ -191,53 +188,31 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top Integrated Header Background Image
                     _buildHeaderBackground(context),
                     const SizedBox(height: 16),
-
-                    // Main Content Body
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Manager Main Action Pill Bar
                           _buildManagerPillBar(context),
                           const SizedBox(height: 18),
-
-                          // Row 1 Circular Action Buttons (Court 1, Court 2, History, Players)
                           _buildPrimaryActionsGrid(context),
                           const SizedBox(height: 20),
-
-                          // Assigned Turf Club Header Banner
                           _buildClubHeader(context, d),
                           const SizedBox(height: 20),
-
-                          // Manager Key Metrics Overview
                           _buildMetricsSection(context, d),
                           const SizedBox(height: 20),
-
-                          // Pending Player Match Requests Section
                           _buildPendingPlayerGamesSection(context),
                           const SizedBox(height: 20),
-
-                          // Pending Player Slot Requests Section
                           _buildPendingSlotRequestsSection(context),
                           const SizedBox(height: 20),
-
-                          // Court 1 & Court 2 Games Section
                           _buildCourtWiseGamesSection(context),
                           const SizedBox(height: 20),
-
-                          // Club Matches Section (TODAY, UPCOMING, ONGOING, CANCELLED)
                           _buildClubMatchesSection(context),
                           const SizedBox(height: 20),
-
-                          // Quick Management Modules Grid
                           _buildQuickModulesGrid(context),
                           const SizedBox(height: 20),
-
-                          // Manager Ad / Promo Banner
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -248,8 +223,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               ),
             ),
           ),
-
-          // 2. Seamless Morphing Header Bar
           Positioned(
             top: 0,
             left: 0,
@@ -296,10 +269,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                           horizontal: 16, vertical: 8),
                       child: Row(
                         children: [
-                          // App Logo
                           _buildLogoWidget(context),
-
-                          // Flexible Morphing Title ("Manager Control Center")
                           Expanded(
                             child: ClipRect(
                               child: Align(
@@ -316,8 +286,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                               ),
                             ),
                           ),
-
-                          // Action Icons (Notification, Profile Avatar, Logout)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -403,7 +371,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// 3D Shimmer Skeleton View
   Widget _buildHomeSkeletonView(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -526,7 +493,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Stadium Asset Background Image at Top of ScrollView
   Widget _buildHeaderBackground(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String homeHeaderImagePath = isDark
@@ -782,7 +748,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Dark Pill Manager Action Bar
   Widget _buildManagerPillBar(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -836,7 +801,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Row 1 Circular Action Buttons: Court 1, Court 2, CCTV
   Widget _buildPrimaryActionsGrid(BuildContext context) {
     final row1 = [
       {
@@ -944,7 +908,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Assigned Club Banner Card
   Widget _buildClubHeader(BuildContext context, dynamic d) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1013,7 +976,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Metrics Section Grid (Fixed vertical overflow & padding)
   Widget _buildMetricsSection(BuildContext context, dynamic d) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1099,7 +1061,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Pending Player-Created Matches Section (Approve / Reject)
   Widget _buildPendingPlayerGamesSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1331,7 +1292,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Pending Player Slot Requests Section
   Widget _buildPendingSlotRequestsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1657,7 +1617,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Court 1 & Court 2 Matches Section
   Widget _buildCourtWiseGamesSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1694,8 +1653,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           ],
         ),
         const SizedBox(height: 10),
-
-        // Court 1 Card / Section
         Obx(() {
           final c1Games = controller.court1Games;
           return _buildCourtSectionCard(
@@ -1706,8 +1663,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           );
         }),
         const SizedBox(height: 16),
-
-        // Court 2 Card / Section
         Obx(() {
           final c2Games = controller.court2Games;
           return _buildCourtSectionCard(
@@ -2012,7 +1967,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Club Matches Section
   Widget _buildClubMatchesSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -2213,7 +2167,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Quick Modules Navigation Grid
   Widget _buildQuickModulesGrid(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [
@@ -2307,7 +2260,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  /// Manager Ad / Promo Banner
   Widget _buildReferAdBanner(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String referImagePath = isDark

@@ -34,7 +34,6 @@ import { authenticateToken } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Public Registration Flow
 router.post(
   "/register/send-otp",
   validateRequest(registerSendOtpSchema),
@@ -61,11 +60,9 @@ router.post(
   registerPlayerController,
 );
 
-// Public Login & Refresh Flow
 router.post("/login", validateRequest(loginSchema), loginController);
 router.post("/refresh", validateRequest(refreshTokenSchema), refreshController);
 
-// Public Forgot Password & Reset Flow
 router.post(
   "/forgot/send-otp",
   validateRequest(forgotSendOtpSchema),
@@ -82,7 +79,6 @@ router.post(
   resetPasswordController,
 );
 
-// Authenticated Session & Device Routes
 router.use(authenticateToken);
 
 router.get("/me", getMeController);
@@ -91,7 +87,6 @@ router.post("/logout-all", logoutAllController);
 router.get("/sessions", getSessionsController);
 router.delete("/sessions/:id", revokeSessionController);
 
-// FCM Device Tokens
 router.post(
   "/devices/fcm-token",
   validateRequest(fcmTokenSchema),

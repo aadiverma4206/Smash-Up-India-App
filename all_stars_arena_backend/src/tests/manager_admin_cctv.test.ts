@@ -20,16 +20,13 @@ describe("ALL STARS ARENA Manager, Admin & CCTV Management Production Tests", ()
   let recordingId = "";
 
   beforeAll(async () => {
-    // Initialize CCTV DB tables
     await initDbTables();
 
-    // 1. Get Owner Admin Account
     const ownerRes = await dbPool.query(
       `SELECT u.id, u.email FROM public.users u JOIN public.admin_details ad ON ad.user_id = u.id WHERE ad.is_owner = true LIMIT 1;`,
     );
     const ownerId = ownerRes.rows[0]?.id || "usr_owner_admin_001";
 
-    // 2. Create Manager Account via DB Stored Function create_manager_account
     const pwdHash = await bcrypt.hash(password, 12);
     const mgrRes = await dbPool.query(
       `SELECT public.create_manager_account($1, $2, $3, $4, $5, 'Raipur', 'EMP_001') as user_id;`,
@@ -37,13 +34,11 @@ describe("ALL STARS ARENA Manager, Admin & CCTV Management Production Tests", ()
     );
     managerId = mgrRes.rows[0].user_id;
 
-    // Login Manager
     const mgrLogin = await request(app)
       .post("/api/v1/auth/login")
       .send({ identifier: managerEmail, password });
     managerToken = mgrLogin.body.data.accessToken;
 
-    // Create & Login Player
     const playerEmail = `player_cctv_${Date.now()}@example.com`;
     const playerPhone = `+9194${Math.floor(10000000 + Math.random() * 90000000)}`;
     await dbPool.query(
@@ -55,7 +50,6 @@ describe("ALL STARS ARENA Manager, Admin & CCTV Management Production Tests", ()
       .send({ identifier: playerEmail, password });
     playerToken = plLogin.body.data.accessToken;
 
-    // 3. Create Club & Assign Manager
     const clubRes = await dbPool.query(
       `INSERT INTO public.clubs (name, address, city, status)
        VALUES ('All Stars Turf Raipur', 'VIP Road, Raipur', 'Raipur', 'ACTIVE')
@@ -68,7 +62,6 @@ describe("ALL STARS ARENA Manager, Admin & CCTV Management Production Tests", ()
       [clubId, managerId],
     );
 
-    // 4. Create Court
     const crtRes = await dbPool.query(
       `INSERT INTO public.courts (club_id, name, base_price, status)
        VALUES ($1, 'Pitch 1 (5v5)', 1200.00, 'AVAILABLE') RETURNING id;`,
@@ -76,7 +69,6 @@ describe("ALL STARS ARENA Manager, Admin & CCTV Management Production Tests", ()
     );
     courtId = crtRes.rows[0].id;
 
-    // 5. Create Game
     const gmRes = await dbPool.query(
       `INSERT INTO public.games (title, club_id, court_id, creator_id, creator_role_name, created_by_player, match_date, start_time, end_time, status)
        VALUES ('Manager Match', $1, $2, $3, 'MANAGER', false, CURRENT_DATE, '18:00:00', '19:30:00', 'OPEN_FOR_JOINING')
@@ -85,7 +77,6 @@ describe("ALL STARS ARENA Manager, Admin & CCTV Management Production Tests", ()
     );
     gameId = gmRes.rows[0].id;
 
-    // Enroll player into match roster so they are an authorized participant
     const playerId = plLogin.body.data.user.id;
     await dbPool.query(
       `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
@@ -215,7 +206,6 @@ describe("ALL STARS ARENA Manager, Admin & CCTV Management Production Tests", ()
   });
 
   it("Player requesting video playback should receive short-lived signed S3 URL", async () => {
-    // Add mock game video metadata
     await dbPool.query(
       `INSERT INTO public.game_videos (game_id, club_id, court_id, title, video_url, status)
        VALUES ($1, $2, $3, 'Match Recording', 'recordings/test.mp4', 'AVAILABLE')

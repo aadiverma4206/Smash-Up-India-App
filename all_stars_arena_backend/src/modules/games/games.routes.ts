@@ -24,12 +24,10 @@ import {
 
 const router = Router();
 
-// Public Game Discovery & Activity Logs
 router.get("/", getGamesController);
 router.get("/:id", getGameByIdController);
 router.get("/:id/activity", getActivityLogsController);
 
-// Authenticated Player Game Actions
 router.use(authenticateToken);
 
 router.post("/create", requireRole([1, 2, 3]), createGameController);
@@ -43,7 +41,6 @@ router.post("/:id/waitlist", requireRole([3]), joinWaitlistController);
 router.delete("/:id/waitlist", requireRole([3]), leaveWaitlistController);
 router.post("/:id/score", requireRole([1, 2, 3]), updateGameScoreController);
 
-// Match Videos & CCTV Recording Lifecycle
 router.get("/:id/videos", requireRole([1, 2, 3]), getGameVideosController);
 router.get(
   "/:id/recording",

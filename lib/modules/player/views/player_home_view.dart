@@ -45,7 +45,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
   bool _onScrollNotification(ScrollNotification notification) {
     if (notification.depth == 0) {
       final double pixels = notification.metrics.pixels;
-      // Interpolate progress smoothly over 0 -> 80 pixels of scroll
+
       final double newProgress = (pixels / 80.0).clamp(0.0, 1.0);
       if (_headerProgress.value != newProgress) {
         _headerProgress.value = newProgress;
@@ -87,8 +87,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           ],
         );
       }),
-
-      // Bottom Navigation Bar
       bottomNavigationBar: showBottomNav
           ? Obx(
               () => Container(
@@ -203,7 +201,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
       }
       return Stack(
         children: [
-          // 1. Scrollable Main Content Body
           NotificationListener<ScrollNotification>(
             onNotification: _onScrollNotification,
             child: RefreshIndicator(
@@ -214,37 +211,23 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top Integrated Header Background Image
                     _buildHeaderBackground(context),
                     const SizedBox(height: 16),
-
-                    // Main Content Body
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Join Game Pill Bar
                           _buildJoinGamePillBar(context),
                           const SizedBox(height: 18),
-
-                          // 4 Circular Football Quick Action Buttons Grid
                           _buildCircularActionsGrid(context),
                           const SizedBox(height: 20),
-
-                          // Match Highlight Cards (Active / Upcoming)
                           _buildMatchHighlightsSection(context),
                           const SizedBox(height: 16),
-
-                          // Football Career Stats Overview
                           _buildStatsSection(context),
                           const SizedBox(height: 20),
-
-                          // Quick Modules Navigation Grid
                           _buildQuickModulesGrid(context),
                           const SizedBox(height: 20),
-
-                          // Refer & Earn Ad Banner
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -255,8 +238,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
               ),
             ),
           ),
-
-          // 2. Seamless Morphing Header Bar
           Positioned(
             top: 0,
             left: 0,
@@ -303,10 +284,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                           horizontal: 16, vertical: 8),
                       child: Row(
                         children: [
-                          // App Logo
                           _buildLogoWidget(context),
-
-                          // Flexible Morphing Title ("All Stars Arena")
                           ClipRect(
                             child: Align(
                               alignment: Alignment.centerLeft,
@@ -320,10 +298,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                               ),
                             ),
                           ),
-
                           const Spacer(),
-
-                          // Action Icons (Notification Bell, Profile Avatar)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -397,14 +372,12 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// Modern 3D Shimmer Skeleton View
   Widget _buildHomeSkeletonView(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Top Integrated Header Banner Skeleton
           Stack(
             children: [
               ClipRRect(
@@ -455,22 +428,17 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // 2. Main Body Content Skeletons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Join Game Pill Bar Skeleton
                 const AppShimmer(
                   width: double.infinity,
                   height: 52,
                   borderRadius: 30,
                 ),
                 const SizedBox(height: 20),
-
-                // 4 Circular Buttons Grid Skeleton
                 Row(
                   children: List.generate(
                     4,
@@ -490,16 +458,12 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                   ),
                 ),
                 const SizedBox(height: 22),
-
-                // Match Highlights Card Skeleton
                 const AppShimmer(
                   width: double.infinity,
                   height: 120,
                   borderRadius: 14,
                 ),
                 const SizedBox(height: 18),
-
-                // Career Statistics Grid Skeleton
                 Row(
                   children: List.generate(
                     4,
@@ -516,8 +480,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                   ),
                 ),
                 const SizedBox(height: 22),
-
-                // Quick Navigation Grid Skeleton
                 Row(
                   children: List.generate(
                     4,
@@ -534,8 +496,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                   ),
                 ),
                 const SizedBox(height: 22),
-
-                // Refer Ad Banner Skeleton
                 const AppShimmer(
                   width: double.infinity,
                   height: 110,
@@ -550,7 +510,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// Stadium Asset Background Image at Top of ScrollView
   Widget _buildHeaderBackground(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String homeHeaderImagePath = isDark
@@ -559,7 +518,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
 
     return Stack(
       children: [
-        // Top Asset Image Background
         ClipRRect(
           borderRadius:
               const BorderRadius.vertical(bottom: Radius.circular(28)),
@@ -581,8 +539,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             ),
           ),
         ),
-
-        // Dark Gradient Overlay for optimal contrast
         ClipRRect(
           borderRadius:
               const BorderRadius.vertical(bottom: Radius.circular(28)),
@@ -772,7 +728,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     });
   }
 
-  /// Dark Pill Join Game Bar
   Widget _buildJoinGamePillBar(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -822,7 +777,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// 4 Circular Football Action Buttons Grid
   Widget _buildCircularActionsGrid(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final actions = [
@@ -918,7 +872,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// Match Highlights Section Cards (Renders only when active/upcoming match exists)
   Widget _buildMatchHighlightsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sum = controller.summary.value;
@@ -1050,14 +1003,12 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// 4 Main Football Career Statistics Section
   Widget _buildStatsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header Row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1097,8 +1048,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           ],
         ),
         const SizedBox(height: 10),
-
-        // 4 Main Stat Cards Row
         Obx(() {
           if (controller.isLoadingStats.value) {
             return const SizedBox(
@@ -1210,7 +1159,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  /// Quick Modules Navigation Grid
   Widget _buildQuickModulesGrid(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [
@@ -1295,10 +1243,9 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           }).toList(),
         ),
       ],
-    ); //book pitch
+    );
   }
 
-  /// Refer & Earn Ad Banner (Light Mode vs Dark Mode asset)
   Widget _buildReferAdBanner(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String referImagePath = isDark

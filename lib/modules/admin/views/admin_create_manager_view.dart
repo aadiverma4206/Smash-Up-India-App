@@ -98,8 +98,6 @@ class AdminCreateManagerView extends GetView<AdminController> {
                         ),
                       ),
                       const SizedBox(height: 20),
-
-                      // Manager Full Name
                       AppTextField(
                         label: 'Manager Full Name',
                         hint: 'Manager Name',
@@ -111,8 +109,6 @@ class AdminCreateManagerView extends GetView<AdminController> {
                             : null,
                       ),
                       const SizedBox(height: 16),
-
-                      // Manager Email
                       AppTextField(
                         label: 'Manager Email',
                         hint: 'manager@example.com',
@@ -125,8 +121,6 @@ class AdminCreateManagerView extends GetView<AdminController> {
                             : null,
                       ),
                       const SizedBox(height: 16),
-
-                      // Phone Number
                       AppTextField(
                         label: 'Phone Number',
                         hint: '+919876543210',
@@ -139,8 +133,6 @@ class AdminCreateManagerView extends GetView<AdminController> {
                             : null,
                       ),
                       const SizedBox(height: 16),
-
-                      // City
                       AppTextField(
                         label: 'City',
                         hint: 'Raipur',
@@ -149,8 +141,6 @@ class AdminCreateManagerView extends GetView<AdminController> {
                             color: AppColors.primary, size: 20),
                       ),
                       const SizedBox(height: 16),
-
-                      // Temporary Password Row Label & Auto Generate Button
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -207,8 +197,6 @@ class AdminCreateManagerView extends GetView<AdminController> {
                         },
                       ),
                       const SizedBox(height: 24),
-
-                      // Submit Button
                       Obx(
                         () => AppButton(
                           text: 'Provision Manager Account',

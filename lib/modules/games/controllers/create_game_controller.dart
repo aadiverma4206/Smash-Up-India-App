@@ -31,7 +31,6 @@ class CreateGameController extends GetxController {
 
   final formKey = GlobalKey<FormState>();
 
-  // Text Controllers - ALL EMPTY (No pre-filled data)
   final titleController = TextEditingController();
   final entryFeeController = TextEditingController();
   final reservePlayersController = TextEditingController();
@@ -40,7 +39,6 @@ class CreateGameController extends GetxController {
   final entryFeeRx = ''.obs;
   final reserveCountRx = ''.obs;
 
-  // Fixed Venue & Court options
   final availableClubs = <ClubModel>[].obs;
   final Rx<ClubModel> selectedClub = ClubModel(
     id: 'all_stars_arena_club',
@@ -52,7 +50,6 @@ class CreateGameController extends GetxController {
   final availableCourts = <CourtModel>[].obs;
   final Rxn<CourtModel> selectedCourt = Rxn<CourtModel>();
 
-  // Format selection
   final formats = ['1v1', '2v2', '3v3', '4v4', '5v5', '7v7', '11v11'];
   final selectedFormat = '11v11'.obs;
   final maxPlayers = 22.obs;
@@ -85,7 +82,6 @@ class CreateGameController extends GetxController {
     }
   }
 
-  // Unselected initial state for Skill level & Date/Times
   final skillRequirement = RxnString();
   final privacy = 'PUBLIC'.obs;
 

@@ -24,7 +24,7 @@ import {
 const router = Router();
 
 router.use(authenticateToken);
-router.use(requireRole([1])); // Exclusively for ADMIN (Role ID 1)
+router.use(requireRole([1]));
 
 router.get("/dashboard", getAdminDashboardController);
 router.get("/users", getUsersController);
@@ -32,7 +32,7 @@ router.get("/users/:id", getUserDetailsController);
 router.patch("/users/:id/suspend", suspendUserController);
 
 router.post("/managers", createManagerController);
-router.post("/admins", requireOwner, createAdminController); // Owner Only!
+router.post("/admins", requireOwner, createAdminController);
 
 router.patch("/clubs/:id/approve", approveClubController);
 router.post("/clubs/:id/assign-manager", assignManagerController);

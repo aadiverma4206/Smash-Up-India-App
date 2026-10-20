@@ -14,7 +14,6 @@ import { CctvRecordingService } from "./services/cctvRecording.service.js";
 import { MediaMtxService } from "./services/mediaMtx.service.js";
 import { TunnelService } from "./services/tunnel.service.js";
 
-// Catch unhandled synchronous exceptions
 process.on("uncaughtException", (err: Error) => {
   logger.fatal(
     { err },
@@ -25,7 +24,6 @@ process.on("uncaughtException", (err: Error) => {
   }, 1000).unref();
 });
 
-// Catch unhandled asynchronous promise rejections
 process.on("unhandledRejection", (reason: any) => {
   logger.error(
     { reason },
@@ -35,10 +33,6 @@ process.on("unhandledRejection", (reason: any) => {
 
 const PORT = env.PORT || "5000";
 
-/**
- * Auto-free port if occupied by a previous stale Node/server process in development.
- * Controlled via AUTO_FREE_PORT in .env (default: true).
- */
 const freePortIfOccupied = (port: number): void => {
   if (process.platform === "win32") {
     try {
@@ -64,24 +58,19 @@ const freePortIfOccupied = (port: number): void => {
                 `✅ Terminated stale process PID ${pid}. Port ${port} is now free.`,
               );
               const start = Date.now();
-              while (Date.now() - start < 500) {
-                // Short sync pause for OS socket recycling
-              }
+              while (Date.now() - start < 500) {}
             } catch (kErr) {
               logger.warn({ kErr }, `Could not auto-kill PID ${pid}`);
             }
           }
         }
       }
-    } catch {
-      // Port is clear
-    }
+    } catch {}
   }
 };
 
 const httpServer = createServer(app);
 
-// Handle server listen errors (e.g. EADDRINUSE) gracefully
 httpServer.on("error", (err: any) => {
   if (err.code === "EADDRINUSE") {
     logger.error(
@@ -96,11 +85,9 @@ httpServer.on("error", (err: any) => {
   process.exit(1);
 });
 
-// Initialize Socket.io Real-Time Football Engine
 initSocket(httpServer);
 
 const startServer = async () => {
-  // 1. Verify / Initialize DB Tables with robust error catch
   try {
     await initDbTables();
   } catch (err) {
@@ -112,7 +99,6 @@ const startServer = async () => {
     freePortIfOccupied(portNum);
   }
 
-  // 2. Start HTTP server listening on 0.0.0.0 (all interfaces for mobile device access)
   const server = httpServer.listen(portNum, "0.0.0.0", () => {
     logger.info(
       `⚽ ALL STARS ARENA Server running in ${env.NODE_ENV} mode on port ${PORT}`,
@@ -121,13 +107,11 @@ const startServer = async () => {
       `⚡ Socket.io Real-Time engine active on ws://localhost:${PORT}`,
     );
 
-    // Start Background Workers & Schedulers
     try {
       startMatchLifecycleWorker();
       startPaymentExpiryJob();
       startPaymentReconciliationJob();
 
-      // Initialize CCTV system (FFmpeg optional) & reconcile active recordings on boot
       CctvRecordingService.checkFfmpeg().catch((err) => {
         logger.info({ err }, "CCTV system operational (FFmpeg optional)");
       });
@@ -135,12 +119,10 @@ const startServer = async () => {
         logger.error({ err }, "CCTV boot reconciliation failed");
       });
 
-      // Ensure MediaMTX streaming server is active
       MediaMtxService.ensureRunning().catch((err) => {
         logger.warn({ err }, "MediaMTX auto-start check skipped");
       });
 
-      // Ensure Cloudflare Tunnel is active for universal outside-network streaming
       TunnelService.start(Number(PORT) || 5000).catch((err) => {
         logger.warn({ err }, "Cloudflare Tunnel start skipped");
       });
@@ -154,7 +136,6 @@ const startServer = async () => {
 
 const server = await startServer();
 
-// Graceful Shutdown Handler
 const handleGracefulShutdown = async (signal: string) => {
   logger.info(`📡 Received ${signal}. Starting graceful shutdown...`);
 
@@ -177,7 +158,6 @@ const handleGracefulShutdown = async (signal: string) => {
     process.exit(0);
   });
 
-  // Force close if graceful shutdown hangs
   setTimeout(() => {
     logger.error(
       "⚠️ Graceful shutdown timed out (10s limit). Forcing immediate termination.",

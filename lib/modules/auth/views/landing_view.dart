@@ -27,7 +27,6 @@ class LandingView extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background Stadium Image
           CachedNetworkImage(
             imageUrl: stadiumImageUrl,
             fit: BoxFit.cover,
@@ -45,8 +44,6 @@ class LandingView extends StatelessWidget {
               ),
             ),
           ),
-
-          // Gradient Overlay for readability
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -66,8 +63,6 @@ class LandingView extends StatelessWidget {
               ),
             ),
           ),
-
-          // Main Responsive Content
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -84,7 +79,6 @@ class LandingView extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Top Bar: Theme Toggle Switch
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -110,8 +104,6 @@ class LandingView extends StatelessWidget {
                               ),
                             ],
                           ),
-
-                          // Brand Section: Logo + Title + Tagline
                           Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -143,8 +135,6 @@ class LandingView extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 28),
-
-                              // Feature Pills Row (Live Matches, Join Communities, Player Stats)
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
@@ -165,8 +155,6 @@ class LandingView extends StatelessWidget {
                               ),
                             ],
                           ),
-
-                          // Flexible Spacer/Artwork Area
                           if (screenHeight > 650)
                             Expanded(
                               child: Container(
@@ -193,12 +181,9 @@ class LandingView extends StatelessWidget {
                                 ),
                               ),
                             ),
-
-                          // Bottom Action Buttons
                           Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Primary Green Button: Log In ->
                               AppButton(
                                 text: 'Log In',
                                 showArrow: true,
@@ -206,8 +191,6 @@ class LandingView extends StatelessWidget {
                                 onPressed: () => Get.toNamed(Routes.login),
                               ),
                               const SizedBox(height: 14),
-
-                              // Outlined Button: Create Account
                               AppButton(
                                 text: 'Create Account',
                                 isOutline: true,
@@ -232,7 +215,6 @@ class LandingView extends StatelessWidget {
     );
   }
 
-  /// Feature Pill Item Widget
   Widget _buildFeatureItem({
     required IconData icon,
     required String label,

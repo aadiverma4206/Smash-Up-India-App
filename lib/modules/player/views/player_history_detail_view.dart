@@ -36,26 +36,17 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. ⚽ Match Overview Card
               _buildOverviewCard(context, game),
               const SizedBox(height: 16),
-
-              // 2. 🏆 SCORE / RESULT SECTION (Read-only for Players)
               _buildScoreResultSection(
                   context, game, hasScore, isCompleted, isCancelled),
               const SizedBox(height: 20),
-
-              // 3. 📹 CCTV RECORDED MATCH VIDEO SECTION (Hidden if Cancelled)
               if (!isCancelled) ...[
                 _buildCctvSection(context, game),
                 const SizedBox(height: 20),
               ],
-
-              // 4. 👥 Joined Player Roster Section (BELOW VIDEO as requested!)
               _buildRosterSection(context, game),
               const SizedBox(height: 20),
-
-              // 5. 💰 Player Individual Entry Fee Card (NO Club Total Revenue)
               _buildPlayerEntryFeeCard(context, game),
               const SizedBox(height: 30),
             ],
@@ -65,7 +56,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
     );
   }
 
-  /// ⚽ Match Overview Card
   Widget _buildOverviewCard(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isCompleted = game.status.toUpperCase() == 'COMPLETED';
@@ -205,12 +195,10 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
     );
   }
 
-  /// 🏆 SCORE & MATCH RESULT SECTION (Read-Only for Players)
   Widget _buildScoreResultSection(BuildContext context, GameModel game,
       bool hasScore, bool isCompleted, bool isCancelled) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 🚫 CANCELLED MATCH
     if (isCancelled) {
       return Container(
         width: double.infinity,
@@ -260,7 +248,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
       );
     }
 
-    // ⏳ PENDING SCORE
     if (!hasScore) {
       return Container(
         width: double.infinity,
@@ -310,7 +297,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
       );
     }
 
-    // 🏆 OFFICIAL SCOREBOARD DISPLAY
     final int scoreA = game.teamAScore;
     final int scoreB = game.teamBScore;
     final bool isTeamAWin = scoreA > scoreB;
@@ -350,8 +336,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Scoreboard Box
           Container(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
             decoration: BoxDecoration(
@@ -417,8 +401,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
             ),
           ),
           const SizedBox(height: 14),
-
-          // Win/Lose Banner
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -487,7 +469,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
     );
   }
 
-  /// 🎥 CCTV RECORDED MATCH VIDEO SECTION
   Widget _buildCctvSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -585,7 +566,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
     );
   }
 
-  /// 👥 JOINED PLAYERS ROSTER SECTION (BELOW VIDEO as requested!)
   Widget _buildRosterSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final roster = game.roster ?? [];
@@ -635,8 +615,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
           Divider(
               color: isDark ? AppColors.darkBorder : Colors.grey.shade300,
               height: 20),
-
-          // Team A & Team B Filter Pills
           Obx(() {
             final activeTab =
                 controller.selectedRosterTeamFilter.value == 'TEAM_B'
@@ -740,7 +718,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
             );
           }),
           const SizedBox(height: 14),
-
           Obx(() {
             final filterTab =
                 controller.selectedRosterTeamFilter.value == 'TEAM_B'
@@ -894,7 +871,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
     );
   }
 
-  /// 💰 PLAYER INDIVIDUAL ENTRY FEE CARD (NO Club Total Revenue)
   Widget _buildPlayerEntryFeeCard(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final double myFee = game.perPlayerFee;

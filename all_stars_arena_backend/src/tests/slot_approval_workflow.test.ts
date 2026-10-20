@@ -25,13 +25,11 @@ describe("Slot Approval & Match Workflow Unit Tests", () => {
   let testGameId: string;
 
   beforeAll(async () => {
-    // 1. Get admin user
     const adminRes = await dbPool.query(
       `SELECT id FROM public.users WHERE role_id = 1 LIMIT 1;`,
     );
     const adminId = adminRes.rows[0]?.id;
 
-    // 2. Create Test Player Account (Game Creator)
     const pwdHash = await bcrypt.hash(testPassword, 10);
     const pUserRes = await dbPool.query(
       `SELECT public.register_player('Workflow Player', $1, $2, $3, 'Raipur') as user_id;`,
@@ -39,19 +37,16 @@ describe("Slot Approval & Match Workflow Unit Tests", () => {
     );
     playerUserId = pUserRes.rows[0].user_id;
 
-    // Top up player wallet balance
     await dbPool.query(
       `UPDATE public.player_details SET wallet_balance = 5000.00 WHERE user_id = $1;`,
       [playerUserId],
     );
 
-    // Login Player
     const pLogin = await request(app)
       .post("/api/v1/auth/login")
       .send({ identifier: testPlayerEmail, password: testPassword });
     playerToken = pLogin.body.data.accessToken;
 
-    // 2b. Create Test Applicant Player Account
     const aUserRes = await dbPool.query(
       `SELECT public.register_player('Applicant Player', $1, $2, $3, 'Raipur') as user_id;`,
       [testApplicantEmail, testApplicantPhone, pwdHash],
@@ -68,7 +63,6 @@ describe("Slot Approval & Match Workflow Unit Tests", () => {
       .send({ identifier: testApplicantEmail, password: testPassword });
     applicantToken = aLogin.body.data.accessToken;
 
-    // 3. Create Test Manager Account
     const mUserRes = await dbPool.query(
       `INSERT INTO public.users (name, email, phone, password_hash, role_id, status)
        VALUES ('Workflow Manager', $1, $2, $3, 2, 'ACTIVE') RETURNING id;`,
@@ -83,13 +77,11 @@ describe("Slot Approval & Match Workflow Unit Tests", () => {
       );
     }
 
-    // Login Manager
     const mLogin = await request(app)
       .post("/api/v1/auth/login")
       .send({ identifier: testManagerEmail, password: testPassword });
     managerToken = mLogin.body.data.accessToken;
 
-    // Create dedicated test club & court to prevent flakiness
     const clubRes = await dbPool.query(
       `INSERT INTO public.clubs (name, address, city, status)
        VALUES ('Workflow Arena Club', 'Ring Road, Raipur', 'Raipur', 'ACTIVE')
@@ -105,7 +97,6 @@ describe("Slot Approval & Match Workflow Unit Tests", () => {
     );
     testCourtId = courtRes.rows[0].id;
 
-    // Assign manager to club
     await dbPool.query(
       `INSERT INTO public.club_managers (club_id, user_id) VALUES ($1, $2), ('all_stars_arena_club', $2) ON CONFLICT DO NOTHING;`,
       [testClubId, managerUserId],

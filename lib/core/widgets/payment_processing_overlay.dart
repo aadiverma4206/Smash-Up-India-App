@@ -22,7 +22,6 @@ class PaymentProcessingOverlay extends StatelessWidget {
       canPop: false,
       child: Stack(
         children: [
-          // Glassmorphism background blur
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
             child: Container(
@@ -31,7 +30,6 @@ class PaymentProcessingOverlay extends StatelessWidget {
               ),
             ),
           ),
-
           Center(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -54,7 +52,6 @@ class PaymentProcessingOverlay extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Smooth loading pulse with primary green color & shield icon
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -84,8 +81,6 @@ class PaymentProcessingOverlay extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // Status Text
                   Text(
                     statusText.isEmpty ? 'Processing Payment...' : statusText,
                     style: TextStyle(
@@ -97,8 +92,6 @@ class PaymentProcessingOverlay extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 10),
-
-                  // Security Sub-text
                   Text(
                     "Please don't close the app or press back.",
                     style: TextStyle(
@@ -107,10 +100,7 @@ class PaymentProcessingOverlay extends StatelessWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-
                   const SizedBox(height: 20),
-
-                  // Visual Progress Step Dots
                   _buildProgressSteps(context, statusText),
                 ],
               ),

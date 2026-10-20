@@ -22,7 +22,7 @@ class FindGamesController extends GetxController {
   final selectedFormat = ''.obs;
   final selectedSkill = ''.obs;
   final selectedPrivacy = ''.obs;
-  final selectedCourt = 'ALL'.obs; // ALL, COURT_1, COURT_2
+  final selectedCourt = 'ALL'.obs;
   final maxFee = 1000.0.obs;
 
   final skills = ['', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'PRO', 'ANY'];
@@ -137,7 +137,6 @@ class _FindGamesViewState extends State<FindGamesView> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
-          // 1. Scrollable Main Content Body
           NotificationListener<ScrollNotification>(
             onNotification: _onScrollNotification,
             child: RefreshIndicator(
@@ -149,18 +148,13 @@ class _FindGamesViewState extends State<FindGamesView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top Stadium Asset Background Image Banner (find_Games/dark.png & light.png)
                     _buildHeaderBackground(context),
                     const SizedBox(height: 16),
-
-                    // Search & Filters Header Section
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _buildSearchAndFiltersHeader(context, controller),
                     ),
                     const SizedBox(height: 16),
-
-                    // Open Matches List or Error State
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _buildGamesListSection(context),
@@ -171,8 +165,6 @@ class _FindGamesViewState extends State<FindGamesView> {
               ),
             ),
           ),
-
-          // 2. Seamless Morphing Floating Top App Bar
           Positioned(
             top: 0,
             left: 0,
@@ -219,7 +211,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                           horizontal: 16, vertical: 8),
                       child: Row(
                         children: [
-                          // Back Button
                           IconButton(
                             icon: const Icon(Icons.arrow_back_ios_new_rounded,
                                 size: 20),
@@ -231,8 +222,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                             onPressed: () => Get.back(),
                           ),
                           const SizedBox(width: 4),
-
-                          // Header Title ("Find Games")
                           Text(
                             'Find Games',
                             style: TextStyle(
@@ -246,10 +235,7 @@ class _FindGamesViewState extends State<FindGamesView> {
                               letterSpacing: 0.3,
                             ),
                           ),
-
                           const Spacer(),
-
-                          // Refresh Button
                           IconButton(
                             icon: const Icon(Icons.refresh_rounded),
                             color: progress > 0.5
@@ -260,8 +246,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                             tooltip: 'Refresh Matches',
                             onPressed: controller.fetchGames,
                           ),
-
-                          // Host / Create Game Button
                           IconButton(
                             icon: const Icon(Icons.add_circle_rounded,
                                 color: AppColors.primary, size: 28),
@@ -284,7 +268,6 @@ class _FindGamesViewState extends State<FindGamesView> {
     );
   }
 
-  /// Stadium Asset Background Image at Top of ScrollView (find_Games/dark.png & light.png)
   Widget _buildHeaderBackground(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String findGamesHeaderImagePath = isDark
@@ -293,7 +276,6 @@ class _FindGamesViewState extends State<FindGamesView> {
 
     return Stack(
       children: [
-        // Top Asset Image Background
         ClipRRect(
           borderRadius:
               const BorderRadius.vertical(bottom: Radius.circular(28)),
@@ -315,8 +297,6 @@ class _FindGamesViewState extends State<FindGamesView> {
             ),
           ),
         ),
-
-        // Dark Gradient Overlay for optimal contrast
         ClipRRect(
           borderRadius:
               const BorderRadius.vertical(bottom: Radius.circular(28)),
@@ -358,7 +338,6 @@ class _FindGamesViewState extends State<FindGamesView> {
       ),
       child: Column(
         children: [
-          // Search Input
           TextField(
             style: TextStyle(color: context.textPrimary, fontSize: 13),
             decoration: InputDecoration(
@@ -394,8 +373,6 @@ class _FindGamesViewState extends State<FindGamesView> {
             onChanged: (val) => controller.searchQuery.value = val,
           ),
           const SizedBox(height: 10),
-
-          // Court Filter Chips (All Courts, Court 1, Court 2, My Games)
           Obx(() {
             final selectedCourt = controller.selectedCourt.value;
             final courts = [
@@ -469,8 +446,6 @@ class _FindGamesViewState extends State<FindGamesView> {
             );
           }),
           const SizedBox(height: 10),
-
-          // Reset Search / Filters Button if query active
           Obx(() {
             final hasActiveFilter = controller.searchQuery.value.isNotEmpty;
 
@@ -634,10 +609,8 @@ class _FindGamesViewState extends State<FindGamesView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Badges Row
                 Row(
                   children: [
-                    // Format Tag
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
@@ -646,7 +619,7 @@ class _FindGamesViewState extends State<FindGamesView> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        game.format, // e.g. 11v11
+                        game.format,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -655,8 +628,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                       ),
                     ),
                     const SizedBox(width: 8),
-
-                    // Skill Level Tag
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
@@ -675,11 +646,8 @@ class _FindGamesViewState extends State<FindGamesView> {
                         ),
                       ),
                     ),
-
                     const SizedBox(width: 8),
                     const Expanded(child: SizedBox.shrink()),
-
-                    // Creator / Host Tag
                     Flexible(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -731,8 +699,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                   ],
                 ),
                 const SizedBox(height: 12),
-
-                // Match Title
                 Text(
                   game.title,
                   style: TextStyle(
@@ -743,8 +709,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                   ),
                 ),
                 const SizedBox(height: 6),
-
-                // Pitch & Venue Row
                 Row(
                   children: [
                     const Icon(Icons.location_on_rounded,
@@ -765,8 +729,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // Date & Time Banner Box
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -812,13 +774,9 @@ class _FindGamesViewState extends State<FindGamesView> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
-                // Slots & Pricing Row
                 Row(
                   children: [
-                    // Slots Progress & Count
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -847,7 +805,6 @@ class _FindGamesViewState extends State<FindGamesView> {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          // Progress Bar
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
@@ -872,10 +829,7 @@ class _FindGamesViewState extends State<FindGamesView> {
                         ],
                       ),
                     ),
-
                     const SizedBox(width: 16),
-
-                    // Price & CTA Button
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [

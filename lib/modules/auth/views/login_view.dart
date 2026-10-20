@@ -46,17 +46,13 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  /// Mobile / Portrait Layout
   Widget _buildMobileLayout(BuildContext context, AuthController controller) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Top Sports Hero Image Banner extending to full top of screen
           _buildHeroImage(context, height: 230),
-
-          // Main Form Section
           SafeArea(
             top: false,
             child: Padding(
@@ -70,14 +66,12 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  /// Wide Screen / Desktop / Tablet Layout
   Widget _buildWideScreenLayout(
       BuildContext context, AuthController controller) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
       children: [
-        // Left Side: Hero Image Banner
         Expanded(
           flex: 5,
           child: Container(
@@ -134,8 +128,6 @@ class _LoginViewState extends State<LoginView> {
             ),
           ),
         ),
-
-        // Right Side: Login Form
         Expanded(
           flex: 6,
           child: Center(
@@ -153,7 +145,6 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  /// Hero Banner Image Widget with Fallback & Curved Bottom
   Widget _buildHeroImage(
     BuildContext context, {
     required double height,
@@ -226,8 +217,6 @@ class _LoginViewState extends State<LoginView> {
             ),
           ),
         ),
-
-        // Dark Gradient Overlay for optimal contrast
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
@@ -252,7 +241,6 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  /// Complete Form Widget matching design reference
   Widget _buildLoginForm(BuildContext context, AuthController controller) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryTextColor =
@@ -265,7 +253,6 @@ class _LoginViewState extends State<LoginView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Title: Welcome Back
           Row(
             children: [
               Flexible(
@@ -300,8 +287,6 @@ class _LoginViewState extends State<LoginView> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Reactive Error Banner inside the Form
           Obx(() {
             final err = controller.errorMessage.value;
             if (err.isEmpty) return const SizedBox.shrink();
@@ -335,8 +320,6 @@ class _LoginViewState extends State<LoginView> {
               ),
             );
           }),
-
-          // Field 1: Email or Mobile Number
           AppTextField(
             controller: identifierController,
             keyboardType: TextInputType.emailAddress,
@@ -366,8 +349,6 @@ class _LoginViewState extends State<LoginView> {
             },
           ),
           const SizedBox(height: 18),
-
-          // Field 2: Password
           AppTextField(
             controller: passwordController,
             obscureText: !isPasswordVisible,
@@ -401,10 +382,7 @@ class _LoginViewState extends State<LoginView> {
               return null;
             },
           ),
-
           const SizedBox(height: 10),
-
-          // Forgot Password Link
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -425,8 +403,6 @@ class _LoginViewState extends State<LoginView> {
             ),
           ),
           const SizedBox(height: 22),
-
-          // Primary Log In Button with right arrow
           Obx(() {
             final isLoading = controller.isLoading.value;
             return AppButton(
@@ -444,14 +420,10 @@ class _LoginViewState extends State<LoginView> {
               },
             );
           }),
-
           const SizedBox(height: 16),
-
-          // ⚡ Quick Autofill Test Role Icons (Player, Manager, Admin)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ⚽ Player Autofill Button
               Tooltip(
                 message: 'Autofill Player Credentials',
                 child: InkWell(
@@ -480,8 +452,6 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // 🏟️ Manager Autofill Button
               Tooltip(
                 message: 'Autofill Manager Credentials',
                 child: InkWell(
@@ -509,8 +479,6 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // 🛡️ Admin Autofill Button
               Tooltip(
                 message: 'Autofill Admin Credentials',
                 child: InkWell(
@@ -540,10 +508,7 @@ class _LoginViewState extends State<LoginView> {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
-          // Divider: —— OR ——
           Row(
             children: [
               Expanded(
@@ -571,10 +536,7 @@ class _LoginViewState extends State<LoginView> {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-
-          // Social Button 1: Continue with Google
           _buildSocialButton(
             context,
             label: 'Continue with Google',
@@ -590,8 +552,6 @@ class _LoginViewState extends State<LoginView> {
             },
           ),
           const SizedBox(height: 12),
-
-          // Social Button 2: Continue with Apple
           _buildSocialButton(
             context,
             label: 'Continue with Apple',
@@ -610,10 +570,7 @@ class _LoginViewState extends State<LoginView> {
               );
             },
           ),
-
           const SizedBox(height: 28),
-
-          // Footer Text: Don't have an account? Create Account
           Center(
             child: Wrap(
               alignment: WrapAlignment.center,
@@ -641,10 +598,7 @@ class _LoginViewState extends State<LoginView> {
               ],
             ),
           ),
-
           const SizedBox(height: 14),
-
-          // Privacy Policy Footer Link
           Center(
             child: InkWell(
               onTap: () => Get.to(() => const PrivacyPolicyScreen()),
@@ -687,7 +641,6 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  /// Social Login Pill Button
   Widget _buildSocialButton(
     BuildContext context, {
     required String label,
@@ -734,7 +687,6 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  /// Custom Google 'G' Icon
   Widget _buildGoogleLogo() {
     return Container(
       width: 20,

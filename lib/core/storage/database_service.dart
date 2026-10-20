@@ -53,14 +53,10 @@ class DatabaseService {
       },
     );
 
-    // Prune notifications older than 3 days & general cache on DB startup
     await pruneOldNotifications(maxAge: const Duration(days: 3));
     await pruneExpiredCache();
   }
 
-  // --- Local Notifications Storage & 3-Day Pruning ---
-
-  /// Inserts or updates a list of notifications by [id] (preventing duplicates)
   Future<void> upsertLocalNotifications(
       String userId, List<Map<String, dynamic>> items) async {
     final batch = _db.batch();
@@ -106,7 +102,6 @@ class DatabaseService {
     await pruneOldNotifications(maxAge: const Duration(days: 3));
   }
 
-  /// Retrieves local notifications for [userId] sorted by created_at DESC
   Future<List<Map<String, dynamic>>> getLocalNotifications(
       String userId) async {
     await pruneOldNotifications(maxAge: const Duration(days: 3));
@@ -139,7 +134,6 @@ class DatabaseService {
     }).toList();
   }
 
-  /// Deletes local notifications older than [maxAge] (default: 3 days / 72 hours)
   Future<void> pruneOldNotifications(
       {Duration maxAge = const Duration(days: 3)}) async {
     try {
@@ -169,8 +163,6 @@ class DatabaseService {
       whereArgs: [userId],
     );
   }
-
-  // --- General Key-Value Cache Storage ---
 
   Future<void> cacheData(String key, String jsonPayload) async {
     await _db.insert(

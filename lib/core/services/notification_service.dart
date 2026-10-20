@@ -190,14 +190,12 @@ class NotificationService extends GetxService {
   void _setupListeners() {
     if (_fcm == null) return;
     try {
-      // 1. Token Refresh
       _fcm!.onTokenRefresh.listen((newToken) {
         fcmToken.value = newToken;
         AppLogger.info('🔄 FCM Token refreshed: $newToken');
         registerFcmTokenWithBackend(newToken);
       });
 
-      // 2. Foreground Message Received
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         AppLogger.info(
             '🔔 FCM Foreground Message Received: ${message.notification?.title}');
@@ -209,14 +207,12 @@ class NotificationService extends GetxService {
         }
       });
 
-      // 3. App Opened From Background State via Notification Tap
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         AppLogger.info('🔔 App opened from notification tap: ${message.data}');
         _saveFcmMessageToLocalStorage(message);
         _handleNotificationClickData(message.data);
       });
 
-      // 4. App Opened From Terminated State via Notification Tap
       _fcm!.getInitialMessage().then((RemoteMessage? message) {
         if (message != null) {
           AppLogger.info(

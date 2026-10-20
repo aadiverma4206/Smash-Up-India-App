@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'media_server_cctv_view.dart';
 
-/// Directs all live CCTV stream requests straight to MediaMTX Live Stream Screen.
 class CctvLiveView extends StatelessWidget {
   const CctvLiveView({super.key});
 

@@ -1,4 +1,4 @@
-﻿import 'package:json_annotation/json_annotation.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'cctv_models.g.dart';
 
@@ -9,13 +9,13 @@ class CctvCameraModel {
   final String? courtId;
   final String? courtName;
   final String name;
-  final String cameraType; // RTSP_DOME, ONVIF
-  final String connectionType; // RTSP
+  final String cameraType;
+  final String connectionType;
   final String? ipAddress;
   final int port;
   final bool isEnabled;
-  final String status; // ONLINE, OFFLINE
-  final String healthStatus; // ONLINE, OFFLINE
+  final String status;
+  final String healthStatus;
   final String? lastSeenAt;
 
   CctvCameraModel({
@@ -80,7 +80,7 @@ class CctvLiveCameraOptionModel {
   final int channel;
   final String name;
   final String? courtName;
-  final String status; // ONLINE, OFFLINE, CONNECTING, FAILED
+  final String status;
   final String healthStatus;
   final String? ipAddress;
   final int port;
@@ -103,20 +103,16 @@ class CctvLiveCameraOptionModel {
   Map<String, dynamic> toJson() => _$CctvLiveCameraOptionModelToJson(this);
 }
 
-/// Live CCTV session returned by the backend after calling POST /cctv/live/session.
-///
-/// Returns the direct RTSP stream URL in [rtspUrl] for playback with VLC player.
 @JsonSerializable()
 class CctvLiveSessionModel {
   final String sessionId;
   final int channel;
   final String cameraName;
-  final String streamType; // main, sub
-  final String status; // ONLINE, OFFLINE
+  final String streamType;
+  final String status;
 
   final int latencyMs;
 
-  /// Direct RTSP stream URL returned by backend for camera channel.
   @JsonKey(name: 'rtspUrl')
   final String rtspUrl;
 
@@ -137,7 +133,6 @@ class CctvLiveSessionModel {
     required this.expiresAt,
   });
 
-  /// Returns the stream URL to use for video playback (prefer playbackUrl if provided, fallback to rtspUrl).
   String get playbackUrl =>
       (rawPlaybackUrl != null && rawPlaybackUrl!.isNotEmpty)
           ? rawPlaybackUrl!

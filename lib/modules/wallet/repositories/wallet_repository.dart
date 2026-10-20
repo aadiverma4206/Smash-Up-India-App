@@ -15,8 +15,6 @@ class WalletRepository {
   static const String _cacheKey = 'wallet_transactions_cache';
 
   Future<WalletBalanceModel> getWallet() async {
-    // Admin (Role 1) and Manager (Role 2) do not have player wallets.
-    // Return zero-balance stub locally without making network request to /api/v1/wallet.
     if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
       return WalletBalanceModel(balance: 0, hasPin: false);
     }

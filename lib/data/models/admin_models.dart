@@ -7,7 +7,7 @@ class AdminUserModel {
   final String phone;
   final int roleId;
   final String roleName;
-  final String status; // ACTIVE, SUSPENDED
+  final String status;
   final String? city;
   final String? profileImageUrl;
   final String createdAt;

@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'wallet_models.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 Map<String, dynamic> _$WalletBalanceModelToJson(WalletBalanceModel instance) =>
     <String, dynamic>{

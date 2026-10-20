@@ -25,11 +25,10 @@ const envSchema = z.object({
   EMAIL_FROM: z
     .string()
     .default("ALL STARS ARENA <no-reply@allstarsarena.com>"),
-  // Backend public URL for building absolute URLs (HLS streams, etc.)
+
   BACKEND_URL: z.string().optional().default(""),
   AUTO_FREE_PORT: z.string().optional().default("true"),
 
-  // Firebase Admin Credentials (Optional)
   GOOGLE_APPLICATION_CREDENTIALS: z
     .string()
     .optional()
@@ -37,7 +36,6 @@ const envSchema = z.object({
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional().default(""),
   FIREBASE_PROJECT_ID: z.string().optional().default("all-stars-arena"),
 
-  // CCTV Camera Configuration (Confirmed Dahua XVR / DVR settings)
   CAMERA_HOST: z.string().optional().default("192.168.1.2"),
   CAMERA_RTSP_PORT: z.coerce.number().default(554),
   CAMERA_TCP_PORT: z.coerce.number().default(37777),
@@ -52,7 +50,6 @@ const envSchema = z.object({
   CAMERA_SERIAL_NUMBER: z.string().optional().default("3L04789PAZ01138"),
   CAMERA_DEVICE_NAME: z.string().optional().default("Botivate"),
 
-  // Camera Security & Networking
   CAMERA_CREDENTIAL_ENCRYPTION_KEY: z
     .string()
     .default(
@@ -68,7 +65,6 @@ const envSchema = z.object({
   CAMERA_CONNECTION_TIMEOUT_MS: z.coerce.number().default(5000),
   CAMERA_RECONNECT_INTERVAL_MS: z.coerce.number().default(5000),
 
-  // Recording Lifecycle & Storage Parameters
   RECORDING_OUTPUT_DIR: z.string().default("./recordings"),
   RECORDING_TEMP_DIR: z.string().default("temp_recordings"),
   RECORDING_DURATION_MINUTES: z.coerce.number().default(120),
@@ -101,7 +97,6 @@ const envSchema = z.object({
           : "ffmpeg"),
     ),
 
-  // AWS S3 Storage
   AWS_REGION: z.string().default(process.env.AWS_S3_REGION || "ap-south-1"),
   AWS_S3_REGION: z.string().default(process.env.AWS_REGION || "ap-south-1"),
   AWS_S3_BUCKET: z
@@ -138,10 +133,6 @@ if (!parsedEnv.success) {
 
 export const env = parsedEnv.data;
 
-/**
- * Constructs Dahua RTSP stream URL with safe password URL-encoding
- * Format: rtsp://username:encodedPassword@host:port/cam/realmonitor?channel=N&subtype=M
- */
 export const getDefaultRtspUrl = (channel = 1, subtype = 0): string => {
   if (!env.CAMERA_HOST) return "";
   const username = env.CAMERA_USERNAME || "admin";

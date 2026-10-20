@@ -43,7 +43,6 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
       final isFutureDate =
           AppDateUtils.isMatchInFuture(rawDate, game.startTime);
 
-      // NO FUTURE DATES IN HISTORY: Any cancelled match or future-dated match defaults to TODAY / PAST
       if (isCancelled || isFutureDate) {
         rawDate = todayIso;
       }
@@ -195,8 +194,6 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Filter Chips (ALL, COMPLETED, CANCELLED)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -242,8 +239,6 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
               }).toList(),
             ),
           ),
-
-          // 📶 Offline SQLite Cache Indicator Pill
           Obx(() {
             if (!controller.isOfflineMode.value) {
               return const SizedBox.shrink();
@@ -449,7 +444,6 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Left Column: Time, Date & Slots
                 SizedBox(
                   width: 96,
                   child: Column(
@@ -517,20 +511,17 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
                     ],
                   ),
                 ),
-                // Vertical Divider
                 Container(
                   width: 1,
                   height: 72,
                   color: isDark ? AppColors.darkBorder : Colors.grey.shade200,
                 ),
                 const SizedBox(width: 12),
-                // Right Column: Badges, Title/Court, Score, Player Fee
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Top row: Badges
                       Wrap(
                         spacing: 6,
                         runSpacing: 3,
@@ -582,7 +573,6 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      // Title & Court row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -620,7 +610,6 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      // Score & Fee row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [

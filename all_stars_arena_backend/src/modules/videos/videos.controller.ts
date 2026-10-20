@@ -29,7 +29,6 @@ export const getVideoMetadata = asyncHandler(
 
     const video = videoRes.rows[0];
 
-    // Authorization check
     if (userRole === 3 && userId) {
       const isParticipant = await dbPool.query(
         "SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;",
@@ -82,7 +81,6 @@ export const getVideoPlaybackUrl = asyncHandler(
 
     const video = videoRes.rows[0];
 
-    // Authorization check
     if (userRole === 3 && userId) {
       const isParticipant = await dbPool.query(
         "SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;",
@@ -117,7 +115,7 @@ export const getVideoPlaybackUrl = asyncHandler(
       );
     }
 
-    const playbackUrl = await getSignedPlaybackUrl(video.video_url, 3600); // 1-hour pre-signed URL
+    const playbackUrl = await getSignedPlaybackUrl(video.video_url, 3600);
 
     res.status(200).json(
       ApiResponse.success("Signed playback URL generated", {
@@ -131,9 +129,6 @@ export const getVideoPlaybackUrl = asyncHandler(
   },
 );
 
-/**
- * Stream Recorded Video MP4 File with HTTP Byte-Range Support (GET & HEAD /api/videos/:filename)
- */
 export const streamVideoFileController = asyncHandler(
   async (req: Request, res: Response) => {
     const filename = req.params.filename || req.params.id;
@@ -141,7 +136,6 @@ export const streamVideoFileController = asyncHandler(
       throw new ApiError(400, "Filename is required", "MISSING_FILENAME");
     }
 
-    // Resolve safe absolute file path
     const filePath = CctvRecordingService.getVideoFilePath(filename);
 
     let stat: fs.Stats;
@@ -160,7 +154,6 @@ export const streamVideoFileController = asyncHandler(
     const isDownload =
       req.query.download === "1" || req.query.download === "true";
 
-    // Standard Video Headers
     res.setHeader("Content-Type", "video/mp4");
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Cache-Control", "public, max-age=86400");
@@ -175,7 +168,6 @@ export const streamVideoFileController = asyncHandler(
     const range = req.headers.range;
 
     if (range) {
-      // Range format: "bytes=start-end" or "bytes=start-"
       const match = range.match(/bytes=(\d+)-(\d*)/);
       if (!match) {
         res.setHeader("Content-Range", `bytes */${fileSize}`);
@@ -186,7 +178,6 @@ export const streamVideoFileController = asyncHandler(
       const start = parseInt(match[1], 10);
       const end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
 
-      // Check invalid range boundaries
       if (start >= fileSize || end >= fileSize || start > end || start < 0) {
         res.setHeader("Content-Range", `bytes */${fileSize}`);
         res.status(416).end();

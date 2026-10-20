@@ -6,10 +6,6 @@ import { dbPool } from "../config/db.config.js";
 let cachedResend: Resend | null = null;
 let lastApiKey: string = "";
 
-/**
- * Returns a configured Resend instance using current environment variables.
- * Dynamically reloads if process.env.RESEND_API_KEY changes in .env.
- */
 export const getResendClient = (): Resend | null => {
   const currentKey = (
     process.env.RESEND_API_KEY ||
@@ -30,9 +26,6 @@ export const getResendClient = (): Resend | null => {
   return cachedResend;
 };
 
-/**
- * Direct export for Resend client proxy - preserves compatibility with direct Resend usage
- */
 export const resend = new Proxy({} as Resend, {
   get(_target, prop) {
     const client = getResendClient();
@@ -45,10 +38,6 @@ export const resend = new Proxy({} as Resend, {
   },
 });
 
-/**
- * Resolves the sender email address from environment variables.
- * Supports both raw email ("zold@support.zold.in") and standard RFC format ("All Stars Arena <zold@support.zold.in>").
- */
 export const getSenderEmail = (): string => {
   const configured = (
     process.env.EMAIL_FROM ||
@@ -64,9 +53,6 @@ export const getSenderEmail = (): string => {
   return `All Stars Arena <${configured}>`;
 };
 
-/**
- * Core email sending function using Resend API with comprehensive diagnostics
- */
 export const sendEmail = async (
   to: string,
   subject: string,
@@ -118,7 +104,6 @@ export const sendEmail = async (
     }
   }
 
-  // Fallback log for development when no valid Resend key is set
   logger.warn(
     `⚠️ [Email Warning] No active RESEND_API_KEY configured in .env. Falling back to dev logger.`,
   );
@@ -128,10 +113,6 @@ export const sendEmail = async (
   return true;
 };
 
-/**
- * Sends OTP verification email with custom styled HTML template.
- * Supports both (userEmail, otp) and (userId, userEmail, otp) signatures.
- */
 export const sendOTP = async (
   userEmailOrUserId: string | null | undefined,
   otpOrEmail: string,
@@ -182,7 +163,6 @@ export const sendOTP = async (
     logger.info(`========================================\n`);
   }
 
-  // Update latest_otp in database if userId was provided
   if (userId) {
     try {
       await dbPool.query(

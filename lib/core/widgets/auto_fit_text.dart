@@ -9,14 +9,14 @@ class AutoFitText extends StatelessWidget {
     this.minFontSize = 12,
     this.maxScale = 3.0,
     this.textAlign,
-    this.overflow = TextOverflow.ellipsis, // last-resort only
+    this.overflow = TextOverflow.ellipsis,
   });
 
   final String text;
   final TextStyle? style;
   final int maxLines;
-  final double minFontSize; // minimum readable size
-  final double maxScale; // upper cap on effective system scale
+  final double minFontSize;
+  final double maxScale;
   final TextAlign? textAlign;
   final TextOverflow overflow;
 
@@ -26,11 +26,9 @@ class AutoFitText extends StatelessWidget {
     final designSize = base.fontSize ?? 14.0;
     final systemScaler = MediaQuery.textScalerOf(context);
 
-    // Respect system/accessibility scale, but cap it.
     double target = systemScaler.scale(designSize);
     target = target.clamp(designSize, designSize * maxScale);
 
-    // Never let minFontSize exceed the design size (small texts stay small).
     final floor = minFontSize < designSize ? minFontSize : designSize;
 
     return LayoutBuilder(builder: (context, c) {
@@ -42,7 +40,7 @@ class AutoFitText extends StatelessWidget {
           text: TextSpan(text: text, style: base.copyWith(fontSize: size)),
           textDirection: Directionality.of(context),
           maxLines: maxLines,
-          textScaler: TextScaler.noScaling, // scale already applied above
+          textScaler: TextScaler.noScaling,
         )..layout(maxWidth: maxLines == 1 ? double.infinity : maxW);
 
         final overflowsWidth = maxLines == 1 && tp.width > maxW;
@@ -51,7 +49,6 @@ class AutoFitText extends StatelessWidget {
         if (overflowsWidth) {
           size = size * (maxW / tp.width);
         } else if (overflowsLines) {
-          // shrink step by step until it fits the allowed lines
           while (size > floor) {
             size -= 0.5;
             final t2 = TextPainter(
@@ -71,9 +68,9 @@ class AutoFitText extends StatelessWidget {
         style: base.copyWith(fontSize: size),
         maxLines: maxLines,
         softWrap: maxLines != 1,
-        overflow: overflow, // only triggers if min size still too big
+        overflow: overflow,
         textAlign: textAlign,
-        textScaler: TextScaler.noScaling, // applied manually, local only
+        textScaler: TextScaler.noScaling,
       );
     });
   }

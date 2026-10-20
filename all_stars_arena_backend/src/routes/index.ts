@@ -41,7 +41,6 @@ router.use("/matches", matchRoutes);
 router.use("/realtime", realtimeRoutes);
 router.use("/cctv", cctvRoutes);
 
-// Razorpay Webhooks
 router.post("/webhooks/razorpay", webhookController);
 
 export default router;

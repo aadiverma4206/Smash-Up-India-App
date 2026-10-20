@@ -1,10 +1,8 @@
 import multer from "multer";
 import { ApiError } from "../utils/apiResponse.js";
 
-// Configure multer memory storage
 const storage = multer.memoryStorage();
 
-// File filter for images (JPEG, PNG, WebP)
 const imageFileFilter = (
   req: any,
   file: Express.Multer.File,
@@ -29,11 +27,10 @@ const imageFileFilter = (
   }
 };
 
-// 5 MB file size limit
 export const uploadAvatarMiddleware = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB max
+    fileSize: 5 * 1024 * 1024,
   },
   fileFilter: imageFileFilter,
 }).single("profileImage");

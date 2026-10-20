@@ -12,9 +12,6 @@ export interface ScoreUpdatePayload {
   updatedByUserId?: string;
 }
 
-/**
- * Update Football Match Score & Broadcast via Socket.IO
- */
 export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
   const {
     gameId,
@@ -25,7 +22,6 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     updatedByUserId,
   } = payload;
 
-  // Verify game exists
   const gameRes = await dbPool.query(
     "SELECT * FROM public.games WHERE id = $1;",
     [gameId],
@@ -43,7 +39,6 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     );
   }
 
-  // Insert into live_score_logs (DB trigger handles ELO rating & game completion if isFinal)
   const logRes = await dbPool.query(
     `INSERT INTO public.live_score_logs
      (game_id, team_a_score, team_b_score, updated_by_user_id, is_final)
@@ -51,7 +46,6 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     [gameId, teamAScore, teamBScore, updatedByUserId || null, isFinal],
   );
 
-  // If match was updated but not final, keep status ONGOING
   if (!isFinal) {
     await dbPool.query(
       `UPDATE public.games
@@ -75,12 +69,11 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     timestamp: new Date().toISOString(),
   };
 
-  // Broadcast Real-Time Match Score to Socket.IO Subscribers
   try {
     const io = getSocketIO();
-    // Emit to specific game room
+
     io.to(`game:${gameId}`).emit("match:score_update", socketPayload);
-    // Emit to global match stream
+
     io.emit("match:live_feed", socketPayload);
 
     logger.info(
@@ -96,9 +89,6 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
   return socketPayload;
 };
 
-/**
- * Get List of Ongoing / Open Games
- */
 export const getLiveMatches = async () => {
   const res = await dbPool.query(
     `SELECT g.*, c.name as club_name, c.address as club_address
@@ -109,9 +99,6 @@ export const getLiveMatches = async () => {
   return res.rows;
 };
 
-/**
- * Get Detailed Match Information
- */
 export const getMatchDetails = async (gameId: string) => {
   const gameRes = await dbPool.query(
     `SELECT g.*, c.name as club_name, crt.name as court_name

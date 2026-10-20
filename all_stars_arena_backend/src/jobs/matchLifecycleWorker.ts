@@ -6,18 +6,11 @@ import { logger } from "../utils/logger.js";
 import { CctvService } from "../modules/cctv/cctv.service.js";
 import { CctvRecordingService } from "../services/cctvRecording.service.js";
 
-/**
- * Single Reconciliation & Lifecycle Execution Pass (Restart-Safe & Idempotent)
- */
 export const runLifecycleCycle = async () => {
   const client = await dbPool.connect();
   try {
-    // -------------------------------------------------------------
-    // PHASE 0: AUTOMATIC UNAPPROVED MATCH CANCELLATION & WALLET REFUNDS
-    // -------------------------------------------------------------
     await client.query("BEGIN");
 
-    // Ensure cancellation_reason column exists on public.games
     await client.query(
       "ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;",
     );
@@ -105,9 +98,6 @@ export const runLifecycleCycle = async () => {
 
     await client.query("COMMIT");
 
-    // -------------------------------------------------------------
-    // PHASE 12 & 31: AUTOMATIC MATCH START + CCTV RECORDING START
-    // -------------------------------------------------------------
     await client.query("BEGIN");
 
     const startingGames = await client.query(
@@ -123,7 +113,6 @@ export const runLifecycleCycle = async () => {
     const gamesToRecord: Array<{ gameId: string; cameraId: string }> = [];
 
     for (const game of startingGames.rows) {
-      // 1. Update Game to ONGOING (STARTED)
       await client.query(
         `UPDATE public.games
          SET status = 'ONGOING', updated_at = CURRENT_TIMESTAMP
@@ -135,7 +124,6 @@ export const runLifecycleCycle = async () => {
         `⚽ [LifecycleWorker] Auto-started match ${game.id} ("${game.title}") to ONGOING`,
       );
 
-      // 2. Identify Camera for Court/Club
       try {
         const camRes = await client.query(
           `SELECT id, is_enabled FROM public.cctv_cameras
@@ -149,7 +137,6 @@ export const runLifecycleCycle = async () => {
         if (camRes.rows.length > 0) {
           const camera = camRes.rows[0];
 
-          // Check if recording already exists for this game (idempotent)
           const existingRec = await client.query(
             `SELECT id FROM public.cctv_recordings WHERE game_id = $1 LIMIT 1;`,
             [game.id],
@@ -163,11 +150,9 @@ export const runLifecycleCycle = async () => {
         logger.error({ cctvErr }, `Failed to query camera for game ${game.id}`);
       }
 
-      // 3. Create Notifications for Manager and Roster Players
       try {
         const courtName = game.court_id === "court_2" ? "Court 2" : "Court 1";
 
-        // Notify managers
         const managers = await client.query(
           `SELECT user_id FROM public.club_managers WHERE club_id = $1;`,
           [game.club_id],
@@ -188,7 +173,6 @@ export const runLifecycleCycle = async () => {
           );
         }
 
-        // Notify roster players
         const players = await client.query(
           `SELECT user_id FROM public.game_players WHERE game_id = $1;`,
           [game.id],
@@ -212,7 +196,6 @@ export const runLifecycleCycle = async () => {
         );
       }
 
-      // 4. Emit Real-time Socket Event
       try {
         const io = getSocketIO();
         io.to(`game:${game.id}`).emit("match:started", {
@@ -225,14 +208,11 @@ export const runLifecycleCycle = async () => {
           status: "ONGOING",
           eventText: `⚽ KICK-OFF: ${game.title}`,
         });
-      } catch (sockErr: any) {
-        // Socket errors should never abort DB transaction
-      }
+      } catch (sockErr: any) {}
     }
 
     await client.query("COMMIT");
 
-    // Trigger real CCTV recordings now that games are committed as ONGOING
     for (const item of gamesToRecord) {
       try {
         await CctvService.startMatchRecording(
@@ -253,9 +233,6 @@ export const runLifecycleCycle = async () => {
       }
     }
 
-    // -------------------------------------------------------------
-    // PHASE 13 & 32: AUTOMATIC MATCH END
-    // -------------------------------------------------------------
     await client.query("BEGIN");
 
     const endingGames = await client.query(
@@ -280,7 +257,6 @@ export const runLifecycleCycle = async () => {
         `🏁 [LifecycleWorker] Auto-completed match ${game.id} ("${game.title}") to COMPLETED`,
       );
 
-      // Switch active CCTV recording to POST_MATCH (recording up to end + 15 mins)
       await client.query(
         `UPDATE public.cctv_recordings
          SET recording_status = 'POST_MATCH',
@@ -307,9 +283,6 @@ export const runLifecycleCycle = async () => {
 
     await client.query("COMMIT");
 
-    // -------------------------------------------------------------
-    // PHASE 32 & 40: CCTV AUTO-STOP AT MATCH_END + 15 MINUTES
-    // -------------------------------------------------------------
     await client.query("BEGIN");
 
     const expiredRecordings = await client.query(
@@ -351,11 +324,7 @@ export const runLifecycleCycle = async () => {
   }
 };
 
-/**
- * Start Scheduled Match Lifecycle & CCTV Recording Job
- */
 export const startMatchLifecycleWorker = () => {
-  // 1. Run immediately on boot to reconcile state after any server restart
   runLifecycleCycle().catch((err) => {
     logger.error(
       { err },
@@ -363,7 +332,6 @@ export const startMatchLifecycleWorker = () => {
     );
   });
 
-  // 2. Schedule to run every 30 seconds
   cron.schedule("*/30 * * * * *", async () => {
     await runLifecycleCycle();
   });

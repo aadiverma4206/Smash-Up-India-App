@@ -81,11 +81,11 @@ class RazorpayOrderModel {
 @JsonSerializable(createFactory: false)
 class WalletTransactionModel {
   final String id;
-  final String transactionType; // TOPUP, DEBIT, REFUND, CASHBACK
+  final String transactionType;
   final double amount;
   final double balanceAfter;
   final String description;
-  final String status; // SUCCESS, FAILED, PENDING
+  final String status;
   final String? referenceId;
   final String? providerPaymentId;
   final String createdAt;

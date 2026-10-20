@@ -9,12 +9,10 @@ import { requestId } from "../middlewares/requestId.js";
 import { parseDbError, isDbError } from "../utils/dbErrors.js";
 
 describe("Comprehensive Error Handling Test Suite", () => {
-  // Test Express application setup with universal error handler
   const testApp = express();
   testApp.use(requestId);
   testApp.use(express.json());
 
-  // Test routes triggering each category of error
   testApp.get("/test/api-error-bad-request", () => {
     throw ApiError.badRequest(
       "Custom bad request message",
@@ -136,7 +134,6 @@ describe("Comprehensive Error Handling Test Suite", () => {
     throw new Error("Unexpected NullPointer or undefined property access");
   });
 
-  // Catch-all 404 handler
   testApp.use((req: Request, _res: Response, next: NextFunction) => {
     next(
       ApiError.notFound(
@@ -147,7 +144,6 @@ describe("Comprehensive Error Handling Test Suite", () => {
     );
   });
 
-  // Global Error Handler
   testApp.use(errorHandler);
 
   it("1. Should handle ApiError.badRequest with custom code and details", async () => {

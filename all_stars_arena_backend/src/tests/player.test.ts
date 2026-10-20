@@ -15,7 +15,6 @@ describe("ALL STARS ARENA Player-Facing Modules Integration Tests", () => {
   let tournamentId = "";
 
   beforeAll(async () => {
-    // 1. Create a Test Player Account directly in DB
     const pwdHash = await bcrypt.hash(testPassword, 10);
     const userRes = await dbPool.query(
       `SELECT public.register_player($1, $2, $3, $4, 'Raipur') as user_id;`,
@@ -23,20 +22,17 @@ describe("ALL STARS ARENA Player-Facing Modules Integration Tests", () => {
     );
     const userId = userRes.rows[0].user_id;
 
-    // Top up player wallet balance directly for tests
     await dbPool.query(
       `UPDATE public.player_details SET wallet_balance = 5000.00 WHERE user_id = $1;`,
       [userId],
     );
 
-    // Login to get access token
     const loginRes = await request(app)
       .post("/api/v1/auth/login")
       .send({ identifier: testEmail, password: testPassword });
 
     accessToken = loginRes.body.data.accessToken;
 
-    // 2. Fetch existing game, court, and tournament for testing
     const gameRes = await dbPool.query(`SELECT id FROM public.games LIMIT 1;`);
     if (gameRes.rows.length > 0) gameId = gameRes.rows[0].id;
 
@@ -112,13 +108,11 @@ describe("ALL STARS ARENA Player-Facing Modules Integration Tests", () => {
     if (res.status === 200) {
       expect(res.body.success).toBe(true);
 
-      // Test Switch Team
       const switchRes = await request(app)
         .post(`/api/v1/games/${gameId}/switch-team`)
         .set("Authorization", `Bearer ${accessToken}`);
       expect(switchRes.status).toBe(200);
 
-      // Test Leave Game
       const leaveRes = await request(app)
         .post(`/api/v1/games/${gameId}/leave`)
         .set("Authorization", `Bearer ${accessToken}`);
@@ -177,7 +171,6 @@ describe("ALL STARS ARENA Player-Facing Modules Integration Tests", () => {
       bookingId = res.body.data.id;
       expect(res.body.data.status).toBe("CONFIRMED");
 
-      // Test Booking Cancellation (Triggers trg_apply_refund_tier)
       const cancelRes = await request(app)
         .post(`/api/v1/bookings/${bookingId}/cancel`)
         .set("Authorization", `Bearer ${accessToken}`)

@@ -77,7 +77,6 @@ class PlayerRepository {
           await remoteDataSource.getHistory(limit: limit, offset: offset);
       final list = response.data ?? [];
 
-      // 💾 Save fresh player history to local SQLite DB with 3-day retention
       if (Get.isRegistered<DatabaseService>()) {
         try {
           final db = Get.find<DatabaseService>();
@@ -89,7 +88,6 @@ class PlayerRepository {
 
       return list;
     } catch (e) {
-      // 📶 Offline Fallback to Local SQLite DB (3-Day Retention)
       if (Get.isRegistered<DatabaseService>()) {
         try {
           final db = Get.find<DatabaseService>();

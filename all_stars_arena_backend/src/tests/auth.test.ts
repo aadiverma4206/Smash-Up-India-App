@@ -14,7 +14,6 @@ describe("ALL STARS ARENA Authentication Module Tests", () => {
   let refreshToken = "";
 
   afterAll(async () => {
-    // DB trigger trg_prevent_user_delete prohibits DELETE FROM users. Set status to SUSPENDED.
     await dbPool.query(
       `UPDATE public.users SET status = 'SUSPENDED' WHERE email = $1 OR phone = $2;`,
       [testEmail, testPhone],

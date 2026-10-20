@@ -10,7 +10,6 @@ export const dbPool = new Pool({
 });
 
 dbPool.on("connect", (client) => {
-  // Set session timezone to Asia/Kolkata
   client.query("SET timezone = 'Asia/Kolkata';");
   logger.info(
     "Connected to PostgreSQL Database (all_stars_arena) - Timezone: Asia/Kolkata",
@@ -21,10 +20,6 @@ dbPool.on("error", (err) => {
   logger.error({ err }, "Unexpected error on idle PostgreSQL client");
 });
 
-/**
- * Transaction Helper
- * Executes callback within a PostgreSQL transaction with BEGIN/COMMIT/ROLLBACK
- */
 export const executeTransaction = async (callback) => {
   const client = await dbPool.connect();
   try {
@@ -41,9 +36,6 @@ export const executeTransaction = async (callback) => {
   }
 };
 
-/**
- * Connection Health Check
- */
 export const checkDbHealth = async () => {
   try {
     const res = await dbPool.query(
@@ -62,9 +54,6 @@ export const checkDbHealth = async () => {
   }
 };
 
-/**
- * Graceful Shutdown Handler
- */
 export const closeDbPool = async () => {
   logger.info("Closing PostgreSQL database connection pool...");
   await dbPool.end();

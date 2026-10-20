@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'register_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 RegisterSendOtpRequestModel _$RegisterSendOtpRequestModelFromJson(
         Map<String, dynamic> json) =>

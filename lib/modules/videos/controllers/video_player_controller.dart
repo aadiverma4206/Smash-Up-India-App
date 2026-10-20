@@ -17,7 +17,6 @@ class VideoPlayerController extends GetxController {
   final RxList<Map<String, dynamic>> cameras = <Map<String, dynamic>>[].obs;
   final RxInt selectedCameraIndex = 0.obs;
 
-  // Playback state
   final RxBool isInitialized = false.obs;
   final RxBool isPlaying = false.obs;
   final RxBool isBuffering = false.obs;
@@ -28,7 +27,6 @@ class VideoPlayerController extends GetxController {
   final RxBool isControlsVisible = true.obs;
   final RxBool isFullScreen = false.obs;
 
-  // Offline Download state
   final RxBool isDownloading = false.obs;
   final RxDouble downloadProgress = 0.0.obs;
   final RxString localFilePath = ''.obs;
@@ -63,13 +61,12 @@ class VideoPlayerController extends GetxController {
     }
   }
 
-  /// Resolve absolute URL reachable from mobile device
   String resolveAbsoluteUrl(String rawUrl) {
     if (rawUrl.isEmpty) return '';
     if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
       return rawUrl;
     }
-    // Clean base URL from EnvConfig: replace /api/v1 or /api
+
     final base = EnvConfig.baseUrl
         .replaceAll(RegExp(r'/api(/v1)?/?$'), '')
         .replaceAll(RegExp(r'/+$'), '');
@@ -77,14 +74,12 @@ class VideoPlayerController extends GetxController {
     return '$base$cleanPath';
   }
 
-  /// Initialize video player instance
   Future<void> _initPlayer(String url) async {
     isInitialized.value = false;
     hasError.value = false;
     errorMessage.value = '';
     isBuffering.value = true;
 
-    // Check if downloaded locally first
     final filename = url.split('/').last.split('?').first;
     if (filename.isNotEmpty) {
       final localPath = await _getLocalVideoPath(filename);
@@ -116,10 +111,8 @@ class VideoPlayerController extends GetxController {
       isInitialized.value = true;
       isBuffering.value = false;
 
-      // Listen to position & buffering changes
       videoPlayerController!.addListener(_videoListener);
 
-      // Auto-start playback
       await videoPlayerController!.play();
       isPlaying.value = true;
       _startControlsHideTimer();
@@ -243,7 +236,6 @@ class VideoPlayerController extends GetxController {
     return '${videosDir.path}/$filename';
   }
 
-  /// Download match video file to local device storage
   Future<void> downloadVideo() async {
     if (isDownloading.value || isDownloaded.value) return;
 

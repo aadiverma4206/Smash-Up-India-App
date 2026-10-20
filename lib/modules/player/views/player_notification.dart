@@ -7,7 +7,6 @@ import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../core/widgets/empty_state.dart';
 
-/// Notification Item Representation for Player View
 class PlayerNotificationItem {
   final String id;
   final String title;
@@ -15,7 +14,7 @@ class PlayerNotificationItem {
   final String? badgeText;
   final Color? badgeBgColor;
   final Color? badgeTextColor;
-  final String category; // 'MATCH', 'PAYMENT', 'PLAYER', 'REFUND', 'SYSTEM'
+  final String category;
   final IconData icon;
   final Color iconColor;
   final Color iconBgLight;
@@ -78,7 +77,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
   final RxBool _showUnreadOnly = false.obs;
   final Rxn<DateTime> _customDate = Rxn<DateTime>();
 
-  // In-memory items list (syncs with real controller notifications + mock fallbacks)
   final RxList<PlayerNotificationItem> _localItems =
       <PlayerNotificationItem>[].obs;
 
@@ -91,7 +89,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
 
     _loadAndPrepareItems();
 
-    // Listen to changes from controller
     ever(_controller.notifications, (_) {
       _loadAndPrepareItems();
     });
@@ -117,7 +114,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
         items.add(_mapModelToPlayerItem(raw, parsedDt));
       }
     } else {
-      // Seed initial high-fidelity notifications matching user design reference
       items.addAll([
         PlayerNotificationItem(
           id: 'mock_1',
@@ -322,7 +318,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     return _localItems.where((item) {
       if (unreadOnly && item.isRead) return false;
 
-      // 1. Search Query Filter
       if (query.isNotEmpty) {
         final title = item.title.toLowerCase();
         final sub = item.subtitle.toLowerCase();
@@ -334,7 +329,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
         }
       }
 
-      // 2. Activity Category Filter
       if (activity != 'All activity') {
         if (activity == 'Matches' && item.category != 'MATCH') return false;
         if (activity == 'Payments' && item.category != 'PAYMENT') return false;
@@ -342,7 +336,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
         if (activity == 'Refunds' && item.category != 'REFUND') return false;
       }
 
-      // 3. Date Filter
       final itemDate =
           DateTime(item.dateTime.year, item.dateTime.month, item.dateTime.day);
 
@@ -371,7 +364,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
 
-    // Sort descending by date
     final sorted = List<PlayerNotificationItem>.from(items)
       ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
@@ -401,7 +393,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
       _localItems[idx] = item.copyWith(isRead: true);
     }
 
-    // Try server sync if real notification
     if (!item.id.startsWith('mock_')) {
       final raw =
           _controller.notifications.firstWhereOrNull((n) => n.id == item.id);
@@ -491,12 +482,10 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
       body: SafeArea(
         child: Column(
           children: [
-            // Search Bar & Filter Button
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Row(
                 children: [
-                  // Search Field
                   Expanded(
                     child: Container(
                       height: 48,
@@ -557,7 +546,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Filter Funnel Button
                   InkWell(
                     onTap: _showComprehensiveFilterSheet,
                     borderRadius: BorderRadius.circular(12),
@@ -585,20 +573,16 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                 ],
               ),
             ),
-
-            // Dropdown Filter Pills Row
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  // Activity Filter Pill
                   Obx(() => _buildDropdownPill(
                         label: _selectedActivity.value,
                         onTap: _showActivityPickerMenu,
                         isDark: isDark,
                       )),
                   const SizedBox(width: 10),
-                  // Date Filter Pill
                   Obx(() => _buildDropdownPill(
                         label: _selectedDateFilter.value,
                         onTap: _showDateFilterPickerMenu,
@@ -608,8 +592,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Notification Grouped List
             Expanded(
               child: Obx(() {
                 final filtered = _filteredList;
@@ -655,7 +637,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Group Date Header (e.g., "Today · 9 Oct 2026")
                           Padding(
                             padding: const EdgeInsets.only(
                               top: 14,
@@ -693,7 +674,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-  /// Dropdown Pill Chip (e.g., "All activity ⌵")
   Widget _buildDropdownPill({
     required String label,
     required VoidCallback onTap,
@@ -738,7 +718,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-  /// Individual Notification Card
   Widget _buildNotificationCard(
     BuildContext context,
     PlayerNotificationItem item,
@@ -777,7 +756,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left Circular Pastel Icon
                 Container(
                   width: 44,
                   height: 44,
@@ -794,8 +772,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Center Title, Subtitle, & Badge
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -854,8 +830,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                   ),
                 ),
                 const SizedBox(width: 10),
-
-                // Right Timestamp & Green Unread Dot
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -902,7 +876,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     }
   }
 
-  /// Activity Picker Menu
   void _showActivityPickerMenu() {
     final activities = [
       'All activity',
@@ -946,7 +919,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-  /// Date Filter Picker Menu
   void _showDateFilterPickerMenu() {
     final dateOptions = [
       'Date: All time',
@@ -1004,7 +976,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-  /// Full Comprehensive Filter Modal Sheet
   void _showComprehensiveFilterSheet() {
     Get.bottomSheet(
       Container(
@@ -1214,5 +1185,4 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
   }
 }
 
-/// Convenience alias for flexible imports
 typedef PlayerNotification = PlayerNotificationView;

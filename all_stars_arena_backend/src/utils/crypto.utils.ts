@@ -3,9 +3,6 @@ import { env } from "../config/env.config.js";
 
 const ALGORITHM = "aes-256-gcm";
 
-/**
- * Derives a valid 32-byte (256-bit) buffer key from environment configuration
- */
 const getKeyBuffer = (): Buffer => {
   const rawKey =
     env.CAMERA_CREDENTIAL_ENCRYPTION_KEY ||
@@ -16,14 +13,9 @@ const getKeyBuffer = (): Buffer => {
     return Buffer.from(rawKey, "hex");
   }
 
-  // Fallback to SHA-256 digest to securely normalize any passphrase to 32 bytes
   return crypto.createHash("sha256").update(rawKey, "utf8").digest();
 };
 
-/**
- * Encrypt sensitive string (such as RTSP password or camera stream URL)
- * Uses AES-256-GCM with a unique 16-byte cryptographically random IV and authentication tag
- */
 export const encryptSecret = (text: string): string => {
   if (!text) return "";
   const key = getKeyBuffer();
@@ -37,9 +29,6 @@ export const encryptSecret = (text: string): string => {
   return `${iv.toString("hex")}:${authTag}:${encrypted}`;
 };
 
-/**
- * Decrypt encrypted secret string with authenticated integrity check
- */
 export const decryptSecret = (encryptedText: string): string => {
   if (!encryptedText) return "";
   const key = getKeyBuffer();
@@ -61,9 +50,6 @@ export const decryptSecret = (encryptedText: string): string => {
   return decrypted;
 };
 
-/**
- * Redacts credentials (username, password) from RTSP/HTTP URLs for safe structured logging
- */
 export const redactRtspUrl = (rawUrl: string): string => {
   if (!rawUrl) return "";
   try {

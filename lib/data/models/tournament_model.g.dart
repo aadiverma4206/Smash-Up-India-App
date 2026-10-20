@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'tournament_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 TournamentModel _$TournamentModelFromJson(Map<String, dynamic> json) =>
     TournamentModel(

@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'court_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 Map<String, dynamic> _$CourtModelToJson(CourtModel instance) =>
     <String, dynamic>{

@@ -18,12 +18,11 @@ class MatchHistoryController extends GetxController {
   final RxBool isSearchingOrFiltering = false.obs;
   final RxBool isOfflineMode = false.obs;
   final RxBool hasMore = true.obs;
-  final RxString activeFilter = 'ALL'.obs; // ALL, COMPLETED, CANCELLED
-  final RxString selectedRosterTeamFilter = 'TEAM_A'.obs; // TEAM_A, TEAM_B
+  final RxString activeFilter = 'ALL'.obs;
+  final RxString selectedRosterTeamFilter = 'TEAM_A'.obs;
   int currentOffset = 0;
   final int limit = 20;
 
-  // CCTV playback state for player history details
   final RxnString cctvPlaybackUrl = RxnString();
   final RxList<VideoModel> matchVideos = <VideoModel>[].obs;
   final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();

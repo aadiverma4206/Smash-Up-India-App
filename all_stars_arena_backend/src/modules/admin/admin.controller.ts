@@ -97,7 +97,7 @@ export const getUsersController = asyncHandler(
     const { search, role, role_id, page = 1, limit = 50 } = req.query;
 
     const pageNum = Math.max(Number(page) || 1, 1);
-    const limitNum = Math.min(Math.max(Number(limit) || 50, 1), 50); // Enforce max 50 per batch
+    const limitNum = Math.min(Math.max(Number(limit) || 50, 1), 50);
     const offset = (pageNum - 1) * limitNum;
 
     let query = `
@@ -128,7 +128,6 @@ export const getUsersController = asyncHandler(
       query += ` AND (u.name ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length})`;
     }
 
-    // Uses indexed columns (role_id, name) for fast sorting
     query += ` ORDER BY u.name ASC, u.id ASC`;
 
     params.push(limitNum);
@@ -194,7 +193,7 @@ export const suspendUserController = asyncHandler(
     const adminId = req.user?.id;
     const adminName = req.user?.name || "Admin";
     const { id: targetUserId } = req.params;
-    const { suspend, reason } = req.body; // true = suspend, false = active
+    const { suspend, reason } = req.body;
 
     const newStatus = suspend ? "SUSPENDED" : "ACTIVE";
 

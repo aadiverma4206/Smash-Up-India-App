@@ -8,8 +8,6 @@ class EnvConfig {
   static String get appName =>
       dotenv.env['APP_NAME']?.trim() ?? 'ALL STARS ARENA';
 
-  /// Primary getter for backend Base URL.
-  /// Always reads strictly from the .env file.
   static String get baseUrl {
     final envUrl = dotenv.env['BASE_URL']?.trim();
     if (envUrl != null && envUrl.isNotEmpty) {
@@ -31,12 +29,9 @@ class EnvConfig {
     return val != null ? (int.tryParse(val) ?? 15000) : 15000;
   }
 
-  /// Initialize Environment Configuration.
-  /// Attempts to load `.env` file first, falling back to `.env.example`.
   static Future<void> init({String envFile = '.env'}) async {
     bool loaded = false;
 
-    // 1. Try specified envFile (.env)
     try {
       await dotenv.load(fileName: envFile);
       loaded = true;
@@ -45,7 +40,6 @@ class EnvConfig {
       AppLogger.warning('Failed to load $envFile: $e');
     }
 
-    // 2. Fallback to .env.example if needed
     if (!loaded) {
       try {
         await dotenv.load(fileName: '.env.example');
@@ -56,7 +50,6 @@ class EnvConfig {
       }
     }
 
-    // Clear any stale cached base URL overrides from SharedPreferences so .env is the single source of truth
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefBaseUrlKey);
@@ -65,7 +58,6 @@ class EnvConfig {
     AppLogger.info('🚀 Active BASE_URL from .env: $baseUrl');
   }
 
-  /// Compatibility method for saving custom Base URL
   static Future<void> saveBaseUrl(String newUrl) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -73,7 +65,6 @@ class EnvConfig {
     } catch (_) {}
   }
 
-  /// Reset Base URL back to `.env` default
   static Future<void> resetBaseUrl() async {
     try {
       final prefs = await SharedPreferences.getInstance();

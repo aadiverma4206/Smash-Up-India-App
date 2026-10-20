@@ -3,11 +3,6 @@ import { dbPool } from "../config/db.config.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { AuthenticatedRequest } from "../types/index.js";
 
-/**
- * Club Scope Middleware:
- * Ensures a MANAGER can only access resources for clubs they are assigned to manage.
- * ADMINs (Role 1) bypass this check.
- */
 export const clubScope = async (
   req: AuthenticatedRequest,
   _res: Response,
@@ -19,12 +14,10 @@ export const clubScope = async (
       return next(new ApiError(401, "Authentication required", "UNAUTHORIZED"));
     }
 
-    // ADMIN bypasses club scope
     if (user.roleId === 1) {
       return next();
     }
 
-    // For MANAGER (Role 2)
     if (user.roleId === 2) {
       const clubId =
         req.params.clubId ||

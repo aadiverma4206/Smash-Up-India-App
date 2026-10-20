@@ -49,7 +49,6 @@ class CreateGameView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🏟️ Section 1: Club & Pitch Info
                         _buildSectionHeader(
                           context,
                           title: 'Club & Pitch Info',
@@ -58,8 +57,6 @@ class CreateGameView extends StatelessWidget {
                         const SizedBox(height: 10),
                         _buildVenueSelectionCard(context, controller),
                         const SizedBox(height: 20),
-
-                        // 📝 Section 2: Match Overview & Pricing
                         _buildSectionHeader(
                           context,
                           title: 'Match Details & Entry Fee',
@@ -68,8 +65,6 @@ class CreateGameView extends StatelessWidget {
                         const SizedBox(height: 10),
                         _buildMatchDetailsCard(context, controller),
                         const SizedBox(height: 20),
-
-                        // 📅 Section 3: Schedule & Time
                         _buildSectionHeader(
                           context,
                           title: 'Match Date & Timing',
@@ -78,8 +73,6 @@ class CreateGameView extends StatelessWidget {
                         const SizedBox(height: 10),
                         _buildScheduleCard(context, controller),
                         const SizedBox(height: 20),
-
-                        // 📜 Section 4: Rules & Guidelines
                         _buildSectionHeader(
                           context,
                           title: 'Guidelines & Description',
@@ -88,8 +81,6 @@ class CreateGameView extends StatelessWidget {
                         const SizedBox(height: 10),
                         _buildRulesCard(context, controller),
                         const SizedBox(height: 24),
-
-                        // ⚡ Summary & Submit CTA
                         _buildSummaryAndSubmitButton(context, controller),
                         const SizedBox(height: 30),
                       ],
@@ -166,7 +157,6 @@ class CreateGameView extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Fixed Club Name Field (Read-only modern rectangular style)
           InputDecorator(
             decoration: InputDecoration(
               labelText: 'Club Name *',
@@ -195,8 +185,6 @@ class CreateGameView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-
-          // Select Pitch / Court Header
           Text(
             'Select Pitch / Court *',
             style: TextStyle(
@@ -206,8 +194,6 @@ class CreateGameView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-
-          // Clean Radio Options Centered
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -234,7 +220,6 @@ class CreateGameView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Game Format Selection
           Text(
             'Game Type / Format *',
             style: TextStyle(
@@ -291,8 +276,6 @@ class CreateGameView extends StatelessWidget {
                 ),
               )),
           const SizedBox(height: 16),
-
-          // Match Title
           TextFormField(
             controller: controller.titleController,
             textInputAction: TextInputAction.next,
@@ -323,8 +306,6 @@ class CreateGameView extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-
-          // Entry Fee
           TextFormField(
             controller: controller.entryFeeController,
             keyboardType: TextInputType.number,
@@ -360,8 +341,6 @@ class CreateGameView extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-
-          // Reserve Players Count Input
           TextFormField(
             controller: controller.reservePlayersController,
             keyboardType: TextInputType.number,
@@ -399,8 +378,6 @@ class CreateGameView extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-
-          // Skill Requirement Dropdown
           Obx(
             () => DropdownButtonFormField<String>(
               initialValue: controller.skillRequirement.value,
@@ -446,8 +423,6 @@ class CreateGameView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-
-          // Match Privacy Choice
           Text('Match Privacy',
               style: TextStyle(
                   fontSize: 12,
@@ -522,7 +497,6 @@ class CreateGameView extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Date Picker Tile
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Container(
@@ -563,8 +537,6 @@ class CreateGameView extends StatelessWidget {
               },
             ),
             Divider(color: context.borderColor),
-
-            // Start & End Time Pickers
             Row(
               children: [
                 Expanded(

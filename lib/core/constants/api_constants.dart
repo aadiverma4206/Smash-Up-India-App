@@ -5,7 +5,6 @@ class ApiConstants {
       ? EnvConfig.razorpayKeyId
       : 'rzp_test_Sb44esbmpGlzBd';
 
-  // Auth
   static const String sendRegisterOtp = '/auth/register/send-otp';
   static const String verifyRegisterOtp = '/auth/register/verify';
   static const String register = '/auth/register';
@@ -17,12 +16,10 @@ class ApiConstants {
   static const String forgotVerifyOtp = '/auth/forgot/verify';
   static const String resetPassword = '/auth/reset-password';
 
-  // Player
   static const String playerProfile = '/player/profile';
   static const String playerStats = '/player/stats';
   static const String playerHistory = '/player/history';
 
-  // Wallet
   static const String wallet = '/wallet';
   static const String walletPin = '/wallet/pin';
   static const String walletPinChange = '/wallet/pin/change';
@@ -31,15 +28,12 @@ class ApiConstants {
   static const String walletTopupVerify = '/wallet/topup/verify';
   static const String walletTransactions = '/wallet/transactions';
 
-  // Games & Matches
   static const String games = '/games';
   static const String liveMatches = '/matches/live';
 
-  // Courts & Bookings
   static const String courts = '/courts';
   static const String bookings = '/bookings';
 
-  // CCTV
   static const String cctvCameras = '/cctv/cameras';
   static const String cctvPlayback = '/cctv/playback';
   static const String cctvLiveCameras = '/cctv/live/cameras';

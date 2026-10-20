@@ -11,7 +11,7 @@ class PlayerStatsModel {
   final int matchesDrawn;
   final int goalsScored;
   final int assists;
-  final int motmCount; // Man of the Match / MVP awards
+  final int motmCount;
   final double winRatePercentage;
   final List<DynamicStatCustomItem>? customStats;
 

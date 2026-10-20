@@ -158,9 +158,7 @@ export const registerFcmTokenController = asyncHandler(
         platform,
         deviceInfo,
       );
-    } catch (err: any) {
-      // Non-blocking fallback for device registration
-    }
+    } catch (err: any) {}
     res
       .status(200)
       .json(ApiResponse.success("FCM Device token registered successfully"));
@@ -176,9 +174,7 @@ export const deleteFcmTokenController = asyncHandler(
 
     try {
       await AuthRepository.deleteDeviceToken(userId, token);
-    } catch (err: any) {
-      // Non-blocking fallback for device token removal
-    }
+    } catch (err: any) {}
     res
       .status(200)
       .json(ApiResponse.success("FCM Device token removed successfully"));

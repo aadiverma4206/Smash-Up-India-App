@@ -44,7 +44,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
     super.dispose();
   }
 
-  /// Groups logs by Date String (Today, Yesterday, or Format 'd MMM yyyy')
   Map<String, List<AuditLogModel>> _groupLogsByDate(List<AuditLogModel> logs) {
     final Map<String, List<AuditLogModel>> grouped = {};
     final now = DateTime.now();
@@ -181,7 +180,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                 const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
             child: Column(
               children: [
-                // Filter Search Bar
                 AppTextField(
                   label: '',
                   hint: 'Filter Audit Logs by Action or Details...',
@@ -201,17 +199,13 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                   },
                 ),
                 const SizedBox(height: 12),
-
-                // Audit Logs Content List
                 Expanded(
                   child: Obx(() {
-                    // 1. Shimmer Loading State
                     if (controller.isLoadingLogs.value &&
                         controller.auditLogs.isEmpty) {
                       return _buildShimmerView(context, deviceType);
                     }
 
-                    // Filter logs locally
                     final query = filterQuery.value;
                     final filteredLogs = controller.auditLogs.where((log) {
                       if (query.isEmpty) return true;
@@ -224,7 +218,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                       return actionMatch || detailsMatch || userMatch;
                     }).toList();
 
-                    // 2. Empty State
                     if (filteredLogs.isEmpty) {
                       return Center(
                         child: Column(
@@ -261,7 +254,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                       );
                     }
 
-                    // Group logs by Date Header
                     final groupedLogs = _groupLogsByDate(filteredLogs);
 
                     return RefreshIndicator(
@@ -292,7 +284,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Date Group Header
                               Padding(
                                 padding: const EdgeInsets.only(
                                     top: 14.0, bottom: 8.0, left: 4.0),
@@ -307,8 +298,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                                   ),
                                 ),
                               ),
-
-                              // Cards List for this Date
                               if (isTabletOrDesktop)
                                 GridView.builder(
                                   physics: const NeverScrollableScrollPhysics(),
@@ -356,7 +345,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
     );
   }
 
-  /// Design matching Screenshot UI: Circular Icon, Title, Time, Subtitle, Status Tag
   Widget _buildAuditLogCard(BuildContext context, AuditLogModel log) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = _getCategoryBgColor(log.action, isDark);
@@ -377,7 +365,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
       ),
       child: InkWell(
         onTap: () {
-          // Navigates to dedicated Audit Log Detail Page
           Get.to(() => AdminAuditLogDetailView(auditLog: log));
         },
         borderRadius: BorderRadius.circular(16),
@@ -386,7 +373,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Circular Category Icon Badge
               Container(
                 width: 44,
                 height: 44,
@@ -399,14 +385,11 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Action Title, Subtitle, Status Tag
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title & Time Top Row
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -439,8 +422,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                       ],
                     ),
                     const SizedBox(height: 3),
-
-                    // Subtitle Details
                     if (log.details != null && log.details!.isNotEmpty) ...[
                       Text(
                         log.details!,
@@ -455,8 +436,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                       ),
                       const SizedBox(height: 5),
                     ],
-
-                    // Status Tag Badge if available
                     if (statusTag != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -478,7 +457,6 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                   ],
                 ),
               ),
-
               const SizedBox(width: 6),
               Icon(
                 Icons.chevron_right_rounded,

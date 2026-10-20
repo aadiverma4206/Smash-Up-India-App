@@ -39,10 +39,8 @@ const router = Router();
 
 router.use(authenticateToken);
 
-// Health & Capability Check
 router.get("/health", getFfmpegHealth);
 
-// Live CCTV Streaming Routes (Authorized Admin & Manager Only: Roles 1 & 2)
 router.get("/live/cameras", requireRole([1, 2]), getLiveCameras);
 
 router.post(
@@ -65,7 +63,6 @@ router.post(
   releaseLiveSession,
 );
 
-// Manager & Admin CCTV Camera Management Routes (Role 1=ADMIN, Role 2=MANAGER)
 router.post(
   "/cameras",
   requireRole([1, 2]),
@@ -97,7 +94,6 @@ router.post(
 router.get("/cameras", requireRole([1, 2]), getClubCameras);
 router.get("/clubs/:clubId/cameras", requireRole([1, 2]), getClubCameras);
 
-// CCTV Recording Controls
 router.post(
   "/recordings/start",
   requireRole([1, 2]),
@@ -125,10 +121,8 @@ router.get(
   getGameRecording,
 );
 
-// Monitoring / Failure Diagnostics for Admin & Managers
 router.get("/failures", requireRole([1, 2]), getRecordingFailures);
 
-// Player/Manager/Admin Match Video Playback (Both GET and POST supported)
 router.get(
   "/playback/:gameId",
   requireRole([1, 2, 3]),

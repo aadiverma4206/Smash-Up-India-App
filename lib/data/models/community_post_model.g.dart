@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'community_post_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 CommunityPostModel _$CommunityPostModelFromJson(Map<String, dynamic> json) =>
     CommunityPostModel(

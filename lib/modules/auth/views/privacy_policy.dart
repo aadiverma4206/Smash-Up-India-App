@@ -35,7 +35,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -95,9 +94,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: 18),
-
               _buildPolicyCard(
                 context,
                 icon: Icons.person_search_rounded,
@@ -105,7 +102,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 content:
                     'We collect necessary information to provide seamless sports arena services: your name, mobile number, email address, profile avatar, and device location (used solely to discover nearby courts, matches, and players).',
               ),
-
               _buildPolicyCard(
                 context,
                 icon: Icons.lock_outline_rounded,
@@ -113,7 +109,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 content:
                     'All wallet top-ups and turf booking payments are processed securely through end-to-end encrypted Razorpay payment gateways. All Stars Arena never stores raw credit card details, UPI PINs, or banking passwords.',
               ),
-
               _buildPolicyCard(
                 context,
                 icon: Icons.analytics_outlined,
@@ -121,7 +116,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 content:
                     'Your data is strictly utilized to process match bookings, compute player ELO/OVR performance ratings, deliver real-time notifications, and enable CCTV live stream access during matches.',
               ),
-
               _buildPolicyCard(
                 context,
                 icon: Icons.cloud_done_outlined,
@@ -129,7 +123,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 content:
                     'All REST and Socket.IO API communications are encrypted using SSL/TLS encryption protocols. Match media recordings and user uploaded avatars are securely stored on Amazon Web Services (AWS S3) cloud infrastructure.',
               ),
-
               _buildPolicyCard(
                 context,
                 icon: Icons.verified_user_outlined,
@@ -137,10 +130,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 content:
                     'You maintain complete control over your account data. You can request data inspection or full account deletion at any time by contacting support@allstarsarena.com or through Chat Support in app.',
               ),
-
               const SizedBox(height: 12),
-
-              // Footer Stamp
               Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),

@@ -279,7 +279,6 @@ class WalletView extends GetView<WalletController> {
     );
   }
 
-  /// 3D Blink Loading Skeleton View (AppShimmer)
   Widget _buildWalletSkeletonView(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -287,31 +286,24 @@ class WalletView extends GetView<WalletController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Total Balance Card Skeleton
           const AppShimmer(
             width: double.infinity,
             height: 150,
             borderRadius: 22,
           ),
           const SizedBox(height: 16),
-
-          // 2. PIN Alert Banner Skeleton
           const AppShimmer(
             width: double.infinity,
             height: 72,
             borderRadius: 16,
           ),
           const SizedBox(height: 16),
-
-          // 3. Add Money Button Skeleton
           const AppShimmer(
             width: double.infinity,
             height: 52,
             borderRadius: 30,
           ),
           const SizedBox(height: 28),
-
-          // 4. Recent Transactions Header Skeleton
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
@@ -320,8 +312,6 @@ class WalletView extends GetView<WalletController> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // 5. Transaction Item Skeletons
           ...List.generate(
             3,
             (index) => const Padding(
@@ -334,8 +324,6 @@ class WalletView extends GetView<WalletController> {
             ),
           ),
           const SizedBox(height: 20),
-
-          // 6. Bottom Security Card Skeleton
           const AppShimmer(
             width: double.infinity,
             height: 80,
@@ -408,7 +396,6 @@ class WalletView extends GetView<WalletController> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Total Balance Card
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(24),
@@ -511,8 +498,6 @@ class WalletView extends GetView<WalletController> {
                               ),
                             ),
                             const SizedBox(height: 16),
-
-                            // PIN Setup Alert Banner (Displayed at top when PIN is not set)
                             if (!hasPin) ...[
                               Container(
                                 width: double.infinity,
@@ -672,17 +657,12 @@ class WalletView extends GetView<WalletController> {
                               ),
                               const SizedBox(height: 16),
                             ],
-
-                            // Add Money (Razorpay) Button - Always opens Add Money directly
                             AppButton(
                               text: '+ Add Money (Razorpay)',
                               showArrow: true,
                               onPressed: () => Get.toNamed('/wallet/add-money'),
                             ),
-
                             const SizedBox(height: 28),
-
-                            // Transactions Header
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -702,8 +682,6 @@ class WalletView extends GetView<WalletController> {
                               ],
                             ),
                             const SizedBox(height: 8),
-
-                            // Transactions List
                             Obx(() {
                               if (controller.transactions.isEmpty) {
                                 return const Padding(
@@ -774,10 +752,7 @@ class WalletView extends GetView<WalletController> {
                                 },
                               );
                             }),
-
                             const SizedBox(height: 32),
-
-                            // Bottom Wallet Security & PIN Management Section
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(18),

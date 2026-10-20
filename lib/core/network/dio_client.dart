@@ -26,7 +26,6 @@ class DioClient {
       ),
     );
 
-    // Interceptors chain
     dio.interceptors
         .add(TokenInterceptor(secureStorageService: secureStorageService));
     dio.interceptors.add(

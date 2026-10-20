@@ -42,7 +42,6 @@ export const uploadPlayerAvatar = asyncHandler(
       throw new ApiError(400, "No image file uploaded");
     }
 
-    // Delete old avatar from S3 if exists
     const currentProfile = await PlayerRepository.getProfile(userId);
     if (
       currentProfile?.avatarUrl &&

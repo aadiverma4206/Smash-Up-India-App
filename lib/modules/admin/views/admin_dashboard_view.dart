@@ -77,16 +77,14 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            const ManagerHistoryView(), // Index 1: Match History & Records
+            const ManagerHistoryView(),
             currentIndex == 2
                 ? const MediaServerCctvScreen()
-                : const SizedBox.shrink(), // Index 2: CCTV Cameras
-            const AdminProfileView(), // Index 3: Profile
+                : const SizedBox.shrink(),
+            const AdminProfileView(),
           ],
         );
       }),
-
-      // Bottom Navigation Bar
       bottomNavigationBar: showBottomNav
           ? Obx(
               () => Container(
@@ -175,7 +173,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       }
       return Stack(
         children: [
-          // 1. Scrollable Main Content Body
           NotificationListener<ScrollNotification>(
             onNotification: _onScrollNotification,
             child: RefreshIndicator(
@@ -186,33 +183,21 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top Integrated Header Background Image
                     _buildHeaderBackground(context),
                     const SizedBox(height: 16),
-
-                    // Main Content Body
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Main Action Pill Bar
                           _buildAdminPillBar(context),
                           const SizedBox(height: 18),
-
-                          // 4 Circular Action Buttons Grid
                           _buildCircularActionsGrid(context),
                           const SizedBox(height: 20),
-
-                          // Platform Metrics Overview Grid
                           _buildMetricsSection(context),
                           const SizedBox(height: 20),
-
-                          // Quick Modules Navigation Grid
                           _buildQuickModulesGrid(context),
                           const SizedBox(height: 20),
-
-                          // Admin Info / Promo Ad Banner
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -223,8 +208,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               ),
             ),
           ),
-
-          // 2. Seamless Morphing Header Bar
           Positioned(
             top: 0,
             left: 0,
@@ -271,10 +254,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           horizontal: 16, vertical: 8),
                       child: Row(
                         children: [
-                          // App Logo
                           _buildLogoWidget(context),
-
-                          // Flexible Morphing Title ("All Stars Arena - Admin")
                           ClipRect(
                             child: Align(
                               alignment: Alignment.centerLeft,
@@ -288,10 +268,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                               ),
                             ),
                           ),
-
                           const Spacer(),
-
-                          // Action Icons (Notifications, Profile, Logout Avatar)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -371,14 +348,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// 3D Shimmer Skeleton View
   Widget _buildHomeSkeletonView(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Top Integrated Header Banner Skeleton
           Stack(
             children: [
               ClipRRect(
@@ -435,22 +410,17 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // 2. Main Body Content Skeletons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Admin Action Pill Bar Skeleton
                 const AppShimmer(
                   width: double.infinity,
                   height: 52,
                   borderRadius: 30,
                 ),
                 const SizedBox(height: 20),
-
-                // 4 Circular Buttons Grid Skeleton
                 Row(
                   children: List.generate(
                     4,
@@ -470,16 +440,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   ),
                 ),
                 const SizedBox(height: 22),
-
-                // Platform Highlight Card Skeleton
                 const AppShimmer(
                   width: double.infinity,
                   height: 120,
                   borderRadius: 14,
                 ),
                 const SizedBox(height: 18),
-
-                // Metrics Grid Skeleton
                 Row(
                   children: List.generate(
                     3,
@@ -496,8 +462,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   ),
                 ),
                 const SizedBox(height: 22),
-
-                // Quick Navigation Grid Skeleton
                 Row(
                   children: List.generate(
                     4,
@@ -514,8 +478,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   ),
                 ),
                 const SizedBox(height: 22),
-
-                // Ad Banner Skeleton
                 const AppShimmer(
                   width: double.infinity,
                   height: 110,
@@ -530,7 +492,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// Header Background Image
   Widget _buildHeaderBackground(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String homeHeaderImagePath = isDark
@@ -726,7 +687,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// Dark Pill Admin Action Bar - Single Audit Logs Pill
   Widget _buildAdminPillBar(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -776,7 +736,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// 4 Circular Action Buttons Grid
   Widget _buildCircularActionsGrid(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final actions = [
@@ -883,7 +842,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// Platform Metrics Overview Grid
   Widget _buildMetricsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final d = controller.dashboard.value;
@@ -1007,7 +965,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// Quick Modules Navigation Grid
   Widget _buildQuickModulesGrid(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [
@@ -1101,7 +1058,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  /// Admin Ad / Info Banner
   Widget _buildReferAdBanner(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String referImagePath = isDark

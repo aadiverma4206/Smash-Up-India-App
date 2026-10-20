@@ -1,7 +1,6 @@
 class ImageUtils {
   ImageUtils._();
 
-  /// Safely checks if an input (String, dynamic, or null) is a valid HTTP/HTTPS network image URL.
   static bool isValidNetworkUrl(dynamic input) {
     if (input == null) return false;
     final str = input.toString().trim();

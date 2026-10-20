@@ -51,7 +51,6 @@ export const likePostController = asyncHandler(
 
     if (!userId) throw new ApiError(401, "Unauthorized");
 
-    // Trigger trg_sync_post_likes automatically increments likes_count!
     await dbPool.query(
       `INSERT INTO public.post_likes (post_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
       [postId, userId],
@@ -95,7 +94,6 @@ export const votePollController = asyncHandler(
     if (!userId) throw new ApiError(401, "Unauthorized");
     if (!optionId) throw new ApiError(400, "Option ID is required");
 
-    // Trigger trg_sync_poll_votes automatically increments votes_count!
     await dbPool.query(
       `INSERT INTO public.poll_votes (poll_id, user_id, option_id) VALUES ($1, $2, $3);`,
       [pollId, userId, optionId],

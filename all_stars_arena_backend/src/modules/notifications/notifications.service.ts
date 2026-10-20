@@ -28,9 +28,6 @@ export interface FormattedNotification {
 }
 
 export class NotificationService {
-  /**
-   * Fetches paginated notifications formatted to 100% match Flutter NotificationModel
-   */
   static async getUserNotifications(
     userId: string,
     page: number = 1,
@@ -59,7 +56,6 @@ export class NotificationService {
 
     const whereClause = conditions.join(" AND ");
 
-    // 1. Fetch paginated records
     const query = `
       SELECT id, user_id, title, COALESCE(body, message, '') as body,
              type, data, link_url, game_id, club_id,
@@ -73,21 +69,18 @@ export class NotificationService {
     values.push(limit, offset);
     const result = await dbPool.query(query, values);
 
-    // 2. Unread count for badge
     const countRes = await dbPool.query(
       `SELECT COUNT(*) as unread_count FROM public.notifications WHERE user_id = $1 AND is_read = false;`,
       [userId],
     );
     const unreadCount = parseInt(countRes.rows[0]?.unread_count || "0", 10);
 
-    // 3. Total count for pagination
     const totalCountRes = await dbPool.query(
       `SELECT COUNT(*) as total_count FROM public.notifications WHERE ${whereClause};`,
       values.slice(0, values.length - 2),
     );
     const totalCount = parseInt(totalCountRes.rows[0]?.total_count || "0", 10);
 
-    // 4. Clean mapping to guarantee Flutter non-null fields
     const formatted: FormattedNotification[] = result.rows.map((row) => {
       let finalData = row.data;
       if (typeof finalData === "string") {
@@ -117,9 +110,6 @@ export class NotificationService {
     return { notifications: formatted, unreadCount, totalCount };
   }
 
-  /**
-   * Creates and stores a notification, then dispatches real-time socket event
-   */
   static async createNotification(
     params: CreateNotificationParams,
   ): Promise<FormattedNotification> {
@@ -147,7 +137,6 @@ export class NotificationService {
 
     const row = insertRes.rows[0];
 
-    // Emit realtime socket event for instant app update
     const socketPayload: NotificationPayload = {
       id: row.id,
       title: row.title,
@@ -173,9 +162,6 @@ export class NotificationService {
     };
   }
 
-  /**
-   * Mark single notification as read
-   */
   static async markNotificationRead(
     notificationId: string,
     userId: string,
@@ -187,9 +173,6 @@ export class NotificationService {
     return (res.rowCount ?? 0) > 0;
   }
 
-  /**
-   * Mark all notifications as read for user
-   */
   static async markAllRead(userId: string): Promise<number> {
     const res = await dbPool.query(
       `UPDATE public.notifications SET is_read = true WHERE user_id = $1 AND is_read = false;`,
@@ -198,9 +181,6 @@ export class NotificationService {
     return res.rowCount ?? 0;
   }
 
-  /**
-   * Delete a notification
-   */
   static async deleteNotification(
     notificationId: string,
     userId: string,

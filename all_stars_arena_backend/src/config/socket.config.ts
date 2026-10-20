@@ -30,15 +30,12 @@ export const initSocket = (httpServer: HttpServer): Server => {
     transports: ["websocket", "polling"],
   });
 
-  // JWT Middleware for Socket Connections
   io.use((socket: Socket, next) => {
     try {
       const authHeader =
         socket.handshake.auth?.token || socket.handshake.headers?.authorization;
 
       if (!authHeader) {
-        // Allow unauthenticated socket connection for public match live streams if needed,
-        // but mark user data as null
         socket.data.user = null;
         return next();
       }
@@ -65,7 +62,6 @@ export const initSocket = (httpServer: HttpServer): Server => {
       `⚡ [Real-Time Socket Connected]: ID=${socket.id}, User=${authUser ? authUser.id : "ANONYMOUS"}`,
     );
 
-    // Join specific user notification room (Protected: Users can only join their own room or Admins)
     socket.on(SOCKET_EVENTS.JOIN_USER_ROOM, (targetUserId: string) => {
       if (!targetUserId) return;
 
@@ -88,7 +84,6 @@ export const initSocket = (httpServer: HttpServer): Server => {
       }
     });
 
-    // Join specific match/game room for live score updates
     socket.on(SOCKET_EVENTS.JOIN_GAME_ROOM, (gameId: string) => {
       if (gameId) {
         socket.join(`game:${gameId}`);

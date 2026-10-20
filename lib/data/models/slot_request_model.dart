@@ -25,8 +25,8 @@ class SlotRequestModel {
   final int ovr;
   final int elo;
   final String? preferredFoot;
-  final String position; // Requested position
-  final String status; // PENDING, APPROVED, REJECTED, WAITLISTED, CANCELLED
+  final String position;
+  final String status;
   final String? rejectionReason;
   final String paymentStatus;
   final double entryFee;

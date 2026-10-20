@@ -112,7 +112,6 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                   ),
                   child: Column(
                     children: [
-                      // Top Header Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -135,7 +134,6 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                         ),
                         child: Column(
                           children: [
-                            // Circular Category Icon Badge
                             Container(
                               width: 64,
                               height: 64,
@@ -149,8 +147,6 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                               ),
                             ),
                             const SizedBox(height: 14),
-
-                            // Notification Title
                             Text(
                               item.title,
                               textAlign: TextAlign.center,
@@ -163,8 +159,6 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                               ),
                             ),
                             const SizedBox(height: 8),
-
-                            // Type & Read Status Badges
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -212,8 +206,6 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Full Notification Body Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -255,8 +247,6 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Date & Metadata Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -307,8 +297,6 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // Deep Link / Action Button if link data exists
                       if (item.data != null && item.data!['link'] != null) ...[
                         SizedBox(
                           width: double.infinity,

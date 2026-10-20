@@ -9,13 +9,12 @@ describe("ALL STARS ARENA Wallet & Razorpay Production Tests", () => {
   const testEmail = `wallet_player_${Date.now()}@example.com`;
   const testPhone = `+9196${Math.floor(10000000 + Math.random() * 90000000)}`;
   const testPassword = "Password123!";
-  const testPin = "849204"; // Strong valid 6-digit PIN
+  const testPin = "849204";
 
   let userId = "";
   let accessToken = "";
 
   beforeAll(async () => {
-    // Register Player
     const pwdHash = await bcrypt.hash(testPassword, 10);
     const userRes = await dbPool.query(
       `SELECT public.register_player($1, $2, $3, $4, 'Raipur') as user_id;`,
@@ -23,13 +22,11 @@ describe("ALL STARS ARENA Wallet & Razorpay Production Tests", () => {
     );
     userId = userRes.rows[0].user_id;
 
-    // Set 6-Digit Wallet PIN
     await dbPool.query(`SELECT public.set_wallet_pin($1, $2);`, [
       userId,
       testPin,
     ]);
 
-    // Login
     const loginRes = await request(app)
       .post("/api/v1/auth/login")
       .send({ identifier: testEmail, password: testPassword });
@@ -106,7 +103,6 @@ describe("ALL STARS ARENA Wallet & Razorpay Production Tests", () => {
     expect(res.body.data).toHaveProperty("paymentOrderId");
     expect(res.body.data).toHaveProperty("amountPaise", 50000);
 
-    // Idempotency check: Duplicate request with same idempotency key returns same order ID
     const duplicateRes = await request(app)
       .post("/api/v1/wallet/topup/order")
       .set("Authorization", `Bearer ${accessToken}`)
@@ -175,7 +171,6 @@ describe("ALL STARS ARENA Wallet & Razorpay Production Tests", () => {
       .update(rawBody)
       .digest("hex");
 
-    // First Webhook Delivery
     const res1 = await request(app)
       .post("/api/v1/webhooks/razorpay")
       .set("x-razorpay-signature", signature)
@@ -183,7 +178,6 @@ describe("ALL STARS ARENA Wallet & Razorpay Production Tests", () => {
 
     expect(res1.status).toBe(200);
 
-    // Second Webhook Delivery (Deduplicated)
     const res2 = await request(app)
       .post("/api/v1/webhooks/razorpay")
       .set("x-razorpay-signature", signature)

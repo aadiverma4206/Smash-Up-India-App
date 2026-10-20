@@ -25,7 +25,6 @@ class RegisterView extends GetView<AuthController> {
   final GlobalKey<FormState> step2Key = GlobalKey<FormState>();
   final GlobalKey<FormState> step3Key = GlobalKey<FormState>();
 
-  // High-reliability sports stadium banner image URL
   static const String sportsImageUrl =
       'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=1000';
 
@@ -41,10 +40,7 @@ class RegisterView extends GetView<AuthController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Sports Hero Image Banner extending to top of screen
             _buildHeroHeader(context),
-
-            // Main Step Form Section
             SafeArea(
               top: false,
               child: Padding(
@@ -70,7 +66,6 @@ class RegisterView extends GetView<AuthController> {
     );
   }
 
-  /// Top Sports Hero Header Banner
   Widget _buildHeroHeader(BuildContext context) {
     return Stack(
       children: [
@@ -144,8 +139,6 @@ class RegisterView extends GetView<AuthController> {
             ),
           ),
         ),
-
-        // Gradient Overlay
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
@@ -168,7 +161,6 @@ class RegisterView extends GetView<AuthController> {
     );
   }
 
-  /// Header Title with Green Highlight
   Widget _buildFormHeader(BuildContext context,
       {required String titleNormal,
       required String titleGreen,
@@ -219,7 +211,6 @@ class RegisterView extends GetView<AuthController> {
     );
   }
 
-  /// Step 1: Personal Information
   Widget _buildStep1Info(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final secondaryTextColor =
@@ -236,11 +227,8 @@ class RegisterView extends GetView<AuthController> {
             titleGreen: 'Account',
             subtitle: 'Join All Stars Arena & unlock sports features',
           ),
-
-          // Step Progress Bar
           _buildProgressBar(currentStep: 1, totalSteps: 3),
           const SizedBox(height: 24),
-
           AppTextField(
             hint: 'Full Name',
             controller: nameController,
@@ -250,7 +238,6 @@ class RegisterView extends GetView<AuthController> {
                 (v == null || v.trim().isEmpty) ? 'Enter your full name' : null,
           ),
           const SizedBox(height: 16),
-
           AppTextField(
             hint: 'Email Address',
             controller: emailController,
@@ -262,7 +249,6 @@ class RegisterView extends GetView<AuthController> {
                 : null,
           ),
           const SizedBox(height: 16),
-
           AppTextField(
             hint: 'Mobile Number',
             controller: phoneController,
@@ -274,7 +260,6 @@ class RegisterView extends GetView<AuthController> {
                 : null,
           ),
           const SizedBox(height: 16),
-
           AppTextField(
             hint: 'City',
             controller: cityController,
@@ -282,7 +267,6 @@ class RegisterView extends GetView<AuthController> {
                 color: secondaryTextColor, size: 22),
           ),
           const SizedBox(height: 28),
-
           Obx(
             () => AppButton(
               text: 'Send OTP',
@@ -301,10 +285,7 @@ class RegisterView extends GetView<AuthController> {
               },
             ),
           ),
-
           const SizedBox(height: 24),
-
-          // Footer Link back to Login
           Center(
             child: Wrap(
               alignment: WrapAlignment.center,
@@ -336,7 +317,6 @@ class RegisterView extends GetView<AuthController> {
     );
   }
 
-  /// Step 2: OTP Verification
   Widget _buildStep2Otp(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final secondaryTextColor =
@@ -414,7 +394,6 @@ class RegisterView extends GetView<AuthController> {
     );
   }
 
-  /// Step 3: Password Creation
   Widget _buildStep3Password(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final secondaryTextColor =
@@ -482,7 +461,6 @@ class RegisterView extends GetView<AuthController> {
     );
   }
 
-  /// Step Progress Bar
   Widget _buildProgressBar(
       {required int currentStep, required int totalSteps}) {
     return Row(

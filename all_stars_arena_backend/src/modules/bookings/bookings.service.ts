@@ -86,7 +86,6 @@ export class BookingsService {
       throw new ApiError(404, "Booking not found", "BOOKING_NOT_FOUND");
     }
 
-    // Trigger trg_apply_refund_tier executes on UPDATE status = 'CANCELLED'
     const updateRes = await dbPool.query(
       `UPDATE public.court_bookings
        SET status = 'CANCELLED', cancellation_reason = $1

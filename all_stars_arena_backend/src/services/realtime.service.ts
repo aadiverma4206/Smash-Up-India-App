@@ -16,9 +16,6 @@ export interface SendNotificationOptions {
   skipDbInsert?: boolean;
 }
 
-/**
- * Send real-time notification to a specific user via Socket.IO, persist to DB, and dispatch FCM Push
- */
 export const sendUserNotification = async (
   userId: string,
   notification: NotificationPayload,
@@ -30,7 +27,6 @@ export const sendUserNotification = async (
       timestamp: notification.timestamp || new Date().toISOString(),
     };
 
-    // 1. Socket.IO Real-time Emit (for connected active app clients)
     try {
       const io = getSocketIO();
       io.to(`user:${userId}`).emit(SOCKET_EVENTS.NOTIFICATION, payload);
@@ -43,7 +39,6 @@ export const sendUserNotification = async (
       );
     }
 
-    // 2. PostgreSQL DB Persistence (Deduplicated via skipDbInsert)
     if (!options?.skipDbInsert) {
       dbPool
         .query(
@@ -66,7 +61,6 @@ export const sendUserNotification = async (
         });
     }
 
-    // 3. FCM Push Dispatch to User's Active Devices
     dispatchFcmPushNotification(userId, notification).catch((fcmErr) => {
       logger.warn(
         `FCM async dispatch notice for user:${userId}: ${fcmErr.message}`,
@@ -80,9 +74,6 @@ export const sendUserNotification = async (
   }
 };
 
-/**
- * Dispatches FCM Push Message to user active tokens and cleans up invalid/expired tokens
- */
 async function dispatchFcmPushNotification(
   userId: string,
   notification: NotificationPayload,
@@ -144,7 +135,6 @@ async function dispatchFcmPushNotification(
       `🔥 [FCM Push] Sent to user:${userId} | Success: ${response.successCount}/${tokens.length}`,
     );
 
-    // Clean up invalid or expired registration tokens
     if (response.failureCount > 0) {
       const tokensToRemove: string[] = [];
       response.responses.forEach((resp: any, idx: number) => {
@@ -176,9 +166,6 @@ async function dispatchFcmPushNotification(
   }
 }
 
-/**
- * Broadcast notification to all connected socket clients
- */
 export const broadcastNotification = (notification: NotificationPayload) => {
   try {
     const io = getSocketIO();
@@ -196,9 +183,6 @@ export const broadcastNotification = (notification: NotificationPayload) => {
   }
 };
 
-/**
- * Send real-time wallet balance / transaction update to user
- */
 export const sendWalletUpdate = (userId: string, walletData: any) => {
   try {
     const io = getSocketIO();
@@ -216,9 +200,6 @@ export const sendWalletUpdate = (userId: string, walletData: any) => {
   }
 };
 
-/**
- * Broadcast live football match score update to room and global feed
- */
 export const broadcastLiveMatchScore = (gameId: string, scoreData: any) => {
   try {
     const io = getSocketIO();

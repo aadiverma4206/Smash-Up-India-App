@@ -28,7 +28,7 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
   final RxBool isSearchingOrFiltering = false.obs;
   final RxBool isOfflineMode = false.obs;
   final RxBool hasMore = true.obs;
-  final RxString activeFilter = 'ALL'.obs; // ALL, COMPLETED, CANCELLED
+  final RxString activeFilter = 'ALL'.obs;
   int currentOffset = 0;
   final int limit = 20;
 
@@ -128,7 +128,6 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
       final isFutureDate =
           AppDateUtils.isMatchInFuture(rawDate, game.startTime);
 
-      // NO FUTURE DATES IN HISTORY: Any cancelled match or future-dated match defaults to TODAY / PAST
       if (isCancelled || isFutureDate) {
         rawDate = todayIso;
       }
@@ -154,7 +153,6 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
   Widget _buildDateHeader(BuildContext context, String headerTitle, int count) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Clean display title matching screenshot format e.g. "Today, 12 Oct 2026", "Fri, 09 Oct 2026"
     String displayTitle = headerTitle.replaceAll(' • ', ', ');
     if (displayTitle.startsWith('TODAY')) {
       displayTitle = displayTitle.replaceFirst('TODAY', 'Today');
@@ -164,7 +162,7 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 8, bottom: 6), // Tight, clean spacing!
+      margin: const EdgeInsets.only(top: 8, bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE8EEF4),
@@ -288,8 +286,6 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Filter Chips (ALL, COMPLETED, CANCELLED)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -335,8 +331,6 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
               }).toList(),
             ),
           ),
-
-          // 📶 Offline SQLite Cache Indicator Pill
           Obx(() {
             if (!isOfflineMode.value) return const SizedBox.shrink();
             return Container(
@@ -393,12 +387,11 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
             final displayList = filteredHistoryGames;
 
             final List<dynamic> flattenedItems = [
-              'SEARCH_HEADER', // Item 0: Search Bar + Chips Header right under AppBar!
+              'SEARCH_HEADER',
             ];
 
             if (isSearchingOrFiltering.value ||
                 (isLoadingMore.value && historyGames.isEmpty)) {
-              // 🦴 Skeleton Shimmer Loading Placeholder Cards
               flattenedItems.addAll([
                 'SKELETON_CARD',
                 'SKELETON_CARD',
@@ -529,7 +522,6 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Left Column: Time, Date & Slots
                 SizedBox(
                   width: 96,
                   child: Column(
@@ -597,20 +589,17 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                     ],
                   ),
                 ),
-                // Vertical Divider
                 Container(
                   width: 1,
                   height: 72,
                   color: isDark ? AppColors.darkBorder : Colors.grey.shade200,
                 ),
                 const SizedBox(width: 12),
-                // Right Column: Badges, Title/Court, Score, Fee
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Top row: Badges
                       Wrap(
                         spacing: 6,
                         runSpacing: 3,
@@ -662,7 +651,6 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      // Title & Court row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -700,7 +688,6 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      // Score & Fee row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [

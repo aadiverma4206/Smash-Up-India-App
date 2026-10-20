@@ -51,7 +51,6 @@ class ManagerBinding extends Bindings {
       fenix: true,
     );
 
-    // CCTV dependencies for Bottom Nav CCTV Tab & Live Stream
     if (!Get.isRegistered<CctvRemoteDataSource>()) {
       Get.lazyPut<CctvRemoteDataSource>(
         () => CctvRemoteDataSource(dioClient: Get.find<DioClient>()),

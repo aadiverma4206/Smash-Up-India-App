@@ -31,13 +31,11 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
       body: SafeArea(
         child: Column(
           children: [
-            // 🔍 Search Bar & Filter Section
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Column(
                 children: [
-                  // Search Bar
                   TextField(
                     controller: searchController,
                     onChanged: (val) => controller.searchQuery.value = val,
@@ -95,8 +93,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // Court Selection Tabs (All Games, Court 1, Court 2)
                   Obx(() {
                     final selectedCourt = controller.selectedCourtFilter.value;
                     final courts = [
@@ -153,8 +149,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                     );
                   }),
                   const SizedBox(height: 10),
-
-                  // Date & Status Filter Chips Horizontal Scroll
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
@@ -245,8 +239,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                 ],
               ),
             ),
-
-            // 📋 Matches List Body
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value && controller.games.isEmpty) {
@@ -287,7 +279,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// ⚽ Compact & Responsive Match Card matching Screenshot 3 design
   Widget _buildCompactMatchCard(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusUpper = game.status.toUpperCase();
@@ -335,11 +326,9 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Section: Left Time/Status Box + Right Info Box
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left Box: Time & Status Badge
               Container(
                 width: 80,
                 padding:
@@ -383,13 +372,10 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Right Section: Badges, Title, Date, Court, Roster
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top Badges Row: Format, Open Slots, Privacy
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
@@ -446,8 +432,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                       ],
                     ),
                     const SizedBox(height: 6),
-
-                    // Title
                     Text(
                       game.title,
                       style: TextStyle(
@@ -460,8 +444,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-
-                    // Date & Time
                     Row(
                       children: [
                         const Icon(Icons.calendar_today_rounded,
@@ -483,8 +465,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                       ],
                     ),
                     const SizedBox(height: 3),
-
-                    // Location / Court
                     Row(
                       children: [
                         const Icon(Icons.location_on_outlined,
@@ -506,8 +486,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                       ],
                     ),
                     const SizedBox(height: 3),
-
-                    // Roster Count & Fee
                     Row(
                       children: [
                         const Icon(Icons.people_outline_rounded,
@@ -537,18 +515,14 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
               ),
             ],
           ),
-
           Divider(
               color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
               height: 18),
-
-          // Bottom Action Buttons Bar matching Screenshot 3
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Row(
               children: [
-                // View Button
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.primary),
@@ -572,8 +546,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                           fontSize: 11)),
                 ),
                 const SizedBox(width: 6),
-
-                // Start Match Button (if not completed/cancelled)
                 if (!isCompleted && !isCancelled) ...[
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -608,8 +580,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                   ),
                   const SizedBox(width: 6),
                 ],
-
-                // Edit Button
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.primary),
@@ -633,8 +603,6 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                           fontSize: 11)),
                 ),
                 const SizedBox(width: 6),
-
-                // Remove / Cancel Button
                 if (!isCancelled) ...[
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(

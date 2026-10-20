@@ -13,7 +13,6 @@ class RetryInterceptor extends Interceptor {
       DioException err, ErrorInterceptorHandler handler) async {
     final requestOptions = err.requestOptions;
 
-    // Check if error is due to connection timeout or connection error
     if (err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.connectionError) {
       bool failoverDone = requestOptions.extra['failoverDone'] ?? false;
@@ -36,7 +35,6 @@ class RetryInterceptor extends Interceptor {
       }
     }
 
-    // Standard retry for idempotent GET requests
     if (requestOptions.method.toUpperCase() == 'GET' &&
         (err.type == DioExceptionType.connectionTimeout ||
             err.type == DioExceptionType.receiveTimeout ||
@@ -50,7 +48,6 @@ class RetryInterceptor extends Interceptor {
         AppLogger.info(
             '🔄 [Retry Attempt $retryCount/$maxRetries] for ${requestOptions.path}');
 
-        // Backoff delay before retry
         await Future.delayed(Duration(milliseconds: 1000 * retryCount));
 
         try {

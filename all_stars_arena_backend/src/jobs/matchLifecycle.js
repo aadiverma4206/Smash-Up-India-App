@@ -3,7 +3,6 @@ import { dbPool } from "../config/db.js";
 import { logger } from "../config/logger.js";
 
 export const startMatchLifecycleJob = () => {
-  // Run every 2 minutes to update match status to ONGOING if match start time has arrived
   cron.schedule("*/2 * * * *", async () => {
     try {
       const result = await dbPool.query(

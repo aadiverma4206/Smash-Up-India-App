@@ -36,7 +36,6 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
           onPressed: () => Get.back(),
         ),
         actions: [
-          // Download to local storage button
           Obx(() {
             if (controller.isDownloading.value) {
               return Padding(
@@ -77,7 +76,6 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
       body: SafeArea(
         child: Column(
           children: [
-            // Multi-camera quick switcher if cameras provided
             Obx(() {
               if (controller.cameras.length <= 1) {
                 return const SizedBox.shrink();
@@ -120,12 +118,9 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
                 ),
               );
             }),
-
-            // Main Video Surface & Overlay Controls
             Expanded(
               child: Center(
                 child: Obx(() {
-                  // 1. Error state
                   if (controller.hasError.value) {
                     return Container(
                       margin: const EdgeInsets.all(24),
@@ -169,7 +164,6 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
                     );
                   }
 
-                  // 2. Loading state
                   if (!controller.isInitialized.value) {
                     return const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -192,15 +186,12 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Video Frame
                         AspectRatio(
                           aspectRatio: vpController.value.aspectRatio > 0
                               ? vpController.value.aspectRatio
                               : 16 / 9,
                           child: vp.VideoPlayer(vpController),
                         ),
-
-                        // Buffering indicator over video
                         if (controller.isBuffering.value)
                           Container(
                             color: Colors.black26,
@@ -209,8 +200,6 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
                                   color: AppColors.primary),
                             ),
                           ),
-
-                        // Interactive Control Overlays
                         AnimatedOpacity(
                           opacity:
                               controller.isControlsVisible.value ? 1.0 : 0.0,
@@ -221,8 +210,6 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const SizedBox(height: 10),
-
-                                // Central Control Buttons (Rewind 10s, Play/Pause, Forward 10s)
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -258,8 +245,6 @@ class VideoPlayerView extends GetView<VideoPlayerController> {
                                     ),
                                   ],
                                 ),
-
-                                // Bottom Progress & Time Controls
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 8),

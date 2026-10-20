@@ -8,9 +8,6 @@ export const generateNumericOTP = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-/**
- * Generate OTP, store hash in otp_verifications DB table, and send via Email/Resend
- */
 export const createAndSendOTP = async (
   identifier: string,
   purpose:
@@ -19,10 +16,9 @@ export const createAndSendOTP = async (
 ): Promise<{ success: boolean; message: string }> => {
   const normalizedIdentifier = identifier.trim().toLowerCase();
   const rawOTP = generateNumericOTP();
-  // Store plain numeric OTP in DB (not hashed) so it can be viewed directly
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
-  // Invalidate any existing unused OTPs for this identifier & purpose
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
   await dbPool.query(
     `UPDATE public.otp_verifications
      SET is_used = TRUE
@@ -30,7 +26,6 @@ export const createAndSendOTP = async (
     [normalizedIdentifier, purpose],
   );
 
-  // Insert new OTP record with plain numeric OTP in otp_hash column
   await dbPool.query(
     `INSERT INTO public.otp_verifications
      (user_id, identifier, channel, purpose, otp_hash, attempt_count, max_attempts, is_used, expires_at)
@@ -38,7 +33,6 @@ export const createAndSendOTP = async (
     [userId || null, normalizedIdentifier, purpose, rawOTP, expiresAt],
   );
 
-  // Update latest_otp in public.users table in simple numeric format
   try {
     const digitsOnly = normalizedIdentifier.replace(/[^0-9]/g, "");
     await dbPool.query(
@@ -63,7 +57,6 @@ export const createAndSendOTP = async (
     logger.warn(`Failed to update latest_otp on users table: ${err.message}`);
   }
 
-  // Send OTP via Resend API / Email
   await sendOTP(userId, normalizedIdentifier, rawOTP);
 
   return {
@@ -72,9 +65,6 @@ export const createAndSendOTP = async (
   };
 };
 
-/**
- * Verify OTP against database record
- */
 export const verifyOTP = async (
   identifier: string,
   otp: string,
@@ -106,7 +96,6 @@ export const verifyOTP = async (
     );
   }
 
-  // Support plain text match directly, with bcrypt fallback
   const isMatch =
     otpRecord.otp_hash === otp ||
     (await bcrypt.compare(otp, otpRecord.otp_hash).catch(() => false));
@@ -121,7 +110,6 @@ export const verifyOTP = async (
     throw new ApiError(400, "Incorrect OTP code");
   }
 
-  // Mark OTP as used
   await dbPool.query(
     `UPDATE public.otp_verifications
      SET is_used = TRUE, used_at = CURRENT_TIMESTAMP

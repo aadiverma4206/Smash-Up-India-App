@@ -63,7 +63,6 @@ export class GamesService {
       razorpaySignature?: string;
     },
   ) {
-    // 1. Validate Creator Account & Role
     const userRes = await dbPool.query(
       `SELECT id, status, role_id FROM public.users WHERE id = $1;`,
       [creatorUserId],
@@ -79,17 +78,13 @@ export class GamesService {
         ? "MANAGER"
         : "ADMIN";
 
-    // 2. Canonical Club & Court Resolution
-    // Canonical Club is strictly all_stars_arena_club
     data.clubId = "all_stars_arena_club";
 
-    // Normalize Court ID strictly to 'court_1' or 'court_2'
     const courtInput = (data.courtId || (data as any).courtName || "")
       .toString()
       .toLowerCase();
     data.courtId = courtInput.includes("2") ? "court_2" : "court_1";
 
-    // Ensure court exists and is AVAILABLE in DB
     const courtRes = await dbPool.query(
       `SELECT id, name, club_id, status FROM public.courts WHERE id = $1;`,
       [data.courtId],
@@ -103,7 +98,6 @@ export class GamesService {
       );
     }
 
-    // 4. Validate Format & Players
     const formatKey = (data.format || "11v11").toLowerCase().trim();
     const expectedPlayers = FORMAT_PLAYER_COUNTS[formatKey] || 22;
     const maxPlayers = data.maxPlayers || expectedPlayers;
@@ -121,7 +115,6 @@ export class GamesService {
       throw new ApiError(400, "Entry fee cannot be negative");
     }
 
-    // 5. Validate Date & Time
     const matchStart = new Date(`${data.matchDate}T${data.startTime}`);
     const matchEnd = new Date(`${data.matchDate}T${data.endTime}`);
     const now = new Date();
@@ -141,7 +134,6 @@ export class GamesService {
       throw new ApiError(400, "Match end time must be after start time");
     }
 
-    // 6. Check Court Overlap
     const hasOverlap = await GamesRepository.checkCourtOverlap(
       data.courtId,
       data.matchDate,
@@ -160,14 +152,12 @@ export class GamesService {
       SKILL_LEVEL_MAP[(data.skillRequirement || "ANY").toUpperCase()] ||
       "Beginner";
 
-    // 7. Atomic Transaction: Game Creation + Auto Roster Entry for Player Creator
     const client = await dbPool.connect();
     let newGame: any = null;
 
     try {
       await client.query("BEGIN");
 
-      // Overlap check with row locking inside transaction to prevent race conditions
       const overlapLock = await client.query(
         `SELECT id FROM public.games
          WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED'
@@ -187,8 +177,6 @@ export class GamesService {
 
       const targetGameId = "gam_" + crypto.randomBytes(8).toString("hex");
 
-      // Create Game inside same database transaction
-      // Creator does NOT pay any entry fee! (Rules 1 & 2)
       newGame = await GamesRepository.createGame(
         {
           id: targetGameId,
@@ -211,8 +199,6 @@ export class GamesService {
         client,
       );
 
-      // Rule 1: If a Player creates a game, the creator becomes Player + Host and automatically participates!
-      // Add Player Creator directly to game_players on Team A without charge!
       if (isPlayerCreator) {
         const initialPosition = ((data as any).position || "ST").toUpperCase();
         await client.query(
@@ -222,9 +208,7 @@ export class GamesService {
           [targetGameId, creatorUserId, initialPosition],
         );
       }
-      // Rule 2: If a Manager creates a game, manager is Host ONLY and NOT added to game_players.
 
-      // Add Activity Log in same transaction
       await GamesRepository.addActivityLog(
         {
           gameId: newGame.id,
@@ -250,7 +234,6 @@ export class GamesService {
       type: "SUCCESS",
     });
 
-    // Notify Manager(s) whenever a Player hosts/creates a match on the turf
     if (isPlayerCreator) {
       try {
         const mgrRes = await dbPool.query(
@@ -320,7 +303,6 @@ export class GamesService {
     try {
       await client.query("BEGIN");
 
-      // 1. Lock Game Row
       const gameRes = await client.query(
         `SELECT * FROM public.games WHERE id = $1 FOR UPDATE;`,
         [gameId],
@@ -346,7 +328,6 @@ export class GamesService {
         );
       }
 
-      // Check joining user account status & ensure managers cannot join matches as players
       const userRes = await client.query(
         `SELECT id, status, role_id FROM public.users WHERE id = $1;`,
         [userId],
@@ -366,7 +347,6 @@ export class GamesService {
         );
       }
 
-      // 2. Prevent Duplicate Joins (Rule 4)
       const existingPlayerRes = await client.query(
         `SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;`,
         [gameId, userId],
@@ -379,7 +359,6 @@ export class GamesService {
         );
       }
 
-      // 3. Prevent Over-booking / Check Capacity (Rule 3 & Rule 4)
       const countRes = await client.query(
         `SELECT COUNT(*) as current_count FROM public.game_players WHERE game_id = $1;`,
         [gameId],
@@ -396,13 +375,11 @@ export class GamesService {
         );
       }
 
-      // 4. Handle Payment for Joining Player (Rule 3)
       const entryFee = parseFloat(game.entry_fee || "0.00");
       const paymentMethod = paymentDetails?.paymentMethod || "WALLET";
 
       if (entryFee > 0) {
         if (paymentMethod === "WALLET") {
-          // Verify Wallet PIN if set
           if (paymentDetails?.walletPin) {
             const isPinValid = await verifyUserWalletPin(
               userId,
@@ -417,7 +394,6 @@ export class GamesService {
             }
           }
 
-          // Lock player details FOR UPDATE & deduct balance
           const walletRes = await client.query(
             `SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;`,
             [userId],
@@ -433,7 +409,6 @@ export class GamesService {
             );
           }
 
-          // Deduct via authoritative transactions ledger
           const txRes = await client.query(
             `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
              VALUES ($1, 'PAYMENT', $2, 0, 'SUCCESS', $3, $4)
@@ -461,7 +436,6 @@ export class GamesService {
             ],
           );
         } else if (paymentMethod === "RAZORPAY") {
-          // Record razorpay reference if supplied
           if (
             paymentDetails?.razorpayPaymentId ||
             paymentDetails?.razorpayOrderId
@@ -476,7 +450,6 @@ export class GamesService {
         }
       }
 
-      // 5. Balance Teams (Team A vs Team B)
       const teamCountRes = await client.query(
         `SELECT team, COUNT(*) as count FROM public.game_players WHERE game_id = $1 GROUP BY team;`,
         [gameId],
@@ -489,7 +462,6 @@ export class GamesService {
       }
       const assignedTeam = teamACount <= teamBCount ? "TEAM_A" : "TEAM_B";
 
-      // 6. Insert into game_players
       const insertRes = await client.query(
         `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
          VALUES ($1, $2, $3, $4, 'PAID')
@@ -498,7 +470,6 @@ export class GamesService {
       );
       rosterId = insertRes.rows[0]?.id;
 
-      // 7. Update game status to FULL if max capacity reached
       if (currentPlayersCount + 1 >= game.max_players) {
         await client.query(
           `UPDATE public.games SET status = 'FULL', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
@@ -506,7 +477,6 @@ export class GamesService {
         );
       }
 
-      // 8. Log Activity
       await GamesRepository.addActivityLog(
         {
           gameId,
@@ -608,7 +578,6 @@ export class GamesService {
     const game = await GamesRepository.getGameById(gameId);
     if (!game) throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
 
-    // If role is PLAYER (role_id = 3), verify active participant in game_players
     if (userRole === 3) {
       const isParticipant = await dbPool.query(
         `SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;`,
@@ -622,7 +591,6 @@ export class GamesService {
         );
       }
     } else if (userRole === 2) {
-      // Manager role check
       const isClubManager = await dbPool.query(
         `SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;`,
         [game.club_id, userId],
@@ -706,7 +674,6 @@ export class GamesService {
         );
       }
 
-      // Check match start time: Cannot cancel once start time has arrived or passed!
       let datePart = "";
       if (game.match_date instanceof Date) {
         const year = game.match_date.getFullYear();
@@ -739,7 +706,6 @@ export class GamesService {
         [gameId],
       );
 
-      // Cancel any CCTV recording associated with this game
       try {
         await client.query(
           `UPDATE public.cctv_recordings SET status = 'CANCELLED', recording_status = 'CANCELLED', actual_stopped_at = CURRENT_TIMESTAMP WHERE game_id = $1;`,
@@ -747,7 +713,6 @@ export class GamesService {
         );
       } catch (_) {}
 
-      // Refund all successfully paid players with idempotency via immutable ledger (excluding free host)
       const entryFee = parseFloat(game.entry_fee || "0.00");
       const playersRes = await client.query(
         `SELECT user_id FROM public.game_players WHERE game_id = $1 AND payment_status = 'PAID' AND user_id != $2;`,
@@ -762,7 +727,6 @@ export class GamesService {
         if (entryFee > 0) {
           const refundRef = `MATCH_REFUND:${gameId}:${pUserId}`;
 
-          // Check if already refunded to prevent duplicate refund
           const existingRefund = await client.query(
             `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
             [pUserId, refundRef],
@@ -770,7 +734,6 @@ export class GamesService {
 
           let newBal = 0;
           if (existingRefund.rows.length === 0) {
-            // Record in authoritative ledger (trg_apply_transaction credits player_details.wallet_balance safely)
             const txRes = await client.query(
               `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
                VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
@@ -834,7 +797,6 @@ export class GamesService {
 
       await client.query("COMMIT");
 
-      // Emit notifications after successful database commit
       for (const item of refundNotifications) {
         sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
         sendUserNotification(item.userId, {

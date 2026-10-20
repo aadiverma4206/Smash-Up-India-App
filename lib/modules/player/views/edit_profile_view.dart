@@ -129,7 +129,6 @@ class EditProfileView extends GetView<PlayerController> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Card Container for Personal Info
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -149,8 +148,6 @@ class EditProfileView extends GetView<PlayerController> {
                             ),
                           ),
                           const SizedBox(height: 14),
-
-                          // Full Name
                           AppTextField(
                             label: 'Full Name',
                             controller: nameController,
@@ -158,8 +155,6 @@ class EditProfileView extends GetView<PlayerController> {
                                 color: AppColors.primary),
                           ),
                           const SizedBox(height: 14),
-
-                          // City
                           AppTextField(
                             label: 'City',
                             controller: cityController,
@@ -167,8 +162,6 @@ class EditProfileView extends GetView<PlayerController> {
                                 color: AppColors.primary),
                           ),
                           const SizedBox(height: 14),
-
-                          // Player Bio
                           AppTextField(
                             label: 'Player Bio',
                             hint: 'Write a short bio...',
@@ -177,8 +170,6 @@ class EditProfileView extends GetView<PlayerController> {
                                 color: AppColors.primary),
                           ),
                           const SizedBox(height: 14),
-
-                          // Date of Birth Picker
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.cake_outlined,
@@ -216,8 +207,6 @@ class EditProfileView extends GetView<PlayerController> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Card Container for Pitch Attribute & Attributes
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -237,8 +226,6 @@ class EditProfileView extends GetView<PlayerController> {
                             ),
                           ),
                           const SizedBox(height: 16),
-
-                          // Primary Position Dropdown
                           Text(
                             'Primary Position',
                             style: TextStyle(
@@ -286,8 +273,6 @@ class EditProfileView extends GetView<PlayerController> {
                             },
                           ),
                           const SizedBox(height: 16),
-
-                          // Secondary Position Dropdown
                           Text(
                             'Secondary Position',
                             style: TextStyle(
@@ -341,8 +326,6 @@ class EditProfileView extends GetView<PlayerController> {
                             },
                           ),
                           const SizedBox(height: 16),
-
-                          // Preferred Foot Dropdown
                           Text(
                             'Preferred Foot',
                             style: TextStyle(
@@ -395,8 +378,6 @@ class EditProfileView extends GetView<PlayerController> {
                             },
                           ),
                           const SizedBox(height: 16),
-
-                          // Skill Level Dropdown
                           Text(
                             'Skill Level',
                             style: TextStyle(
@@ -453,8 +434,6 @@ class EditProfileView extends GetView<PlayerController> {
                       ),
                     ),
                     const SizedBox(height: 28),
-
-                    // Submit Button
                     Obx(
                       () => AppButton(
                         text: 'Save Passport Changes',

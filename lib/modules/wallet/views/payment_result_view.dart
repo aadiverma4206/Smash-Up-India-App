@@ -26,7 +26,6 @@ class PaymentResultView extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Success / Failure Icon with subtle green container
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -43,7 +42,6 @@ class PaymentResultView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 Text(
                   isSuccess
                       ? (isGamePayment
@@ -58,7 +56,6 @@ class PaymentResultView extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-
                 Text(
                   isSuccess
                       ? (isGamePayment
@@ -74,7 +71,6 @@ class PaymentResultView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 36),
-
                 if (isGamePayment && isSuccess && gameId != null) ...[
                   AppButton(
                     text: 'View Match Details',

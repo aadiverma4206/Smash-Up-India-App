@@ -66,9 +66,6 @@ export const updateScoreController = asyncHandler(
   },
 );
 
-/**
- * Start Match Recording (POST /api/matches/start)
- */
 export const startMatchRecordingController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const { matchId, matchTitle, cameraId, channel, durationSeconds, rtspUrl } =
@@ -101,9 +98,6 @@ export const startMatchRecordingController = asyncHandler(
   },
 );
 
-/**
- * Stop Match Recording (POST /api/matches/stop)
- */
 export const stopMatchRecordingController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const { matchId } = req.body;
@@ -130,9 +124,6 @@ export const stopMatchRecordingController = asyncHandler(
   },
 );
 
-/**
- * List Recorded Matches (GET /api/matches)
- */
 export const listRecordedMatchesController = asyncHandler(
   async (req: Request, res: Response) => {
     const limit = Math.min(Number(req.query.limit) || 50, 100);
@@ -151,9 +142,6 @@ export const listRecordedMatchesController = asyncHandler(
   },
 );
 
-/**
- * Get Match Recording Status (GET /api/matches/:matchId/recording-status)
- */
 export const getMatchRecordingStatusController = asyncHandler(
   async (req: Request, res: Response) => {
     const matchId = req.params.matchId || req.params.gameId;

@@ -24,7 +24,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
   late String playerId;
   Map<String, dynamic>? initialPlayer;
 
-  // Selected filter tab for match history: 'ALL', 'COMPLETED', 'SCHEDULED', 'CANCELLED'
   final RxString selectedHistoryFilter = 'ALL'.obs;
 
   @override
@@ -143,7 +142,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   playerMap['avatarUrl']?.toString() ??
                   playerMap['profileImageUrl']?.toString();
 
-          // Filter match history based on selected filter
           final filteredHistory = historyList.where((item) {
             final match = item as Map<String, dynamic>;
             final status = (match['match_status'] ?? match['status'] ?? '')
@@ -174,7 +172,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               children: [
-                // 1. 🌟 Hero Player Profile Card
                 _buildHeroProfileCard(
                   context: context,
                   isDark: isDark,
@@ -192,33 +189,21 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   avatarUrl: avatarUrl,
                   playerId: playerId,
                 ),
-
                 const SizedBox(height: 20),
-
-                // 2. 📊 Player Activity Metrics
                 _buildMetricsSection(
                   context: context,
                   isDark: isDark,
                   statsMap: statsMap,
                 ),
-
                 const SizedBox(height: 24),
-
-                // 3. 🏟️ Match & Payment History Section
                 _buildHistoryHeader(
                   context: context,
                   isDark: isDark,
                   totalMatches: historyList.length,
                 ),
-
                 const SizedBox(height: 12),
-
-                // History Filter Chips
                 _buildHistoryFilterTabs(context, isDark, historyList),
-
                 const SizedBox(height: 14),
-
-                // History List or Empty State
                 if (filteredHistory.isEmpty) ...[
                   _buildEmptyHistoryCard(context, isDark),
                 ] else ...[
@@ -227,7 +212,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                     return _buildHistoryMatchCard(context, isDark, match);
                   }),
                 ],
-
                 const SizedBox(height: 32),
               ],
             ),
@@ -237,9 +221,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     );
   }
 
-  // -------------------------------------------------------------
-  // 1. HERO PLAYER CARD
-  // -------------------------------------------------------------
   Widget _buildHeroProfileCard({
     required BuildContext context,
     required bool isDark,
@@ -287,11 +268,9 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Avatar + Name + Status Tag
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar with status ring
               Stack(
                 children: [
                   Container(
@@ -341,8 +320,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                 ],
               ),
               const SizedBox(width: 14),
-
-              // Player Name, Registered Badge & Status Chip
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +339,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Status Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
@@ -410,8 +386,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                       ],
                     ),
                     const SizedBox(height: 5),
-
-                    // Phone row with quick copy & call
                     if (phone.isNotEmpty) ...[
                       InkWell(
                         onTap: () => _makePhoneCall(phone),
@@ -446,8 +420,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                         ),
                       ),
                     ],
-
-                    // Email row
                     if (email.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Row(
@@ -479,8 +451,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                         ],
                       ),
                     ],
-
-                    // City row (if provided)
                     if (city.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Row(
@@ -504,8 +474,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               ),
             ],
           ),
-
-          // Bio quote (if present)
           if (bio.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
@@ -525,10 +493,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               ),
             ),
           ],
-
           const SizedBox(height: 14),
-
-          // Sport Attributes Row (Position, ELO, Skill Level, Foot, OVR)
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -568,12 +533,9 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                 ),
             ],
           ),
-
           const SizedBox(height: 16),
           const Divider(height: 1),
           const SizedBox(height: 14),
-
-          // Action Buttons: Call Player + Block/Unblock Button
           Row(
             children: [
               if (phone.isNotEmpty) ...[
@@ -605,8 +567,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                 ),
                 const SizedBox(width: 10),
               ],
-
-              // Block / Unblock Action Button
               Expanded(
                 child: isBlocked
                     ? ElevatedButton.icon(
@@ -698,9 +658,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     );
   }
 
-  // -------------------------------------------------------------
-  // 2. METRICS SECTION (High Contrast & Responsive)
-  // -------------------------------------------------------------
   Widget _buildMetricsSection({
     required BuildContext context,
     required bool isDark,
@@ -757,11 +714,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // 2x2 Grid of Metrics Cards
         LayoutBuilder(
           builder: (context, constraints) {
-            // Responsive child aspect ratio depending on screen width
             final double cardAspectRatio =
                 constraints.maxWidth < 360 ? 1.4 : 1.6;
 
@@ -773,7 +727,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                // 1. Matches Played
                 _buildStatMetricCard(
                   context: context,
                   isDark: isDark,
@@ -785,8 +738,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   bgLight: const Color(0xFFF0FDF4),
                   bgDark: const Color(0xFF062316),
                 ),
-
-                // 2. Payments Paid
                 _buildStatMetricCard(
                   context: context,
                   isDark: isDark,
@@ -798,8 +749,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   bgLight: const Color(0xFFF0F9FF),
                   bgDark: const Color(0xFF082236),
                 ),
-
-                // 3. Cancelled Matches
                 _buildStatMetricCard(
                   context: context,
                   isDark: isDark,
@@ -811,8 +760,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   bgLight: const Color(0xFFFEF2F2),
                   bgDark: const Color(0xFF2A0D12),
                 ),
-
-                // 4. Amount Refunded
                 _buildStatMetricCard(
                   context: context,
                   isDark: isDark,
@@ -871,7 +818,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Icon + Title Row
           Row(
             children: [
               Container(
@@ -897,8 +843,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               ),
             ],
           ),
-
-          // Main Value
           Text(
             value,
             style: TextStyle(
@@ -908,8 +852,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               letterSpacing: -0.5,
             ),
           ),
-
-          // Subtitle tag
           Text(
             subtitle,
             style: TextStyle(
@@ -925,9 +867,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     );
   }
 
-  // -------------------------------------------------------------
-  // 3. MATCH & PAYMENT HISTORY HEADER & FILTERS
-  // -------------------------------------------------------------
   Widget _buildHistoryHeader({
     required BuildContext context,
     required bool isDark,
@@ -1084,9 +1023,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     );
   }
 
-  // -------------------------------------------------------------
-  // 4. MATCH HISTORY CARD
-  // -------------------------------------------------------------
   Widget _buildHistoryMatchCard(
       BuildContext context, bool isDark, Map<String, dynamic> match) {
     final cardBg = Theme.of(context).cardColor;
@@ -1126,7 +1062,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
           '$dateStr  •  $startTime${endTime.isNotEmpty ? ' - $endTime' : ''}';
     }
 
-    // Payment styling
     Color paymentColor = const Color(0xFF00C853);
     if (paymentStatus == 'REFUNDED') {
       paymentColor = const Color(0xFFD97706);
@@ -1136,7 +1071,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
       paymentColor = const Color(0xFFEF4444);
     }
 
-    // Match status styling
     Color matchStatusColor = AppColors.primary;
     if (matchStatus == 'CANCELLED') {
       matchStatusColor = const Color(0xFFEF4444);
@@ -1177,7 +1111,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Row: Title + Format Badge + Status Tag
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1237,8 +1170,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                       ),
                     ),
                     const SizedBox(width: 8),
-
-                    // Status Badge
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
@@ -1262,10 +1193,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 10),
-
-                // Date and Time Row
                 if (timeDisplay.isNotEmpty) ...[
                   Row(
                     children: [
@@ -1284,8 +1212,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   ),
                   const SizedBox(height: 8),
                 ],
-
-                // Team & Position Row (if player had specific team/position)
                 if (team.isNotEmpty || gamePosition.isNotEmpty) ...[
                   Row(
                     children: [
@@ -1334,14 +1260,10 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   ),
                   const SizedBox(height: 10),
                 ],
-
                 const Divider(height: 14),
-
-                // Bottom Row: Entry Fee & Payment Tag & CCTV link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Entry Fee
                     Row(
                       children: [
                         const Icon(Icons.payment_rounded,
@@ -1364,8 +1286,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                         ),
                       ],
                     ),
-
-                    // Payment Badge + CCTV badge
                     Row(
                       children: [
                         if (videoUrl.isNotEmpty) ...[
@@ -1394,8 +1314,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                             ),
                           ),
                         ],
-
-                        // Payment Status Chip
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
@@ -1429,9 +1347,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     );
   }
 
-  // -------------------------------------------------------------
-  // 5. EMPTY & NOT FOUND STATES
-  // -------------------------------------------------------------
   Widget _buildEmptyHistoryCard(BuildContext context, bool isDark) {
     return Container(
       width: double.infinity,
@@ -1549,9 +1464,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     );
   }
 
-  // -------------------------------------------------------------
-  // 6. BLOCK & UNBLOCK MODALS
-  // -------------------------------------------------------------
   void _showBlockModal(BuildContext context, String playerId, String name) {
     final reasonController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;

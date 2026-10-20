@@ -43,7 +43,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ⚽ Match Overview Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -157,12 +156,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // 🛡️ MANAGER CONTROLS PANEL (Active Court Match Controls)
               _buildManagerControlsPanel(context, game),
               const SizedBox(height: 20),
-
-              // 💰 Revenue & Roster Summary Card
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -255,17 +250,12 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // 👥 Joined Player Roster Section
               _buildRosterPaymentSection(context, game),
               const SizedBox(height: 20),
-
-              // 📹 CCTV RECORDING VIDEO PLAYER SECTION
               if (isCompleted || isOngoing) ...[
                 _buildCctvVideoSection(context, game),
                 const SizedBox(height: 20),
               ],
-
               const SizedBox(height: 30),
             ],
           ),
@@ -274,7 +264,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// 🛡️ MANAGER CONTROLS PANEL Widget (Active Court Matches)
   Widget _buildManagerControlsPanel(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusUpper = game.status.toUpperCase();
@@ -365,7 +354,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 style: TextStyle(
                     color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ] else if (isOngoing) ...[
-            // 🟢 MATCH IS ONGOING / PAUSED
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -403,8 +391,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Pause / Resume & Stop Match Buttons
             Row(
               children: [
                 Expanded(
@@ -473,8 +459,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // Cancel Match option
             SizedBox(
               width: double.infinity,
               height: 46,
@@ -498,7 +482,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ),
             ),
           ] else ...[
-            // ▶ NOT STARTED YET (OPEN_FOR_JOINING / SCHEDULED)
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -522,8 +505,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Cancel Match
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -553,8 +534,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// 📹 CCTV RECORDED MATCH VIDEO SECTION Widget
-  /// 🎥 CCTV RECORDED MATCH VIDEO SECTION Widget (With Multi-Camera Options)
   Widget _buildCctvVideoSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -644,7 +623,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Camera switcher if multiple
                   if (videos.length > 1) ...[
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -707,7 +685,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       ),
                     ),
                   ],
-
                   GestureDetector(
                     onTap: () {
                       Get.toNamed('/videos/player', arguments: {
@@ -862,8 +839,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             ],
           ),
           Divider(color: context.borderColor, height: 20),
-
-          // 🏆 Team Filter Segmented Control Bar
           Obx(() {
             final activeTab = controller.selectedRosterTeamFilter.value;
             final teamACount =
@@ -876,7 +851,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               physics: const BouncingScrollPhysics(),
               child: Row(
                 children: [
-                  // ALL PLAYERS Filter Pill
                   GestureDetector(
                     onTap: () =>
                         controller.selectedRosterTeamFilter.value = 'ALL',
@@ -922,8 +896,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     ),
                   ),
                   const SizedBox(width: 8),
-
-                  // TEAM A Filter Pill
                   GestureDetector(
                     onTap: () =>
                         controller.selectedRosterTeamFilter.value = 'TEAM_A',
@@ -969,8 +941,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     ),
                   ),
                   const SizedBox(width: 8),
-
-                  // TEAM B Filter Pill
                   GestureDetector(
                     onTap: () =>
                         controller.selectedRosterTeamFilter.value = 'TEAM_B',
@@ -1020,7 +990,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             );
           }),
           const SizedBox(height: 14),
-
           Obx(() {
             final filterTab = controller.selectedRosterTeamFilter.value;
             List<GameRosterPlayerModel> filteredRoster;

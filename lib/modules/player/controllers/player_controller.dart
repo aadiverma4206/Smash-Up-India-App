@@ -22,10 +22,8 @@ class PlayerController extends GetxController {
   final RxBool isLoadingStats = false.obs;
   final RxString errorMessage = ''.obs;
 
-  // Navigation Index (0: Arena, 1: Explore, 2: History)
   final RxInt selectedNavIndex = 0.obs;
 
-  // Dynamic Statistics State (4 Main Results)
   final RxList<DynamicStatCardModel> dynamicStatsList =
       <DynamicStatCardModel>[].obs;
 
@@ -81,7 +79,6 @@ class PlayerController extends GetxController {
     }
   }
 
-  /// Dedicated Backend Function: Dynamically fetch & calculate Player Statistics
   Future<void> fetchPlayerStatistics() async {
     isLoadingStats.value = true;
     try {
@@ -103,28 +100,28 @@ class PlayerController extends GetxController {
         label: 'Joined',
         value: '${s.matchesJoined > 0 ? s.matchesJoined : s.matchesPlayed}',
         icon: Icons.sports_soccer_rounded,
-        color: const Color(0xFF00C853), // Green
+        color: const Color(0xFF00C853),
       ),
       DynamicStatCardModel(
         id: 'played',
         label: 'Played',
         value: '${s.matchesPlayed}',
         icon: Icons.sports_football_rounded,
-        color: const Color(0xFF0288D1), // Blue
+        color: const Color(0xFF0288D1),
       ),
       DynamicStatCardModel(
         id: 'won',
         label: 'Won',
         value: '${s.matchesWon}',
         icon: Icons.emoji_events_rounded,
-        color: const Color(0xFFFFB300), // Amber
+        color: const Color(0xFFFFB300),
       ),
       DynamicStatCardModel(
         id: 'lost',
         label: 'Lost',
         value: '${s.matchesLost}',
         icon: Icons.cancel_outlined,
-        color: const Color(0xFFE53935), // Red
+        color: const Color(0xFFE53935),
       ),
     ];
   }

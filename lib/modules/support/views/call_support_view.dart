@@ -128,7 +128,6 @@ class CallSupportView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // HERO SUPPORT BANNER
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -195,8 +194,6 @@ class CallSupportView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // CALL ACTIONS
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -242,8 +239,6 @@ class CallSupportView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // ALTERNATIVE CONTACT CHANNELS
               Text(
                 'Alternative Support Channels',
                 style: TextStyle(
@@ -253,7 +248,6 @@ class CallSupportView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-
               _buildContactCard(
                 context,
                 title: 'Direct Phone Line',
@@ -264,7 +258,6 @@ class CallSupportView extends StatelessWidget {
                     _copyToClipboard(context, directPhone, 'Phone Line'),
               ),
               const SizedBox(height: 12),
-
               _buildContactCard(
                 context,
                 title: 'Official Email Support',
@@ -275,7 +268,6 @@ class CallSupportView extends StatelessWidget {
                     _copyToClipboard(context, supportEmail, 'Support Email'),
               ),
               const SizedBox(height: 12),
-
               _buildContactCard(
                 context,
                 title: 'Turf Head Office',

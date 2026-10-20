@@ -12,9 +12,6 @@ import { logger } from "../../utils/logger.js";
 import { dbPool } from "../../config/db.config.js";
 
 export class WalletService {
-  /**
-   * Fetch Player Wallet Balance & PIN Info
-   */
   static async getWallet(userId: string) {
     const details = await WalletRepository.getWalletDetails(userId);
     if (!details) {
@@ -34,9 +31,6 @@ export class WalletService {
     };
   }
 
-  /**
-   * Set Initial 6-Digit Wallet PIN
-   */
   static async setWalletPin(userId: string, pin: string) {
     if (!pin || !/^\d{6}$/.test(pin)) {
       throw new ApiError(
@@ -49,9 +43,6 @@ export class WalletService {
     return { message: "Wallet PIN set successfully" };
   }
 
-  /**
-   * Change 6-Digit Wallet PIN
-   */
   static async changeWalletPin(userId: string, oldPin: string, newPin: string) {
     if (!newPin || !/^\d{6}$/.test(newPin)) {
       throw new ApiError(
@@ -85,9 +76,6 @@ export class WalletService {
     return { message: "Wallet PIN updated successfully" };
   }
 
-  /**
-   * Verify 6-Digit Wallet PIN
-   */
   static async verifyWalletPin(userId: string, pin: string) {
     try {
       const isValid = await WalletRepository.verifyWalletPin(userId, pin);
@@ -107,9 +95,6 @@ export class WalletService {
     }
   }
 
-  /**
-   * Create Razorpay Wallet Top-Up Order (Online top-up does NOT require PIN)
-   */
   static async createTopupOrder(
     userId: string,
     amountRupees: number,
@@ -124,7 +109,6 @@ export class WalletService {
       );
     }
 
-    // Wallet Maximum Balance Cap Check (₹2,00,000)
     const currentWallet = await this.getWallet(userId);
     if (currentWallet.walletBalance + amountRupees > 200000) {
       throw new ApiError(
@@ -136,7 +120,6 @@ export class WalletService {
 
     const amountPaise = Math.round(amountRupees * 100);
 
-    // Call PostgreSQL Stored Function create_payment_order (Top-up does NOT require PIN)
     const paymentOrderId = await WalletRepository.createPaymentOrder({
       userId,
       provider: "RAZORPAY",
@@ -152,7 +135,6 @@ export class WalletService {
       );
     }
 
-    // Create Razorpay SDK Order
     let razorpayOrderId = `rzp_order_mock_${Date.now()}`;
     const keyId = env.RAZORPAY_KEY_ID || "rzp_test_Sb44esbmpGlzBd";
     const keySecret = env.RAZORPAY_KEY_SECRET || "0TkqPajfyDM5ng6e3CQxIzYy";
@@ -183,14 +165,13 @@ export class WalletService {
       razorpayOrderId,
     );
 
-    // Get User Details for Prefill
     const userRes = await dbPool.query(
       "SELECT name, email, phone FROM public.users WHERE id = $1;",
       [userId],
     );
     const user = userRes.rows[0];
 
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes window
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     return {
       paymentOrderId,
@@ -212,9 +193,6 @@ export class WalletService {
     };
   }
 
-  /**
-   * Verify Razorpay Payment Signature and Settle Wallet
-   */
   static async verifyTopupPayment(
     userId: string,
     userEmail: string,
@@ -223,7 +201,6 @@ export class WalletService {
     razorpayOrderId: string,
     razorpaySignature?: string,
   ) {
-    // Resolve activePaymentOrderId if not passed directly
     let activePaymentOrderId = paymentOrderId;
     if (!activePaymentOrderId && razorpayOrderId) {
       const orderRes = await dbPool.query(
@@ -249,7 +226,6 @@ export class WalletService {
       );
     }
 
-    // Timing-Safe Signature Verification
     if (
       razorpaySignature &&
       razorpayOrderId &&
@@ -289,7 +265,6 @@ export class WalletService {
       }
     }
 
-    // Settle Wallet Payment via DB Function settle_wallet_payment
     let txId = "";
     try {
       txId = await WalletRepository.settleWalletPayment(
@@ -302,7 +277,6 @@ export class WalletService {
         "Wallet Settlement Failure after captured payment. Initiating auto-refund.",
       );
 
-      // Auto-Refund Safety Net
       await this.initiateAutomaticRefund(
         razorpayPaymentId,
         "Wallet settlement failed: " + settleError.message,
@@ -329,10 +303,8 @@ export class WalletService {
       );
     }
 
-    // Fetch fresh balance
     const wallet = await this.getWallet(userId);
 
-    // Emit Socket.IO real-time event
     sendWalletUpdate(userId, { walletBalance: wallet.walletBalance, txId });
     sendUserNotification(userId, {
       title: "⚽ Top-Up Successful",
@@ -352,9 +324,6 @@ export class WalletService {
     };
   }
 
-  /**
-   * Automatic Razorpay Refund Helper
-   */
   static async initiateAutomaticRefund(paymentId: string, reason: string) {
     try {
       if (
@@ -377,15 +346,11 @@ export class WalletService {
     return null;
   }
 
-  /**
-   * Process Razorpay Webhook Event
-   */
   static async processRazorpayWebhook(
     rawBody: string,
     signature: string,
     eventPayload: any,
   ) {
-    // 1. Timing-Safe Webhook Signature Verification
     if (signature && env.RAZORPAY_WEBHOOK_SECRET) {
       const expectedSignature = crypto
         .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET)
@@ -412,7 +377,6 @@ export class WalletService {
     const paymentEntity = eventPayload.payload?.payment?.entity;
     let paymentOrderId = paymentEntity?.notes?.paymentOrderId;
 
-    // Check if paymentOrderId exists in DB to prevent foreign key violation
     if (paymentOrderId) {
       const checkRes = await dbPool.query(
         `SELECT id FROM public.payment_orders WHERE id = $1;`,
@@ -423,7 +387,6 @@ export class WalletService {
       }
     }
 
-    // 2. Deduplication Check via payment_webhook_events table
     const recordedId = await WalletRepository.recordWebhookEvent({
       provider: "RAZORPAY",
       eventId,
@@ -438,7 +401,6 @@ export class WalletService {
       return { status: "IGNORED_DUPLICATE" };
     }
 
-    // 3. Process Events
     try {
       if (eventType === "payment.captured" || eventType === "order.paid") {
         const paymentId = paymentEntity.id;

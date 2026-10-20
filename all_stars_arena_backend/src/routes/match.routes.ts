@@ -20,7 +20,6 @@ import { authenticateToken } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Match Recording APIs
 router.get("/", listRecordedMatchesController);
 router.post(
   "/start",
@@ -35,7 +34,6 @@ router.post(
   stopMatchRecordingController,
 );
 
-// Match Status and Live Feed
 router.get("/live", getLiveMatchesController);
 router.get(
   "/:matchId/recording-status",
@@ -43,7 +41,6 @@ router.get(
   getMatchRecordingStatusController,
 );
 
-// Match Details & Scoreboard
 router.get(
   "/:gameId",
   validateRequest(getMatchDetailsSchema),

@@ -25,7 +25,6 @@ class AdminBinding extends Bindings {
       () => AdminController(),
     );
 
-    // Manager & History dependencies for Admin Dashboard History Tab
     if (!Get.isRegistered<ManagerRemoteDataSource>()) {
       Get.lazyPut<ManagerRemoteDataSource>(
         () => ManagerRemoteDataSource(dioClient: Get.find<DioClient>()),
@@ -46,7 +45,6 @@ class AdminBinding extends Bindings {
       );
     }
 
-    // CCTV dependencies
     if (!Get.isRegistered<CctvRemoteDataSource>()) {
       Get.lazyPut<CctvRemoteDataSource>(
         () => CctvRemoteDataSource(dioClient: Get.find<DioClient>()),

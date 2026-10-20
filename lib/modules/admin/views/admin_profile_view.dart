@@ -46,12 +46,10 @@ class _AdminProfileViewState extends State<AdminProfileView> {
         final data = response.data['data'] as Map<String, dynamic>;
         profileData.assignAll(data);
 
-        // Update global AuthService currentUser
         final userModel = UserModel.fromJson(data);
         AuthService.to.currentUser.value = userModel;
       }
     } catch (_) {
-      // Fallback to local AuthService user
       final user = AuthService.to.currentUser.value;
       if (user != null) {
         profileData.assignAll({
@@ -66,7 +64,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
       }
     } finally {
       isLoading.value = false;
-      // Also refresh dashboard stats if available
+
       if (Get.isRegistered<AdminController>()) {
         adminController.loadDashboard();
       }
@@ -75,7 +73,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
     try {
-      Get.back(); // close bottom sheet
+      Get.back();
 
       XFile? file;
       try {
@@ -267,7 +265,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 child: Column(
                   children: [
-                    // 👤 AVATAR & HERO SECTION
                     Center(
                       child: Stack(
                         alignment: Alignment.bottomRight,
@@ -385,8 +382,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // 📊 SYSTEM METRICS OVERVIEW CARD
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -467,8 +462,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // 💳 ACCOUNT DETAILS CARD
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -529,8 +522,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // 🛡️ ADMIN PRIVILEGES & RESPONSIBILITIES CARD
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -588,8 +579,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // ⚙️ PREFERENCES & SYSTEM MAINTENANCE CARD
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -699,12 +688,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // ❓ HELP & SUPPORT AND LEGAL SECTION
                     const SupportAndLegalSection(),
                     const SizedBox(height: 24),
-
-                    // 🚪 LOGOUT BUTTON
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -729,8 +714,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // FOOTER
                     Center(
                       child: Column(
                         children: const [

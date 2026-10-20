@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'cctv_models.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 CctvCameraModel _$CctvCameraModelFromJson(Map<String, dynamic> json) =>
     CctvCameraModel(

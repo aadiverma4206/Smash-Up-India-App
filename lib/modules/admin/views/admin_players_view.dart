@@ -57,7 +57,6 @@ class AdminPlayersView extends GetView<AdminController> {
                     horizontal: 14.0, vertical: 10.0),
                 child: Column(
                   children: [
-                    // Compact Search Bar
                     AppTextField(
                       label: '',
                       hint: 'Search Player Email, Phone or Name...',
@@ -80,17 +79,13 @@ class AdminPlayersView extends GetView<AdminController> {
                       },
                     ),
                     const SizedBox(height: 12),
-
-                    // Players Content View
                     Expanded(
                       child: Obx(() {
-                        // 1. 3D Shimmer Loading Skeleton
                         if (controller.isLoadingPlayers.value &&
                             controller.players.isEmpty) {
                           return _buildShimmerView(context, deviceType);
                         }
 
-                        // 2. Empty State View
                         if (controller.players.isEmpty) {
                           return Center(
                             child: Column(
@@ -127,7 +122,6 @@ class AdminPlayersView extends GetView<AdminController> {
                           );
                         }
 
-                        // 3. Responsive List / Grid View
                         return RefreshIndicator(
                           onRefresh: () async => controller.fetchPlayers(),
                           child: isTabletOrDesktop
@@ -194,7 +188,6 @@ class AdminPlayersView extends GetView<AdminController> {
         ));
   }
 
-  /// 3D Animated Shimmer Loading Skeleton
   Widget _buildShimmerView(BuildContext context, DeviceType deviceType) {
     final isGrid =
         deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
@@ -294,7 +287,6 @@ class AdminPlayersView extends GetView<AdminController> {
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
           child: Row(
             children: [
-              // Avatar Image
               Container(
                 width: 44,
                 height: 44,
@@ -329,8 +321,6 @@ class AdminPlayersView extends GetView<AdminController> {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // User Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,7 +343,6 @@ class AdminPlayersView extends GetView<AdminController> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        // Compact Status Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
@@ -400,7 +389,6 @@ class AdminPlayersView extends GetView<AdminController> {
                   ],
                 ),
               ),
-
               const SizedBox(width: 8),
               Icon(
                 Icons.chevron_right_rounded,

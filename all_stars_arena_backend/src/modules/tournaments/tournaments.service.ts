@@ -60,7 +60,6 @@ export class TournamentsService {
       throw new ApiError(404, "Tournament not found", "TOURNAMENT_NOT_FOUND");
     }
 
-    // Insert team (DB trigger trg_sync_tournament_team_count updates team count & enforces max_teams!)
     const res = await dbPool.query(
       `INSERT INTO public.tournament_teams (tournament_id, name, captain_id, logo, status)
        VALUES ($1, $2, $3, $4, 'CONFIRMED') RETURNING *;`,

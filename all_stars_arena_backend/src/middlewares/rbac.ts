@@ -2,9 +2,6 @@ import { Response, NextFunction } from "express";
 import { ApiError } from "../utils/apiResponse.js";
 import { AuthenticatedRequest } from "../types/index.js";
 
-/**
- * Require specific Role IDs (1=ADMIN, 2=MANAGER, 3=PLAYER)
- */
 export const requireRole = (allowedRoleIds: number[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
     if (!req.user || !allowedRoleIds.includes(req.user.roleId)) {
@@ -20,9 +17,6 @@ export const requireRole = (allowedRoleIds: number[]) => {
   };
 };
 
-/**
- * Require specific Admin Types (SUPER_ADMIN, OPS_ADMIN, FINANCE_ADMIN)
- */
 export const requireAdminType = (allowedTypes: string[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
     if (
@@ -43,9 +37,6 @@ export const requireAdminType = (allowedTypes: string[]) => {
   };
 };
 
-/**
- * Require Platform Owner
- */
 export const requireOwner = (
   req: AuthenticatedRequest,
   _res: Response,

@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'game_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 Map<String, dynamic> _$GameRosterPlayerModelToJson(
         GameRosterPlayerModel instance) =>

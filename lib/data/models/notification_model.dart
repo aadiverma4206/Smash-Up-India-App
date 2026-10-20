@@ -7,8 +7,7 @@ class NotificationModel {
   final String id;
   final String title;
   final String body;
-  final String
-      type; // MATCH_STARTING, BOOKING, REFUND, CCTV_STARTED, DISPUTE, etc.
+  final String type;
   final Map<String, dynamic>? data;
   final bool isRead;
   final String createdAt;

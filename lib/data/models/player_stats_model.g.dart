@@ -1,10 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'player_stats_model.dart';
-
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
 
 Map<String, dynamic> _$PlayerStatsModelToJson(PlayerStatsModel instance) =>
     <String, dynamic>{

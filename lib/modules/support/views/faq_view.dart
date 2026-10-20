@@ -105,7 +105,6 @@ class _FaqViewState extends State<FaqView> {
       body: SafeArea(
         child: Column(
           children: [
-            // SEARCH & CATEGORY HEADER
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -182,8 +181,6 @@ class _FaqViewState extends State<FaqView> {
                 ],
               ),
             ),
-
-            // FAQ ITEMS LIST
             Expanded(
               child: filteredFaqs.isEmpty
                   ? Center(
@@ -276,8 +273,6 @@ class _FaqViewState extends State<FaqView> {
                       },
                     ),
             ),
-
-            // BOTTOM ACTION BAR
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

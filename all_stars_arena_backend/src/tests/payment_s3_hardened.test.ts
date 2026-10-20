@@ -19,10 +19,8 @@ describe("Player Payment, Razorpay, Refund & AWS S3 Integration Tests", () => {
   let p2UserId: string;
 
   beforeAll(async () => {
-    // Ensure all test users are ACTIVE
     await dbPool.query(`UPDATE public.users SET status = 'ACTIVE';`);
 
-    // 1. Create Player 1
     const pwdHash = await bcrypt.hash(testPassword, 10);
     const p1Res = await dbPool.query(
       `SELECT public.register_player('Payment Player 1', $1, $2, $3, 'Raipur') as user_id;`,
@@ -30,19 +28,16 @@ describe("Player Payment, Razorpay, Refund & AWS S3 Integration Tests", () => {
     );
     p1UserId = p1Res.rows[0].user_id;
 
-    // Set 6-digit Wallet PIN (Non-sequential)
     await dbPool.query(`SELECT public.set_wallet_pin($1, $2);`, [
       p1UserId,
       validPin,
     ]);
 
-    // Login Player 1
     const p1Login = await request(app)
       .post("/api/v1/auth/login")
       .send({ identifier: player1Email, password: testPassword });
     p1Token = p1Login.body.data.accessToken;
 
-    // 2. Create Player 2
     const p2Res = await dbPool.query(
       `SELECT public.register_player('Payment Player 2', $1, $2, $3, 'Raipur') as user_id;`,
       [player2Email, player2Phone, pwdHash],
@@ -54,7 +49,6 @@ describe("Player Payment, Razorpay, Refund & AWS S3 Integration Tests", () => {
       validPin,
     ]);
 
-    // Login Player 2
     const p2Login = await request(app)
       .post("/api/v1/auth/login")
       .send({ identifier: player2Email, password: testPassword });
@@ -146,14 +140,12 @@ describe("Player Payment, Razorpay, Refund & AWS S3 Integration Tests", () => {
         },
       };
 
-      // First webhook post
       const res1 = await request(app)
         .post("/api/v1/webhooks/razorpay")
         .send(payload);
 
       expect(res1.status).toBe(200);
 
-      // Duplicate webhook post
       const res2 = await request(app)
         .post("/api/v1/webhooks/razorpay")
         .send(payload);

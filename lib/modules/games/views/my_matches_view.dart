@@ -21,7 +21,6 @@ class MyMatchesView extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // 5 Tabs Bar
           _buildTabBar(context, controller),
           Expanded(
             child: Obx(() {

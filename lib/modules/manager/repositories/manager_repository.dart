@@ -121,7 +121,6 @@ class ManagerRepository {
 
       final list = response.data ?? [];
 
-      // 💾 Save fresh network data to local SQLite DB with 3-day retention
       if (Get.isRegistered<DatabaseService>()) {
         try {
           final db = Get.find<DatabaseService>();
@@ -133,7 +132,6 @@ class ManagerRepository {
 
       return list;
     } catch (e) {
-      // 📶 Offline Fallback to Local SQLite DB (3-Day Retention)
       if (Get.isRegistered<DatabaseService>()) {
         try {
           final db = Get.find<DatabaseService>();

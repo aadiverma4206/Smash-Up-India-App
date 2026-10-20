@@ -31,7 +31,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ⚽ Section 1: Match Summary
                 Text(
                   'Match Summary',
                   style: TextStyle(
@@ -43,8 +42,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
                 const SizedBox(height: 10),
                 _buildMatchSummaryCard(context),
                 const SizedBox(height: 20),
-
-                // 💳 Section 2: Pricing Breakdown
                 Text(
                   'Payment Summary',
                   style: TextStyle(
@@ -56,8 +53,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
                 const SizedBox(height: 10),
                 _buildPricingSummaryCard(context, fee),
                 const SizedBox(height: 20),
-
-                // 🏦 Section 3: Select Payment Option
                 Text(
                   'Select Payment Method',
                   style: TextStyle(
@@ -69,12 +64,8 @@ class GameCheckoutView extends GetView<CreateGameController> {
                 const SizedBox(height: 10),
                 _buildPaymentMethodsCard(context, fee),
                 const SizedBox(height: 20),
-
-                // ⚡ Test Mode Info Notice
                 _buildTestModeNoticeCard(context),
                 const SizedBox(height: 24),
-
-                // 🚀 Primary Host Match Button
                 Obx(
                   () => AppButton(
                     text: 'Host Match & Open Player Slots',
@@ -83,8 +74,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // Instant Test Payment Button
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 48),
@@ -107,8 +96,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
               ],
             ),
           ),
-
-          // Glassmorphism Overlay during active payment
           Obx(
             () => PaymentProcessingOverlay(
               isVisible: controller.isProcessing.value,
@@ -321,7 +308,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
 
         return Column(
           children: [
-            // Option 1: Razorpay
             InkWell(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(16)),
@@ -372,10 +358,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                 ),
               ),
             ),
-
             Divider(color: context.borderColor, height: 1),
-
-            // Option 2: Wallet
             InkWell(
               borderRadius:
                   const BorderRadius.vertical(bottom: Radius.circular(16)),

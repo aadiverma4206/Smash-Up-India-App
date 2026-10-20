@@ -134,7 +134,6 @@ export const requestSlotController = asyncHandler(
       details: `Player requested slot in position ${position}`,
     });
 
-    // Notify Game Creator & Club Managers
     try {
       if (game.creator_id && game.creator_id !== userId) {
         sendUserNotification(game.creator_id, {
@@ -295,7 +294,6 @@ export const updateGameScoreController = asyncHandler(
 
     if (!userId) throw new ApiError(401, "Unauthorized");
 
-    // Verify authorization: Only Admin, Club Manager, or Game Host can enter/update score
     const game = await GamesRepository.getGameById(gameId);
     if (!game) throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
 
@@ -308,9 +306,7 @@ export const updateGameScoreController = asyncHandler(
     }
 
     if (roleId === 1) {
-      // Admin authorized
     } else if (roleId === 2) {
-      // Check if manager manages this club
       const isManager = await GamesRepository.isClubManager(
         game.club_id,
         userId,
@@ -323,7 +319,6 @@ export const updateGameScoreController = asyncHandler(
         );
       }
     } else if (roleId === 3) {
-      // Player: only the match creator/host can enter score
       if (game.creator_id !== userId) {
         throw new ApiError(
           403,

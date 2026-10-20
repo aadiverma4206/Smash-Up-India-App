@@ -112,7 +112,6 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                 const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
             child: Column(
               children: [
-                // Filter Search Bar
                 AppTextField(
                   label: '',
                   hint: 'Filter Admin Notifications...',
@@ -132,8 +131,6 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                   },
                 ),
                 const SizedBox(height: 12),
-
-                // Notifications List
                 Expanded(
                   child: Obx(() {
                     if (controller.isLoading.value &&
@@ -244,7 +241,6 @@ class AdminNotificationsView extends GetView<NotificationsController> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Circular Category Icon Badge
               Container(
                 width: 44,
                 height: 44,
@@ -257,8 +253,6 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Title, Subtitle Body & Time
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +307,6 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                   ],
                 ),
               ),
-
               if (!item.isRead) ...[
                 const SizedBox(width: 8),
                 Container(

@@ -16,8 +16,6 @@ import {
 
 const router = Router();
 
-// 1. Direct Video Streaming with HTTP Byte-Range support (HEAD & GET)
-// Uses optional token authentication so mobile video_player and ExoPlayer can stream via URI with ?token= or directly
 router.head("/:filename", optionalAuthenticateToken, streamVideoFileController);
 
 router.get(
@@ -32,7 +30,7 @@ router.get(
     ) {
       return streamVideoFileController(req, res, next);
     }
-    // Otherwise requires authentication for internal metadata check
+
     return authenticateToken(req as any, res, (err) => {
       if (err) return next(err);
       return validateRequest(getVideoMetadataSchema)(req, res, () => {
@@ -42,7 +40,6 @@ router.get(
   },
 );
 
-// 2. Playback URL generation for S3 pre-signed objects
 router.get(
   "/:id/playback-url",
   authenticateToken,

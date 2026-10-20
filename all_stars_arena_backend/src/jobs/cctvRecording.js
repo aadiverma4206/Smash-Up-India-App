@@ -3,7 +3,6 @@ import { dbPool } from "../config/db.js";
 import { logger } from "../config/logger.js";
 
 export const startCctvRecordingJob = () => {
-  // Run every minute to check for expired recording deadlines (scheduled match end + 15 mins)
   cron.schedule("* * * * *", async () => {
     try {
       const expiredRecordings = await dbPool.query(
@@ -24,7 +23,6 @@ export const startCctvRecordingJob = () => {
           [rec.id],
         );
 
-        // Save metadata into game_videos
         await dbPool.query(
           `INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, status)
            VALUES ($1, $2, $3, $4, $5, $6, 'AVAILABLE')
@@ -39,7 +37,6 @@ export const startCctvRecordingJob = () => {
           ],
         );
 
-        // Log audit
         await dbPool.query(
           `INSERT INTO public.audit_logs (admin_name, action, target, details)
            VALUES ('CCTV_WORKER', 'AUTO_STOP_RECORDING', $1, $2);`,

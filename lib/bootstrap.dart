@@ -14,7 +14,6 @@ Future<void> bootstrap({String envFile = '.env'}) async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
 
-  // Initialize Firebase (safely)
   try {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
@@ -51,14 +50,12 @@ Future<void> bootstrap({String envFile = '.env'}) async {
     AppLogger.error('Failed to initialize SQLite Database', e);
   }
 
-  // Register remaining core dependencies
   try {
     InitialBinding().dependencies();
   } catch (e) {
     AppLogger.error('Failed to initialize InitialBinding dependencies', e);
   }
 
-  // Initialize AuthService (checks persisted login token)
   try {
     await Get.find<AuthService>().init();
   } catch (e) {

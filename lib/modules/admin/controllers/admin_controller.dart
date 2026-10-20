@@ -19,7 +19,6 @@ class AdminController extends GetxController {
   final RxBool isLoadingManagers = false.obs;
   final RxBool isLoadingLogs = false.obs;
 
-  // Pagination states
   int playerPage = 1;
   final RxBool hasMorePlayers = true.obs;
   final RxBool isLoadingMorePlayers = false.obs;
@@ -115,7 +114,7 @@ class AdminController extends GetxController {
     try {
       final list = await repository.getUsers(
         search: playerSearchQuery.value,
-        roleId: 3, // Player Role ID
+        roleId: 3,
         limit: 50,
         page: targetPage,
         onCachedData: (!isLoadMore)
@@ -131,7 +130,7 @@ class AdminController extends GetxController {
         final newEntries =
             list.where((e) => !existingIds.contains(e.id)).toList();
         players.addAll(newEntries);
-        // Sort merged list alphabetically
+
         players.sort(
             (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         playerPage = targetPage;
@@ -166,7 +165,7 @@ class AdminController extends GetxController {
     try {
       final list = await repository.getUsers(
         search: managerSearchQuery.value,
-        roleId: 2, // Manager Role ID
+        roleId: 2,
         limit: 50,
         page: targetPage,
         onCachedData: (!isLoadMore)
@@ -182,7 +181,7 @@ class AdminController extends GetxController {
         final newEntries =
             list.where((e) => !existingIds.contains(e.id)).toList();
         managers.addAll(newEntries);
-        // Sort merged list alphabetically
+
         managers.sort(
             (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         managerPage = targetPage;

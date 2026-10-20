@@ -52,9 +52,6 @@ function formatRecordingResponse(rec: any) {
 }
 
 export class CctvService {
-  /**
-   * Add CCTV Camera with AES-256-GCM encrypted RTSP credentials
-   */
   static async addCamera(
     managerId: string,
     managerName: string,
@@ -136,9 +133,6 @@ export class CctvService {
     };
   }
 
-  /**
-   * Edit CCTV Camera metadata and configuration
-   */
   static async editCamera(
     managerId: string,
     managerName: string,
@@ -227,9 +221,6 @@ export class CctvService {
     };
   }
 
-  /**
-   * Toggle Camera active/disabled state
-   */
   static async toggleCamera(
     managerId: string,
     managerName: string,
@@ -275,9 +266,6 @@ export class CctvService {
     };
   }
 
-  /**
-   * Real connection test to camera via network socket probe
-   */
   static async testCameraConnection(
     cameraId: string,
     managerId?: string,
@@ -313,9 +301,6 @@ export class CctvService {
     };
   }
 
-  /**
-   * Get Cameras by Club
-   */
   static async getClubCameras(
     clubId: string,
     managerId?: string,
@@ -358,9 +343,6 @@ export class CctvService {
     }));
   }
 
-  /**
-   * Start Match Recording
-   */
   static async startMatchRecording(
     managerId: string,
     managerName: string,
@@ -509,9 +491,6 @@ export class CctvService {
     return formatRecordingResponse(recording);
   }
 
-  /**
-   * Stop Match Recording
-   */
   static async stopMatchRecording(
     managerId: string,
     managerName: string,
@@ -585,9 +564,6 @@ export class CctvService {
     return updated;
   }
 
-  /**
-   * Extend Recording Deadline
-   */
   static async extendRecording(
     managerId: string,
     managerName: string,
@@ -661,9 +637,6 @@ export class CctvService {
     return updated;
   }
 
-  /**
-   * Get recording session status for a game
-   */
   static async getGameRecording(
     gameId: string,
     userId: string,
@@ -710,9 +683,6 @@ export class CctvService {
       : { status: "NO_RECORDING", gameId };
   }
 
-  /**
-   * Get Short-Lived Signed Playback URL for Match Video
-   */
   static async getMatchVideoPlaybackUrl(
     gameId: string,
     userId?: string,
@@ -804,9 +774,6 @@ export class CctvService {
     };
   }
 
-  /**
-   * Get failures for monitoring
-   */
   static async getRecordingFailures(
     userId: string,
     userRole: number,
@@ -830,9 +797,6 @@ export class CctvService {
     return await CctvRepository.getRecordingFailures(clubId);
   }
 
-  /**
-   * Get Dynamic Live CCTV Camera Options from DB Credentials & Host Discovery
-   */
   static async getLiveCameras(
     userId: string,
     userRole: number,
@@ -862,9 +826,6 @@ export class CctvService {
     }));
   }
 
-  /**
-   * Request Authorized Live Stream Session with direct RTSP stream configuration
-   */
   static async createLiveSession(
     userId: string,
     userRole: number,
@@ -910,10 +871,8 @@ export class CctvService {
     const sessionId = `live_sess_${channel}_${Date.now()}`;
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
-    // Ensure MediaMTX server is active on port 8888
     await MediaMtxService.ensureRunning();
 
-    // Determine host IP and base origin for universal streaming
     let mediaServerHost = "127.0.0.1";
     let baseOrigin = "http://127.0.0.1:5000";
     try {
@@ -925,12 +884,11 @@ export class CctvService {
     } catch (_) {}
 
     const streamKey = `cam${channel}_${streamType}`;
-    // Universal stream URL proxied through Express (works on Mobile Data, any WiFi, Internet)
+
     const playbackUrl = `${baseOrigin}/cctv-stream/${streamKey}/index.m3u8`;
-    // Direct MediaMTX URL for ultra-low latency on LAN
+
     const directPlaybackUrl = `http://${mediaServerHost}:8888/${streamKey}/index.m3u8`;
 
-    // Public Cloudflare Tunnel URL (100% accessible on MGMT BOTIVATE and 5G/4G Mobile Data)
     const tunnelOrigin = TunnelService.getUrl();
     const tunnelPlaybackUrl = tunnelOrigin
       ? `${tunnelOrigin}/cctv-stream/${streamKey}/index.m3u8`
@@ -960,9 +918,6 @@ export class CctvService {
     };
   }
 
-  /**
-   * Probe Live Camera Channel Status
-   */
   static async getLiveChannelStatus(
     channel: number,
     userId: string,
@@ -990,9 +945,6 @@ export class CctvService {
     };
   }
 
-  /**
-   * Release Live CCTV Stream Session
-   */
   static async releaseLiveSession(
     sessionId: string,
     userId: string,

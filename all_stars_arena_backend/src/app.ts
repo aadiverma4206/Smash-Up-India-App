@@ -17,13 +17,10 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 
 const app = express();
 
-// Assign unique X-Request-ID header & attach to req.id
 app.use(requestId);
 
-// Security Headers via Helmet
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// CORS Config
 app.use(
   cors({
     origin: env.CORS_ORIGIN,
@@ -31,7 +28,6 @@ app.use(
   }),
 );
 
-// Global Rate Limiter (Dev & Localhost bypass to prevent Rate Limit Exceeded during testing)
 const isDev =
   env.NODE_ENV !== "production" || process.env.NODE_ENV !== "production";
 
@@ -58,7 +54,6 @@ const apiLimiter = rateLimit({
 
 app.use("/api/", apiLimiter);
 
-// Body Parsers (with rawBody capture for Razorpay webhooks)
 app.use(
   express.json({
     limit: "10mb",
@@ -70,7 +65,6 @@ app.use(
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// Root endpoint info
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json(
     ApiResponse.success("ALL STARS ARENA Backend API is running", {
@@ -81,14 +75,10 @@ app.get("/", (_req: Request, res: Response) => {
   );
 });
 
-// Swagger OpenAPI Documentation
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Serve Live CCTV HLS Streams
 app.use("/hls", express.static(HlsStreamingService.getHlsBaseDir()));
 
-// Reverse-Proxy MediaMTX HLS streams through Express on port 5000
-// Allows CCTV streaming over any public domain, Cloudflare tunnel, ngrok, mobile data, or LAN without opening port 8888
 app.use(
   ["/cctv-stream", "/cam*"],
   createProxyMiddleware({
@@ -108,11 +98,9 @@ app.use(
   }),
 );
 
-// API Master Router (Support both /api and /api/v1)
 app.use("/api/v1", apiRoutes);
 app.use("/api", apiRoutes);
 
-// Catch-all 404 Not Found Handler for unmatched routes
 app.use((req: Request, _res: Response, next: NextFunction) => {
   next(
     ApiError.notFound(
@@ -126,7 +114,6 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   );
 });
 
-// Global Universal Error Handler
 app.use(errorHandler);
 
 export default app;

@@ -45,7 +45,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ⚽ Match Overview Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -167,22 +166,14 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // 🏆 SCORE ENTRY & RESULT SECTION
               _buildHistoryScoreSection(context, game, hasScore),
               const SizedBox(height: 20),
-
-              // 📹 CCTV RECORDED MATCH VIDEO SECTION (Hidden if Cancelled)
               if (!isCancelled) ...[
                 _buildCctvSection(context, game),
                 const SizedBox(height: 20),
               ],
-
-              // 👥 Joined Player Roster Section (BELOW VIDEO as requested!)
               _buildRosterSection(context, game),
               const SizedBox(height: 20),
-
-              // 💰 Revenue & Roster Summary Card
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -296,13 +287,11 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// 🏆 DIRECT INLINE SCORE ENTRY CARD & LOCKED SCOREBOARD SYSTEM
   Widget _buildHistoryScoreSection(
       BuildContext context, GameModel game, bool hasScore) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isCancelled = game.status.toUpperCase() == 'CANCELLED';
 
-    // 🚫 CANCELLED MATCH NOTICE (No scores or changes allowed for cancelled matches)
     if (isCancelled) {
       return Container(
         width: double.infinity,
@@ -360,7 +349,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
     }
 
     if (hasScore) {
-      // 🔒 LOCKED OFFICIAL SCOREBOARD CARD (Once entered, manager cannot edit - Admin only)
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -382,7 +370,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row
             Row(
               children: [
                 const Icon(Icons.emoji_events_rounded,
@@ -425,8 +412,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
               ],
             ),
             const SizedBox(height: 18),
-
-            // 🏆 Modern Scoreboard Display Box (Win = Green, Lose = Red)
             Builder(
               builder: (context) {
                 final int scoreA = game.teamAScore;
@@ -458,7 +443,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                   ),
                   child: Row(
                     children: [
-                      // Team A Column
                       Expanded(
                         child: Column(
                           children: [
@@ -485,8 +469,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                           ],
                         ),
                       ),
-
-                      // VS Divider Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
@@ -503,8 +485,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                           ),
                         ),
                       ),
-
-                      // Team B Column
                       Expanded(
                         child: Column(
                           children: [
@@ -537,8 +517,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
               },
             ),
             const SizedBox(height: 14),
-
-            // 🏆 WIN / LOSE / DRAW Match Result Badge UI/UX
             Builder(
               builder: (context) {
                 final int scoreA = game.teamAScore;
@@ -754,8 +732,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                 }
               },
             ),
-
-            // 🔐 ADMIN ONLY OVERRIDE SCORE OPTION
             if (AuthService.to.currentUser.value?.roleId == 1) ...[
               const SizedBox(height: 12),
               Obx(() {
@@ -789,7 +765,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            // Team A Score Stepper
                             Column(
                               children: [
                                 const Text('TEAM A',
@@ -839,8 +814,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                                 ),
                               ],
                             ),
-
-                            // Team B Score Stepper
                             Column(
                               children: [
                                 const Text('TEAM B',
@@ -968,7 +941,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
       );
     }
 
-    // ⚽ PENDING SCORE ENTRY CARD (Shown when score has NOT been entered yet)
     teamAController.text = '0';
     teamBController.text = '0';
 
@@ -1024,12 +996,9 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Score Inputs Row
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Team A Card Input
               Expanded(
                 child: Column(
                   children: [
@@ -1114,8 +1083,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                   ],
                 ),
               ),
-
-              // VS Text
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
@@ -1127,8 +1094,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                   ),
                 ),
               ),
-
-              // Team B Card Input
               Expanded(
                 child: Column(
                   children: [
@@ -1215,10 +1180,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
               ),
             ],
           ),
-
           const SizedBox(height: 18),
-
-          // 💾 One-Time Submit Button
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -1252,7 +1214,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// 👥 Roster Player List (With Team A & Team B Filter Tabs)
   Widget _buildRosterSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final roster = game.roster ?? [];
@@ -1299,8 +1260,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
           Divider(
               color: isDark ? AppColors.darkBorder : Colors.grey.shade300,
               height: 20),
-
-          // 🏆 Team A & Team B Filter Tabs (Only Team A & Team B)
           Obx(() {
             final activeTab =
                 controller.selectedRosterTeamFilter.value == 'TEAM_B'
@@ -1313,7 +1272,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
 
             return Row(
               children: [
-                // TEAM A Filter Pill
                 Expanded(
                   child: GestureDetector(
                     onTap: () =>
@@ -1362,8 +1320,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                   ),
                 ),
                 const SizedBox(width: 10),
-
-                // TEAM B Filter Pill
                 Expanded(
                   child: GestureDetector(
                     onTap: () =>
@@ -1415,7 +1371,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
             );
           }),
           const SizedBox(height: 14),
-
           Obx(() {
             final filterTab =
                 controller.selectedRosterTeamFilter.value == 'TEAM_B'
@@ -1552,7 +1507,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
     );
   }
 
-  /// 🎥 CCTV Recorded Video Section (With Dynamic Multi-Camera Switcher)
   Widget _buildCctvSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1686,7 +1640,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 🎥 Dynamic Camera Selector (Admin & Manager multi-camera switcher)
                 if (videos.length > 1) ...[
                   Row(
                     children: [
@@ -1814,8 +1767,6 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                   ),
                   const SizedBox(height: 12),
                 ],
-
-                // 🎬 Video Thumbnail Preview Screen
                 GestureDetector(
                   onTap: () {
                     Get.toNamed('/videos/player', arguments: {

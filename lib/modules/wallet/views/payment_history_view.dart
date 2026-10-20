@@ -45,13 +45,10 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
       body: Column(
         children: [
           const SizedBox(height: 10),
-          // Search Bar
           _buildSearchBar(context, controller, searchTextController),
           const SizedBox(height: 10),
-          // Filter Chips
           _buildFilterBar(context, controller),
           const SizedBox(height: 10),
-          // Main Grouped List
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value) {
@@ -239,7 +236,6 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Date Header Card
         Container(
           margin: const EdgeInsets.only(top: 12, bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -289,7 +285,6 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
             ],
           ),
         ),
-        // Group Transactions
         ...group.items.map((tx) => _buildTransactionCard(context, tx)),
       ],
     );

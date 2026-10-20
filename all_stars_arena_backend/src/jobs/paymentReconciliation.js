@@ -5,7 +5,6 @@ import { WalletService } from "../modules/wallet/wallet.service.js";
 import { logger } from "../config/logger.js";
 
 export const startPaymentReconciliationJob = () => {
-  // Run every 10 minutes to reconcile pending payment orders with Razorpay API
   cron.schedule("*/10 * * * *", async () => {
     try {
       const pendingOrders = await dbPool.query(

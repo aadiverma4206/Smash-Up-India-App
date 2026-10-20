@@ -21,7 +21,6 @@ class MyRequestsView extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Filter Tabs
           _buildTabBar(context, controller),
           Expanded(
             child: Obx(() {
@@ -162,8 +161,6 @@ class MyRequestsView extends StatelessWidget {
                         TextStyle(color: context.textSecondary, fontSize: 12)),
               ],
             ),
-
-            // Rejection reason banner if rejected
             if (req.status == 'REJECTED' &&
                 req.rejectionReason != null &&
                 req.rejectionReason!.isNotEmpty) ...[
@@ -195,7 +192,6 @@ class MyRequestsView extends StatelessWidget {
                 ),
               ),
             ],
-
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

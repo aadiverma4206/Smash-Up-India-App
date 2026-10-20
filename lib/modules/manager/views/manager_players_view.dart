@@ -22,8 +22,7 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
   final TextEditingController searchController = TextEditingController();
   final RxString selectedStatus = 'ACTIVE'.obs;
   final RxString selectedPosition = 'ALL'.obs;
-  final RxString selectedSort =
-      'NAME_ASC'.obs; // NAME_ASC, ELO_DESC, MATCHES_DESC
+  final RxString selectedSort = 'NAME_ASC'.obs;
 
   @override
   void initState() {
@@ -84,7 +83,6 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
       List<Map<String, dynamic>> players) {
     var list = List<Map<String, dynamic>>.from(players);
 
-    // Filter by position if not ALL
     if (selectedPosition.value != 'ALL') {
       final pos = selectedPosition.value.toUpperCase();
       list = list.where((p) {
@@ -93,7 +91,6 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
       }).toList();
     }
 
-    // Sort
     if (selectedSort.value == 'NAME_ASC') {
       list.sort((a, b) {
         final nameA = (a['name'] ?? '').toString().toLowerCase();
@@ -154,13 +151,11 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
       body: SafeArea(
         child: Column(
           children: [
-            // 1. 🌟 Search & Filter Section
             Container(
               color: isDark ? AppColors.darkCard : Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 children: [
-                  // Search Bar
                   TextField(
                     controller: searchController,
                     onChanged: _onSearchChanged,
@@ -217,14 +212,10 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // Status Chips & Sort Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Status Filters
                       Expanded(
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -278,8 +269,6 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                         ),
                       ),
                       const SizedBox(width: 8),
-
-                      // Sort dropdown menu
                       Obx(() {
                         return PopupMenuButton<String>(
                           initialValue: selectedSort.value,
@@ -369,10 +358,7 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                 ],
               ),
             ),
-
             const Divider(height: 1),
-
-            // 2. 👥 Player List Body
             Expanded(
               child: Obx(() {
                 final bool isBusy = controller.isPlayersLoading.value ||
@@ -477,7 +463,6 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                // 1. WhatsApp-Style Circle Avatar with status ring
                 Stack(
                   children: [
                     ClipRRect(
@@ -511,8 +496,6 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                   ],
                 ),
                 const SizedBox(width: 14),
-
-                // 2. Name & Mobile Number
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,10 +541,7 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                     ],
                   ),
                 ),
-
                 const SizedBox(width: 8),
-
-                // 3. Status Badge & Quick Action Button
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,

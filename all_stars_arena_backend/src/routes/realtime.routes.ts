@@ -15,10 +15,8 @@ import {
 
 const router = Router();
 
-// Protect all real-time routes with JWT authentication
 router.use(authenticateToken);
 
-// Send real-time notification to user or global broadcast (Admin only)
 router.post(
   "/notifications/send",
   requireRole([1]),
@@ -26,7 +24,6 @@ router.post(
   sendRealtimeNotification,
 );
 
-// Broadcast live match score event (Admin & Manager)
 router.post(
   "/matches/trigger",
   requireRole([1, 2]),

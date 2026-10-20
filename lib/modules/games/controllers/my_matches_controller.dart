@@ -5,8 +5,7 @@ import '../../../data/models/game_model.dart';
 class MyMatchesController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
 
-  final RxString selectedTab =
-      'UPCOMING'.obs; // UPCOMING, ONGOING, COMPLETED, CANCELLED, WAITLISTED
+  final RxString selectedTab = 'UPCOMING'.obs;
   final RxList<GameModel> matchesList = <GameModel>[].obs;
   final RxBool isLoading = false.obs;
 

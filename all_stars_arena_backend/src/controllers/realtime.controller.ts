@@ -7,9 +7,6 @@ import {
   broadcastLiveMatchScore,
 } from "../services/realtime.service.js";
 
-/**
- * Trigger real-time notification to user or broadcast
- */
 export const sendRealtimeNotification = asyncHandler(
   async (req: Request, res: Response) => {
     const { userId, title, message, type } = req.body;
@@ -38,9 +35,6 @@ export const sendRealtimeNotification = asyncHandler(
   },
 );
 
-/**
- * Trigger live football match event broadcast
- */
 export const triggerLiveMatchEvent = asyncHandler(
   async (req: Request, res: Response) => {
     const { gameId, teamAScore, teamBScore, eventText } = req.body;

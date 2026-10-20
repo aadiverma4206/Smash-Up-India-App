@@ -49,7 +49,7 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
     try {
-      Get.back(); // close bottom sheet first
+      Get.back();
 
       XFile? file;
       try {
@@ -231,7 +231,6 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 child: Column(
                   children: [
-                    // 👤 AVATAR SECTION WITH CAMERA OVERLAY
                     Center(
                       child: Stack(
                         alignment: Alignment.bottomRight,
@@ -333,8 +332,6 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // 💳 ACCOUNT DETAILS CARD
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -388,8 +385,6 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // 🏟️ ASSIGNED TURF CLUB CARD
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -446,12 +441,8 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // ❓ HELP & SUPPORT AND LEGAL SECTION
                     const SupportAndLegalSection(),
                     const SizedBox(height: 24),
-
-                    // 🚪 LOGOUT BUTTON
                     SizedBox(
                       width: double.infinity,
                       height: 48,

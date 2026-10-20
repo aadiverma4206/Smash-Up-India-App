@@ -10,7 +10,6 @@ class TokenInterceptor extends Interceptor {
   @override
   Future<void> onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
-    // Dynamically assign active BASE_URL from .env for every request
     final activeBaseUrl = EnvConfig.baseUrl;
     if (activeBaseUrl.isNotEmpty) {
       options.baseUrl = activeBaseUrl;

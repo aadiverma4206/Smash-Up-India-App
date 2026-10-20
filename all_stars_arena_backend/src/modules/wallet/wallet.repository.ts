@@ -1,9 +1,6 @@
 import { dbPool } from "../../config/db.config.js";
 
 export class WalletRepository {
-  /**
-   * Get Player Wallet Balance & Details
-   */
   static async getWalletDetails(userId: string) {
     const res = await dbPool.query(
       `SELECT wallet_balance, wallet_pin_set_at, wallet_pin_failed_attempts, wallet_pin_locked_until,
@@ -15,9 +12,6 @@ export class WalletRepository {
     return res.rows[0] || null;
   }
 
-  /**
-   * Call DB function set_wallet_pin
-   */
   static async setWalletPin(userId: string, pin: string) {
     await dbPool.query(
       "SELECT public.set_wallet_pin($1::VARCHAR, $2::VARCHAR);",
@@ -25,9 +19,6 @@ export class WalletRepository {
     );
   }
 
-  /**
-   * Call DB function verify_wallet_pin
-   */
   static async verifyWalletPin(userId: string, pin: string): Promise<boolean> {
     const res = await dbPool.query(
       "SELECT public.verify_wallet_pin($1::VARCHAR, $2::VARCHAR) as is_valid;",
@@ -36,9 +27,6 @@ export class WalletRepository {
     return res.rows[0]?.is_valid === true;
   }
 
-  /**
-   * Call DB function create_payment_order (Explicit type casts to prevent PG 42725 function ambiguity)
-   */
   static async createPaymentOrder(data: {
     userId: string;
     provider: string;
@@ -59,9 +47,6 @@ export class WalletRepository {
     return res.rows[0]?.payment_order_id;
   }
 
-  /**
-   * Update Provider Order ID in payment_orders
-   */
   static async updateProviderOrderId(
     paymentOrderId: string,
     providerOrderId: string,
@@ -74,9 +59,6 @@ export class WalletRepository {
     );
   }
 
-  /**
-   * Call DB function settle_wallet_payment
-   */
   static async settleWalletPayment(
     paymentOrderId: string,
     providerPaymentId: string,
@@ -88,9 +70,6 @@ export class WalletRepository {
     return res.rows[0]?.tx_id;
   }
 
-  /**
-   * Call DB function get_payment_order_status
-   */
   static async getPaymentOrderStatus(userId: string, paymentOrderId: string) {
     const res = await dbPool.query(
       "SELECT * FROM public.get_payment_order_status($1::VARCHAR, $2::VARCHAR);",
@@ -99,9 +78,6 @@ export class WalletRepository {
     return res.rows[0] || null;
   }
 
-  /**
-   * Deduplicate and record Webhook Event in payment_webhook_events
-   */
   static async recordWebhookEvent(data: {
     provider: string;
     eventId: string;
@@ -128,9 +104,6 @@ export class WalletRepository {
     return res.rows[0]?.id || null;
   }
 
-  /**
-   * Update Webhook Event Processing Status
-   */
   static async updateWebhookStatus(eventId: string, status: string) {
     await dbPool.query(
       `UPDATE public.payment_webhook_events
@@ -140,9 +113,6 @@ export class WalletRepository {
     );
   }
 
-  /**
-   * Mark Payment Order as FAILED or REFUNDED
-   */
   static async updatePaymentOrderStatus(
     paymentOrderId: string,
     status: string,
@@ -156,9 +126,6 @@ export class WalletRepository {
     );
   }
 
-  /**
-   * Call DB function get_wallet_transaction_history
-   */
   static async getTransactionHistory(userId: string, limit = 50, offset = 0) {
     const res = await dbPool.query(
       "SELECT * FROM public.get_wallet_transaction_history($1::VARCHAR, $2::INT, $3::INT);",

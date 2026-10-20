@@ -48,7 +48,7 @@ class GameRosterPlayerModel {
   final String userId;
   final String name;
   final String? profileImageUrl;
-  final String team; // TEAM_A, TEAM_B
+  final String team;
   final String position;
   final int ovr;
 
@@ -91,8 +91,8 @@ class GameModel {
   final String matchDate;
   final String startTime;
   final String endTime;
-  final String status; // OPEN_FOR_JOINING, FULL, ONGOING, COMPLETED, CANCELLED
-  final String format; // 5v5, 7v7, 11v11, etc.
+  final String status;
+  final String format;
   final double perPlayerFee;
   final int maxPlayers;
   final int currentPlayers;

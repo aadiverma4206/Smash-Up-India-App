@@ -34,7 +34,6 @@ class ResetPasswordView extends GetView<AuthController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Banner Header extending to top of screen
             Stack(
               children: [
                 Container(
@@ -65,8 +64,6 @@ class ResetPasswordView extends GetView<AuthController> {
                     ),
                   ),
                 ),
-
-                // Gradient Overlay
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
@@ -87,8 +84,6 @@ class ResetPasswordView extends GetView<AuthController> {
                 ),
               ],
             ),
-
-            // Form Section
             SafeArea(
               top: false,
               child: Padding(

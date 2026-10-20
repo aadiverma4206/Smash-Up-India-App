@@ -14,12 +14,6 @@ export interface HlsSession {
   clientCount: number;
 }
 
-/**
- * HLS Streaming Service - 100% MediaMTX Native
- *
- * Eliminates FFmpeg entirely. All HLS segmenting, remuxing, and low-latency
- * streaming is handled natively by MediaMTX on port 8888.
- */
 export class HlsStreamingService {
   private static activeSessions = new Map<string, HlsSession>();
   private static hlsBaseDir = path.resolve(process.cwd(), "temp_hls");
@@ -37,9 +31,6 @@ export class HlsStreamingService {
     return `/hls/${sessionId}/playlist.m3u8`;
   }
 
-  /**
-   * Start or reuse an HLS streaming session powered by MediaMTX.
-   */
   static async startOrReuseSession(params: {
     sessionId: string;
     rtspUrl: string;
@@ -49,7 +40,6 @@ export class HlsStreamingService {
   }): Promise<{ session: HlsSession; hlsUrlPath: string; isNew: boolean }> {
     const { sessionId, channel, streamType } = params;
 
-    // Ensure MediaMTX server is active
     await MediaMtxService.ensureRunning();
 
     const existing = this.activeSessions.get(sessionId);
@@ -75,7 +65,6 @@ export class HlsStreamingService {
     const playlistPath = path.join(outputDir, "playlist.m3u8");
     const streamKey = `cam${channel}_${streamType}`;
 
-    // Write standard HLS master playlist linking to MediaMTX stream
     const masterPlaylist = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=1920x1080

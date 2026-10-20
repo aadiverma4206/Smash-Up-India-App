@@ -13,7 +13,7 @@ class PreferencesService {
   }
 
   String getThemeMode() {
-    return _prefs.getString(AppConstants.themeKey) ?? 'light'; //system
+    return _prefs.getString(AppConstants.themeKey) ?? 'light';
   }
 
   Future<void> setOnboardingCompleted() async {

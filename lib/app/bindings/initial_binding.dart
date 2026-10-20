@@ -14,7 +14,6 @@ import '../../modules/notifications/services/socket_notification_service.dart';
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
-    // Storage Services
     if (!Get.isRegistered<SecureStorageService>()) {
       Get.put(SecureStorageService(), permanent: true);
     }
@@ -25,7 +24,6 @@ class InitialBinding extends Bindings {
       Get.put(DatabaseService(), permanent: true);
     }
 
-    // Network Client
     if (!Get.isRegistered<DioClient>()) {
       Get.put(
         DioClient(secureStorageService: Get.find<SecureStorageService>()),
@@ -33,7 +31,6 @@ class InitialBinding extends Bindings {
       );
     }
 
-    // App Core Services
     if (!Get.isRegistered<AuthService>()) {
       Get.put(AuthService(), permanent: true);
     }

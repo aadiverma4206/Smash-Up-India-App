@@ -20,7 +20,7 @@ const s3SecretKey = env.AWS_SECRET_ACCESS_KEY || env.AWS_S3_SECRET_ACCESS_KEY;
 export const s3Client = new S3Client({
   region: s3Region,
   endpoint: env.AWS_S3_ENDPOINT || undefined,
-  forcePathStyle: Boolean(env.AWS_S3_ENDPOINT), // Required for MinIO / Local S3
+  forcePathStyle: Boolean(env.AWS_S3_ENDPOINT),
   credentials:
     s3AccessKey && s3SecretKey
       ? {
@@ -30,10 +30,6 @@ export const s3Client = new S3Client({
       : undefined,
 });
 
-/**
- * Generate short-lived signed URL for private S3 objects (e.g. CCTV recordings or private profile images)
- * Never exposes AWS credentials or keeps buckets public
- */
 export const getSignedPlaybackUrl = async (
   objectKey: string,
   expiresInSeconds = 3600,
@@ -65,9 +61,6 @@ export const getSignedPlaybackUrl = async (
   }
 };
 
-/**
- * Upload recording file stream/buffer to S3 bucket with server-side encryption (AES256)
- */
 export const uploadRecordingToS3 = async (
   objectKey: string,
   body: Buffer | Uint8Array,
@@ -91,10 +84,6 @@ export const uploadRecordingToS3 = async (
   }
 };
 
-/**
- * Upload a finalized local recording file to S3 with exponential retry handling
- * and server-side encryption.
- */
 export const uploadLocalFileToS3 = async (
   localFilePath: string,
   objectKey: string,
@@ -138,7 +127,6 @@ export const uploadLocalFileToS3 = async (
         `[S3 Upload] Attempt ${attempt}/${maxRetries} failed for ${objectKey}: ${err.message}`,
       );
       if (attempt < maxRetries) {
-        // Exponential backoff
         await new Promise((res) => setTimeout(res, 500 * Math.pow(2, attempt)));
       }
     }
@@ -154,9 +142,6 @@ export const uploadLocalFileToS3 = async (
   );
 };
 
-/**
- * Safely removes local temporary recording file only after verified database & S3 upload persistence
- */
 export const safeDeleteLocalFile = async (filePath: string): Promise<void> => {
   try {
     if (filePath && fs.existsSync(filePath)) {
@@ -165,7 +150,6 @@ export const safeDeleteLocalFile = async (filePath: string): Promise<void> => {
         `[Cleanup] Deleted local temporary recording file: ${filePath}`,
       );
 
-      // If directory is empty, remove it too
       const dir = path.dirname(filePath);
       const remaining = await fs.promises.readdir(dir);
       if (remaining.length === 0) {
@@ -180,9 +164,6 @@ export const safeDeleteLocalFile = async (filePath: string): Promise<void> => {
   }
 };
 
-/**
- * Upload player profile avatar image to S3 in user-scoped path: players/{userId}/profile/{uuid}.ext
- */
 export const uploadProfileImageToS3 = async (
   userId: string,
   buffer: Buffer,
@@ -219,9 +200,6 @@ export const uploadProfileImageToS3 = async (
   }
 };
 
-/**
- * Delete object from S3
- */
 export const deleteS3Object = async (objectKey: string) => {
   if (!objectKey) return;
   try {

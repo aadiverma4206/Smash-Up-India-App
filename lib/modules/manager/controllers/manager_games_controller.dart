@@ -14,15 +14,12 @@ class ManagerGamesController extends GetxController {
   final Rxn<GameModel> selectedGame = Rxn<GameModel>();
   final RxBool isLoading = false.obs;
 
-  // Search & Filter state
   final RxString searchQuery = ''.obs;
-  final RxString selectedFilter = 'ALL'
-      .obs; // ALL, TODAY, TOMORROW, SELECT DATE, ONGOING, COMPLETED, CANCELLED
-  final RxString selectedCourtFilter = 'ALL'.obs; // ALL, COURT_1, COURT_2
+  final RxString selectedFilter = 'ALL'.obs;
+  final RxString selectedCourtFilter = 'ALL'.obs;
   final Rxn<DateTime> customSelectedDate = Rxn<DateTime>();
-  final RxString selectedRosterTeamFilter = 'TEAM_A'.obs; // TEAM_A, TEAM_B
+  final RxString selectedRosterTeamFilter = 'TEAM_A'.obs;
 
-  // CCTV playback URL & Multi-camera video state
   final RxnString cctvPlaybackUrl = RxnString();
   final RxList<VideoModel> matchVideos = <VideoModel>[].obs;
   final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();
@@ -71,7 +68,6 @@ class ManagerGamesController extends GetxController {
 
   List<GameModel> get filteredGames {
     return games.where((g) {
-      // 1. Search Query Filter
       if (searchQuery.value.trim().isNotEmpty) {
         final q = searchQuery.value.trim().toLowerCase();
         final titleMatches = g.title.toLowerCase().contains(q);
@@ -86,7 +82,6 @@ class ManagerGamesController extends GetxController {
         }
       }
 
-      // 2. Date & Status Filter
       final filter = selectedFilter.value;
       if (filter == 'TODAY') {
         final todayStr = AppDateUtils.formatIsoDate(DateTime.now());
@@ -178,7 +173,6 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Manager approves player-created game request
   Future<void> approvePlayerGame(String gameId) async {
     isLoading.value = true;
     try {
@@ -197,7 +191,6 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Manager rejects player-created game request
   Future<void> rejectPlayerGame(String gameId, String reason) async {
     isLoading.value = true;
     try {
@@ -216,7 +209,6 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Manager cancels match & issues atomic wallet refunds
   Future<void> cancelMatchWithRefunds(String gameId, String reason) async {
     isLoading.value = true;
     try {
@@ -235,7 +227,6 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Manager starts match -> Triggers backend CCTV recording lifecycle automatically
   Future<void> startGame(String gameId) async {
     isLoading.value = true;
     try {
@@ -251,7 +242,6 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Submit or update Match Score (Final Score)
   Future<void> submitMatchScore(String gameId, int scoreA, int scoreB,
       {bool isFinal = true}) async {
     isLoading.value = true;
@@ -301,7 +291,6 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Manager completes match -> Enters POST_MATCH window (+15m deadline)
   Future<void> completeGame(
       String gameId, int teamAScore, int teamBScore) async {
     isLoading.value = true;
@@ -320,7 +309,6 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  /// Toggle Pause / Resume Match State
   void togglePauseGame(String gameId) {
     if (selectedGame.value == null) return;
     final current = selectedGame.value!;

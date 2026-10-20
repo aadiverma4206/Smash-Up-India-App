@@ -342,7 +342,7 @@ export class ManagerRepository {
     }
 
     const query = `
-      SELECT g.*, 
+      SELECT g.*,
              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
              (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
@@ -465,7 +465,6 @@ export class ManagerRepository {
   }
 
   static async getCourtSlots(courtId: string, date?: string | null) {
-    // Auto-cancel any unapproved game past its start time & issue refunds
     try {
       const expired = await dbPool.query(
         `SELECT g.id, g.title FROM public.games g
@@ -514,7 +513,6 @@ export class ManagerRepository {
         }
       }
 
-      // Auto-start approved games past scheduled start time
       const autoStartGames = await dbPool.query(
         `SELECT g.id, g.club_id, g.title, crt.name as court_name
          FROM public.games g
@@ -623,7 +621,7 @@ export class ManagerRepository {
 
   static async getPendingPlayerGames(_clubId?: string) {
     const query = `
-      SELECT g.*, 
+      SELECT g.*,
              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,
              u.profile_image_url as host_image, pd.elo_rating as host_elo, pd.position as host_position,
@@ -702,7 +700,6 @@ export class ManagerRepository {
   }
 
   static async getPlayerDetailHistory(playerId: string) {
-    // 1. Fetch Player User & Profile Details
     const userRes = await dbPool.query(
       `SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,
               u.city, u.bio,
@@ -719,7 +716,6 @@ export class ManagerRepository {
 
     const player = userRes.rows[0];
 
-    // 2. Fetch Player Match & Payment History
     const historyRes = await dbPool.query(
       `SELECT gp.game_id, gp.payment_status, gp.team, gp.position as game_position, gp.created_at as joined_at,
               g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,
@@ -738,7 +734,6 @@ export class ManagerRepository {
 
     const history = historyRes.rows;
 
-    // 3. Compute Player Metrics Summary
     let totalMatches = history.length;
     let completedMatches = 0;
     let cancelledMatches = 0;

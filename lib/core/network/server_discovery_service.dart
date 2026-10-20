@@ -2,11 +2,9 @@ import 'package:dio/dio.dart';
 import '../config/env_config.dart';
 import '../utils/app_logger.dart';
 
-/// Server Discovery Service using EnvConfig.baseUrl strictly from .env
 class ServerDiscoveryService {
   static const String prefKeyTunnelUrl = 'cctv_public_tunnel_url';
 
-  /// Test if the configured BASE_URL from .env is reachable
   static Future<String?> findWorkingServer([String? priorityUrl]) async {
     final candidate = (priorityUrl != null && priorityUrl.isNotEmpty)
         ? priorityUrl
@@ -44,10 +42,8 @@ class ServerDiscoveryService {
     return null;
   }
 
-  /// Cache public tunnel URL if needed
   static Future<void> saveTunnelUrl(String url) async {}
 
-  /// Ensure active Dio instance uses EnvConfig.baseUrl from .env
   static Future<bool> handleConnectionFailure(Dio dio) async {
     final currentBase = EnvConfig.baseUrl;
     if (currentBase.isNotEmpty && dio.options.baseUrl != currentBase) {

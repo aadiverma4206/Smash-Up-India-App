@@ -16,7 +16,6 @@ export const initFirebaseAdmin = (): admin.app.App | null => {
       return firebaseApp;
     }
 
-    // 1. Resolve GOOGLE_APPLICATION_CREDENTIALS file path reliably
     const credPath =
       process.env.GOOGLE_APPLICATION_CREDENTIALS ||
       env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -64,7 +63,6 @@ export const initFirebaseAdmin = (): admin.app.App | null => {
       }
     }
 
-    // 2. Try loading service account from inline FIREBASE_SERVICE_ACCOUNT_JSON env string
     if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
       try {
         const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -85,7 +83,6 @@ export const initFirebaseAdmin = (): admin.app.App | null => {
       }
     }
 
-    // 3. Fallback to Application Default Credentials
     try {
       firebaseApp = admin.initializeApp({
         credential: admin.credential.applicationDefault(),

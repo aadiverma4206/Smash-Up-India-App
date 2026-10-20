@@ -128,7 +128,6 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Top Profile Header Card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -150,7 +149,6 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
               ),
               child: Column(
                 children: [
-                  // Profile Avatar
                   Stack(
                     children: [
                       Container(
@@ -208,8 +206,6 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                     ],
                   ),
                   const SizedBox(height: 14),
-
-                  // Name
                   Text(
                     user.name,
                     textAlign: TextAlign.center,
@@ -221,12 +217,9 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                     ),
                   ),
                   const SizedBox(height: 6),
-
-                  // Badges Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Role Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
@@ -253,8 +246,6 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
                         ),
                       ),
                       const SizedBox(width: 8),
-
-                      // Status Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
@@ -284,8 +275,6 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // User Info Details Section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
@@ -327,8 +316,6 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Account Meta Information Section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
@@ -370,8 +357,6 @@ class _AdminUserDetailViewState extends State<AdminUserDetailView> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Block / Unlock Action Button
             SizedBox(
               width: double.infinity,
               height: 50,

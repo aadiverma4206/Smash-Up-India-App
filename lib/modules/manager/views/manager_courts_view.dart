@@ -95,7 +95,6 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔍 Search Bar & Date Filter Chips
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -189,8 +188,6 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                   ],
                 ),
               ),
-
-              // Scrollable Matches List with Skeleton Loader & Scrollbar
               Expanded(
                 child: controller.isSlotsLoading.value
                     ? const SkeletonListLoader(count: 4)

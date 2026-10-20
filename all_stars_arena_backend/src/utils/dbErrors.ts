@@ -5,9 +5,6 @@ export interface ParsedDbError {
   details?: Record<string, any>;
 }
 
-/**
- * Checks if an error is originating from PostgreSQL / pg driver
- */
 export const isDbError = (err: any): boolean => {
   if (!err || typeof err !== "object") return false;
   return Boolean(
@@ -23,15 +20,11 @@ export const isDbError = (err: any): boolean => {
   );
 };
 
-/**
- * Parses PostgreSQL errors into user-friendly HTTP statuses, error codes, and messages
- */
 export const parseDbError = (err: any): ParsedDbError => {
   const code = (err.code || "").toString();
   const detail = (err.detail || err.message || "").toString();
   const lowerDetail = detail.toLowerCase();
 
-  // 1. PostgreSQL 23505 - Unique Violation
   if (code === "23505") {
     let message = "A record with these unique details already exists";
     if (lowerDetail.includes("email")) {
@@ -64,7 +57,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 2. PostgreSQL 23503 - Foreign Key Violation
   if (code === "23503") {
     let message = "Referenced record does not exist";
     let statusCode = 400;
@@ -89,7 +81,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 3. PostgreSQL 23502 - Not-Null Violation
   if (code === "23502") {
     const colName = err.column ? `'${err.column}'` : "A required column";
     return {
@@ -103,7 +94,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 4. PostgreSQL 23514 - Check Constraint Violation
   if (code === "23514") {
     return {
       statusCode: 400,
@@ -116,7 +106,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 5. PostgreSQL 23P01 - Exclusion Violation (Overlapping time slots)
   if (code === "23P01") {
     return {
       statusCode: 409,
@@ -129,7 +118,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 6. PostgreSQL 22P02 - Invalid Text Representation (e.g. invalid UUID / bad int cast)
   if (code === "22P02") {
     return {
       statusCode: 400,
@@ -141,7 +129,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 7. PostgreSQL 22001 - String Data Right Truncation
   if (code === "22001") {
     return {
       statusCode: 400,
@@ -154,7 +141,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 8. PostgreSQL 22003 - Numeric Value Out of Range
   if (code === "22003") {
     return {
       statusCode: 400,
@@ -166,7 +152,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 9. PostgreSQL 22007 or 22008 - Invalid Datetime Format
   if (code === "22007" || code === "22008") {
     return {
       statusCode: 400,
@@ -178,7 +163,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 10. PostgreSQL 40P01 - Deadlock Detected
   if (code === "40P01") {
     return {
       statusCode: 409,
@@ -188,7 +172,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 11. PostgreSQL 40001 - Serialization Failure (Transaction Concurrency)
   if (code === "40001") {
     return {
       statusCode: 409,
@@ -198,7 +181,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 12. PostgreSQL 42501 - Insufficient Privilege / RLS
   if (code === "42501") {
     return {
       statusCode: 403,
@@ -208,7 +190,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 13. PostgreSQL 42P01 / 42703 - Undefined Table or Column
   if (code === "42P01" || code === "42703") {
     return {
       statusCode: 500,
@@ -224,7 +205,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 14. PostgreSQL 57014 - Query Timeout
   if (code === "57014") {
     return {
       statusCode: 504,
@@ -234,7 +214,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 15. PostgreSQL 57P01, 57P02, 57P03 - Server Shutdown / Cannot Connect Now
   if (code === "57P01" || code === "57P02" || code === "57P03") {
     return {
       statusCode: 503,
@@ -244,7 +223,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 16. PostgreSQL P0001 - PL/pgSQL RAISE EXCEPTION
   if (code === "P0001") {
     return {
       statusCode: 400,
@@ -256,7 +234,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 17. Network / Connection errors
   if (
     ["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "ECONNRESET"].includes(code) ||
     lowerDetail.includes("connection terminated") ||
@@ -270,7 +247,6 @@ export const parseDbError = (err: any): ParsedDbError => {
     };
   }
 
-  // 18. Default fallback for other DB errors
   return {
     statusCode: 500,
     code: "DATABASE_ERROR",

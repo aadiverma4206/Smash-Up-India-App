@@ -42,7 +42,6 @@ class WalletController extends GetxController {
   }
 
   Future<void> fetchWalletDetails() async {
-    // Admin (Role 1) and Manager (Role 2) do not have player wallets
     if (Get.isRegistered<AuthService>() && !AuthService.to.isPlayer) {
       AppLogger.info(
           'Admin/Manager role active - Skipping player wallet fetch.');
@@ -73,7 +72,6 @@ class WalletController extends GetxController {
     }
   }
 
-  /// Top-up Flow Step 1: Create Order on Backend (No PIN required)
   Future<void> initiateTopup(double amountRupees) async {
     if (amountRupees <= 0 || amountRupees > 50000) {
       ErrorHandler.showErrorSnackBar(
@@ -120,7 +118,6 @@ class WalletController extends GetxController {
     }
   }
 
-  /// Razorpay Payment Success Callback -> Sends signatures to Backend for Verification
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     isLoading.value = true;
     Get.toNamed('/payment/processing');

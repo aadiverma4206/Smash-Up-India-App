@@ -3,7 +3,6 @@ import { dbPool } from "../config/db.config.js";
 import { logger } from "../utils/logger.js";
 
 export const startPaymentExpiryJob = () => {
-  // Run every 5 minutes
   cron.schedule("*/5 * * * *", async () => {
     try {
       const res = await dbPool.query(

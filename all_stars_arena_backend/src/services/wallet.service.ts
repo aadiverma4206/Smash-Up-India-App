@@ -7,9 +7,6 @@ import { env } from "../config/env.config.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { logger } from "../utils/logger.js";
 
-/**
- * Set 6-digit Wallet PIN
- */
 export const setUserWalletPin = async (userId: string, pin: string) => {
   if (!pin || !/^\d{6}$/.test(pin)) {
     throw new ApiError(
@@ -23,9 +20,6 @@ export const setUserWalletPin = async (userId: string, pin: string) => {
   return { message: "Wallet PIN set successfully" };
 };
 
-/**
- * Verify 6-digit Wallet PIN
- */
 export const verifyUserWalletPin = async (
   userId: string,
   pin: string,
@@ -48,9 +42,6 @@ export const verifyUserWalletPin = async (
   }
 };
 
-/**
- * Create Payment Order for Wallet Top-Up (Razorpay + DB) - Top-up via Razorpay does NOT require PIN
- */
 export const initiatePaymentOrder = async (
   userId: string,
   amountRupees: number,
@@ -63,7 +54,6 @@ export const initiatePaymentOrder = async (
   const amountPaise = Math.round(amountRupees * 100);
   const idempotencyKey = `idemp_${userId}_${Date.now()}`;
 
-  // Call PostgreSQL Stored Function to create order record (Top-up does NOT require PIN)
   const dbOrderRes = await dbPool.query(
     "SELECT public.create_payment_order($1::VARCHAR, $2::VARCHAR, $3::INT, $4::VARCHAR, $5::VARCHAR) as payment_order_id;",
     [userId, "RAZORPAY", amountPaise, idempotencyKey, walletPin || null],
@@ -75,7 +65,6 @@ export const initiatePaymentOrder = async (
     throw new ApiError(500, "Failed to create payment order record");
   }
 
-  // Create Razorpay Order
   let razorpayOrder = null;
   try {
     razorpayOrder = await razorpayClient.orders.create({
@@ -89,7 +78,6 @@ export const initiatePaymentOrder = async (
       },
     });
 
-    // Update provider_order_id in DB
     await dbPool.query(
       `UPDATE public.payment_orders
        SET provider_order_id = $1, status = 'PENDING'
@@ -111,9 +99,6 @@ export const initiatePaymentOrder = async (
   };
 };
 
-/**
- * Verify Razorpay Payment Signature and Settle Wallet
- */
 export const verifyAndSettlePayment = async (
   userId: string,
   userEmail: string,
@@ -143,7 +128,6 @@ export const verifyAndSettlePayment = async (
     throw new ApiError(404, "Payment order not found");
   }
 
-  // Validate Razorpay Signature
   if (
     env.RAZORPAY_KEY_SECRET &&
     razorpaySignature &&
@@ -160,7 +144,6 @@ export const verifyAndSettlePayment = async (
     }
   }
 
-  // Settle wallet payment in DB via Stored Procedure
   const settleRes = await dbPool.query(
     "SELECT public.settle_wallet_payment($1, $2) as tx_id;",
     [activePaymentOrderId, razorpayPaymentId],
@@ -168,14 +151,12 @@ export const verifyAndSettlePayment = async (
 
   const txId = settleRes.rows[0]?.tx_id;
 
-  // Get updated wallet balance
   const walletRes = await dbPool.query(
     "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;",
     [userId],
   );
   const newBalance = walletRes.rows[0]?.wallet_balance || 0;
 
-  // Emit Real-Time Socket.IO Updates
   sendWalletUpdate(userId, { walletBalance: newBalance, lastTxId: txId });
   sendUserNotification(userId, {
     title: "⚽ Top-Up Successful",
@@ -183,7 +164,6 @@ export const verifyAndSettlePayment = async (
     type: "SUCCESS",
   });
 
-  // Send Email Confirmation
   if (userEmail) {
     sendPaymentConfirmationEmail(userEmail, Number(newBalance), txId);
   }
@@ -196,9 +176,6 @@ export const verifyAndSettlePayment = async (
   };
 };
 
-/**
- * Fetch Wallet Transaction History
- */
 export const getWalletHistory = async (
   userId: string,
   limit = 20,
@@ -220,9 +197,6 @@ export const getWalletHistory = async (
   };
 };
 
-/**
- * Join a Football Game using Wallet Balance (Verifies PIN if set)
- */
 export const joinGameWithWallet = async (
   userId: string,
   gameId: string,
@@ -247,7 +221,6 @@ export const joinGameWithWallet = async (
 
   const rosterId = res.rows[0]?.roster_id;
 
-  // Fetch updated wallet balance
   const walletRes = await dbPool.query(
     "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;",
     [userId],

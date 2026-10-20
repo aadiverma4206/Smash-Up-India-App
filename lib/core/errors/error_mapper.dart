@@ -29,7 +29,6 @@ class ErrorMapper {
       );
     }
 
-    // Check inner SocketException or network drops
     if (err.error is SocketException ||
         err.error.toString().contains('SocketException')) {
       return NetworkException(
@@ -58,7 +57,6 @@ class ErrorMapper {
           code = errObj['code']?.toString() ?? code;
           details = errObj['details'];
 
-          // Extract detailed validation messages if available
           if (details is List && details.isNotEmpty) {
             final fieldMessages = <String>[];
             for (final item in details) {
@@ -91,7 +89,6 @@ class ErrorMapper {
         }
       }
 
-      // Backend Specific Error Codes Override
       if (code == 'ACCOUNT_SUSPENDED') {
         return AuthException(
           'Your account has been suspended by administration. Please contact support.',

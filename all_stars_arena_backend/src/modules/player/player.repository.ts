@@ -259,7 +259,6 @@ export class PlayerRepository {
     const profile = await this.getProfile(userId);
     const stats = await this.getStats(userId);
 
-    // Active/ongoing match
     const activeRes = await dbPool.query(
       `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position
        FROM public.game_players gp
@@ -271,7 +270,6 @@ export class PlayerRepository {
       [userId],
     );
 
-    // Upcoming match
     const upcomingRes = await dbPool.query(
       `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position
        FROM public.game_players gp
@@ -283,7 +281,6 @@ export class PlayerRepository {
       [userId],
     );
 
-    // Recent match
     const recentRes = await dbPool.query(
       `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position,
               CASE

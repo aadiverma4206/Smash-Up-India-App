@@ -73,33 +73,22 @@ class ProfileView extends GetView<PlayerController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Hero Player Card Header
                 _buildHeroHeader(context, p),
                 const SizedBox(height: 20),
-
-                // 2. Personal Attributes Card
                 _buildSectionHeader(
                     context, 'Player Attributes', Icons.badge_outlined),
                 const SizedBox(height: 10),
                 _buildAttributesCard(context, p),
                 const SizedBox(height: 20),
-
-                // 4. Preferences & Storage Management
                 _buildSectionHeader(
                     context, 'Preferences & Theme', Icons.tune_rounded),
                 const SizedBox(height: 10),
                 _buildPreferencesAndStorageCard(context),
                 const SizedBox(height: 20),
-
-                // 6. Help & Support and Legal Section
                 const SupportAndLegalSection(),
                 const SizedBox(height: 24),
-
-                // 7. Prominent Logout Action Button
                 _buildLogoutCard(context),
                 const SizedBox(height: 32),
-
-                // App Footer
                 Center(
                   child: Column(
                     children: const [
@@ -151,7 +140,6 @@ class ProfileView extends GetView<PlayerController> {
     );
   }
 
-  /// 1. Hero Player Banner
   Widget _buildHeroHeader(BuildContext context, dynamic p) {
     return Card(
       shape: RoundedRectangleBorder(
@@ -164,7 +152,6 @@ class ProfileView extends GetView<PlayerController> {
           children: [
             Row(
               children: [
-                // Avatar
                 Stack(
                   children: [
                     Container(
@@ -208,7 +195,6 @@ class ProfileView extends GetView<PlayerController> {
                   ],
                 ),
                 const SizedBox(width: 14),
-                // Name, Email, Position
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,7 +240,6 @@ class ProfileView extends GetView<PlayerController> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // OVR Rating
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -311,7 +296,6 @@ class ProfileView extends GetView<PlayerController> {
     );
   }
 
-  /// 3. Attributes List Card
   Widget _buildAttributesCard(BuildContext context, dynamic p) {
     return Card(
       child: Column(
@@ -370,7 +354,6 @@ class ProfileView extends GetView<PlayerController> {
     );
   }
 
-  /// 5. Preferences & Cache Management Card
   Widget _buildPreferencesAndStorageCard(BuildContext context) {
     return Card(
       child: Column(
@@ -406,7 +389,6 @@ class ProfileView extends GetView<PlayerController> {
     );
   }
 
-  /// 6. Prominent Logout Action Card
   Widget _buildLogoutCard(BuildContext context) {
     return Card(
       color: AppColors.error.withValues(alpha: 0.1),

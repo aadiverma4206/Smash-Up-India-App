@@ -23,7 +23,6 @@ export const authenticateToken = async (
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
 
-    // Check user status in DB
     const userRes = await dbPool.query(
       `SELECT u.id, u.email, u.phone, u.role_id, u.status,
               ad.admin_type, ad.is_owner
@@ -87,9 +86,6 @@ export const authenticateToken = async (
   }
 };
 
-/**
- * RBAC Guard: Restrict access by Role ID (1=ADMIN, 2=MANAGER, 3=PLAYER)
- */
 export const requireRole = (allowedRoleIds: number[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
     if (!req.user || !allowedRoleIds.includes(req.user.roleId)) {
@@ -105,9 +101,6 @@ export const requireRole = (allowedRoleIds: number[]) => {
   };
 };
 
-/**
- * Require specific Admin Types (SUPER_ADMIN, OPS_ADMIN, FINANCE_ADMIN)
- */
 export const requireAdminType = (allowedTypes: string[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
     if (
@@ -128,9 +121,6 @@ export const requireAdminType = (allowedTypes: string[]) => {
   };
 };
 
-/**
- * Require Platform Owner
- */
 export const requireOwner = (
   req: AuthenticatedRequest,
   _res: Response,
@@ -147,9 +137,6 @@ export const requireOwner = (
   }
 };
 
-/**
- * Optional Authentication: Attaches req.user if token is valid, but allows guest/unauthenticated requests through
- */
 export const optionalAuthenticateToken = async (
   req: AuthenticatedRequest,
   _res: Response,
@@ -185,8 +172,6 @@ export const optionalAuthenticateToken = async (
         isOwner: Boolean(user.is_owner),
       };
     }
-  } catch (_) {
-    // Non-fatal for optional auth
-  }
+  } catch (_) {}
   next();
 };

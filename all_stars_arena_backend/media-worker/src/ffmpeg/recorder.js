@@ -24,10 +24,9 @@ export class FfmpegRecorder {
 
     const ffmpegBinary = process.env.FFMPEG_PATH || 'ffmpeg';
 
-    // FFmpeg arguments for low-latency RTSP stream capture and mp4 streaming compatibility
     const ffmpegArgs = [
       '-rtsp_transport', 'tcp',
-      '-stimeout', '10000000', // 10-second socket timeout
+      '-stimeout', '10000000',
       '-i', this.rtspUrl,
       '-c:v', 'copy',
       '-c:a', 'aac',
@@ -44,7 +43,7 @@ export class FfmpegRecorder {
     this.isRecording = true;
 
     this.process.stderr.on('data', (_chunk) => {
-      // Progress stream data (omitted to keep logs clean)
+
     });
 
     this.process.on('close', (_code) => {

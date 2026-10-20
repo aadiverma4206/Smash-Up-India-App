@@ -8,7 +8,6 @@ import 'app_exception.dart';
 import 'error_mapper.dart';
 
 class ErrorHandler {
-  /// Extracts a clean, human-readable error message from ANY error object
   static String getErrorMessage(dynamic error) {
     if (error == null) return 'An unexpected error occurred. Please try again.';
 
@@ -45,7 +44,6 @@ class ErrorHandler {
       return raw.substring(11).trim();
     }
 
-    // Clean any remaining raw exception tags or stack traces
     final clean = raw
         .replaceAll(
             RegExp(
@@ -58,7 +56,6 @@ class ErrorHandler {
         : 'An unexpected error occurred. Please try again.';
   }
 
-  /// Displays a standardized error snackbar
   static void showErrorSnackBar(String title, dynamic error,
       {Duration? duration}) {
     final message = getErrorMessage(error);
@@ -75,7 +72,6 @@ class ErrorHandler {
     );
   }
 
-  /// Displays a standardized success snackbar
   static void showSuccessSnackBar(String title, String message,
       {Duration? duration}) {
     Get.snackbar(

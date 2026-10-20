@@ -11,10 +11,8 @@ import '../../../core/utils/app_logger.dart';
 import '../../../app/theme/app_colors.dart';
 
 class MediaServerCctvScreen extends StatefulWidget {
-  /// Base URL where MediaMTX HLS is hosted (e.g. 'http://10.0.2.2:8888' or 'https://cctv.domain.com')
   final String? initialBaseUrl;
 
-  /// Default channel to open (1-4)
   final int initialChannel;
 
   const MediaServerCctvScreen({
@@ -39,10 +37,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   bool _showControlsOverlay = true;
   Timer? _controlsTimer;
 
-  // Selected Channel (1, 2, 3, 4) and Stream Quality ('sub' for SD, 'main' for HD)
   late int _selectedChannel;
-  String _selectedQuality =
-      'sub'; // 'sub' = SD (low latency), 'main' = HD (1080p)
+  String _selectedQuality = 'sub';
 
   late String _baseUrl;
 
@@ -55,7 +51,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     4: 'Camera 4 (Court 2 - Goalpost)',
   };
 
-  /// Safely check if a VideoPlayerController is initialized and not disposed
   static bool _isControllerValid(VideoPlayerController? controller) {
     if (controller == null) return false;
     try {
@@ -65,7 +60,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     }
   }
 
-  /// Safely get aspectRatio without throwing on disposed controller
   static double _getControllerAspectRatio(VideoPlayerController? controller) {
     if (controller == null) return 16 / 9;
     try {
@@ -76,7 +70,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     }
   }
 
-  /// Smart default base URL resolution based on platform and EnvConfig
   static String _resolveDefaultBaseUrl([String? initialBaseUrl]) {
     if (initialBaseUrl != null && initialBaseUrl.trim().isNotEmpty) {
       return initialBaseUrl.trim();
@@ -100,7 +93,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   void initState() {
     super.initState();
     _transformationController = TransformationController();
-    // Enable seamless device rotation in ALL directions
+
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -160,12 +153,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     _initializePlayer(cachedTunnel);
   }
 
-  /// Construct stream key based on mediamtx.yml path definitions
-  /// e.g. cam1_sub, cam1_main, cam2_sub, cam2_main, etc.
   String get _currentStreamKey => 'cam${_selectedChannel}_$_selectedQuality';
 
-  /// Universal Express HLS Proxy URL (Port 5000 / cctv-stream)
-  /// Streams over ANY network (Mobile Data 4G/5G, any WiFi, Internet, Tunnels) without exposing port 8888
   String get _backendProxyHlsUrl {
     final cleanBase = EnvConfig.baseUrl
         .replaceAll(RegExp(r'/api/v1/?$'), '')
@@ -173,7 +162,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     return '$cleanBase/cctv-stream/$_currentStreamKey/index.m3u8';
   }
 
-  /// Direct MediaMTX URL (Port 8888) for local network
   String get _directMediaMtxHlsUrl {
     try {
       final envUri = Uri.tryParse(EnvConfig.baseUrl);
@@ -185,23 +173,19 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     return '';
   }
 
-  /// Candidate stream URLs derived from EnvConfig.baseUrl from .env
   List<String> _buildCandidateUrls([String? cachedTunnelUrl]) {
     final candidates = <String>[];
 
-    // Priority 1: Express HLS Proxy (/cctv-stream) on EnvConfig.baseUrl
     final proxyUrl = _backendProxyHlsUrl;
     if (proxyUrl.isNotEmpty && !candidates.contains(proxyUrl)) {
       candidates.add(proxyUrl);
     }
 
-    // Priority 2: Direct MediaMTX port 8888 on EnvConfig.baseUrl host
     final directUrl = _directMediaMtxHlsUrl;
     if (directUrl.isNotEmpty && !candidates.contains(directUrl)) {
       candidates.add(directUrl);
     }
 
-    // Priority 3: Custom user configured URL if different
     if (_baseUrl.isNotEmpty) {
       final clean = _baseUrl.replaceAll(RegExp(r'/$'), '');
       final customUrl = clean.contains('/cam')
@@ -228,7 +212,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       });
     }
 
-    // Automatic reconnect with candidate failover
     Future.delayed(const Duration(milliseconds: 1200), () async {
       if (!mounted) return;
       await _initializePlayer();
@@ -251,7 +234,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       await oldController.dispose();
     }
 
-    // Build ordered list of candidate URLs to try dynamically
     final candidates = _buildCandidateUrls(cachedTunnelUrl);
 
     String lastError = '';
@@ -290,7 +272,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
 
         _activeStreamUrl = candidateUrl;
 
-        // Successfully connected! Update _baseUrl to working host base
         final workingBase = candidateUrl.replaceAll(
           RegExp(r'/cam\d+_(sub|main)/index\.m3u8.*$'),
           '',
@@ -316,7 +297,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         lastError = e.toString();
         AppLogger.warning(
             '❌ [CCTV Stream] Candidate failed: $candidateUrl ($e)');
-        // Candidate failed, continuing to next candidate
       }
     }
 
@@ -537,7 +517,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Video Player Box (Always 16:9 Aspect Ratio)
             Container(
               color: Colors.black,
               child: AspectRatio(
@@ -545,15 +524,12 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                 child: _buildPlayerContent(),
               ),
             ),
-
-            // Controls & Channel Selection
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Stream Quality Selector (SD Substream vs HD Mainstream)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -585,10 +561,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 18),
-
-                  // Camera Channel Grid Options (CH 1-4)
                   Text(
                     'Select Camera Channel:',
                     style: TextStyle(
@@ -737,10 +710,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       );
                     },
                   ),
-
                   const SizedBox(height: 18),
-
-                  // Server URL Quick Config Button
                   InkWell(
                     onTap: _showUrlDialog,
                     borderRadius: BorderRadius.circular(12),
@@ -810,10 +780,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // Diagnostics Card
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -1080,7 +1047,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Video background container with Pinch-to-Zoom
           Container(
             color: Colors.black,
             width: double.infinity,
@@ -1103,8 +1069,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                     ),
             ),
           ),
-
-          // Animated Overlay Controls
           AnimatedOpacity(
             opacity: _showControlsOverlay ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 220),
@@ -1112,7 +1076,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
               ignoring: !_showControlsOverlay,
               child: Stack(
                 children: [
-                  // Top Gradient & Header Controls (LIVE Badge + Channel Title + Exit button)
                   Positioned(
                     top: 0,
                     left: 0,
@@ -1198,8 +1161,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ),
                     ),
                   ),
-
-                  // Bottom Gradient & Fullscreen Toggle Control
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -1226,7 +1187,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // Zoom Controls Pill
                               Container(
                                 margin: const EdgeInsets.only(right: 8),
                                 padding: const EdgeInsets.symmetric(
@@ -1479,7 +1439,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header with Icon
                     Row(
                       children: [
                         Container(
@@ -1525,7 +1484,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ],
                     ),
                     const SizedBox(height: 18),
-
                     Text(
                       'Enter the base URL where MediaMTX HLS port 8888 is reachable:',
                       style: TextStyle(
@@ -1535,8 +1493,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-
-                    // Input Field
                     Container(
                       decoration: BoxDecoration(
                         color: inputBg,
@@ -1582,8 +1538,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-
-                    // Presets Section
                     Row(
                       children: [
                         const Icon(Icons.bolt_rounded,
@@ -1601,8 +1555,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-
-                    // Preset Options
                     Column(
                       children: presets.map((preset) {
                         final isCurrent = currentInput == preset['url'];
@@ -1698,8 +1650,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                       }).toList(),
                     ),
                     const SizedBox(height: 18),
-
-                    // Dialog Buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -1758,8 +1708,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   }
 }
 
-/// Standalone Fullscreen Landscape Video Player Page.
-/// Pushed via root navigator so it covers the entire app (including bottom bars).
 class CctvFullscreenPlayerPage extends StatefulWidget {
   final VideoPlayerController controller;
   final int channel;
@@ -1790,10 +1738,9 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
   void initState() {
     super.initState();
     _transformationController = TransformationController();
-    // 1. Hide Android System Navigation Bar & Status Bar completely
+
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // 2. Allow Device Rotation in ALL directions seamlessly
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -1805,7 +1752,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
   }
 
   void _restoreSystemUIAndOrientations() {
-    // Restore Android System Navigation Bar & Status Bar
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -1814,7 +1760,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
       systemNavigationBarIconBrightness: Brightness.light,
     ));
 
-    // Restore Orientations to allow portrait/landscape
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -1944,7 +1889,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Black Background + Centered Video with InteractiveViewer Zoom
           Container(
             color: Colors.black,
             width: double.infinity,
@@ -1967,8 +1911,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
                     ),
             ),
           ),
-
-          // Animated Controls Overlay
           AnimatedOpacity(
             opacity: _showOverlay ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
@@ -1976,7 +1918,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
               ignoring: !_showOverlay,
               child: Stack(
                 children: [
-                  // Top Gradient Header Bar
                   Positioned(
                     top: 0,
                     left: 0,
@@ -2078,8 +2019,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
                       ),
                     ),
                   ),
-
-                  // Bottom Right Controls (Zoom + Exit Fullscreen)
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -2106,7 +2045,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // Zoom Controls Pill
                               Container(
                                 margin: const EdgeInsets.only(right: 12),
                                 padding: const EdgeInsets.symmetric(
@@ -2160,8 +2098,6 @@ class _CctvFullscreenPlayerPageState extends State<CctvFullscreenPlayerPage> {
                                   ],
                                 ),
                               ),
-
-                              // Exit Fullscreen Button
                               Material(
                                 color: Colors.black.withValues(alpha: 0.65),
                                 borderRadius: BorderRadius.circular(8),

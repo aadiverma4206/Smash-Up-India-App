@@ -36,7 +36,6 @@ class PlayerPaymentHistoryController extends GetxController {
   }
 
   Future<void> fetchTransactions() async {
-    // 1. Immediately load local storage cached transactions for 0ms instant UI rendering
     final cachedList = await repository.getLocalCachedTransactions();
     if (cachedList.isNotEmpty) {
       allTransactions.value = cachedList;
@@ -47,7 +46,6 @@ class PlayerPaymentHistoryController extends GetxController {
 
     errorMessage.value = '';
     try {
-      // 2. Fetch latest fresh list from API and update local storage + UI
       final list = await repository.getTransactions(page: 1, limit: 100);
       if (list.isNotEmpty) {
         allTransactions.value = list;

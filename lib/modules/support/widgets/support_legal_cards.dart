@@ -19,7 +19,6 @@ class SupportAndLegalSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. HELP & SUPPORT CARD
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -74,8 +73,6 @@ class SupportAndLegalSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // 2. LEGAL CARD
         Container(
           width: double.infinity,
           decoration: BoxDecoration(

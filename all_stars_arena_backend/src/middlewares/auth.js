@@ -16,7 +16,6 @@ export const requireAuth = async (req, _res, next) => {
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
-    // Verify user in PostgreSQL
     const userRes = await dbPool.query(
       `SELECT u.id, u.email, u.phone, u.role_id, u.status,
               ad.admin_type, ad.is_owner
@@ -48,8 +47,8 @@ export const requireAuth = async (req, _res, next) => {
       id: user.id,
       email: user.email,
       phone: user.phone,
-      roleId: user.role_id, // 1=ADMIN, 2=MANAGER, 3=PLAYER
-      adminType: user.admin_type || null, // SUPER_ADMIN, OPS_ADMIN, FINANCE_ADMIN
+      roleId: user.role_id,
+      adminType: user.admin_type || null,
       isOwner: Boolean(user.is_owner),
     };
 
