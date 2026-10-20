@@ -32,6 +32,7 @@ import {
   extendMatchRecordingController,
   getManagerCamerasController,
   getGameDetailsController,
+  getGamePlayersController,
   getManagerProfileController,
   uploadManagerAvatarController,
 } from "./manager.controller.js";
@@ -88,6 +89,8 @@ router.post(
 router.get("/games/pending", getPendingGamesController);
 router.get("/games", getClubMatchesController);
 router.get("/games/:id", getGameDetailsController);
+router.get("/games/:id/players", getGamePlayersController);
+router.get("/games/:id/roster", getGamePlayersController);
 router.post("/games", validateRequest(createGameSchema), createGameController);
 router.put("/games/:id", updateGameController);
 router.post(

@@ -19,6 +19,11 @@ class ManagerGamesController extends GetxController {
   final RxString selectedCourtFilter = 'ALL'.obs;
   final Rxn<DateTime> customSelectedDate = Rxn<DateTime>();
   final RxString selectedRosterTeamFilter = 'TEAM_A'.obs;
+  final RxList<GameRosterPlayerModel> teamAPlayers =
+      <GameRosterPlayerModel>[].obs;
+  final RxList<GameRosterPlayerModel> teamBPlayers =
+      <GameRosterPlayerModel>[].obs;
+  final RxBool isLoadingRoster = false.obs;
 
   final RxnString cctvPlaybackUrl = RxnString();
   final RxList<VideoModel> matchVideos = <VideoModel>[].obs;
@@ -34,13 +39,78 @@ class ManagerGamesController extends GetxController {
       if (args['game'] is GameModel) {
         selectedGame.value = args['game'] as GameModel;
       }
-      final gameId = (args['gameId'] ?? args['id'] ?? '').toString();
+      final gameId = (args['gameId'] ?? args['id'] ?? selectedGame.value?.id ?? '').toString();
       if (gameId.isNotEmpty) {
         fetchMatchRecording(gameId);
+        fetchGamePlayers(gameId);
       }
     } else if (args is GameModel) {
       selectedGame.value = args;
       fetchMatchRecording(args.id);
+      fetchGamePlayers(args.id);
+    }
+  }
+
+  Future<void> fetchGamePlayers(String gameId) async {
+    if (gameId.isEmpty) return;
+    isLoadingRoster.value = true;
+    try {
+      final res = await repository.getGamePlayers(gameId);
+      final rawTeamA = res['teamA'] as List? ?? [];
+      final rawTeamB = res['teamB'] as List? ?? [];
+      final rawRoster = res['roster'] as List? ?? [];
+
+      final aList = rawTeamA
+          .map((e) => GameRosterPlayerModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final bList = rawTeamB
+          .map((e) => GameRosterPlayerModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final fullRoster = rawRoster
+          .map((e) => GameRosterPlayerModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      teamAPlayers.assignAll(aList);
+      teamBPlayers.assignAll(bList);
+
+      if (selectedGame.value != null && selectedGame.value!.id == gameId) {
+        final cur = selectedGame.value!;
+        selectedGame.value = GameModel(
+          id: cur.id,
+          title: cur.title,
+          clubId: cur.clubId,
+          clubName: cur.clubName,
+          courtId: cur.courtId,
+          courtName: cur.courtName,
+          matchDate: cur.matchDate,
+          startTime: cur.startTime,
+          endTime: cur.endTime,
+          status: cur.status,
+          format: cur.format,
+          perPlayerFee: cur.perPlayerFee,
+          maxPlayers: cur.maxPlayers,
+          currentPlayers:
+              fullRoster.isNotEmpty ? fullRoster.length : cur.currentPlayers,
+          skillRequirement: cur.skillRequirement,
+          privacy: cur.privacy,
+          creatorId: cur.creatorId,
+          creatorRoleName: cur.creatorRoleName,
+          createdByPlayer: cur.createdByPlayer,
+          teamAScore: cur.teamAScore,
+          teamBScore: cur.teamBScore,
+          winnerTeam: cur.winnerTeam,
+          userTeam: cur.userTeam,
+          userPosition: cur.userPosition,
+          description: cur.description,
+          waitlistPosition: cur.waitlistPosition,
+          roster: fullRoster,
+          videoPlaybackUrl: cur.videoPlaybackUrl,
+        );
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to fetch game players: $e');
+    } finally {
+      isLoadingRoster.value = false;
     }
   }
 

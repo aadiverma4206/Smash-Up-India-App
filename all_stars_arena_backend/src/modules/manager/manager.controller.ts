@@ -608,6 +608,20 @@ export const getGameDetailsController = asyncHandler(
   },
 );
 
+export const getGamePlayersController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id: gameId } = req.params;
+
+    if (!userId) throw new ApiError(401, "Unauthorized");
+
+    const result = await ManagerService.getGamePlayers(userId, gameId);
+    res
+      .status(200)
+      .json(ApiResponse.success("Match players retrieved", result));
+  },
+);
+
 export const getClubHistoryController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;

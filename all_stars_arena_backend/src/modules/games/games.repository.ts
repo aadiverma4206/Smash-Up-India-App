@@ -103,7 +103,32 @@ export class GamesRepository {
   static async getGameById(gameId: string) {
     const res = await dbPool.query(
       `SELECT g.*, c.name as club_name, crt.name as court_name,
-              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count
+              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
+              COALESCE(
+                (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
+                g.video_playback_url
+              ) as video_playback_url,
+              (
+                SELECT COALESCE(json_agg(
+                  json_build_object(
+                    'userId', gp.user_id,
+                    'user_id', gp.user_id,
+                    'name', COALESCE(pu.name, 'Player'),
+                    'profileImageUrl', pu.profile_image_url,
+                    'profile_image_url', pu.profile_image_url,
+                    'team', COALESCE(gp.team, 'TEAM_A'),
+                    'position', COALESCE(gp.position, 'MID'),
+                    'ovr', COALESCE(pd.ovr_rating, 80),
+                    'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
+                    'payment_status', COALESCE(gp.payment_status, 'PAID'),
+                    'phone', pu.phone
+                  )
+                ), '[]'::json)
+                FROM public.game_players gp
+                JOIN public.users pu ON pu.id = gp.user_id
+                LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
+                WHERE gp.game_id = g.id
+              ) as roster
        FROM public.games g
        LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id

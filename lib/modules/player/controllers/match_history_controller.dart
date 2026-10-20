@@ -18,7 +18,7 @@ class MatchHistoryController extends GetxController {
   final RxBool isSearchingOrFiltering = false.obs;
   final RxBool isOfflineMode = false.obs;
   final RxBool hasMore = true.obs;
-  final RxString activeFilter = 'ALL'.obs;
+  final RxString activeFilter = 'COMPLETED'.obs;
   final RxString selectedRosterTeamFilter = 'TEAM_A'.obs;
   int currentOffset = 0;
   final int limit = 20;

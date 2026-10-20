@@ -131,9 +131,27 @@ export const getVideoPlaybackUrl = asyncHandler(
 
 export const streamVideoFileController = asyncHandler(
   async (req: Request, res: Response) => {
-    const filename = req.params.filename || req.params.id;
+    let filename = req.params.filename || req.params.id;
     if (!filename) {
       throw new ApiError(400, "Filename is required", "MISSING_FILENAME");
+    }
+
+    if (filename.startsWith("vid_")) {
+      const vidRes = await dbPool.query(
+        `SELECT video_url FROM public.game_videos WHERE id = $1;`,
+        [filename],
+      );
+      if (vidRes.rows.length > 0 && vidRes.rows[0].video_url) {
+        filename = path.basename(vidRes.rows[0].video_url);
+      }
+    } else if (filename.startsWith("gam_")) {
+      const vidRes = await dbPool.query(
+        `SELECT video_url FROM public.game_videos WHERE game_id = $1 AND status = 'AVAILABLE' ORDER BY created_at DESC LIMIT 1;`,
+        [filename],
+      );
+      if (vidRes.rows.length > 0 && vidRes.rows[0].video_url) {
+        filename = path.basename(vidRes.rows[0].video_url);
+      }
     }
 
     const filePath = CctvRecordingService.getVideoFilePath(filename);
@@ -157,6 +175,8 @@ export const streamVideoFileController = asyncHandler(
     res.setHeader("Content-Type", "video/mp4");
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
 
     if (isDownload) {
       res.setHeader(

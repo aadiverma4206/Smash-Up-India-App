@@ -87,6 +87,23 @@ class ManagerRemoteDataSource {
     );
   }
 
+  Future<ApiResponseModel<GameModel>> getGameDetails(String gameId) async {
+    final response = await dioClient.dio.get('/manager/games/$gameId');
+    return ApiResponseParser.parse<GameModel>(
+      response.data,
+      (json) => GameModel.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponseModel<Map<String, dynamic>>> getGamePlayers(
+      String gameId) async {
+    final response = await dioClient.dio.get('/manager/games/$gameId/players');
+    return ApiResponseParser.parse<Map<String, dynamic>>(
+      response.data,
+      (json) => json as Map<String, dynamic>,
+    );
+  }
+
   Future<ApiResponseModel<GameModel>> updateGame(
       String gameId, Map<String, dynamic> gameData) async {
     final response = await dioClient.dio.put(

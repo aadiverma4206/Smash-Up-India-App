@@ -53,6 +53,19 @@ class ManagerRepository {
     return response.data ?? [];
   }
 
+  Future<GameModel> getGameDetails(String gameId) async {
+    final response = await remoteDataSource.getGameDetails(gameId);
+    if (response.data == null) {
+      throw AppException('Failed to load game details.');
+    }
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> getGamePlayers(String gameId) async {
+    final response = await remoteDataSource.getGamePlayers(gameId);
+    return response.data ?? {};
+  }
+
   Future<GameModel> updateGame(
       String gameId, Map<String, dynamic> gameData) async {
     final response = await remoteDataSource.updateGame(gameId, gameData);

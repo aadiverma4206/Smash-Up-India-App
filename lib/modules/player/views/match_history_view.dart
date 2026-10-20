@@ -31,32 +31,48 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
   }
 
   Map<String, List<GameModel>> _groupGamesByDate(List<GameModel> gamesList) {
-    final Map<String, List<GameModel>> grouped = {};
     final now = DateTime.now();
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final pastGames = gamesList.where((g) {
+      final matchDt = AppDateUtils.parseDate(g.matchDate) ??
+          AppDateUtils.parseMatchDateTime(g.matchDate, g.startTime);
+      if (matchDt == null) return true;
+      return !matchDt.isAfter(todayEnd);
+    }).toList();
+
+    final sortedGames = List<GameModel>.from(pastGames);
+    sortedGames.sort((a, b) {
+      final dtA = AppDateUtils.parseMatchDateTime(a.matchDate, a.startTime) ??
+          AppDateUtils.parseDate(a.matchDate) ??
+          DateTime(2000);
+      final dtB = AppDateUtils.parseMatchDateTime(b.matchDate, b.startTime) ??
+          AppDateUtils.parseDate(b.matchDate) ??
+          DateTime(2000);
+      return dtB.compareTo(dtA);
+    });
+
+    final Map<String, List<GameModel>> grouped = {};
     final todayIso = AppDateUtils.formatIsoDate(now);
     final yesterdayIso =
         AppDateUtils.formatIsoDate(now.subtract(const Duration(days: 1)));
 
-    for (final game in gamesList) {
-      String rawDate = game.matchDate.split('T')[0].trim();
-      final isCancelled = game.status.toUpperCase() == 'CANCELLED';
-      final isFutureDate =
-          AppDateUtils.isMatchInFuture(rawDate, game.startTime);
-
-      if (isCancelled || isFutureDate) {
-        rawDate = todayIso;
-      }
+    for (final game in sortedGames) {
+      final matchDt = AppDateUtils.parseDate(game.matchDate) ??
+          AppDateUtils.parseMatchDateTime(game.matchDate, game.startTime) ??
+          now;
+      final rawDateIso = AppDateUtils.formatIsoDate(matchDt);
 
       String headerKey;
-      if (rawDate == todayIso) {
+      if (rawDateIso == todayIso) {
         headerKey =
-            'TODAY • ${AppDateUtils.formatDate(todayIso, format: "dd MMM yyyy")}';
-      } else if (rawDate == yesterdayIso) {
+            'TODAY • ${AppDateUtils.formatDate(matchDt, format: "dd MMM yyyy")}';
+      } else if (rawDateIso == yesterdayIso) {
         headerKey =
-            'YESTERDAY • ${AppDateUtils.formatDate(yesterdayIso, format: "dd MMM yyyy")}';
+            'YESTERDAY • ${AppDateUtils.formatDate(matchDt, format: "dd MMM yyyy")}';
       } else {
         headerKey =
-            AppDateUtils.formatDate(rawDate, format: "EEE, dd MMM yyyy");
+            AppDateUtils.formatDate(matchDt, format: "EEE, dd MMM yyyy");
       }
 
       grouped.putIfAbsent(headerKey, () => []).add(game);
@@ -198,7 +214,7 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Row(
-              children: ['ALL', 'COMPLETED', 'CANCELLED'].map((filter) {
+              children: ['COMPLETED', 'CANCELLED'].map((filter) {
                 return Obx(() {
                   final isSelected = controller.activeFilter.value == filter;
                   return Padding(
@@ -385,7 +401,8 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
 
   Widget _buildHistoryCard(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isCompleted = game.status.toUpperCase() == 'COMPLETED';
+    final statusUpper = game.status.toUpperCase();
+    final isCompleted = statusUpper == 'COMPLETED' || statusUpper == 'FINISHED';
 
     String startTime =
         AppDateUtils.formatTime(game.startTime, format: 'h:mm a');
@@ -394,20 +411,13 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
       if (startTime.length > 5) startTime = startTime.substring(0, 5);
     }
 
-    String formattedDate = 'Today';
-    final rawDateStr = game.matchDate.split('T')[0].trim();
-    if (!isCompleted ||
-        AppDateUtils.isMatchInFuture(rawDateStr, game.startTime)) {
-      formattedDate = 'Cancelled';
-    } else {
-      try {
-        final parsedDate = DateTime.parse(rawDateStr);
-        formattedDate =
-            AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
-      } catch (_) {
-        formattedDate = rawDateStr;
-      }
-    }
+    final matchDt = AppDateUtils.parseDate(game.matchDate) ??
+        AppDateUtils.parseMatchDateTime(game.matchDate, game.startTime);
+    final String formattedDate = matchDt != null
+        ? AppDateUtils.formatDate(matchDt, format: 'EEE, dd MMM')
+        : (game.matchDate.contains('T')
+            ? game.matchDate.split('T')[0]
+            : game.matchDate);
 
     final double fee = game.perPlayerFee;
 

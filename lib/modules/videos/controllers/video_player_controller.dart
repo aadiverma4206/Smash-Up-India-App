@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart' as vp;
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/config/env_config.dart';
+import '../../../core/storage/secure_storage_service.dart';
 import '../../../core/utils/app_logger.dart';
 
 class VideoPlayerController extends GetxController {
@@ -80,6 +81,15 @@ class VideoPlayerController extends GetxController {
     errorMessage.value = '';
     isBuffering.value = true;
 
+    if (url.trim().isEmpty ||
+        url.contains('BigBuckBunny') ||
+        url.contains('commondatastorage.googleapis.com')) {
+      hasError.value = true;
+      isBuffering.value = false;
+      errorMessage.value = 'No recorded video footage is available for this match.';
+      return;
+    }
+
     final filename = url.split('/').last.split('?').first;
     if (filename.isNotEmpty) {
       final localPath = await _getLocalVideoPath(filename);
@@ -102,8 +112,19 @@ class VideoPlayerController extends GetxController {
         final fullUrl = resolveAbsoluteUrl(url);
         resolvedUrl.value = fullUrl;
         AppLogger.info('🌐 Streaming video from URL: $fullUrl');
-        videoPlayerController =
-            vp.VideoPlayerController.networkUrl(Uri.parse(fullUrl));
+
+        Map<String, String>? headers;
+        if (Get.isRegistered<SecureStorageService>()) {
+          final token = await Get.find<SecureStorageService>().getAccessToken();
+          if (token != null && token.isNotEmpty) {
+            headers = {'Authorization': 'Bearer $token'};
+          }
+        }
+
+        videoPlayerController = vp.VideoPlayerController.networkUrl(
+          Uri.parse(fullUrl),
+          httpHeaders: headers ?? const {},
+        );
       }
 
       await videoPlayerController!.initialize();
@@ -254,9 +275,19 @@ class VideoPlayerController extends GetxController {
       final dio = Dio();
       final downloadUrl =
           url.contains('?') ? '$url&download=1' : '$url?download=1';
+
+      Options? options;
+      if (Get.isRegistered<SecureStorageService>()) {
+        final token = await Get.find<SecureStorageService>().getAccessToken();
+        if (token != null && token.isNotEmpty) {
+          options = Options(headers: {'Authorization': 'Bearer $token'});
+        }
+      }
+
       await dio.download(
         downloadUrl,
         savePath,
+        options: options,
         onReceiveProgress: (received, total) {
           if (total > 0) {
             downloadProgress.value = received / total;

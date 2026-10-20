@@ -504,13 +504,19 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
           Obx(() {
             final String? playbackUrl =
                 controller.cctvPlaybackUrl.value ?? game.videoPlaybackUrl;
-            if (playbackUrl != null && playbackUrl.isNotEmpty) {
+            final bool hasValidVideo = playbackUrl != null &&
+                playbackUrl.isNotEmpty &&
+                !playbackUrl.contains('BigBuckBunny') &&
+                !playbackUrl.contains('sample/');
+
+            if (hasValidVideo) {
               return Column(
                 children: [
                   GestureDetector(
                     onTap: () {
                       Get.toNamed('/videos/player', arguments: {
                         'videoUrl': playbackUrl,
+                        'playbackUrl': playbackUrl,
                         'title': '${game.title} - CCTV Footage',
                       });
                     },
@@ -541,6 +547,7 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
                       onPressed: () {
                         Get.toNamed('/videos/player', arguments: {
                           'videoUrl': playbackUrl,
+                          'playbackUrl': playbackUrl,
                           'title': '${game.title} - CCTV Footage',
                         });
                       },
@@ -555,12 +562,43 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
                 ],
               );
             }
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: EmptyStateWidget(
-                title: 'No CCTV Footage Available',
-                subtitle: 'No CCTV footage was recorded for this match.',
-                imageSize: 130,
+
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF182232) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.videocam_off_rounded,
+                        size: 40, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'No CCTV Video Recording Available',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'No camera recording was saved for this match.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             );
           }),

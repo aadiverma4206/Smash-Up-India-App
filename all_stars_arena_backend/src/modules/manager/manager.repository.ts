@@ -345,7 +345,28 @@ export class ManagerRepository {
       SELECT g.*,
              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
-             (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
+             (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count,
+             (
+               SELECT COALESCE(json_agg(
+                 json_build_object(
+                   'userId', gp.user_id,
+                   'user_id', gp.user_id,
+                   'name', COALESCE(pu.name, 'Player'),
+                   'profileImageUrl', pu.profile_image_url,
+                   'profile_image_url', pu.profile_image_url,
+                   'team', COALESCE(gp.team, 'TEAM_A'),
+                   'position', COALESCE(gp.position, 'MID'),
+                   'ovr', COALESCE(pd.ovr_rating, 80),
+                   'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
+                   'payment_status', COALESCE(gp.payment_status, 'PAID'),
+                   'phone', pu.phone
+                 )
+               ), '[]'::json)
+               FROM public.game_players gp
+               JOIN public.users pu ON pu.id = gp.user_id
+               LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
+               WHERE gp.game_id = g.id
+             ) as roster
       FROM public.games g
       WHERE ${conditions.join(" AND ")}
       ORDER BY g.match_date ASC, g.start_time ASC;
@@ -364,13 +385,19 @@ export class ManagerRepository {
     const conditions: string[] = [
       "(g.club_id = $1 OR g.club_id = 'all_stars_arena_club')",
       "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
+      "g.match_date::date <= CURRENT_DATE",
     ];
     const values: any[] = [clubId || "all_stars_arena_club"];
     let idx = 2;
 
     if (statusFilter && statusFilter.toUpperCase() !== "ALL") {
-      conditions.push(`UPPER(g.status::text) = $${idx++}`);
-      values.push(statusFilter.toUpperCase());
+      const upperStatus = statusFilter.toUpperCase();
+      if (upperStatus === "COMPLETED") {
+        conditions.push(`UPPER(g.status::text) IN ('COMPLETED', 'FINISHED')`);
+      } else {
+        conditions.push(`UPPER(g.status::text) = $${idx++}`);
+        values.push(upperStatus);
+      }
     }
 
     if (courtFilter && courtFilter.trim().toUpperCase() !== "ALL") {
@@ -383,17 +410,12 @@ export class ManagerRepository {
 
     const query = `
       SELECT g.*,
+             to_char(g.match_date::date, 'YYYY-MM-DD') as match_date,
              COALESCE(
                (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
-               g.video_playback_url,
-               'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+               g.video_playback_url
              ) as video_playback_url,
              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
-             CASE
-               WHEN g.status = 'CANCELLED' AND g.updated_at::date <= CURRENT_DATE THEN g.updated_at::date
-               WHEN g.match_date <= CURRENT_DATE THEN g.match_date
-               ELSE CURRENT_DATE
-             END as history_event_date,
              u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') * g.entry_fee as total_amount_collected,
@@ -416,7 +438,7 @@ export class ManagerRepository {
       FROM public.games g
       LEFT JOIN public.users u ON u.id = g.creator_id
       WHERE ${conditions.join(" AND ")}
-      ORDER BY history_event_date DESC, g.start_time DESC
+      ORDER BY g.match_date DESC, g.start_time DESC, g.created_at DESC
       LIMIT $${idx++} OFFSET $${idx++};
     `;
     const res = await dbPool.query(query, values);
@@ -810,10 +832,80 @@ export class ManagerRepository {
       [gameId],
     );
 
+    const mappedPlayers = playersRes.rows.map((r: any) => ({
+      rosterId: r.roster_id,
+      roster_id: r.roster_id,
+      userId: r.user_id,
+      user_id: r.user_id,
+      team: (r.team || "TEAM_A").toUpperCase(),
+      position: r.position || "MID",
+      paymentStatus: (r.payment_status || "PAID").toUpperCase(),
+      payment_status: (r.payment_status || "PAID").toUpperCase(),
+      joinedAt: r.joined_at,
+      name: r.name || "Player",
+      email: r.email,
+      phone: r.phone,
+      profileImageUrl: r.profile_image_url,
+      profile_image_url: r.profile_image_url,
+      eloRating: Number(r.elo_rating || 1200),
+      ovr: Number(r.ovr_rating || 75),
+      ovr_rating: Number(r.ovr_rating || 75),
+    }));
+
     return {
       ...game,
-      roster: playersRes.rows,
+      roster: mappedPlayers,
       recording: recordingRes.rows[0] || null,
+    };
+  }
+
+  static async getGamePlayers(gameId: string) {
+    const playersRes = await dbPool.query(
+      `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.created_at as joined_at,
+              u.name, u.email, u.phone, u.profile_image_url,
+              pd.elo_rating, pd.ovr_rating
+       FROM public.game_players gp
+       JOIN public.users u ON u.id = gp.user_id
+       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
+       WHERE gp.game_id = $1
+       ORDER BY gp.team ASC, gp.created_at ASC;`,
+      [gameId],
+    );
+
+    const players = playersRes.rows.map((r: any) => ({
+      rosterId: r.roster_id,
+      roster_id: r.roster_id,
+      userId: r.user_id,
+      user_id: r.user_id,
+      team: (r.team || "TEAM_A").toUpperCase(),
+      position: r.position || "MID",
+      paymentStatus: (r.payment_status || "PAID").toUpperCase(),
+      payment_status: (r.payment_status || "PAID").toUpperCase(),
+      joinedAt: r.joined_at,
+      name: r.name || "Player",
+      email: r.email,
+      phone: r.phone,
+      profileImageUrl: r.profile_image_url,
+      profile_image_url: r.profile_image_url,
+      eloRating: Number(r.elo_rating || 1200),
+      ovr: Number(r.ovr_rating || 75),
+      ovr_rating: Number(r.ovr_rating || 75),
+    }));
+
+    const teamA = players.filter((p: any) =>
+      p.team.toUpperCase().includes("A"),
+    );
+    const teamB = players.filter((p: any) =>
+      p.team.toUpperCase().includes("B"),
+    );
+
+    return {
+      totalPlayers: players.length,
+      teamACount: teamA.length,
+      teamBCount: teamB.length,
+      teamA,
+      teamB,
+      roster: players,
     };
   }
 

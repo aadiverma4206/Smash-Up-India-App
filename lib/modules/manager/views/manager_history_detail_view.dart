@@ -733,7 +733,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                 }
               },
             ),
-            if (AuthService.to.currentUser.value?.roleId == 1) ...[
+            if (AuthService.to.isAdmin || AuthService.to.isManager) ...[
               const SizedBox(height: 12),
               Obx(() {
                 if (isEditingScore.value) {
@@ -926,7 +926,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                     icon: Icon(Icons.edit_note_rounded,
                         color: Colors.green.shade700, size: 18),
                     label: Text(
-                      'Edit & Override Official Score (Admin Only)',
+                      'Edit & Override Official Score',
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.bold,
@@ -1616,13 +1616,47 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                     ? selectedVid.playbackUrl
                     : (game.videoPlaybackUrl ?? ''));
 
-            if (playbackUrl.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: EmptyStateWidget(
-                  title: 'No CCTV Footage Available',
-                  subtitle: 'No CCTV footage was recorded for this match.',
-                  imageSize: 130,
+            final bool hasValidVideo = playbackUrl.isNotEmpty &&
+                !playbackUrl.contains('BigBuckBunny') &&
+                !playbackUrl.contains('sample/');
+
+            if (!hasValidVideo) {
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF182232) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.videocam_off_rounded,
+                          size: 40, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'No CCTV Video Recording Available',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'No camera recording was saved for this match.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               );
             }

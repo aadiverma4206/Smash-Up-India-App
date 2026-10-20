@@ -51,6 +51,8 @@ class GameRosterPlayerModel {
   final String team;
   final String position;
   final int ovr;
+  final String paymentStatus;
+  final String? phone;
 
   GameRosterPlayerModel({
     required this.userId,
@@ -59,6 +61,8 @@ class GameRosterPlayerModel {
     required this.team,
     this.position = 'ST',
     this.ovr = 75,
+    this.paymentStatus = 'PAID',
+    this.phone,
   });
 
   factory GameRosterPlayerModel.fromJson(Map<String, dynamic> json) {
@@ -74,10 +78,25 @@ class GameRosterPlayerModel {
       position:
           (json['position'] ?? json['player_position'] ?? 'ST').toString(),
       ovr: _parseInt(json['ovr'] ?? json['ovr_rating'], 75),
+      paymentStatus: (json['paymentStatus'] ??
+              json['payment_status'] ??
+              'PAID')
+          .toString()
+          .toUpperCase(),
+      phone: json['phone']?.toString(),
     );
   }
 
-  Map<String, dynamic> toJson() => _$GameRosterPlayerModelToJson(this);
+  Map<String, dynamic> toJson() => {
+        'userId': userId,
+        'name': name,
+        'profileImageUrl': profileImageUrl,
+        'team': team,
+        'position': position,
+        'ovr': ovr,
+        'paymentStatus': paymentStatus,
+        'phone': phone,
+      };
 }
 
 @JsonSerializable(createFactory: false)

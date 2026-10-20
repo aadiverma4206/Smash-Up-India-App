@@ -1365,16 +1365,15 @@ export class ManagerService {
       );
     }
 
-    const hasExistingScore = game.team_a_score > 0 || game.team_b_score > 0;
-    if (hasExistingScore && userRole !== 1) {
-      throw new ApiError(
-        403,
-        "Official match score is locked. Only Platform Administrators can edit or override submitted scores.",
-        "SCORE_LOCKED_ADMIN_ONLY",
-      );
-    }
-
     if (userRole === 3) {
+      const hasExistingScore = game.team_a_score > 0 || game.team_b_score > 0;
+      if (hasExistingScore) {
+        throw new ApiError(
+          403,
+          "Official match score is locked. Only Turf Managers and Admins can edit scores.",
+          "SCORE_LOCKED",
+        );
+      }
       if (game.creator_id !== userId) {
         throw new ApiError(
           403,
@@ -1387,7 +1386,10 @@ export class ManagerService {
         `SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;`,
         [game.club_id, userId],
       );
-      if (isClubManager.rows.length === 0) {
+      if (
+        isClubManager.rows.length === 0 &&
+        game.club_id !== "all_stars_arena_club"
+      ) {
         throw new ApiError(
           403,
           "Forbidden: You do not manage the club hosting this match",
@@ -1589,5 +1591,24 @@ export class ManagerService {
     }
 
     return game;
+  }
+
+  static async getGamePlayers(managerUserId: string, gameId: string) {
+    const game = await ManagerRepository.getGameForManager(gameId);
+    if (!game) throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
+
+    const isManager = await dbPool.query(
+      `SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;`,
+      [game.club_id, managerUserId],
+    );
+    if (isManager.rows.length === 0) {
+      throw new ApiError(
+        403,
+        "Forbidden: You do not manage the club hosting this match",
+        "FORBIDDEN_CLUB_SCOPE",
+      );
+    }
+
+    return await ManagerRepository.getGamePlayers(gameId);
   }
 }

@@ -120,10 +120,16 @@ export const getPlayerHistory = asyncHandler(
     const userId = req.user?.id;
     const limit = Number(req.query.limit) || 20;
     const offset = Number(req.query.offset) || 0;
+    const status = req.query.status as string;
 
     if (!userId) throw new ApiError(401, "Unauthorized");
 
-    const history = await PlayerRepository.getHistory(userId, limit, offset);
+    const history = await PlayerRepository.getHistory(
+      userId,
+      limit,
+      offset,
+      status,
+    );
     res
       .status(200)
       .json(ApiResponse.success("Player match history retrieved", history));

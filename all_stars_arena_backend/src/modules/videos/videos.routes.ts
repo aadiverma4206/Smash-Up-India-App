@@ -19,6 +19,12 @@ const router = Router();
 router.head("/:filename", optionalAuthenticateToken, streamVideoFileController);
 
 router.get(
+  "/:id/stream",
+  optionalAuthenticateToken,
+  streamVideoFileController,
+);
+
+router.get(
   "/:id",
   optionalAuthenticateToken,
   (req: Request, res: Response, next: NextFunction) => {
@@ -26,7 +32,11 @@ router.get(
     if (
       idOrFilename.endsWith(".mp4") ||
       idOrFilename.startsWith("match_") ||
-      idOrFilename.includes(".")
+      idOrFilename.includes(".") ||
+      Boolean(req.headers.range) ||
+      Boolean(req.headers.accept?.includes("video")) ||
+      req.query.stream === "true" ||
+      req.query.playback === "true"
     ) {
       return streamVideoFileController(req, res, next);
     }

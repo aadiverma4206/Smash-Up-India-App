@@ -202,30 +202,45 @@ export class PlayerRepository {
     };
   }
 
-  static async getHistory(userId: string, limit = 20, offset = 0) {
-    const res = await dbPool.query(
-      `SELECT g.id, g.club_id, g.court_id, g.creator_id, g.title, g.description, g.match_date, g.start_time, g.end_time,
+  static async getHistory(userId: string, limit = 20, offset = 0, statusFilter?: string) {
+    const conditions: string[] = [
+      "gp.user_id = $1",
+      "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
+      "g.match_date::date <= CURRENT_DATE",
+    ];
+    const values: any[] = [userId];
+    let idx = 2;
+
+    if (statusFilter && statusFilter.toUpperCase() !== "ALL") {
+      const upperStatus = statusFilter.toUpperCase();
+      if (upperStatus === "COMPLETED") {
+        conditions.push(`UPPER(g.status::text) IN ('COMPLETED', 'FINISHED')`);
+      } else {
+        conditions.push(`UPPER(g.status::text) = $${idx++}`);
+        values.push(upperStatus);
+      }
+    }
+
+    values.push(limit, offset);
+
+    const query = `
+       SELECT g.id, g.club_id, g.court_id, g.creator_id, g.title, g.description,
+              to_char(g.match_date::date, 'YYYY-MM-DD') as match_date, g.start_time, g.end_time,
               g.status, g.format, g.privacy, g.entry_fee, g.entry_fee as per_player_fee, g.entry_fee as my_entry_fee,
               g.team_a_score, g.team_b_score, g.winner_team,
               COALESCE(
                 (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
-                g.video_playback_url,
-                'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+                g.video_playback_url
               ) as video_playback_url,
               CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
               c.name as club_name,
               gp.team as my_team, gp.position as my_position,
               CASE
-                WHEN g.status <> 'COMPLETED' THEN 'PENDING'
+                WHEN UPPER(g.status::text) NOT IN ('COMPLETED', 'FINISHED') THEN 'PENDING'
                 WHEN g.winner_team = 'DRAW' THEN 'DRAW'
                 WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
                 ELSE 'LOSS'
               END as result,
-              CASE
-                WHEN g.status = 'CANCELLED' AND g.updated_at::date <= CURRENT_DATE THEN g.updated_at::date
-                WHEN g.match_date <= CURRENT_DATE THEN g.match_date
-                ELSE CURRENT_DATE
-              END as history_event_date,
               (SELECT COUNT(*) FROM public.game_players gp_cnt WHERE gp_cnt.game_id = g.id) as current_players_count,
               (
                 SELECT COALESCE(json_agg(
@@ -247,11 +262,11 @@ export class PlayerRepository {
        JOIN public.games g ON g.id = gp.game_id
        LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
-       WHERE gp.user_id = $1 AND UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')
-       ORDER BY history_event_date DESC, g.start_time DESC
-       LIMIT $2 OFFSET $3;`,
-      [userId, limit, offset],
-    );
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY g.match_date DESC, g.start_time DESC, g.created_at DESC
+       LIMIT $${idx++} OFFSET $${idx++};`;
+
+    const res = await dbPool.query(query, values);
     return res.rows;
   }
 

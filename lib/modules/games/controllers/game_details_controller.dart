@@ -147,7 +147,7 @@ class GameDetailsController extends GetxController {
         teamBRoster.value = g.roster!.where((p) => p.team == 'TEAM_B').toList();
       }
 
-      if (isUserInGame || isManagerOrAdmin) {
+      if (g.status == 'COMPLETED' || isUserInGame || isManagerOrAdmin) {
         try {
           final vids = await repository.getGameVideos(targetId);
           matchVideos.value = vids;

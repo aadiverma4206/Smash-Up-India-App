@@ -32,6 +32,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           return const AppLoader(message: 'Loading match details...');
         }
 
+        if (controller.teamAPlayers.isEmpty &&
+            controller.teamBPlayers.isEmpty &&
+            (game.roster == null || game.roster!.isEmpty) &&
+            !controller.isLoadingRoster.value) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            controller.fetchGamePlayers(game.id);
+          });
+        }
+
         final collectedFee = (game.currentPlayers * game.perPlayerFee);
         final statusUpper = game.status.toUpperCase();
         final isOngoing = statusUpper == 'ONGOING' || statusUpper == 'STARTED';
@@ -641,9 +650,14 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     ? selectedVid.playbackUrl
                     : game.videoPlaybackUrl);
 
-            final cameraDisplayName = selectedVid?.cameraName ?? 'Camera 1';
+            final bool hasValidVideo = playbackUrl != null &&
+                playbackUrl.trim().isNotEmpty &&
+                !playbackUrl.contains('BigBuckBunny') &&
+                !playbackUrl.contains('commondatastorage.googleapis.com') &&
+                !playbackUrl.contains('sample/');
 
-            if (playbackUrl != null && playbackUrl.isNotEmpty) {
+            if (hasValidVideo) {
+              final cameraDisplayName = selectedVid?.cameraName ?? 'Camera 1';
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -812,115 +826,83 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
 
   Widget _buildRosterPaymentSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final roster = game.roster ?? [];
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Joined Players & Payment Badges',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: context.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${roster.length} Players',
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Divider(color: context.borderColor, height: 20),
-          Obx(() {
-            final activeTab = controller.selectedRosterTeamFilter.value;
-            final teamACount =
-                roster.where((p) => p.team.toUpperCase().contains('A')).length;
-            final teamBCount =
-                roster.where((p) => p.team.toUpperCase().contains('B')).length;
+    return Obx(() {
+      final roster = (controller.selectedGame.value?.roster != null &&
+              controller.selectedGame.value!.roster!.isNotEmpty)
+          ? controller.selectedGame.value!.roster!
+          : (controller.teamAPlayers.isNotEmpty ||
+                  controller.teamBPlayers.isNotEmpty)
+              ? [...controller.teamAPlayers, ...controller.teamBPlayers]
+              : (game.roster ?? []);
 
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () =>
-                        controller.selectedRosterTeamFilter.value = 'ALL',
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: activeTab == 'ALL'
-                            ? AppColors.primary
-                            : (isDark
-                                ? const Color(0xFF1E293B)
-                                : const Color(0xFFF1F5F9)),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: activeTab == 'ALL'
-                              ? AppColors.primary
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.groups_rounded,
-                            size: 14,
-                            color: activeTab == 'ALL'
-                                ? Colors.white
-                                : (isDark ? Colors.white70 : Colors.black87),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'All Players (${roster.length})',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: activeTab == 'ALL'
-                                  ? Colors.white
-                                  : (isDark ? Colors.white70 : Colors.black87),
-                            ),
-                          ),
-                        ],
-                      ),
+      final activeTab = controller.selectedRosterTeamFilter.value == 'ALL'
+          ? 'TEAM_A'
+          : controller.selectedRosterTeamFilter.value;
+
+      final teamAPlayers =
+          roster.where((p) => p.team.toUpperCase().contains('A')).toList();
+      final teamBPlayers =
+          roster.where((p) => p.team.toUpperCase().contains('B')).toList();
+
+      final teamACount = teamAPlayers.length;
+      final teamBCount = teamBPlayers.length;
+      final totalPlayers = roster.length;
+
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Joined Players & Payment Badges',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: context.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '$totalPlayers Players',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
+                ),
+              ],
+            ),
+            Divider(color: context.borderColor, height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
                     onTap: () =>
                         controller.selectedRosterTeamFilter.value = 'TEAM_A',
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: activeTab == 'TEAM_A'
                             ? Colors.green
@@ -935,19 +917,20 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                         ),
                       ),
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.shield_outlined,
-                            size: 14,
+                            Icons.shield_rounded,
+                            size: 16,
                             color: activeTab == 'TEAM_A'
                                 ? Colors.white
                                 : Colors.green,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Text(
                             'Team A ($teamACount)',
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.bold,
                               color: activeTab == 'TEAM_A'
                                   ? Colors.white
@@ -958,14 +941,16 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
                     onTap: () =>
                         controller.selectedRosterTeamFilter.value = 'TEAM_B',
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: activeTab == 'TEAM_B'
                             ? Colors.blue.shade700
@@ -980,19 +965,20 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                         ),
                       ),
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.shield_outlined,
-                            size: 14,
+                            Icons.shield_rounded,
+                            size: 16,
                             color: activeTab == 'TEAM_B'
                                 ? Colors.white
                                 : Colors.blue.shade700,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Text(
                             'Team B ($teamBCount)',
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.bold,
                               color: activeTab == 'TEAM_B'
                                   ? Colors.white
@@ -1003,138 +989,212 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       ),
                     ),
                   ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 14),
-          Obx(() {
-            final filterTab = controller.selectedRosterTeamFilter.value;
-            List<GameRosterPlayerModel> filteredRoster;
-            if (filterTab == 'TEAM_A') {
-              filteredRoster = roster
-                  .where((p) => p.team.toUpperCase().contains('A'))
-                  .toList();
-            } else if (filterTab == 'TEAM_B') {
-              filteredRoster = roster
-                  .where((p) => p.team.toUpperCase().contains('B'))
-                  .toList();
-            } else {
-              filteredRoster = roster;
-            }
-
-            if (filteredRoster.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  filterTab == 'TEAM_A'
-                      ? 'No players assigned to Team A in this match.'
-                      : (filterTab == 'TEAM_B'
-                          ? 'No players assigned to Team B in this match.'
-                          : 'No players have joined this match yet.'),
-                  style: TextStyle(color: context.textSecondary, fontSize: 13),
                 ),
-              );
-            }
+              ],
+            ),
+            const SizedBox(height: 14),
+            Builder(builder: (context) {
+              final displayedPlayers =
+                  activeTab == 'TEAM_B' ? teamBPlayers : teamAPlayers;
+              final isTeamA = activeTab == 'TEAM_A';
 
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredRoster.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final player = filteredRoster[index];
-                final isTeamA = player.team.toUpperCase().contains('A');
-
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkInputBg
-                        : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isTeamA
-                          ? Colors.green.withValues(alpha: 0.3)
-                          : Colors.blue.withValues(alpha: 0.3),
-                      width: 1,
+              if (displayedPlayers.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text(
+                      isTeamA
+                          ? 'No players assigned to Team A in this match.'
+                          : 'No players assigned to Team B in this match.',
+                      style: TextStyle(
+                          color: context.textSecondary, fontSize: 13),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: (isTeamA ? Colors.green : Colors.blue)
-                            .withValues(alpha: 0.18),
-                        child: Text(
-                          player.name.isNotEmpty
-                              ? player.name[0].toUpperCase()
-                              : 'P',
-                          style: TextStyle(
-                            color:
-                                isTeamA ? Colors.green : Colors.blue.shade700,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              player.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13.5,
-                                color: context.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Position: ${player.position} • OVR: ${player.ovr}',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: context.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: (isTeamA ? Colors.green : Colors.blue.shade700)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color:
-                                isTeamA ? Colors.green : Colors.blue.shade700,
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          isTeamA ? 'TEAM A' : 'TEAM B',
-                          style: TextStyle(
-                            color:
-                                isTeamA ? Colors.green : Colors.blue.shade700,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 );
-              },
-            );
-          }),
-        ],
-      ),
-    );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: displayedPlayers.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final player = displayedPlayers[index];
+                  final paymentStatus = player.paymentStatus.toUpperCase();
+                  final isPaid = paymentStatus == 'PAID' ||
+                      paymentStatus == 'COMPLETED' ||
+                      paymentStatus == 'SUCCESS';
+                  final isPending = paymentStatus == 'PENDING';
+                  final isRefunded = paymentStatus == 'REFUNDED';
+
+                  final badgeColor = isPaid
+                      ? Colors.green
+                      : (isPending
+                          ? Colors.orange
+                          : (isRefunded
+                              ? Colors.deepOrange
+                              : Colors.redAccent));
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.darkInputBg
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isTeamA
+                            ? Colors.green.withValues(alpha: 0.25)
+                            : Colors.blue.withValues(alpha: 0.25),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 19,
+                          backgroundColor:
+                              (isTeamA ? Colors.green : Colors.blue)
+                                  .withValues(alpha: 0.18),
+                          backgroundImage: (player.profileImageUrl != null &&
+                                  player.profileImageUrl!.isNotEmpty)
+                              ? NetworkImage(player.profileImageUrl!)
+                              : null,
+                          child: (player.profileImageUrl == null ||
+                                  player.profileImageUrl!.isEmpty)
+                              ? Text(
+                                  player.name.isNotEmpty
+                                      ? player.name[0].toUpperCase()
+                                      : 'P',
+                                  style: TextStyle(
+                                    color: isTeamA
+                                        ? Colors.green
+                                        : Colors.blue.shade700,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                player.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                  color: context.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Pos: ${player.position}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: context.textSecondary,
+                                    ),
+                                  ),
+                                  Text(
+                                    ' • ',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: context.textSecondary,
+                                    ),
+                                  ),
+                                  Text(
+                                    'OVR: ${player.ovr}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: context.textSecondary,
+                                    ),
+                                  ),
+                                  if (player.phone != null &&
+                                      player.phone!.isNotEmpty) ...[
+                                    Text(
+                                      ' • ',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: context.textSecondary,
+                                      ),
+                                    ),
+                                    Flexible(
+                                      child: Text(
+                                        player.phone!,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: context.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Payment Status Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: badgeColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: badgeColor.withValues(alpha: 0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPaid
+                                    ? Icons.check_circle_rounded
+                                    : (isPending
+                                        ? Icons.hourglass_top_rounded
+                                        : (isRefunded
+                                            ? Icons.replay_rounded
+                                            : Icons.cancel_rounded)),
+                                size: 12,
+                                color: badgeColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isPaid
+                                    ? 'PAID'
+                                    : (isPending
+                                        ? 'PENDING'
+                                        : (isRefunded ? 'REFUND' : 'UNPAID')),
+                                style: TextStyle(
+                                  color: badgeColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }),
+          ],
+        ),
+      );
+    });
   }
 
   void _confirmStopMatch(BuildContext context, GameModel game) {

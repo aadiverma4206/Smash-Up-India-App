@@ -846,12 +846,18 @@ class GameDetailsView extends StatelessWidget {
       final videos = controller.matchVideos;
       final selectedVid = controller.selectedVideo.value ??
           (videos.isNotEmpty ? videos.first : null);
-      final videoUrl =
+      final rawVideoUrl =
           (selectedVid != null && selectedVid.playbackUrl.isNotEmpty)
               ? selectedVid.playbackUrl
               : game.videoPlaybackUrl;
 
-      if (videoUrl == null || videoUrl.isEmpty) {
+      final bool hasValidVideo = rawVideoUrl != null &&
+          rawVideoUrl.trim().isNotEmpty &&
+          !rawVideoUrl.contains('BigBuckBunny') &&
+          !rawVideoUrl.contains('commondatastorage.googleapis.com') &&
+          !rawVideoUrl.contains('sample/');
+
+      if (!hasValidVideo) {
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.only(top: 14),
@@ -891,6 +897,7 @@ class GameDetailsView extends StatelessWidget {
         );
       }
 
+      final videoUrl = rawVideoUrl;
       final cameraName = selectedVid?.cameraName ?? 'Camera 1';
       final showMultiCam = controller.isManagerOrAdmin && videos.length > 1;
 

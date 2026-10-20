@@ -6,20 +6,38 @@ class AppDateUtils {
 
   static DateTime? parseDate(dynamic input) {
     if (input == null) return null;
-    if (input is DateTime) return input.toLocal();
+    if (input is DateTime) {
+      return DateTime(input.year, input.month, input.day);
+    }
     if (input is int) {
-      return DateTime.fromMillisecondsSinceEpoch(input).toLocal();
+      final dt = DateTime.fromMillisecondsSinceEpoch(input);
+      return DateTime(dt.year, dt.month, dt.day);
     }
     if (input is double) {
-      return DateTime.fromMillisecondsSinceEpoch(input.toInt()).toLocal();
+      final dt = DateTime.fromMillisecondsSinceEpoch(input.toInt());
+      return DateTime(dt.year, dt.month, dt.day);
     }
 
     if (input is String) {
       final trimmed = input.trim();
       if (trimmed.isEmpty) return null;
 
-      final direct = DateTime.tryParse(trimmed);
-      if (direct != null) return direct.toLocal();
+      final cleanDateStr =
+          trimmed.contains('T') ? trimmed.split('T')[0].trim() : trimmed;
+
+      final dateRegex = RegExp(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$');
+      final match = dateRegex.firstMatch(cleanDateStr);
+      if (match != null) {
+        final year = int.parse(match.group(1)!);
+        final month = int.parse(match.group(2)!);
+        final day = int.parse(match.group(3)!);
+        return DateTime(year, month, day);
+      }
+
+      final direct = DateTime.tryParse(cleanDateStr);
+      if (direct != null) {
+        return DateTime(direct.year, direct.month, direct.day);
+      }
 
       final formats = [
         'yyyy-MM-dd HH:mm:ss',
@@ -40,8 +58,8 @@ class AppDateUtils {
 
       for (final fmt in formats) {
         try {
-          final dt = DateFormat(fmt).parseStrict(trimmed);
-          return dt;
+          final dt = DateFormat(fmt).parseStrict(cleanDateStr);
+          return DateTime(dt.year, dt.month, dt.day);
         } catch (_) {}
       }
     }

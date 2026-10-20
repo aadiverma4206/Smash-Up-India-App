@@ -184,8 +184,8 @@ export const initDbTables = async () => {
 
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS video_playback_url VARCHAR(512);
       UPDATE public.games
-      SET video_playback_url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
-      WHERE (video_playback_url IS NULL OR video_playback_url = '') AND UPPER(status::text) = 'COMPLETED';
+      SET video_playback_url = NULL
+      WHERE video_playback_url ILIKE '%commondatastorage.googleapis.com%' OR video_playback_url ILIKE '%BigBuckBunny%';
 
       DO $$
       BEGIN
