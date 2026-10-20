@@ -86,11 +86,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       final envUri = Uri.tryParse(EnvConfig.baseUrl);
       if (envUri != null && envUri.host.isNotEmpty) {
         String host = envUri.host;
-        if (host == 'localhost' || host == '127.0.0.1') {
-          if (!kIsWeb && Platform.isAndroid) {
-            host = '10.0.2.2';
-          }
-        }
         final scheme = envUri.scheme.isNotEmpty ? envUri.scheme : 'http';
         final port =
             envUri.hasPort ? envUri.port : (scheme == 'https' ? 443 : 5000);
@@ -98,10 +93,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       }
     } catch (_) {}
 
-    if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:5000/cctv-stream';
-    }
-    return 'http://localhost:5000/cctv-stream';
+    return '';
   }
 
   @override
@@ -160,9 +152,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedUrl = prefs.getString(_prefKeyBaseUrl);
-      if (savedUrl != null &&
-          savedUrl.trim().isNotEmpty &&
-          !savedUrl.contains('192.168.1.100')) {
+      if (savedUrl != null && savedUrl.trim().isNotEmpty) {
         _baseUrl = savedUrl.trim();
       }
       cachedTunnel = prefs.getString(ServerDiscoveryService.prefKeyTunnelUrl);
@@ -189,56 +179,29 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       final envUri = Uri.tryParse(EnvConfig.baseUrl);
       if (envUri != null && envUri.host.isNotEmpty) {
         String host = envUri.host;
-        if (host == 'localhost' || host == '127.0.0.1') {
-          if (!kIsWeb && Platform.isAndroid) host = '10.0.2.2';
-        }
         return 'http://$host:8888/$_currentStreamKey/index.m3u8';
       }
     } catch (_) {}
-    return 'http://10.0.2.2:8888/$_currentStreamKey/index.m3u8';
+    return '';
   }
 
-  /// Complete list of intelligent candidate URLs in order of priority:
+  /// Candidate stream URLs derived from EnvConfig.baseUrl from .env
   List<String> _buildCandidateUrls([String? cachedTunnelUrl]) {
     final candidates = <String>[];
 
-    // Priority 1: Universal Express Proxy (Port 5000)
+    // Priority 1: Express HLS Proxy (/cctv-stream) on EnvConfig.baseUrl
     final proxyUrl = _backendProxyHlsUrl;
     if (proxyUrl.isNotEmpty && !candidates.contains(proxyUrl)) {
       candidates.add(proxyUrl);
     }
 
-    // Priority 2: Direct MediaMTX port 8888 on backend host (for ultra-low latency LAN on Botivate_5g)
+    // Priority 2: Direct MediaMTX port 8888 on EnvConfig.baseUrl host
     final directUrl = _directMediaMtxHlsUrl;
     if (directUrl.isNotEmpty && !candidates.contains(directUrl)) {
       candidates.add(directUrl);
     }
 
-    // Priority 3: Dynamic Cached Cloudflare Tunnel (Universal for MGMT BOTIVATE & 5G/4G Mobile Data)
-    if (cachedTunnelUrl != null && cachedTunnelUrl.isNotEmpty) {
-      final clean = cachedTunnelUrl
-          .replaceAll(RegExp(r'/api/v1/?$'), '')
-          .replaceAll(RegExp(r'/$'), '');
-      final tunnelStream = '$clean/cctv-stream/$_currentStreamKey/index.m3u8';
-      if (!candidates.contains(tunnelStream)) candidates.add(tunnelStream);
-    }
-
-    // Priority 4: Production Cloudflare Quick Tunnel (Guaranteed to work across all subnets & mobile data)
-    const staticTunnel =
-        'https://integrity-bookmarks-options-matches.trycloudflare.com/cctv-stream';
-    final staticTunnelStream = '$staticTunnel/$_currentStreamKey/index.m3u8';
-    if (!candidates.contains(staticTunnelStream)) {
-      candidates.add(staticTunnelStream);
-    }
-
-    // Priority 5: Known LAN Fallback (Botivate_5g IP 192.168.1.21)
-    const lanFallback = 'http://192.168.1.21:5000/cctv-stream';
-    final lanStream = '$lanFallback/$_currentStreamKey/index.m3u8';
-    if (!candidates.contains(lanStream)) {
-      candidates.add(lanStream);
-    }
-
-    // Priority 6: Custom user configured URL if different
+    // Priority 3: Custom user configured URL if different
     if (_baseUrl.isNotEmpty) {
       final clean = _baseUrl.replaceAll(RegExp(r'/$'), '');
       final customUrl = clean.contains('/cam')
@@ -247,17 +210,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       if (!candidates.contains(customUrl)) {
         candidates.add(customUrl);
       }
-    }
-
-    // Priority 7: Android Emulator fallbacks
-    if (!kIsWeb && Platform.isAndroid) {
-      final emuProxy =
-          'http://10.0.2.2:5000/cctv-stream/$_currentStreamKey/index.m3u8';
-      final emuDirect = 'http://10.0.2.2:8888/$_currentStreamKey/index.m3u8';
-      final adbDirect = 'http://127.0.0.1:8888/$_currentStreamKey/index.m3u8';
-      if (!candidates.contains(emuProxy)) candidates.add(emuProxy);
-      if (!candidates.contains(emuDirect)) candidates.add(emuDirect);
-      if (!candidates.contains(adbDirect)) candidates.add(adbDirect);
     }
 
     return candidates;
@@ -1059,11 +1011,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                                 _isInitialized = false;
                                 _hasError = false;
                               });
-                              final working = await ServerDiscoveryService
-                                  .findWorkingServer();
-                              if (working != null) {
-                                await EnvConfig.saveBaseUrl(working);
-                              }
                               await _loadSavedBaseUrlAndInitialize();
                             },
                             icon: const Icon(Icons.refresh_rounded, size: 14),

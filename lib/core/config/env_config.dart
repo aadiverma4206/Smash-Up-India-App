@@ -4,38 +4,30 @@ import '../utils/app_logger.dart';
 
 class EnvConfig {
   static const String _prefBaseUrlKey = 'app_custom_base_url';
-  static String _customBaseUrl = '';
 
-  static String get appName => dotenv.env['APP_NAME'] ?? 'ALL STARS ARENA';
+  static String get appName =>
+      dotenv.env['APP_NAME']?.trim() ?? 'ALL STARS ARENA';
 
   /// Primary getter for backend Base URL.
-  /// If a runtime custom URL is set, it returns that.
-  /// Otherwise, it returns the BASE_URL from the .env file.
+  /// Always reads strictly from the .env file.
   static String get baseUrl {
-    if (_customBaseUrl.trim().isNotEmpty) {
-      return _customBaseUrl.trim();
-    }
     final envUrl = dotenv.env['BASE_URL']?.trim();
     if (envUrl != null && envUrl.isNotEmpty) {
       return envUrl;
     }
-    return 'http://192.168.1.28:5000/api/v1';
-  }
-
-  static set baseUrl(String url) {
-    _customBaseUrl = url.trim();
+    return '';
   }
 
   static String get razorpayKeyId =>
-      dotenv.env['RAZORPAY_KEY_ID'] ?? 'rzp_test_Sb44esbmpGlzBd';
+      dotenv.env['RAZORPAY_KEY_ID']?.trim() ?? '';
 
   static int get connectTimeout {
-    final val = dotenv.env['CONNECT_TIMEOUT'];
+    final val = dotenv.env['CONNECT_TIMEOUT']?.trim();
     return val != null ? (int.tryParse(val) ?? 15000) : 15000;
   }
 
   static int get receiveTimeout {
-    final val = dotenv.env['RECEIVE_TIMEOUT'];
+    final val = dotenv.env['RECEIVE_TIMEOUT']?.trim();
     return val != null ? (int.tryParse(val) ?? 15000) : 15000;
   }
 
@@ -64,50 +56,29 @@ class EnvConfig {
       }
     }
 
-    // Clear stale cached base URLs from SharedPreferences if they contain old unreachable IPs
+    // Clear any stale cached base URL overrides from SharedPreferences so .env is the single source of truth
     try {
       final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(_prefBaseUrlKey)?.trim();
-      final envUrl = dotenv.env['BASE_URL']?.trim() ?? '';
-
-      if (saved != null && saved.isNotEmpty) {
-        if (saved.contains('192.168.1.21') ||
-            saved.contains('192.168.1.100') ||
-            saved.contains('192.168.1.23')) {
-          await prefs.remove(_prefBaseUrlKey);
-          _customBaseUrl = '';
-          AppLogger.info(
-              '🧹 Cleared stale cached Base URL ($saved) in favor of .env ($envUrl)');
-        } else {
-          _customBaseUrl = saved;
-        }
-      }
+      await prefs.remove(_prefBaseUrlKey);
     } catch (_) {}
 
-    AppLogger.info('🚀 Active BASE_URL: $baseUrl');
+    AppLogger.info('🚀 Active BASE_URL from .env: $baseUrl');
   }
 
-  /// Save new custom Base URL at runtime
+  /// Compatibility method for saving custom Base URL
   static Future<void> saveBaseUrl(String newUrl) async {
-    final clean = newUrl.trim();
-    if (clean.isEmpty) return;
-    _customBaseUrl = clean;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefBaseUrlKey, clean);
-      AppLogger.info('💾 Custom Base URL saved: $clean');
-    } catch (e) {
-      AppLogger.error('Failed to save custom Base URL', e);
-    }
+      await prefs.remove(_prefBaseUrlKey);
+    } catch (_) {}
   }
 
   /// Reset Base URL back to `.env` default
   static Future<void> resetBaseUrl() async {
-    _customBaseUrl = '';
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefBaseUrlKey);
-      AppLogger.info('🔄 Base URL reset to .env default: $baseUrl');
+      AppLogger.info('🔄 Base URL set to .env default: $baseUrl');
     } catch (e) {
       AppLogger.error('Failed to reset Base URL', e);
     }

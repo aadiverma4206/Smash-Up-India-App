@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
+import '../../config/env_config.dart';
 import '../../utils/app_logger.dart';
-import '../server_discovery_service.dart';
 
 class RetryInterceptor extends Interceptor {
   final Dio dio;
@@ -13,18 +13,17 @@ class RetryInterceptor extends Interceptor {
       DioException err, ErrorInterceptorHandler handler) async {
     final requestOptions = err.requestOptions;
 
-    // Check if error is due to an unreachable host (timeout or connection refused)
+    // Check if error is due to connection timeout or connection error
     if (err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.connectionError) {
       bool failoverDone = requestOptions.extra['failoverDone'] ?? false;
       if (!failoverDone) {
         requestOptions.extra['failoverDone'] = true;
-        final switched =
-            await ServerDiscoveryService.handleConnectionFailure(dio);
-        if (switched) {
+        final currentBase = EnvConfig.baseUrl;
+        if (currentBase.isNotEmpty) {
+          requestOptions.baseUrl = currentBase;
           AppLogger.info(
-              '🔄 [RetryInterceptor] Retrying request with new baseUrl: ${dio.options.baseUrl}');
-          requestOptions.baseUrl = dio.options.baseUrl;
+              '🔄 [RetryInterceptor] Retrying request with .env baseUrl: ${requestOptions.baseUrl}');
           try {
             final response = await dio.fetch(requestOptions);
             return handler.resolve(response);

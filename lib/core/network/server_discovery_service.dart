@@ -1,119 +1,59 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/env_config.dart';
 import '../utils/app_logger.dart';
-import '../utils/device_detector.dart';
 
-/// Production-ready Dynamic Server Discovery & Failover Service.
-/// Automatically detects and switches to working backend host across:
-/// 1. Current WiFi LAN IP (e.g. 192.168.1.28 - Botivate_5g)
-/// 2. Public Cloudflare Tunnel (Universal - Mobile Data 4G/5G & Real Physical Mobile Devices)
-/// 3. Android Emulator Host Loopback (10.0.2.2)
-/// 4. Localhost / ADB (127.0.0.1)
+/// Server Discovery Service using EnvConfig.baseUrl strictly from .env
 class ServerDiscoveryService {
   static const String prefKeyTunnelUrl = 'cctv_public_tunnel_url';
 
-  /// Test a list of candidates in priority order based on physical device vs emulator
+  /// Test if the configured BASE_URL from .env is reachable
   static Future<String?> findWorkingServer([String? priorityUrl]) async {
-    final isRealDevice = await DeviceDetector.isPhysicalDevice();
-    final candidates = <String>[];
+    final candidate = (priorityUrl != null && priorityUrl.isNotEmpty)
+        ? priorityUrl
+        : EnvConfig.baseUrl;
 
-    // Priority 1: Current EnvConfig.baseUrl if valid
-    final current = priorityUrl ?? EnvConfig.baseUrl;
-    if (current.isNotEmpty) {
-      if (!isRealDevice ||
-          (!current.contains('10.0.2.2') && !current.contains('127.0.0.1'))) {
-        candidates.add(current);
-      }
-    }
-
-    // Priority 2: Saved public tunnel URL
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedTunnel = prefs.getString(prefKeyTunnelUrl);
-      if (savedTunnel != null && savedTunnel.isNotEmpty) {
-        final tunnelApi = savedTunnel.endsWith('/api/v1')
-            ? savedTunnel
-            : '${savedTunnel.replaceAll(RegExp(r'/$'), '')}/api/v1';
-        if (!candidates.contains(tunnelApi)) candidates.add(tunnelApi);
-      }
-    } catch (_) {}
-
-    // Priority 3: WiFi LAN IPs
-    const lan1 = 'http://192.168.1.28:5000/api/v1';
-    const lan2 = 'http://192.168.1.21:5000/api/v1';
-    const lan3 = 'http://192.168.1.23:5000/api/v1';
-    if (!candidates.contains(lan1)) candidates.add(lan1);
-    if (!candidates.contains(lan2)) candidates.add(lan2);
-    if (!candidates.contains(lan3)) candidates.add(lan3);
-
-    // Priority 4: Public Cloudflare Tunnel (Universal for Real Phones & Mobile Data 4G/5G)
-    const publicTunnel =
-        'https://integrity-bookmarks-options-matches.trycloudflare.com/api/v1';
-    if (!candidates.contains(publicTunnel)) candidates.add(publicTunnel);
-
-    // Priority 5: Emulator Host Loopback (10.0.2.2 / 127.0.0.1) - ONLY for emulators
-    if (!isRealDevice) {
-      const emu = 'http://10.0.2.2:5000/api/v1';
-      const local = 'http://127.0.0.1:5000/api/v1';
-      if (!candidates.contains(emu)) candidates.add(emu);
-      if (!candidates.contains(local)) candidates.add(local);
-    }
-
-    AppLogger.info(
-        '🔍 [ServerDiscovery] Probing backend candidates (isPhysicalDevice=$isRealDevice): $candidates');
+    if (candidate.isEmpty) return null;
 
     final dio = Dio(
       BaseOptions(
-        connectTimeout: const Duration(milliseconds: 2500),
-        receiveTimeout: const Duration(milliseconds: 2500),
+        connectTimeout: const Duration(milliseconds: 3000),
+        receiveTimeout: const Duration(milliseconds: 3000),
         headers: {'Accept': 'application/json'},
       ),
     );
 
-    for (final candidate in candidates) {
+    try {
+      final rootUrl = candidate.replaceAll(RegExp(r'/api/v1/?$'), '');
       try {
-        final rootUrl = candidate.replaceAll(RegExp(r'/api/v1/?$'), '');
-        try {
-          final res = await dio.get('$rootUrl/api/v1/health');
-          if (res.statusCode == 200) {
-            AppLogger.info(
-                '✅ [ServerDiscovery] Connected successfully to health: $candidate');
-            return candidate;
-          }
-        } catch (_) {
-          final res = await dio.get('$rootUrl/');
-          if (res.statusCode == 200) {
-            AppLogger.info(
-                '✅ [ServerDiscovery] Connected successfully to root: $candidate');
-            return candidate;
-          }
+        final res = await dio.get('$rootUrl/api/v1/health');
+        if (res.statusCode == 200) {
+          AppLogger.info('✅ Connected successfully to health: $candidate');
+          return candidate;
         }
       } catch (_) {
-        // Candidate failed, try next
+        final res = await dio.get('$rootUrl/');
+        if (res.statusCode == 200) {
+          AppLogger.info('✅ Connected successfully to root: $candidate');
+          return candidate;
+        }
       }
+    } catch (e) {
+      AppLogger.warning('Server discovery probe failed for $candidate: $e');
     }
 
     return null;
   }
 
-  /// Cache public tunnel URL discovered from backend or user configuration
-  static Future<void> saveTunnelUrl(String url) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(prefKeyTunnelUrl, url.trim());
-      AppLogger.info('💾 [ServerDiscovery] Cached public tunnel URL: $url');
-    } catch (_) {}
-  }
+  /// Cache public tunnel URL if needed
+  static Future<void> saveTunnelUrl(String url) async {}
 
-  /// Automatically attempt failover when a network request experiences a connection error or timeout
+  /// Ensure active Dio instance uses EnvConfig.baseUrl from .env
   static Future<bool> handleConnectionFailure(Dio dio) async {
-    final workingServer = await findWorkingServer();
-    if (workingServer != null && workingServer != dio.options.baseUrl) {
+    final currentBase = EnvConfig.baseUrl;
+    if (currentBase.isNotEmpty && dio.options.baseUrl != currentBase) {
+      dio.options.baseUrl = currentBase;
       AppLogger.info(
-          '🔄 [ServerDiscovery] Switching active baseUrl to: $workingServer');
-      dio.options.baseUrl = workingServer;
-      await EnvConfig.saveBaseUrl(workingServer);
+          '🔄 [ServerDiscovery] Ensured active baseUrl is set to .env: $currentBase');
       return true;
     }
     return false;
