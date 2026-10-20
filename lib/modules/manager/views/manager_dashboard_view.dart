@@ -2057,7 +2057,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
       child: ListTile(
         onTap: () {
           Get.find<ManagerGamesController>().selectedGame.value = game;
-          Get.toNamed('/games/details');
+          Get.toNamed('/games/details', arguments: {'gameId': game.id});
         },
         title: Row(
           children: [

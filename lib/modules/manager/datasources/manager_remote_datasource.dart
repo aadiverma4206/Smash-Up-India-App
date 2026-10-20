@@ -99,6 +99,30 @@ class ManagerRemoteDataSource {
     );
   }
 
+  Future<ApiResponseModel<GameModel>> rescheduleGame(
+    String gameId, {
+    required String matchDate,
+    required String startTime,
+    required String endTime,
+    String? courtId,
+    String? reason,
+  }) async {
+    final response = await dioClient.dio.post(
+      '/manager/games/$gameId/reschedule',
+      data: {
+        'matchDate': matchDate,
+        'startTime': startTime,
+        'endTime': endTime,
+        if (courtId != null && courtId.isNotEmpty) 'courtId': courtId,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+    return ApiResponseParser.parse<GameModel>(
+      response.data,
+      (json) => GameModel.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
   Future<ApiResponseModel<GameModel>> startGame(String gameId) async {
     final response = await dioClient.dio.post('/manager/games/$gameId/start');
     return ApiResponseParser.parse<GameModel>(

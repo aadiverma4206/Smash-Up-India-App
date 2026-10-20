@@ -198,7 +198,7 @@ export const getActivityLogsController = asyncHandler(
 export const joinGameController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
-    const { id: gameId } = req.params;
+    const gameId = req.params.id || req.body?.gameId;
     const {
       position = "MID",
       paymentMethod,
@@ -209,6 +209,9 @@ export const joinGameController = asyncHandler(
     } = req.body || {};
 
     if (!userId) throw new ApiError(401, "Unauthorized");
+    if (!gameId) {
+      throw new ApiError(400, "Match ID (gameId) is required", "VALIDATION_ERROR");
+    }
     if (req.user?.roleId !== 3) {
       throw new ApiError(
         403,

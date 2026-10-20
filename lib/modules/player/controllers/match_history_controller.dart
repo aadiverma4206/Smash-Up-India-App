@@ -107,6 +107,9 @@ class MatchHistoryController extends GetxController {
 
   Future<void> fetchMatchRecording(String gameId) async {
     isLoadingVideos.value = true;
+    matchVideos.clear();
+    selectedVideo.value = null;
+    cctvPlaybackUrl.value = null;
     try {
       if (Get.isRegistered<GamesRepository>()) {
         final videos = await Get.find<GamesRepository>().getGameVideos(gameId);
@@ -114,6 +117,9 @@ class MatchHistoryController extends GetxController {
         if (matchVideos.isNotEmpty) {
           selectedVideo.value = matchVideos.first;
           cctvPlaybackUrl.value = matchVideos.first.playbackUrl;
+        } else {
+          selectedVideo.value = null;
+          cctvPlaybackUrl.value = null;
         }
       }
     } catch (e) {

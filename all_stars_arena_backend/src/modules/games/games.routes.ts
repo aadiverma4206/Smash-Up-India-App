@@ -33,6 +33,7 @@ router.use(authenticateToken);
 router.post("/create", requireRole([1, 2, 3]), createGameController);
 router.post("/", requireRole([1, 2, 3]), createGameController);
 router.post("/:id/request-slot", requireRole([3]), requestSlotController);
+router.post("/join", requireRole([3]), joinGameController);
 router.post("/:id/join", requireRole([3]), joinGameController);
 router.post("/:id/switch-team", requireRole([3]), switchTeamController);
 router.post("/:id/leave", requireRole([3]), leaveGameController);

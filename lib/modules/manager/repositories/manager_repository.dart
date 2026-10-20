@@ -62,6 +62,28 @@ class ManagerRepository {
     return response.data!;
   }
 
+  Future<GameModel> rescheduleGame(
+    String gameId, {
+    required String matchDate,
+    required String startTime,
+    required String endTime,
+    String? courtId,
+    String? reason,
+  }) async {
+    final response = await remoteDataSource.rescheduleGame(
+      gameId,
+      matchDate: matchDate,
+      startTime: startTime,
+      endTime: endTime,
+      courtId: courtId,
+      reason: reason,
+    );
+    if (response.data == null) {
+      throw AppException('Failed to reschedule match.');
+    }
+    return response.data!;
+  }
+
   Future<GameModel> startGame(String gameId) async {
     final response = await remoteDataSource.startGame(gameId);
     if (response.data == null) {

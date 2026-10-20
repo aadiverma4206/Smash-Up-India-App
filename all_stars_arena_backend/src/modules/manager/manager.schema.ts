@@ -106,6 +106,19 @@ export const updateGameSchema = z.object({
   }),
 });
 
+export const rescheduleGameSchema = z.object({
+  params: z.object({
+    id: z.string().min(1, "Game ID is required"),
+  }),
+  body: z.object({
+    matchDate: z.string().min(1, "matchDate is required"),
+    startTime: z.string().min(1, "startTime is required"),
+    endTime: z.string().min(1, "endTime is required"),
+    courtId: z.string().optional(),
+    reason: z.string().optional(),
+  }),
+});
+
 export const startGameSchema = z.object({
   params: z.object({
     id: z.string().min(1, "Game ID is required"),

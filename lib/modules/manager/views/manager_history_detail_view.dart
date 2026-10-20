@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../core/services/auth_service.dart';
@@ -1616,20 +1617,12 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                     : (game.videoPlaybackUrl ?? ''));
 
             if (playbackUrl.isEmpty) {
-              return Container(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                alignment: Alignment.center,
-                child: Column(
-                  children: [
-                    Icon(Icons.video_camera_back_outlined,
-                        size: 40, color: Colors.grey.shade400),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No CCTV footage recorded for this match.',
-                      style:
-                          TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                    ),
-                  ],
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: EmptyStateWidget(
+                  title: 'No CCTV Footage Available',
+                  subtitle: 'No CCTV footage was recorded for this match.',
+                  imageSize: 130,
                 ),
               );
             }

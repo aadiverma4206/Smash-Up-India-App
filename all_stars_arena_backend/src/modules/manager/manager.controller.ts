@@ -117,6 +117,26 @@ export const updateGameController = asyncHandler(
   },
 );
 
+export const rescheduleGameController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const managerId = req.user?.id || "SYS";
+    const managerName = req.user?.email || "Manager";
+    const userRole = req.user?.roleId || 2;
+    const { id: gameId } = req.params;
+
+    const game = await ManagerService.rescheduleMatch(
+      managerId,
+      managerName,
+      userRole,
+      gameId,
+      req.body,
+    );
+    res
+      .status(200)
+      .json(ApiResponse.success("Match rescheduled successfully", game));
+  },
+);
+
 export const startGameController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const managerId = req.user?.id || "SYS";

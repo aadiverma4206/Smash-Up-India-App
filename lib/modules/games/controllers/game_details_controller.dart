@@ -47,15 +47,43 @@ class GameDetailsController extends GetxController {
   final RxString selectedJoinPaymentMethod = 'RAZORPAY'.obs;
   final RxDouble walletBalance = 0.0.obs;
 
+  String _gameId = '';
+
   String get gameId {
-    final paramId = Get.parameters['id'];
-    if (paramId != null && paramId.isNotEmpty) return paramId;
+    if (_gameId.isNotEmpty) return _gameId;
+    if (game.value?.id != null && game.value!.id.isNotEmpty) {
+      _gameId = game.value!.id;
+      return _gameId;
+    }
+
+    final paramId = Get.parameters['id'] ?? Get.parameters['gameId'];
+    if (paramId != null && paramId.isNotEmpty) {
+      _gameId = paramId;
+      return _gameId;
+    }
 
     final args = Get.arguments;
-    if (args is String && args.isNotEmpty) return args;
+    if (args is String && args.isNotEmpty) {
+      _gameId = args;
+      return _gameId;
+    }
     if (args is Map) {
-      if (args['gameId'] != null) return args['gameId'].toString();
-      if (args['id'] != null) return args['id'].toString();
+      if (args['gameId'] != null && args['gameId'].toString().isNotEmpty) {
+        _gameId = args['gameId'].toString();
+        return _gameId;
+      }
+      if (args['id'] != null && args['id'].toString().isNotEmpty) {
+        _gameId = args['id'].toString();
+        return _gameId;
+      }
+      if (args['game'] is GameModel) {
+        _gameId = (args['game'] as GameModel).id;
+        return _gameId;
+      }
+    }
+    if (args is GameModel) {
+      _gameId = args.id;
+      return _gameId;
     }
     return '';
   }
@@ -67,8 +95,11 @@ class GameDetailsController extends GetxController {
     final args = Get.arguments;
     if (args is Map && args['game'] is GameModel) {
       game.value = args['game'] as GameModel;
+    } else if (args is GameModel) {
+      game.value = args;
     }
-    if (gameId.isNotEmpty) {
+    _gameId = gameId;
+    if (_gameId.isNotEmpty) {
       loadGameDetails();
     }
     fetchWalletBalance();
@@ -101,22 +132,38 @@ class GameDetailsController extends GetxController {
   }
 
   Future<void> loadGameDetails() async {
-    if (gameId.isEmpty) return;
+    final targetId = gameId;
+    if (targetId.isEmpty) return;
     isLoading.value = true;
+    matchVideos.clear();
+    selectedVideo.value = null;
     try {
-      final g = await repository.getGameById(gameId);
+      final g = await repository.getGameById(targetId);
       game.value = g;
+      if (_gameId.isEmpty) _gameId = g.id;
 
       if (g.roster != null) {
         teamARoster.value = g.roster!.where((p) => p.team == 'TEAM_A').toList();
         teamBRoster.value = g.roster!.where((p) => p.team == 'TEAM_B').toList();
       }
 
-      try {
-        final vids = await repository.getGameVideos(gameId);
-        matchVideos.value = vids;
-        if (vids.isNotEmpty) selectedVideo.value = vids.first;
-      } catch (_) {}
+      if (isUserInGame || isManagerOrAdmin) {
+        try {
+          final vids = await repository.getGameVideos(targetId);
+          matchVideos.value = vids;
+          if (vids.isNotEmpty) {
+            selectedVideo.value = vids.first;
+          } else {
+            selectedVideo.value = null;
+          }
+        } catch (_) {
+          matchVideos.clear();
+          selectedVideo.value = null;
+        }
+      } else {
+        matchVideos.clear();
+        selectedVideo.value = null;
+      }
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Error', e);
     } finally {
@@ -388,9 +435,19 @@ class GameDetailsController extends GetxController {
     String? razorpayPaymentId,
     String? razorpaySignature,
   }) async {
+    final targetGameId = gameId.isNotEmpty ? gameId : (game.value?.id ?? '');
+    if (targetGameId.isEmpty) {
+      isProcessingPayment.value = false;
+      ErrorHandler.showErrorSnackBar(
+        'Match Error',
+        'Unable to determine match ID. Please refresh and try again.',
+      );
+      return;
+    }
+
     try {
       await repository.joinGame(
-        gameId,
+        targetGameId,
         position,
         paymentMethod: paymentMethod,
         walletPin: walletPin,

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/create_game_controller.dart';
@@ -8,6 +9,120 @@ import '../../../core/responsive/responsive_builder.dart';
 
 class CreateGameView extends StatelessWidget {
   const CreateGameView({super.key});
+
+  static Future<TimeOfDay?> _showCustomTimePicker({
+    required BuildContext context,
+    required TimeOfDay initialTime,
+  }) async {
+    return await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      initialEntryMode: TimePickerEntryMode.dial,
+      builder: (BuildContext context, Widget? child) {
+        final mediaQuery = MediaQuery.of(context);
+        final dialogWidth = math.min(mediaQuery.size.width * 0.9, 360.0);
+
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            alwaysUse24HourFormat: false,
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: Theme.of(context).colorScheme.copyWith(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: context.cardColor,
+                    onSurface: context.textPrimary,
+                    surfaceContainerHighest:
+                        AppColors.primary.withValues(alpha: 0.12),
+                  ),
+              timePickerTheme: TimePickerThemeData(
+                backgroundColor: context.cardColor,
+                hourMinuteColor: AppColors.primary.withValues(alpha: 0.15),
+                hourMinuteTextColor: AppColors.primary,
+                dayPeriodColor: AppColors.primary.withValues(alpha: 0.15),
+                dayPeriodTextColor: AppColors.primary,
+                dayPeriodBorderSide:
+                    const BorderSide(color: AppColors.primary, width: 1.5),
+                dialHandColor: AppColors.primary,
+                dialBackgroundColor: context.backgroundColor,
+                dialTextColor: context.textPrimary,
+                entryModeIconColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: context.borderColor, width: 1),
+                ),
+              ),
+            ),
+            child: Center(
+              child: UnconstrainedBox(
+                child: SizedBox(
+                  width: dialogWidth,
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static Future<DateTime?> _showCustomDatePicker({
+    required BuildContext context,
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required DateTime lastDate,
+  }) async {
+    return await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (BuildContext context, Widget? child) {
+        final mediaQuery = MediaQuery.of(context);
+        final dialogWidth = math.min(mediaQuery.size.width * 0.9, 360.0);
+
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            alwaysUse24HourFormat: false,
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: Theme.of(context).colorScheme.copyWith(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: context.cardColor,
+                    onSurface: context.textPrimary,
+                  ),
+              datePickerTheme: DatePickerThemeData(
+                backgroundColor: context.cardColor,
+                headerBackgroundColor: AppColors.primary,
+                headerForegroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                dayStyle: TextStyle(color: context.textPrimary),
+                weekdayStyle: const TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.bold),
+                yearStyle: TextStyle(color: context.textPrimary),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: context.borderColor, width: 1),
+                ),
+              ),
+            ),
+            child: Center(
+              child: UnconstrainedBox(
+                child: SizedBox(
+                  width: dialogWidth,
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,97 +230,118 @@ class CreateGameView extends StatelessWidget {
 
   Widget _buildVenueSelectionCard(
       BuildContext context, CreateGameController controller) {
-    return Obx(() {
-      final courts = controller.availableCourts;
-      final selectedCourt = controller.selectedCourt.value;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.borderColor),
+      ),
+      child: Obx(() {
+        final courts = controller.availableCourts;
+        final selectedCourt = controller.selectedCourt.value;
 
-      final List<Widget> courtButtons = courts.map<Widget>((court) {
-        final isSelected =
-            selectedCourt?.id == court.id || selectedCourt?.name == court.name;
-        return InkWell(
-          onTap: () {
-            controller.selectedCourt.value = court;
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isSelected
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 20,
-                  color: isSelected ? AppColors.primary : context.textSecondary,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Club Name *',
+                prefixIcon:
+                    const Icon(Icons.business_rounded, color: AppColors.primary),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  court.name,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : context.textPrimary,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    fontSize: 15,
-                  ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: context.borderColor, width: 1.2),
                 ),
-              ],
-            ),
-          ),
-        );
-      }).toList();
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InputDecorator(
-            decoration: InputDecoration(
-              labelText: 'Club Name *',
-              prefixIcon:
-                  const Icon(Icons.business_rounded, color: AppColors.primary),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: context.borderColor),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: context.borderColor, width: 1.2),
+              child: Text(
+                controller.selectedClub.value.name.isNotEmpty
+                    ? controller.selectedClub.value.name
+                    : 'All Stars Turf Raipur',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimary,
+                ),
               ),
             ),
-            child: Text(
-              controller.selectedClub.value.name.isNotEmpty
-                  ? controller.selectedClub.value.name
-                  : 'All Stars Turf Raipur',
+            const SizedBox(height: 14),
+            Text(
+              'Select Pitch / Court *',
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: context.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: context.textSecondary,
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Select Pitch / Court *',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: context.textSecondary,
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              children: courts.map((court) {
+                final isSelected = selectedCourt?.id == court.id ||
+                    selectedCourt?.name == court.name;
+                return InkWell(
+                  onTap: () {
+                    controller.selectedCourt.value = court;
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary.withValues(alpha: 0.12)
+                          : context.backgroundColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : context.borderColor,
+                        width: isSelected ? 1.8 : 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          size: 20,
+                          color: isSelected
+                              ? AppColors.primary
+                              : context.textSecondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          court.name,
+                          style: TextStyle(
+                            color: isSelected
+                                ? AppColors.primary
+                                : context.textPrimary,
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (int i = 0; i < courtButtons.length; i++) ...[
-                if (i > 0) const SizedBox(width: 32),
-                courtButtons[i],
-              ],
-            ],
-          ),
-        ],
-      );
-    });
+          ],
+        );
+      }),
+    );
   }
 
   Widget _buildMatchDetailsCard(
@@ -237,7 +373,7 @@ class CreateGameView extends StatelessWidget {
                 children: controller.formats.map((fmt) {
                   final isSelected = controller.selectedFormat.value == fmt;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 6.0),
+                    padding: const EdgeInsets.only(right: 8.0),
                     child: ChoiceChip(
                       label: Text(
                         fmt,
@@ -245,14 +381,14 @@ class CreateGameView extends StatelessWidget {
                           color:
                               isSelected ? Colors.white : context.textPrimary,
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                       selected: isSelected,
                       selectedColor: AppColors.primary,
-                      backgroundColor: context.cardColor,
+                      backgroundColor: context.backgroundColor,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         side: BorderSide(
                           color: isSelected
                               ? AppColors.primary
@@ -266,13 +402,21 @@ class CreateGameView extends StatelessWidget {
               ),
             );
           }),
-          const SizedBox(height: 6),
-          Obx(() => Text(
-                'Max Players: ${controller.maxPlayers.value} (${controller.maxPlayers.value ~/ 2} vs ${controller.maxPlayers.value ~/ 2})',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: context.textSecondary,
-                  fontWeight: FontWeight.w500,
+          const SizedBox(height: 8),
+          Obx(() => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Max Players: ${controller.maxPlayers.value} (${controller.maxPlayers.value ~/ 2} vs ${controller.maxPlayers.value ~/ 2})',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               )),
           const SizedBox(height: 16),
@@ -341,46 +485,49 @@ class CreateGameView extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-          TextFormField(
-            controller: controller.reservePlayersController,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.next,
-            style: TextStyle(color: context.textPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Extra Reserve / Substitute Players Count *',
-              hintText: 'e.g. 2',
-              prefixIcon: const Icon(Icons.person_add_alt_1_rounded,
-                  color: AppColors.primary),
-              helperText:
-                  'Extra players on reserve bench (e.g. 2 reserves = 24 total capacity)',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+          Obx(
+            () => TextFormField(
+              controller: controller.reservePlayersController,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              style: TextStyle(color: context.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: 'Extra Reserve / Substitute Players Count *',
+                hintText: 'e.g. 2',
+                prefixIcon: const Icon(Icons.person_add_alt_1_rounded,
+                    color: AppColors.primary),
+                helperText:
+                    'Extra players on reserve bench (e.g. 2 reserves = ${controller.maxPlayers.value + (int.tryParse(controller.reserveCountRx.value) ?? 0)} total capacity)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      BorderSide(color: context.borderColor, width: 1.2),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1.8),
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: context.borderColor, width: 1.2),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.primary, width: 1.8),
-              ),
+              validator: (val) {
+                if (val == null || val.trim().isEmpty) {
+                  return 'Reserve count is required';
+                }
+                final count = int.tryParse(val.trim());
+                if (count == null || count < 0 || count > 10) {
+                  return 'Enter a valid count (0 to 10)';
+                }
+                return null;
+              },
             ),
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) {
-                return 'Reserve count is required';
-              }
-              final count = int.tryParse(val.trim());
-              if (count == null || count < 0 || count > 10) {
-                return 'Enter a valid count (0 to 10)';
-              }
-              return null;
-            },
           ),
           const SizedBox(height: 14),
           Obx(
             () => DropdownButtonFormField<String>(
-              initialValue: controller.skillRequirement.value,
+              value: controller.skillRequirement.value,
               hint: Text('Select Skill Level',
                   style: TextStyle(color: context.textSecondary, fontSize: 14)),
               dropdownColor: context.cardColor,
@@ -445,7 +592,7 @@ class CreateGameView extends StatelessWidget {
                     ),
                     selected: isPublic,
                     selectedColor: AppColors.primary,
-                    backgroundColor: context.cardColor,
+                    backgroundColor: context.backgroundColor,
                     onSelected: (selected) {
                       if (selected) controller.privacy.value = 'PUBLIC';
                     },
@@ -467,7 +614,7 @@ class CreateGameView extends StatelessWidget {
                     ),
                     selected: isPrivate,
                     selectedColor: AppColors.primary,
-                    backgroundColor: context.cardColor,
+                    backgroundColor: context.backgroundColor,
                     onSelected: (selected) {
                       if (selected) controller.privacy.value = 'PRIVATE';
                     },
@@ -496,110 +643,221 @@ class CreateGameView extends StatelessWidget {
           border: Border.all(color: context.borderColor),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.calendar_month_rounded,
-                    color: AppColors.primary),
+            Text(
+              'Match Date *',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: context.textSecondary,
               ),
-              title: Text('Match Date *',
-                  style: TextStyle(color: context.textSecondary, fontSize: 12)),
-              subtitle: Text(
-                selectedDate != null
-                    ? AppDateUtils.formatDate(selectedDate,
-                        format: 'EEEE, dd MMMM yyyy')
-                    : 'Tap to select match date',
-                style: TextStyle(
-                    color: selectedDate != null
-                        ? context.textPrimary
-                        : context.textSecondary,
-                    fontWeight: selectedDate != null
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    fontSize: 15),
-              ),
-              trailing: Icon(Icons.chevron_right_rounded,
-                  color: context.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
               onTap: () async {
-                final picked = await showDatePicker(
+                final picked = await _showCustomDatePicker(
                   context: context,
-                  initialDate: selectedDate ?? DateTime.now(),
+                  initialDate:
+                      selectedDate ?? DateTime.now().add(const Duration(days: 1)),
                   firstDate: DateTime.now(),
                   lastDate: DateTime.now().add(const Duration(days: 90)),
                 );
                 if (picked != null) controller.updateDate(picked);
               },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: context.backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.borderColor, width: 1.2),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.calendar_month_rounded,
+                          color: AppColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        selectedDate != null
+                            ? AppDateUtils.formatDate(selectedDate,
+                                format: 'EEEE, dd MMMM yyyy')
+                            : 'Tap to select match date',
+                        style: TextStyle(
+                          color: selectedDate != null
+                              ? context.textPrimary
+                              : context.textSecondary,
+                          fontWeight: selectedDate != null
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded,
+                        color: context.textSecondary),
+                  ],
+                ),
+              ),
             ),
-            Divider(color: context.borderColor),
-            Row(
-              children: [
-                Expanded(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.access_time_rounded,
-                        color: AppColors.primary, size: 20),
-                    title: Text('Start Time *',
+            const SizedBox(height: 16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 280;
+
+                Widget buildStartTimeWidget() {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Start Time *',
                         style: TextStyle(
-                            color: context.textSecondary, fontSize: 11)),
-                    subtitle: Text(
-                      startTime != null
-                          ? AppDateUtils.formatTime(startTime)
-                          : 'Select Start',
-                      style: TextStyle(
-                          color: startTime != null
-                              ? context.textPrimary
-                              : context.textSecondary,
-                          fontWeight: startTime != null
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 14),
-                    ),
-                    onTap: () async {
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime: startTime ?? TimeOfDay.now(),
-                      );
-                      if (picked != null) controller.updateStartTime(picked);
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.access_time_filled_rounded,
-                        color: AppColors.primary, size: 20),
-                    title: Text('End Time *',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await _showCustomTimePicker(
+                            context: context,
+                            initialTime: startTime ??
+                                const TimeOfDay(hour: 18, minute: 0),
+                          );
+                          if (picked != null) {
+                            controller.updateStartTime(picked);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: context.backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: context.borderColor, width: 1.2),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time_rounded,
+                                  color: AppColors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  startTime != null
+                                      ? AppDateUtils.formatTime(startTime)
+                                      : 'Select Start',
+                                  style: TextStyle(
+                                    color: startTime != null
+                                        ? context.textPrimary
+                                        : context.textSecondary,
+                                    fontWeight: startTime != null
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                Widget buildEndTimeWidget() {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'End Time *',
                         style: TextStyle(
-                            color: context.textSecondary, fontSize: 11)),
-                    subtitle: Text(
-                      endTime != null
-                          ? AppDateUtils.formatTime(endTime)
-                          : 'Select End',
-                      style: TextStyle(
-                          color: endTime != null
-                              ? context.textPrimary
-                              : context.textSecondary,
-                          fontWeight: endTime != null
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 14),
-                    ),
-                    onTap: () async {
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime: endTime ?? TimeOfDay.now(),
-                      );
-                      if (picked != null) controller.updateEndTime(picked);
-                    },
-                  ),
-                ),
-              ],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await _showCustomTimePicker(
+                            context: context,
+                            initialTime: endTime ??
+                                const TimeOfDay(hour: 19, minute: 30),
+                          );
+                          if (picked != null) {
+                            controller.updateEndTime(picked);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: context.backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: context.borderColor, width: 1.2),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time_filled_rounded,
+                                  color: AppColors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  endTime != null
+                                      ? AppDateUtils.formatTime(endTime)
+                                      : 'Select End',
+                                  style: TextStyle(
+                                    color: endTime != null
+                                        ? context.textPrimary
+                                        : context.textSecondary,
+                                    fontWeight: endTime != null
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                if (isNarrow) {
+                  return Column(
+                    children: [
+                      buildStartTimeWidget(),
+                      const SizedBox(height: 12),
+                      buildEndTimeWidget(),
+                    ],
+                  );
+                } else {
+                  return Row(
+                    children: [
+                      Expanded(child: buildStartTimeWidget()),
+                      const SizedBox(width: 12),
+                      Expanded(child: buildEndTimeWidget()),
+                    ],
+                  );
+                }
+              },
             ),
           ],
         ),
@@ -624,7 +882,7 @@ class CreateGameView extends StatelessWidget {
         decoration: InputDecoration(
           labelText: 'Match Rules & Extra Details (Optional)',
           hintText:
-              'e.g. Bring black & white jerseys. Standard 11v11 rules apply.',
+              'e.g. Bring black & white jerseys. Standard rules apply.',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -650,6 +908,8 @@ class CreateGameView extends StatelessWidget {
       final reserves = controller.reserveCountRx.value.isEmpty
           ? '0'
           : controller.reserveCountRx.value;
+      final fmt = controller.selectedFormat.value;
+      final mainCount = controller.maxPlayers.value;
 
       return Column(
         children: [
@@ -670,7 +930,7 @@ class CreateGameView extends StatelessWidget {
                         color: AppColors.primary, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      '11v11 (22 Main + $reserves Subs)',
+                      '$fmt ($mainCount Main + $reserves Subs)',
                       style: TextStyle(
                           color: context.textPrimary,
                           fontWeight: FontWeight.bold,
@@ -693,7 +953,7 @@ class CreateGameView extends StatelessWidget {
             width: double.infinity,
             height: 50,
             child: AppButton(
-              text: 'Create 11v11 Football Game',
+              text: 'Create $fmt Football Game',
               isLoading: controller.isLoading.value,
               onPressed: controller.proceedToCheckout,
             ),

@@ -10,6 +10,7 @@ import {
   sendWalletUpdate,
 } from "../../services/realtime.service.js";
 import { dbPool } from "../../config/db.config.js";
+import { getSocketIO } from "../../config/socket.config.js";
 import { ApiError } from "../../utils/apiResponse.js";
 import { logger } from "../../utils/logger.js";
 
@@ -942,9 +943,15 @@ export class ManagerService {
       const cameras = await CctvRepository.getCamerasByClub(
         gameRes.rows[0].club_id,
       );
-      const courtCamera = cameras.find(
-        (c) => c.court_id === gameRes.rows[0].court_id && c.is_enabled,
-      );
+      const courtCamera =
+        cameras.find(
+          (c) => c.court_id === gameRes.rows[0].court_id && c.is_enabled,
+        ) ||
+        cameras.find((c) => c.is_enabled) ||
+        (await CctvRepository.getActiveCameraForCourt(
+          gameRes.rows[0].court_id,
+          gameRes.rows[0].club_id,
+        ));
 
       if (courtCamera) {
         await dbPool.query(
@@ -955,11 +962,19 @@ export class ManagerService {
         CctvService.startMatchRecording(
           managerId,
           managerName,
+          2,
           gameId,
           courtCamera.id,
         ).catch((err) => {
           logger.error({ err }, `Async CCTV start failed for Game ${gameId}`);
         });
+        logger.info(
+          `📹 [Manager] Started CCTV recording on camera ${courtCamera.id} for Match ${gameId}`,
+        );
+      } else {
+        logger.warn(
+          `⚠️ [Manager] No enabled CCTV camera found for court ${gameRes.rows[0].court_id} / club ${gameRes.rows[0].club_id}`,
+        );
       }
     } catch (cctvErr) {
       logger.error(
@@ -976,6 +991,156 @@ export class ManagerService {
       actionType: "MATCH_STARTED",
       details: `Match started dynamically at ${updatedGame.start_time || "current time"}. Scheduled end: ${updatedGame.end_time || "+1.5h"}. CCTV recording active.`,
     });
+
+    try {
+      const io = getSocketIO();
+      io.to(`game:${gameId}`).emit("match:started", {
+        gameId,
+        status: "ONGOING",
+        message: "Match has been started by manager!",
+      });
+      io.emit("match:live_feed", {
+        gameId,
+        status: "ONGOING",
+        eventText: `⚽ MATCH STARTED: ${gameRes.rows[0].title}`,
+      });
+    } catch (_) {}
+
+    return updatedGame;
+  }
+
+  static async rescheduleMatch(
+    managerId: string,
+    managerName: string,
+    userRole: number,
+    gameId: string,
+    data: {
+      matchDate: string;
+      startTime: string;
+      endTime: string;
+      courtId?: string;
+      reason?: string;
+    },
+  ) {
+    const gameRes = await dbPool.query(
+      "SELECT * FROM public.games WHERE id = $1;",
+      [gameId],
+    );
+    if (gameRes.rows.length === 0) {
+      throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
+    }
+    const game = gameRes.rows[0];
+
+    if (userRole === 2) {
+      const isAuthorized = await CctvRepository.isClubManager(
+        game.club_id,
+        managerId,
+      );
+      if (!isAuthorized) {
+        throw new ApiError(
+          403,
+          "Forbidden: You do not manage the club hosting this match",
+          "FORBIDDEN_CLUB_SCOPE",
+        );
+      }
+    }
+
+    if (
+      game.status === "ONGOING" ||
+      game.status === "COMPLETED" ||
+      game.status === "CANCELLED"
+    ) {
+      throw new ApiError(
+        400,
+        `Cannot reschedule a match that is already '${game.status}'`,
+        "INVALID_MATCH_STATUS",
+      );
+    }
+
+    // Ensure match has not already started or passed start time
+    const timeCheckRes = await dbPool.query(
+      `SELECT (g.match_date + g.start_time) <= CURRENT_TIMESTAMP as is_past
+       FROM public.games g WHERE g.id = $1;`,
+      [gameId],
+    );
+    if (timeCheckRes.rows[0]?.is_past) {
+      throw new ApiError(
+        400,
+        "Cannot reschedule a match that has already reached or passed its scheduled start time",
+        "MATCH_ALREADY_STARTED",
+      );
+    }
+
+    const { matchDate, startTime, endTime, courtId, reason } = data;
+    if (!matchDate || !startTime || !endTime) {
+      throw new ApiError(
+        400,
+        "matchDate, startTime, and endTime are required",
+        "VALIDATION_ERROR",
+      );
+    }
+
+    const updateRes = await dbPool.query(
+      `UPDATE public.games
+       SET match_date = $1,
+           start_time = $2,
+           end_time = $3,
+           court_id = COALESCE($4, court_id),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING *;`,
+      [matchDate, startTime, endTime, courtId || null, gameId],
+    );
+    const updatedGame = updateRes.rows[0];
+
+    await GamesRepository.addActivityLog({
+      gameId,
+      actorId: managerId,
+      actorName: managerName,
+      actorRoleName: userRole === 1 ? "ADMIN" : "MANAGER",
+      actionType: "MATCH_RESCHEDULED",
+      details: `Match rescheduled to ${matchDate} (${startTime} - ${endTime}). Reason: ${reason || "Rescheduled by turf manager"}`,
+    });
+
+    try {
+      const players = await dbPool.query(
+        `SELECT user_id FROM public.game_players WHERE game_id = $1;`,
+        [gameId],
+      );
+
+      const notifMsg = `Match "${game.title}" has been rescheduled to ${matchDate} at ${startTime}. Please check your updated match details.`;
+      for (const p of players.rows) {
+        await dbPool.query(
+          `INSERT INTO public.notifications (user_id, title, body, message, type, data)
+           VALUES ($1, '📅 Match Rescheduled', $2, $2, 'MATCH_RESCHEDULED', $3);`,
+          [
+            p.user_id,
+            notifMsg,
+            JSON.stringify({ gameId, route: "/games/details" }),
+          ],
+        );
+      }
+
+      const io = getSocketIO();
+      io.to(`game:${gameId}`).emit("match:rescheduled", {
+        gameId,
+        matchDate,
+        startTime,
+        endTime,
+        courtId: updatedGame.court_id,
+        reason,
+        message: notifMsg,
+      });
+      io.emit("match:live_feed", {
+        gameId,
+        eventText: `📅 MATCH RESCHEDULED: ${game.title} (New Time: ${startTime})`,
+      });
+    } catch (notifErr: any) {
+      logger.warn(
+        { notifErr },
+        `Failed to dispatch notifications for rescheduled game ${gameId}`,
+      );
+    }
 
     return updatedGame;
   }

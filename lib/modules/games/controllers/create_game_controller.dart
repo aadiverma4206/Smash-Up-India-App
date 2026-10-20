@@ -106,6 +106,19 @@ class CreateGameController extends GetxController {
     loadVenues();
     fetchWalletBalance();
 
+    titleController.clear();
+    entryFeeController.clear();
+    reservePlayersController.clear();
+    descriptionController.clear();
+
+    entryFeeRx.value = '';
+    reserveCountRx.value = '';
+    selectedDate.value = null;
+    startTime.value = null;
+    endTime.value = null;
+    skillRequirement.value = null;
+    selectedCourt.value = null;
+
     entryFeeController.addListener(() {
       entryFeeRx.value = entryFeeController.text.trim();
     });
@@ -159,37 +172,45 @@ class CreateGameController extends GetxController {
   }
 
   void _populateCourts([List<CourtModel>? fetchedCourts]) {
-    final court1 = CourtModel(
-      id: 'court_1',
-      clubId: 'all_stars_arena_club',
-      clubName: 'All Stars Turf Raipur',
-      name: 'Court 1',
-      surfaceType: '3G Turf',
-      basePricePerHour: 1200.0,
-      status: 'AVAILABLE',
-      city: 'Raipur',
-      address: 'VIP Road, Raipur',
-    );
+    if (fetchedCourts != null && fetchedCourts.isNotEmpty) {
+      availableCourts.assignAll(fetchedCourts);
+    } else {
+      final clubId = selectedClub.value.id.isNotEmpty
+          ? selectedClub.value.id
+          : 'all_stars_arena_club';
+      final clubName = selectedClub.value.name.isNotEmpty
+          ? selectedClub.value.name
+          : 'All Stars Turf Raipur';
 
-    final court2 = CourtModel(
-      id: 'court_2',
-      clubId: 'all_stars_arena_club',
-      clubName: 'All Stars Turf Raipur',
-      name: 'Court 2',
-      surfaceType: '3G Turf',
-      basePricePerHour: 1200.0,
-      status: 'AVAILABLE',
-      city: 'Raipur',
-      address: 'VIP Road, Raipur',
-    );
+      final court1 = CourtModel(
+        id: 'court_1',
+        clubId: clubId,
+        clubName: clubName,
+        name: 'Court 1',
+        surfaceType: '3G Turf',
+        basePricePerHour: 1200.0,
+        status: 'AVAILABLE',
+        city: 'Raipur',
+        address: 'VIP Road, Raipur',
+      );
 
-    availableCourts.assignAll([court1, court2]);
+      final court2 = CourtModel(
+        id: 'court_2',
+        clubId: clubId,
+        clubName: clubName,
+        name: 'Court 2',
+        surfaceType: '3G Turf',
+        basePricePerHour: 1200.0,
+        status: 'AVAILABLE',
+        city: 'Raipur',
+        address: 'VIP Road, Raipur',
+      );
 
-    if (selectedCourt.value == null ||
-        (selectedCourt.value!.id != 'court_1' &&
-            selectedCourt.value!.id != 'court_2')) {
-      selectedCourt.value = court1;
+      availableCourts.assignAll([court1, court2]);
     }
+
+    // Do NOT pre-select court; let user explicitly select pitch / court.
+    selectedCourt.value = null;
   }
 
   Future<void> fetchWalletBalance() async {

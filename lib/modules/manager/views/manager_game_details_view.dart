@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 
@@ -508,6 +509,29 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             SizedBox(
               width: double.infinity,
               height: 48,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
+                ),
+                onPressed: () => _showRescheduleDialog(context, game),
+                icon: const Icon(Icons.edit_calendar_rounded,
+                    color: AppColors.primary, size: 20),
+                label: const Text(
+                  'Reschedule Match',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
@@ -771,19 +795,13 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               );
             }
 
-            return Container(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  Icon(Icons.video_camera_back_outlined,
-                      size: 40, color: Colors.grey.shade400),
-                  const SizedBox(height: 8),
-                  Text(
-                    'No CCTV footage recorded yet for this match.',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                  ),
-                ],
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: EmptyStateWidget(
+                title: 'No CCTV Footage Available',
+                subtitle:
+                    'Footage will be automatically recorded and displayed here once the match starts.',
+                imageSize: 130,
               ),
             );
           }),
@@ -1175,6 +1193,293 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRescheduleDialog(BuildContext context, GameModel game) {
+    DateTime selectedDate =
+        DateTime.tryParse(game.matchDate) ?? DateTime.now();
+    TimeOfDay selectedStartTime = TimeOfDay.now();
+    TimeOfDay selectedEndTime = TimeOfDay.now();
+
+    try {
+      if (game.startTime.contains(':')) {
+        final parts = game.startTime.split(':');
+        selectedStartTime = TimeOfDay(
+          hour: int.tryParse(parts[0]) ?? 18,
+          minute: int.tryParse(parts[1]) ?? 0,
+        );
+      }
+    } catch (_) {}
+
+    try {
+      if (game.endTime.contains(':')) {
+        final parts = game.endTime.split(':');
+        selectedEndTime = TimeOfDay(
+          hour: int.tryParse(parts[0]) ?? 19,
+          minute: int.tryParse(parts[1]) ?? 30,
+        );
+      }
+    } catch (_) {}
+
+    final reasonController = TextEditingController();
+
+    Get.dialog(
+      StatefulBuilder(
+        builder: (ctx, setState) {
+          String formatTime(TimeOfDay tod) {
+            final h = tod.hour.toString().padLeft(2, '0');
+            final m = tod.minute.toString().padLeft(2, '0');
+            return '$h:$m:00';
+          }
+
+          String formatDate(DateTime dt) {
+            final y = dt.year.toString();
+            final m = dt.month.toString().padLeft(2, '0');
+            final d = dt.day.toString().padLeft(2, '0');
+            return '$y-$m-$d';
+          }
+
+          return AlertDialog(
+            backgroundColor: context.cardColor,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.edit_calendar_rounded,
+                    color: AppColors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Reschedule Match',
+                    style: TextStyle(
+                      color: context.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Update the scheduled date & time for "${game.title}". All joined players will receive an instant notification.',
+                    style:
+                        TextStyle(fontSize: 12.5, color: context.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('New Match Date',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: context.textPrimary)),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate.isBefore(DateTime.now())
+                            ? DateTime.now()
+                            : selectedDate,
+                        firstDate: DateTime.now(),
+                        lastDate:
+                            DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() => selectedDate = picked);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: context.borderColor),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(formatDate(selectedDate),
+                              style: TextStyle(
+                                  color: context.textPrimary,
+                                  fontWeight: FontWeight.w600)),
+                          const Icon(Icons.calendar_today_rounded,
+                              size: 18, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Start Time',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: context.textPrimary)),
+                            const SizedBox(height: 6),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: selectedStartTime,
+                                );
+                                if (picked != null) {
+                                  setState(() => selectedStartTime = picked);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: context.borderColor),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      selectedStartTime.format(context),
+                                      style: TextStyle(
+                                          color: context.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13),
+                                    ),
+                                    const Icon(Icons.access_time_rounded,
+                                        size: 16, color: AppColors.primary),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('End Time',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: context.textPrimary)),
+                            const SizedBox(height: 6),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: selectedEndTime,
+                                );
+                                if (picked != null) {
+                                  setState(() => selectedEndTime = picked);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: context.borderColor),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      selectedEndTime.format(context),
+                                      style: TextStyle(
+                                          color: context.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13),
+                                    ),
+                                    const Icon(Icons.access_time_filled_rounded,
+                                        size: 16, color: AppColors.primary),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Reason for Rescheduling (Optional)',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: context.textPrimary)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: reasonController,
+                    maxLines: 2,
+                    style: TextStyle(color: context.textPrimary, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText:
+                          'e.g. Ground maintenance, weather delay, requested by players',
+                      hintStyle: TextStyle(
+                          color: context.textSecondary, fontSize: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: context.borderColor),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('Cancel',
+                    style: TextStyle(color: context.textSecondary)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                ),
+                onPressed: () async {
+                  final formattedDate = formatDate(selectedDate);
+                  final formattedStart = formatTime(selectedStartTime);
+                  final formattedEnd = formatTime(selectedEndTime);
+
+                  Get.back();
+                  await controller.rescheduleMatch(
+                    gameId: game.id,
+                    matchDate: formattedDate,
+                    startTime: formattedStart,
+                    endTime: formattedEnd,
+                    courtId: game.courtId,
+                    reason: reasonController.text.trim(),
+                  );
+                },
+                child: const Text('Confirm Reschedule',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

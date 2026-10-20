@@ -122,9 +122,14 @@ class GamesRemoteDataSource {
     String? razorpayPaymentId,
     String? razorpaySignature,
   }) async {
+    final effectiveGameId = gameId.trim();
+    if (effectiveGameId.isEmpty) {
+      throw Exception('Match ID is required to join');
+    }
     final response = await dioClient.dio.post(
-      '${ApiConstants.games}/$gameId/join',
+      '${ApiConstants.games}/$effectiveGameId/join',
       data: {
+        'gameId': effectiveGameId,
         'position': position,
         if (paymentMethod != null && paymentMethod.isNotEmpty)
           'paymentMethod': paymentMethod,

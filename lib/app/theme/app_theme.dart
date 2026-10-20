@@ -141,6 +141,35 @@ class AppTheme {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: AppColors.darkCard,
+          hourMinuteColor: AppColors.primary.withValues(alpha: 0.15),
+          hourMinuteTextColor: AppColors.primary,
+          dayPeriodColor: AppColors.primary.withValues(alpha: 0.15),
+          dayPeriodTextColor: AppColors.primary,
+          dialHandColor: AppColors.primary,
+          dialBackgroundColor: AppColors.darkInputBg,
+          dialTextColor: AppColors.textPrimaryDark,
+          entryModeIconColor: AppColors.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AppColors.darkBorder, width: 1),
+          ),
+        ),
+        datePickerTheme: DatePickerThemeData(
+          backgroundColor: AppColors.darkCard,
+          headerBackgroundColor: AppColors.primary,
+          headerForegroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          dayStyle: const TextStyle(color: AppColors.textPrimaryDark),
+          weekdayStyle:
+              const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          yearStyle: const TextStyle(color: AppColors.textPrimaryDark),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AppColors.darkBorder, width: 1),
+          ),
+        ),
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: AppColors.darkCard,
           shape: RoundedRectangleBorder(
@@ -287,6 +316,35 @@ class AppTheme {
           backgroundColor: AppColors.lightCard,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: AppColors.lightCard,
+          hourMinuteColor: AppColors.primary.withValues(alpha: 0.15),
+          hourMinuteTextColor: AppColors.primary,
+          dayPeriodColor: AppColors.primary.withValues(alpha: 0.15),
+          dayPeriodTextColor: AppColors.primary,
+          dialHandColor: AppColors.primary,
+          dialBackgroundColor: AppColors.lightInputBg,
+          dialTextColor: AppColors.textPrimaryLight,
+          entryModeIconColor: AppColors.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AppColors.lightBorder, width: 1),
+          ),
+        ),
+        datePickerTheme: DatePickerThemeData(
+          backgroundColor: AppColors.lightCard,
+          headerBackgroundColor: AppColors.primary,
+          headerForegroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          dayStyle: const TextStyle(color: AppColors.textPrimaryLight),
+          weekdayStyle:
+              const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          yearStyle: const TextStyle(color: AppColors.textPrimaryLight),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AppColors.lightBorder, width: 1),
+          ),
         ),
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: AppColors.lightCard,

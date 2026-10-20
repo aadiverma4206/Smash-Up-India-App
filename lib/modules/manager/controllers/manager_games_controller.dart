@@ -120,6 +120,9 @@ class ManagerGamesController extends GetxController {
   Future<void> fetchMatchRecording(String gameId) async {
     if (gameId.isEmpty) return;
     isLoadingVideos.value = true;
+    matchVideos.clear();
+    selectedVideo.value = null;
+    cctvPlaybackUrl.value = null;
     try {
       final res = await repository.getMatchRecording(gameId);
       final List<dynamic>? vidsRaw = res['videos'] as List<dynamic>?;
@@ -157,12 +160,47 @@ class ManagerGamesController extends GetxController {
             res['playbackUrl'] ?? res['url'] ?? res['video_playback_url'];
         if (url != null && url.toString().isNotEmpty) {
           cctvPlaybackUrl.value = url.toString();
+        } else {
+          cctvPlaybackUrl.value = null;
         }
       }
     } catch (e) {
       AppLogger.warning('Error fetching match CCTV recording: $e');
     } finally {
       isLoadingVideos.value = false;
+    }
+  }
+
+  Future<bool> rescheduleMatch({
+    required String gameId,
+    required String matchDate,
+    required String startTime,
+    required String endTime,
+    String? courtId,
+    String? reason,
+  }) async {
+    isLoading.value = true;
+    try {
+      final updated = await repository.rescheduleGame(
+        gameId,
+        matchDate: matchDate,
+        startTime: startTime,
+        endTime: endTime,
+        courtId: courtId,
+        reason: reason,
+      );
+      selectedGame.value = updated;
+      await fetchClubGames();
+      ErrorHandler.showSuccessSnackBar(
+        'Match Rescheduled!',
+        'The match has been rescheduled to $matchDate ($startTime - $endTime). Players have been notified.',
+      );
+      return true;
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar('Reschedule Error', e);
+      return false;
+    } finally {
+      isLoading.value = false;
     }
   }
 

@@ -9,6 +9,7 @@ import {
   simulatePricingController,
   createGameController,
   updateGameController,
+  rescheduleGameController,
   startGameController,
   completeGameController,
   cancelGameController,
@@ -51,6 +52,7 @@ import {
   updateCourtPricingSchema,
   simulatePricingSchema,
   createGameSchema,
+  rescheduleGameSchema,
 } from "./manager.schema.js";
 import {
   authenticateToken,
@@ -88,6 +90,11 @@ router.get("/games", getClubMatchesController);
 router.get("/games/:id", getGameDetailsController);
 router.post("/games", validateRequest(createGameSchema), createGameController);
 router.put("/games/:id", updateGameController);
+router.post(
+  "/games/:id/reschedule",
+  validateRequest(rescheduleGameSchema),
+  rescheduleGameController,
+);
 router.post("/games/:id/approve", approvePlayerGameController);
 router.post("/games/:id/accept", approvePlayerGameController);
 router.post("/games/:id/reject", rejectPlayerGameController);

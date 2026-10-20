@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/match_history_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../core/utils/image_utils.dart';
@@ -555,10 +556,12 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
               );
             }
             return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                  child: Text('No CCTV footage recorded for this match.',
-                      style: TextStyle(color: Colors.grey, fontSize: 12))),
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: EmptyStateWidget(
+                title: 'No CCTV Footage Available',
+                subtitle: 'No CCTV footage was recorded for this match.',
+                imageSize: 130,
+              ),
             );
           }),
         ],

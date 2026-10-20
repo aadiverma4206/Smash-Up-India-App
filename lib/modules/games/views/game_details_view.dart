@@ -5,6 +5,7 @@ import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/payment_processing_overlay.dart';
 import '../../../core/utils/app_date_utils.dart';
 
@@ -851,7 +852,43 @@ class GameDetailsView extends StatelessWidget {
               : game.videoPlaybackUrl;
 
       if (videoUrl == null || videoUrl.isEmpty) {
-        return const SizedBox.shrink();
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 14),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.videocam_rounded,
+                      color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'CCTV Recorded Match Footage',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: context.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const EmptyStateWidget(
+                title: 'No CCTV Footage Available',
+                subtitle:
+                    'Footage will be automatically recorded and displayed here once the match starts.',
+                imageSize: 130,
+              ),
+            ],
+          ),
+        );
       }
 
       final cameraName = selectedVid?.cameraName ?? 'Camera 1';

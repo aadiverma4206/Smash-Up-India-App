@@ -127,9 +127,9 @@ export const runLifecycleCycle = async () => {
       try {
         const camRes = await client.query(
           `SELECT id, is_enabled FROM public.cctv_cameras
-           WHERE (court_id = $1 OR (club_id = $2 AND court_id IS NULL))
+           WHERE (court_id = $1 OR club_id = $2 OR court_id IS NULL)
              AND is_enabled = true
-           ORDER BY court_id NULLS LAST
+           ORDER BY (CASE WHEN court_id = $1 THEN 0 WHEN club_id = $2 THEN 1 ELSE 2 END)
            LIMIT 1;`,
           [game.court_id, game.club_id],
         );
