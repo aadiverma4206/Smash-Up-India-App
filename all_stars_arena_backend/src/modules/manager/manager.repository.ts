@@ -385,7 +385,7 @@ export class ManagerRepository {
     const conditions: string[] = [
       "(g.club_id = $1 OR g.club_id = 'all_stars_arena_club')",
       "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
-      "g.match_date::date <= CURRENT_DATE",
+      "(UPPER(g.status::text) = 'CANCELLED' OR g.match_date::date <= CURRENT_DATE)",
     ];
     const values: any[] = [clubId || "all_stars_arena_club"];
     let idx = 2;

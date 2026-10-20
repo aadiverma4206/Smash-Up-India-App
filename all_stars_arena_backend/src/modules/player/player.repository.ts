@@ -206,7 +206,7 @@ export class PlayerRepository {
     const conditions: string[] = [
       "gp.user_id = $1",
       "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
-      "g.match_date::date <= CURRENT_DATE",
+      "(UPPER(g.status::text) = 'CANCELLED' OR g.match_date::date <= CURRENT_DATE)",
     ];
     const values: any[] = [userId];
     let idx = 2;

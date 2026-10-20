@@ -5,6 +5,7 @@ import '../../../data/models/notification_model.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/security/deep_link_service.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/app_date_utils.dart';
 
 class NotificationDetailView extends StatefulWidget {
   final NotificationModel? notification;
@@ -75,8 +76,9 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
   String _formatFullDate(String createdAt) {
     if (createdAt.isEmpty) return 'N/A';
     try {
-      final dt = DateTime.parse(createdAt);
-      return DateFormat('EEEE, d MMMM yyyy • h:mm a').format(dt);
+      final dt = AppDateUtils.parseDate(createdAt);
+      if (dt == null) return createdAt;
+      return DateFormat('EEEE, d MMMM yyyy • h:mm a').format(dt.toLocal());
     } catch (_) {
       return createdAt;
     }

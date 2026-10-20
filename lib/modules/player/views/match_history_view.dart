@@ -35,6 +35,9 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
     final pastGames = gamesList.where((g) {
+      final isCancelled = g.status.toUpperCase() == 'CANCELLED';
+      if (isCancelled) return true;
+
       final matchDt = AppDateUtils.parseDate(g.matchDate) ??
           AppDateUtils.parseMatchDateTime(g.matchDate, g.startTime);
       if (matchDt == null) return true;

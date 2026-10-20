@@ -227,26 +227,41 @@ class AppDateUtils {
     if (dt == null) return fallback;
 
     final now = DateTime.now();
-    final diff = now.difference(dt);
+    final localDt = dt.toLocal();
+    final diff = now.difference(localDt);
 
-    if (diff.isNegative) {
-      return formatDate(dt);
-    }
-
-    if (diff.inSeconds < 60) {
+    if (diff.isNegative || diff.inSeconds < 45) {
       return 'Just now';
-    } else if (diff.inMinutes < 60) {
-      final mins = diff.inMinutes;
-      return '$mins ${mins == 1 ? 'min' : 'mins'} ago';
-    } else if (diff.inHours < 24) {
-      final hrs = diff.inHours;
-      return '$hrs ${hrs == 1 ? 'hour' : 'hours'} ago';
-    } else if (diff.inDays < 7) {
-      final days = diff.inDays;
-      return '$days ${days == 1 ? 'day' : 'days'} ago';
-    } else {
-      return DateFormat('dd MMM yyyy').format(dt);
     }
+
+    if (diff.inMinutes < 60) {
+      final mins = diff.inMinutes;
+      if (mins < 1) return 'Just now';
+      return '$mins ${mins == 1 ? 'min' : 'mins'} ago';
+    }
+
+    final isSameDay = localDt.year == now.year &&
+        localDt.month == now.month &&
+        localDt.day == now.day;
+    if (isSameDay) {
+      final hrs = diff.inHours;
+      if (hrs == 0) return 'Just now';
+      return '$hrs ${hrs == 1 ? 'hour' : 'hours'} ago (${DateFormat('h:mm a').format(localDt)})';
+    }
+
+    final yesterday = now.subtract(const Duration(days: 1));
+    final isYesterday = localDt.year == yesterday.year &&
+        localDt.month == yesterday.month &&
+        localDt.day == yesterday.day;
+    if (isYesterday) {
+      return 'Yesterday at ${DateFormat('h:mm a').format(localDt)}';
+    }
+
+    if (localDt.year == now.year) {
+      return DateFormat('dd MMM, h:mm a').format(localDt);
+    }
+
+    return DateFormat('dd MMM yyyy, h:mm a').format(localDt);
   }
 
   static String formatIsoDate(DateTime date) {

@@ -6,6 +6,7 @@ import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/app_date_utils.dart';
 import '../../player/controllers/notifications_controller.dart';
 import 'notification_detail_view.dart';
 
@@ -16,19 +17,7 @@ class AdminNotificationsView extends GetView<NotificationsController> {
   final RxString searchQuery = ''.obs;
 
   String _formatTimeAgo(String createdAt) {
-    if (createdAt.isEmpty) return '';
-    try {
-      final dt = DateTime.parse(createdAt);
-      final diff = DateTime.now().difference(dt);
-      if (diff.inSeconds < 60) return 'Just now';
-      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-      if (diff.inHours < 24) return '${diff.inHours} hours ago';
-      if (diff.inDays == 1) return 'Yesterday';
-      if (diff.inDays < 7) return '${diff.inDays} days ago';
-      return DateFormat('d MMM').format(dt);
-    } catch (_) {
-      return createdAt;
-    }
+    return AppDateUtils.formatRelativeTime(createdAt);
   }
 
   Color _getCategoryBgColor(String type, bool isDark) {
