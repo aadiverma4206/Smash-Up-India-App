@@ -381,9 +381,8 @@ class CreateGameController extends GetxController {
             ? user.email
             : 'player@allstarsarena.com';
 
-        final key = order.keyId.isNotEmpty
-            ? order.keyId
-            : ApiConstants.razorpayKey;
+        final key =
+            order.keyId.isNotEmpty ? order.keyId : ApiConstants.razorpayKey;
 
         final options = {
           'key': key,

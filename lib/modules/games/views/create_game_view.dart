@@ -247,8 +247,8 @@ class CreateGameView extends StatelessWidget {
             InputDecorator(
               decoration: InputDecoration(
                 labelText: 'Club Name *',
-                prefixIcon:
-                    const Icon(Icons.business_rounded, color: AppColors.primary),
+                prefixIcon: const Icon(Icons.business_rounded,
+                    color: AppColors.primary),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(
@@ -257,7 +257,8 @@ class CreateGameView extends StatelessWidget {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: context.borderColor, width: 1.2),
+                  borderSide:
+                      BorderSide(color: context.borderColor, width: 1.2),
                 ),
               ),
               child: Text(
@@ -294,8 +295,8 @@ class CreateGameView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primary.withValues(alpha: 0.12)
@@ -658,8 +659,8 @@ class CreateGameView extends StatelessWidget {
               onTap: () async {
                 final picked = await _showCustomDatePicker(
                   context: context,
-                  initialDate:
-                      selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+                  initialDate: selectedDate ??
+                      DateTime.now().add(const Duration(days: 1)),
                   firstDate: DateTime.now(),
                   lastDate: DateTime.now().add(const Duration(days: 90)),
                 );
@@ -881,8 +882,7 @@ class CreateGameView extends StatelessWidget {
         style: TextStyle(color: context.textPrimary, fontSize: 13),
         decoration: InputDecoration(
           labelText: 'Match Rules & Extra Details (Optional)',
-          hintText:
-              'e.g. Bring black & white jerseys. Standard rules apply.',
+          hintText: 'e.g. Bring black & white jerseys. Standard rules apply.',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),

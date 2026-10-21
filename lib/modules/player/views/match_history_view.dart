@@ -35,8 +35,12 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
     final pastGames = gamesList.where((g) {
-      final isCancelled = g.status.toUpperCase() == 'CANCELLED';
-      if (isCancelled) return true;
+      final statusUpper = g.status.toUpperCase();
+      if (statusUpper == 'CANCELLED' ||
+          statusUpper == 'COMPLETED' ||
+          statusUpper == 'FINISHED') {
+        return true;
+      }
 
       final matchDt = AppDateUtils.parseDate(g.matchDate) ??
           AppDateUtils.parseMatchDateTime(g.matchDate, g.startTime);
@@ -217,7 +221,7 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Row(
-              children: ['COMPLETED', 'CANCELLED'].map((filter) {
+              children: ['ALL', 'COMPLETED', 'CANCELLED'].map((filter) {
                 return Obx(() {
                   final isSelected = controller.activeFilter.value == filter;
                   return Padding(

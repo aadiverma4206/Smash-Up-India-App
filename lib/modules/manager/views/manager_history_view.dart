@@ -72,10 +72,12 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
     isLoadingMore.value = true;
 
     try {
+      final statusParam =
+          activeFilter.value == 'ALL' ? null : activeFilter.value;
       final list = await repository.getClubHistory(
         limit: limit,
         offset: currentOffset,
-        status: activeFilter.value,
+        status: statusParam,
       );
       if (list.length < limit) {
         hasMore.value = false;
@@ -134,8 +136,12 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
     final pastGames = gamesList.where((g) {
-      final isCancelled = g.status.toUpperCase() == 'CANCELLED';
-      if (isCancelled) return true;
+      final statusUpper = g.status.toUpperCase();
+      if (statusUpper == 'CANCELLED' ||
+          statusUpper == 'COMPLETED' ||
+          statusUpper == 'FINISHED') {
+        return true;
+      }
 
       final matchDt = AppDateUtils.parseDate(g.matchDate) ??
           AppDateUtils.parseMatchDateTime(g.matchDate, g.startTime);
@@ -323,7 +329,7 @@ class _ManagerHistoryViewState extends State<ManagerHistoryView> {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Row(
-              children: ['COMPLETED', 'CANCELLED'].map((filter) {
+              children: ['ALL', 'COMPLETED', 'CANCELLED'].map((filter) {
                 return Obx(() {
                   final isSelected = activeFilter.value == filter;
                   return Padding(

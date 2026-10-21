@@ -1615,13 +1615,18 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
 
             if (!hasValidVideo) {
               return Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF182232) : const Color(0xFFF8FAFC),
+                  color: isDark
+                      ? const Color(0xFF182232)
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                      color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : const Color(0xFFE2E8F0)),
                 ),
                 child: Column(
                   children: [
@@ -1640,7 +1645,8 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        color:
+                            isDark ? AppColors.textPrimaryDark : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 4),

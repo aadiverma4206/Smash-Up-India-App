@@ -78,9 +78,7 @@ class GameRosterPlayerModel {
       position:
           (json['position'] ?? json['player_position'] ?? 'ST').toString(),
       ovr: _parseInt(json['ovr'] ?? json['ovr_rating'], 75),
-      paymentStatus: (json['paymentStatus'] ??
-              json['payment_status'] ??
-              'PAID')
+      paymentStatus: (json['paymentStatus'] ?? json['payment_status'] ?? 'PAID')
           .toString()
           .toUpperCase(),
       phone: json['phone']?.toString(),

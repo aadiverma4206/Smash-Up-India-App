@@ -162,8 +162,8 @@ class AppTheme {
           headerForegroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           dayStyle: const TextStyle(color: AppColors.textPrimaryDark),
-          weekdayStyle:
-              const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          weekdayStyle: const TextStyle(
+              color: AppColors.primary, fontWeight: FontWeight.bold),
           yearStyle: const TextStyle(color: AppColors.textPrimaryDark),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
@@ -338,8 +338,8 @@ class AppTheme {
           headerForegroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           dayStyle: const TextStyle(color: AppColors.textPrimaryLight),
-          weekdayStyle:
-              const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          weekdayStyle: const TextStyle(
+              color: AppColors.primary, fontWeight: FontWeight.bold),
           yearStyle: const TextStyle(color: AppColors.textPrimaryLight),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),

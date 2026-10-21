@@ -12,8 +12,8 @@ class GamesRemoteDataSource {
 
   GamesRemoteDataSource({required this.dioClient});
 
-  Future<ApiResponseModel<RazorpayOrderModel>> createMatchOrder(
-      double amount, {String? gameId}) async {
+  Future<ApiResponseModel<RazorpayOrderModel>> createMatchOrder(double amount,
+      {String? gameId}) async {
     final response = await dioClient.dio.post(
       '${ApiConstants.games}/order',
       data: {

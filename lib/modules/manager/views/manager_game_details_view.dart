@@ -1004,8 +1004,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       isTeamA
                           ? 'No players assigned to Team A in this match.'
                           : 'No players assigned to Team B in this match.',
-                      style: TextStyle(
-                          color: context.textSecondary, fontSize: 13),
+                      style:
+                          TextStyle(color: context.textSecondary, fontSize: 13),
                     ),
                   ),
                 );
@@ -1241,8 +1241,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
   }
 
   void _showRescheduleDialog(BuildContext context, GameModel game) {
-    DateTime selectedDate =
-        DateTime.tryParse(game.matchDate) ?? DateTime.now();
+    DateTime selectedDate = DateTime.tryParse(game.matchDate) ?? DateTime.now();
     TimeOfDay selectedStartTime = TimeOfDay.now();
     TimeOfDay selectedEndTime = TimeOfDay.now();
 
@@ -1330,8 +1329,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                             ? DateTime.now()
                             : selectedDate,
                         firstDate: DateTime.now(),
-                        lastDate:
-                            DateTime.now().add(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (picked != null) {
                         setState(() => selectedDate = picked);
@@ -1476,8 +1474,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     decoration: InputDecoration(
                       hintText:
                           'e.g. Ground maintenance, weather delay, requested by players',
-                      hintStyle: TextStyle(
-                          color: context.textSecondary, fontSize: 12),
+                      hintStyle:
+                          TextStyle(color: context.textSecondary, fontSize: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: context.borderColor),

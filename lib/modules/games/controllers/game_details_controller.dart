@@ -238,7 +238,8 @@ class GameDetailsController extends GetxController {
 
     try {
       final targetGameId = gameId.isNotEmpty ? gameId : (game.value?.id ?? '');
-      final order = await repository.createMatchOrder(fee, gameId: targetGameId);
+      final order =
+          await repository.createMatchOrder(fee, gameId: targetGameId);
 
       currentRazorpayOrderId.value = order.orderId;
 
@@ -259,7 +260,8 @@ class GameDetailsController extends GetxController {
         'name': 'ALL STARS ARENA',
         'description':
             'Player Entry Fee - ${game.value?.title ?? "Football Match"}',
-        if (order.orderId.isNotEmpty && !order.orderId.startsWith('rzp_order_mock_'))
+        if (order.orderId.isNotEmpty &&
+            !order.orderId.startsWith('rzp_order_mock_'))
           'order_id': order.orderId,
         'retry': {'enabled': true, 'max_count': 1},
         'prefill': {

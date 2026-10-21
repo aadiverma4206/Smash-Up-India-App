@@ -86,7 +86,8 @@ class VideoPlayerController extends GetxController {
         url.contains('commondatastorage.googleapis.com')) {
       hasError.value = true;
       isBuffering.value = false;
-      errorMessage.value = 'No recorded video footage is available for this match.';
+      errorMessage.value =
+          'No recorded video footage is available for this match.';
       return;
     }
 

@@ -39,7 +39,9 @@ class ManagerGamesController extends GetxController {
       if (args['game'] is GameModel) {
         selectedGame.value = args['game'] as GameModel;
       }
-      final gameId = (args['gameId'] ?? args['id'] ?? selectedGame.value?.id ?? '').toString();
+      final gameId =
+          (args['gameId'] ?? args['id'] ?? selectedGame.value?.id ?? '')
+              .toString();
       if (gameId.isNotEmpty) {
         fetchMatchRecording(gameId);
         fetchGamePlayers(gameId);
