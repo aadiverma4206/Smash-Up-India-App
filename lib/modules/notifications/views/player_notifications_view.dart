@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/widgets/app_shimmer.dart';

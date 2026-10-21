@@ -151,7 +151,7 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     }
 
     for (final slot in dashboardController.pendingRequests) {
-      final parsedDate = AppDateUtils.parseDate(slot.createdAt) ?? now;
+      final parsedDate = AppDateUtils.parseDateTime(slot.createdAt) ?? now;
       final key = 'pending_slot_${slot.id}';
       itemsMap[key] = ManagerAlertItem(
         id: key,
@@ -174,7 +174,7 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     }
 
     for (final notif in _serverNotifications) {
-      final parsedDate = AppDateUtils.parseDate(notif.createdAt) ?? now;
+      final parsedDate = AppDateUtils.parseDateTime(notif.createdAt) ?? now;
       final typeUpper = notif.type.toUpperCase();
 
       IconData icon = Icons.notifications_active_rounded;

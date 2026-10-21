@@ -822,12 +822,13 @@ export class CctvRecordingService {
     );
 
     try {
+      const defaultS3Key = `cctv/${actualGameId}/${recordingId}_seg1.mp4`;
       await dbPool.query(
         `INSERT INTO public.cctv_recording_segments (
-           recording_id, game_id, segment_order,
+           recording_id, game_id, segment_order, s3_object_key,
            local_file_path, duration_seconds, file_size_bytes, status
-         ) VALUES ($1, $2, 1, $3, $4, $5, 'READY');`,
-        [recordingId, actualGameId, localPath, durationSeconds, fileSizeBytes],
+         ) VALUES ($1, $2, 1, $3, $4, $5, $6, 'READY');`,
+        [recordingId, actualGameId, defaultS3Key, localPath, durationSeconds, fileSizeBytes],
       );
     } catch (segErr) {
       logger.warn({ segErr }, "Non-fatal error inserting segment metadata");

@@ -200,19 +200,87 @@ class AppDateUtils {
     return fallback;
   }
 
+  static DateTime? parseDateTime(dynamic input) {
+    if (input == null) return null;
+    if (input is DateTime) return input;
+    if (input is int) {
+      if (input < 10000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(input * 1000);
+      }
+      return DateTime.fromMillisecondsSinceEpoch(input);
+    }
+    if (input is double) {
+      final intVal = input.toInt();
+      if (intVal < 10000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(intVal * 1000);
+      }
+      return DateTime.fromMillisecondsSinceEpoch(intVal);
+    }
+
+    if (input is String) {
+      final trimmed = input.trim();
+      if (trimmed.isEmpty) return null;
+
+      final asNum = int.tryParse(trimmed);
+      if (asNum != null) {
+        if (asNum < 10000000000) {
+          return DateTime.fromMillisecondsSinceEpoch(asNum * 1000);
+        }
+        return DateTime.fromMillisecondsSinceEpoch(asNum);
+      }
+
+      // Try direct ISO-8601 parsing (handles '2026-10-21T07:44:45.000Z' and timezone offsets)
+      final direct = DateTime.tryParse(trimmed);
+      if (direct != null) return direct;
+
+      // Handle space-separated timestamps e.g. "2026-10-21 07:44:45" or "2026-10-21 07:44:45+00"
+      if (trimmed.contains(' ') && !trimmed.contains('T')) {
+        final withT = trimmed.replaceFirst(' ', 'T');
+        final withTParsed = DateTime.tryParse(withT);
+        if (withTParsed != null) return withTParsed;
+      }
+
+      final formats = [
+        'yyyy-MM-dd HH:mm:ss.SSSZ',
+        'yyyy-MM-dd HH:mm:ssZ',
+        'yyyy-MM-ddTHH:mm:ssZ',
+        'yyyy-MM-ddTHH:mm:ss.SSSZ',
+        'yyyy-MM-dd HH:mm:ss',
+        'yyyy-MM-dd HH:mm',
+        'dd-MM-yyyy HH:mm:ss',
+        'dd-MM-yyyy HH:mm',
+        'dd/MM/yyyy HH:mm:ss',
+        'dd/MM/yyyy HH:mm',
+        'yyyy/MM/dd HH:mm:ss',
+        'yyyy/MM/dd HH:mm',
+        'yyyy-MM-dd',
+        'dd-MM-yyyy',
+        'dd/MM/yyyy',
+      ];
+
+      for (final fmt in formats) {
+        try {
+          return DateFormat(fmt).parse(trimmed);
+        } catch (_) {}
+      }
+    }
+
+    return null;
+  }
+
   static String formatDateTime(
     dynamic input, {
     String format = 'dd MMM yyyy, h:mm a',
     String fallback = 'TBD',
   }) {
     if (input == null) return fallback;
-    final dt = parseDate(input);
+    final dt = parseDateTime(input);
     if (dt == null) {
       if (input is String && input.trim().isNotEmpty) return input.trim();
       return fallback;
     }
     try {
-      return DateFormat(format).format(dt);
+      return DateFormat(format).format(dt.toLocal());
     } catch (_) {
       return fallback;
     }
@@ -223,14 +291,23 @@ class AppDateUtils {
     String fallback = 'Just now',
   }) {
     if (input == null) return fallback;
-    final dt = parseDate(input);
+    final dt = parseDateTime(input);
     if (dt == null) return fallback;
 
     final now = DateTime.now();
     final localDt = dt.toLocal();
     final diff = now.difference(localDt);
 
-    if (diff.isNegative || diff.inSeconds < 45) {
+    // If future by a tiny margin due to client-server clock drift, or within 45s:
+    if (diff.isNegative) {
+      if (diff.inSeconds.abs() < 120) {
+        return 'Just now';
+      }
+      // Future event
+      return DateFormat('dd MMM, h:mm a').format(localDt);
+    }
+
+    if (diff.inSeconds < 45) {
       return 'Just now';
     }
 

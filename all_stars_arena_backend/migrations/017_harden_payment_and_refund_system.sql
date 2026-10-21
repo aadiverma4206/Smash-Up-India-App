@@ -107,16 +107,22 @@ DECLARE
     v_amount_paise BIGINT;
     v_amount_rupees NUMERIC(10,2);
     v_order_status VARCHAR(32);
+    v_purpose VARCHAR(32);
     v_tx_id VARCHAR(64);
     v_new_balance NUMERIC(10,2);
 BEGIN
     -- 1. Fetch payment order with row lock
-    SELECT user_id, amount_paise, status INTO v_user_id, v_amount_paise, v_order_status
+    SELECT user_id, amount_paise, status, purpose INTO v_user_id, v_amount_paise, v_order_status, v_purpose
     FROM public.payment_orders
     WHERE id = p_payment_order_id FOR UPDATE;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Payment order % not found', p_payment_order_id;
+    END IF;
+
+    -- Enforce that ONLY WALLET_TOPUP orders can ever be settled as a wallet credit
+    IF v_purpose <> 'WALLET_TOPUP' THEN
+        RAISE EXCEPTION 'Payment order % is not a WALLET_TOPUP order (purpose: %)', p_payment_order_id, v_purpose;
     END IF;
 
     -- 2. Idempotency: If already settled as PAID, return existing transaction ID

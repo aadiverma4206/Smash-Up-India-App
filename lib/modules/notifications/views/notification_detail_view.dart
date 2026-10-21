@@ -76,7 +76,7 @@ class _NotificationDetailViewState extends State<NotificationDetailView> {
   String _formatFullDate(String createdAt) {
     if (createdAt.isEmpty) return 'N/A';
     try {
-      final dt = AppDateUtils.parseDate(createdAt);
+      final dt = AppDateUtils.parseDateTime(createdAt);
       if (dt == null) return createdAt;
       return DateFormat('EEEE, d MMMM yyyy • h:mm a').format(dt.toLocal());
     } catch (_) {

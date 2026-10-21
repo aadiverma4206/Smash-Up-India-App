@@ -329,16 +329,22 @@ export const initDbTables = async () => {
           v_amount_paise BIGINT;
           v_amount_rupees NUMERIC(10,2);
           v_order_status VARCHAR(32);
+          v_purpose VARCHAR(32);
           v_tx_id VARCHAR(64);
           v_new_balance NUMERIC(10,2);
       BEGIN
           -- 1. Fetch payment order with row lock
-          SELECT user_id, amount_paise, status INTO v_user_id, v_amount_paise, v_order_status
+          SELECT user_id, amount_paise, status, purpose INTO v_user_id, v_amount_paise, v_order_status, v_purpose
           FROM public.payment_orders
           WHERE id = p_payment_order_id FOR UPDATE;
 
           IF NOT FOUND THEN
               RAISE EXCEPTION 'Payment order % not found', p_payment_order_id;
+          END IF;
+
+          -- Enforce that ONLY WALLET_TOPUP orders can ever be settled as a wallet credit
+          IF v_purpose <> 'WALLET_TOPUP' THEN
+              RAISE EXCEPTION 'Payment order % is not a WALLET_TOPUP order (purpose: %)', p_payment_order_id, v_purpose;
           END IF;
 
           -- 2. Idempotency: If already settled as PAID, return existing transaction ID
@@ -360,19 +366,8 @@ export const initDbTables = async () => {
 
           v_amount_rupees := (v_amount_paise::NUMERIC / 100.0);
 
-          -- 3. Ensure player_details row exists
-          INSERT INTO public.player_details (user_id, wallet_balance)
-          VALUES (v_user_id, 0.00)
-          ON CONFLICT (user_id) DO NOTHING;
-
-          -- 4. ATOMICALLY LOCK & CREDIT PLAYER WALLET BALANCE
-          UPDATE public.player_details
-          SET wallet_balance = COALESCE(wallet_balance, 0.00) + v_amount_rupees,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE user_id = v_user_id
-          RETURNING wallet_balance INTO v_new_balance;
-
-          -- 5. Record in authoritative transactions ledger
+          -- 3. Record in authoritative transactions ledger
+          -- trg_apply_transaction automatically locks player_details FOR UPDATE and credits wallet_balance exactly once
           INSERT INTO public.transactions (
               user_id,
               type,
@@ -385,13 +380,13 @@ export const initDbTables = async () => {
               v_user_id,
               'WALLET_TOPUP',
               v_amount_rupees,
-              v_new_balance,
+              0,
               'SUCCESS',
               'Wallet Top-Up via Razorpay',
               p_payment_order_id
-          ) RETURNING id INTO v_tx_id;
+          ) RETURNING id, balance_after INTO v_tx_id, v_new_balance;
 
-          -- 6. Keep wallet_transactions in sync
+          -- 4. Keep wallet_transactions in sync
           INSERT INTO public.wallet_transactions (
               id,
               user_id,
@@ -414,7 +409,7 @@ export const initDbTables = async () => {
               p_provider_payment_id
           ) ON CONFLICT (id) DO UPDATE SET balance_after = EXCLUDED.balance_after;
 
-          -- 7. Mark payment_order as PAID (valid status in payment_orders_status_check constraint)
+          -- 5. Mark payment_order as PAID
           UPDATE public.payment_orders
           SET status = 'PAID',
               paid_at = CURRENT_TIMESTAMP,

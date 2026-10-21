@@ -227,7 +227,7 @@ export class WalletService {
     }
 
     const orderPurposeRes = await dbPool.query(
-      `SELECT purpose, user_id FROM public.payment_orders WHERE id = $1;`,
+      `SELECT purpose, user_id, amount_paise FROM public.payment_orders WHERE id = $1;`,
       [activePaymentOrderId],
     );
     if (orderPurposeRes.rows.length === 0) {
@@ -331,10 +331,11 @@ export class WalletService {
 
     const wallet = await this.getWallet(userId);
 
+    const topupAmount = (Number(orderPurposeRes.rows[0]?.amount_paise || 0) / 100).toFixed(2);
     sendWalletUpdate(userId, { walletBalance: wallet.walletBalance, txId });
     sendUserNotification(userId, {
       title: "⚽ Top-Up Successful",
-      message: `₹${wallet.walletBalance.toFixed(2)} added to your wallet!`,
+      message: `₹${topupAmount} added to your wallet! New balance: ₹${wallet.walletBalance.toFixed(2)}`,
       type: "SUCCESS",
     });
 
@@ -434,13 +435,24 @@ export class WalletService {
 
         if (paymentOrderId && paymentId) {
           try {
-            await WalletRepository.settleWalletPayment(
-              paymentOrderId,
-              paymentId,
+            const orderRes = await dbPool.query(
+              `SELECT purpose, user_id FROM public.payment_orders WHERE id = $1;`,
+              [paymentOrderId],
             );
-            if (userId) {
-              const wallet = await this.getWallet(userId);
-              sendWalletUpdate(userId, { walletBalance: wallet.walletBalance });
+            if (orderRes.rows[0]?.purpose === "WALLET_TOPUP") {
+              await WalletRepository.settleWalletPayment(
+                paymentOrderId,
+                paymentId,
+              );
+              const targetUserId = userId || orderRes.rows[0]?.user_id;
+              if (targetUserId) {
+                const wallet = await this.getWallet(targetUserId);
+                sendWalletUpdate(targetUserId, { walletBalance: wallet.walletBalance });
+              }
+            } else {
+              logger.info(
+                `Razorpay Webhook for order ${paymentOrderId} has purpose ${orderRes.rows[0]?.purpose || "UNKNOWN"} - not a wallet top-up, skipping wallet settlement.`,
+              );
             }
           } catch (settleErr: any) {
             logger.error(

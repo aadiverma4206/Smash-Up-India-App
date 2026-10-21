@@ -62,10 +62,12 @@ class MatchHistoryController extends GetxController {
     isLoadingMore.value = true;
 
     try {
+      final statusParam =
+          activeFilter.value == 'ALL' ? null : activeFilter.value;
       final list = await repository.getHistory(
         limit: limit,
         offset: currentOffset,
-        status: activeFilter.value,
+        status: statusParam,
       );
       if (list.length < limit) {
         hasMore.value = false;
