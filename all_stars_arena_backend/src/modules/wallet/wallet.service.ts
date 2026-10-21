@@ -226,6 +226,32 @@ export class WalletService {
       );
     }
 
+    const orderPurposeRes = await dbPool.query(
+      `SELECT purpose, user_id FROM public.payment_orders WHERE id = $1;`,
+      [activePaymentOrderId],
+    );
+    if (orderPurposeRes.rows.length === 0) {
+      throw new ApiError(
+        404,
+        "Payment order record not found for settlement",
+        "PAYMENT_ORDER_NOT_FOUND",
+      );
+    }
+    if (orderPurposeRes.rows[0]?.user_id !== userId) {
+      throw new ApiError(
+        403,
+        "Payment order belongs to another player",
+        "FORBIDDEN",
+      );
+    }
+    if (orderPurposeRes.rows[0]?.purpose !== "WALLET_TOPUP") {
+      throw new ApiError(
+        400,
+        "This payment order is not a wallet top-up and cannot credit the wallet",
+        "INVALID_PAYMENT_PURPOSE",
+      );
+    }
+
     if (
       razorpaySignature &&
       razorpayOrderId &&

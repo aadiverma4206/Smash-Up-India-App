@@ -12,6 +12,8 @@ import {
 } from "../../services/realtime.service.js";
 import { ApiError } from "../../utils/apiResponse.js";
 import { logger } from "../../utils/logger.js";
+import { razorpayClient } from "../../services/razorpay.service.js";
+import { env } from "../../config/env.config.js";
 
 const FORMAT_PLAYER_COUNTS: Record<string, number> = {
   "1v1": 2,
@@ -38,6 +40,113 @@ const SKILL_LEVEL_MAP: Record<string, string> = {
 };
 
 export class GamesService {
+  static async createMatchRazorpayOrder(
+    userId: string,
+    amountRupees: number,
+    gameId?: string,
+    purpose: string = "MATCH_JOIN",
+  ) {
+    if (gameId) {
+      const gameRes = await dbPool.query(
+        `SELECT id, entry_fee, max_players, status FROM public.games WHERE id = $1;`,
+        [gameId],
+      );
+      if (gameRes.rows.length === 0) {
+        throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
+      }
+      const game = gameRes.rows[0];
+      if (game.status === "CANCELLED" || game.status === "COMPLETED") {
+        throw new ApiError(
+          400,
+          `Cannot join a match that is ${game.status}`,
+          "INVALID_MATCH_STATUS",
+        );
+      }
+      amountRupees = parseFloat(game.entry_fee || "0.00");
+    }
+
+    if (amountRupees <= 0) {
+      throw new ApiError(
+        400,
+        "Match is free or fee is invalid",
+        "INVALID_AMOUNT",
+      );
+    }
+
+    const amountPaise = Math.round(amountRupees * 100);
+    const keyId = env.RAZORPAY_KEY_ID || "rzp_test_Sb44esbmpGlzBd";
+    const paymentOrderId = `pay_ord_${crypto.randomBytes(8).toString("hex")}`;
+    let razorpayOrderId = `rzp_order_mock_${Date.now()}`;
+    const dbPurpose = gameId ? "MATCH_JOIN" : "MATCH_CREATION";
+
+    try {
+      if (
+        keyId &&
+        env.RAZORPAY_KEY_SECRET &&
+        !keyId.includes("dummy") &&
+        !keyId.includes("123456")
+      ) {
+        const rzpOrder = await razorpayClient.orders.create({
+          amount: amountPaise,
+          currency: "INR",
+          receipt: paymentOrderId,
+          notes: {
+            userId,
+            gameId: gameId || "new_game",
+            purpose: dbPurpose,
+            paymentOrderId,
+          },
+        });
+        razorpayOrderId = rzpOrder.id;
+      }
+    } catch (err: any) {
+      logger.warn(
+        `Razorpay Match Order SDK Notice (${err.message}). Using fallback order ID.`,
+      );
+    }
+
+    await dbPool.query(
+      `INSERT INTO public.payment_orders (
+         id, user_id, provider, provider_order_id, idempotency_key,
+         amount_paise, currency, purpose, status, metadata, expires_at
+       ) VALUES ($1, $2, 'RAZORPAY', $3, $4, $5, 'INR', $6, 'PENDING', $7, CURRENT_TIMESTAMP + INTERVAL '30 minutes')
+       ON CONFLICT (id) DO UPDATE 
+       SET provider_order_id = EXCLUDED.provider_order_id, updated_at = CURRENT_TIMESTAMP;`,
+      [
+        paymentOrderId,
+        userId,
+        razorpayOrderId,
+        paymentOrderId,
+        amountPaise,
+        dbPurpose,
+        JSON.stringify({ gameId, userId, amountRupees }),
+      ],
+    );
+
+    const userRes = await dbPool.query(
+      "SELECT name, email, phone FROM public.users WHERE id = $1;",
+      [userId],
+    );
+    const user = userRes.rows[0];
+
+    return {
+      paymentOrderId,
+      orderId: razorpayOrderId,
+      razorpayOrderId,
+      keyId,
+      razorpayKeyId: keyId,
+      amountRupees,
+      amountPaise,
+      amountPaisa: amountPaise,
+      currency: "INR",
+      prefill: {
+        name: user?.name || "Player",
+        email: user?.email || "",
+        contact: user?.phone || "",
+      },
+    };
+  }
+
   static async createPlayerGame(
     creatorUserId: string,
     data: {
@@ -201,11 +310,139 @@ export class GamesService {
 
       if (isPlayerCreator) {
         const initialPosition = ((data as any).position || "ST").toUpperCase();
+        let paymentStatus = "HOST_FREE";
+
+        let paymentMethodRecorded = "FREE";
+        let paymentRefRecorded: string | null = null;
+
+        if (entryFee > 0) {
+          if (data.paymentMethod === "WALLET") {
+            if (data.walletPin) {
+              const pinValid = await verifyUserWalletPin(
+                creatorUserId,
+                data.walletPin,
+              );
+              if (!pinValid) {
+                throw new ApiError(
+                  400,
+                  "Incorrect wallet PIN",
+                  "INVALID_WALLET_PIN",
+                );
+              }
+            }
+            const walletRes = await client.query(
+              `SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;`,
+              [creatorUserId],
+            );
+            const currentBalance = parseFloat(
+              walletRes.rows[0]?.wallet_balance || "0.00",
+            );
+            if (currentBalance < entryFee) {
+              throw new ApiError(
+                400,
+                `Insufficient wallet balance. Available: ₹${currentBalance.toFixed(2)}, Required: ₹${entryFee.toFixed(2)}`,
+                "INSUFFICIENT_WALLET_BALANCE",
+              );
+            }
+
+            const txRes = await client.query(
+              `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+               VALUES ($1, 'PAYMENT', $2, 0, 'SUCCESS', $3, $4)
+               RETURNING id, balance_after;`,
+              [
+                creatorUserId,
+                entryFee,
+                `Host entry fee for match "${newGame.title || "Football Match"}"`,
+                targetGameId,
+              ],
+            );
+            const newBalance = parseFloat(
+              txRes.rows[0]?.balance_after || "0.00",
+            );
+
+            await client.query(
+              `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+               VALUES ($1, $2, 'DEBIT', $3, $4, $5, 'SUCCESS', $6)
+               ON CONFLICT (id) DO NOTHING;`,
+              [
+                txRes.rows[0]?.id,
+                creatorUserId,
+                entryFee,
+                newBalance,
+                `Host entry fee for match "${newGame.title || "Football Match"}"`,
+                targetGameId,
+              ],
+            );
+
+            sendWalletUpdate(creatorUserId, { walletBalance: newBalance });
+            paymentStatus = "PAID";
+            paymentMethodRecorded = "WALLET";
+            paymentRefRecorded = txRes.rows[0]?.id;
+          } else if (data.paymentMethod === "RAZORPAY") {
+            const razorId =
+              data.razorpayPaymentId ||
+              data.paymentReference ||
+              data.razorpayOrderId;
+            logger.info(
+              `Host player ${creatorUserId} created game ${targetGameId} via Razorpay reference ${razorId}`,
+            );
+
+            if (
+              data.razorpayOrderId &&
+              data.razorpayPaymentId &&
+              data.razorpaySignature &&
+              !data.razorpayOrderId.startsWith("rzp_order_mock_")
+            ) {
+              const secret =
+                env.RAZORPAY_KEY_SECRET || "0TkqPajfyDM5ng6e3CQxIzYy";
+              const generatedSig = crypto
+                .createHmac("sha256", secret)
+                .update(`${data.razorpayOrderId}|${data.razorpayPaymentId}`)
+                .digest("hex");
+              if (generatedSig !== data.razorpaySignature) {
+                throw new ApiError(
+                  400,
+                  "Invalid Razorpay payment signature",
+                  "INVALID_SIGNATURE",
+                );
+              }
+            }
+
+            const razorOrderId = data.razorpayOrderId || data.paymentOrderId;
+            if (razorOrderId) {
+              await client.query(
+                `UPDATE public.payment_orders 
+                 SET status = 'PAID', paid_at = CURRENT_TIMESTAMP, provider_payment_id = $1, updated_at = CURRENT_TIMESTAMP 
+                 WHERE (provider_order_id = $2 OR id = $2) AND user_id = $3;`,
+                [
+                  data.razorpayPaymentId || razorId,
+                  razorOrderId,
+                  creatorUserId,
+                ],
+              );
+            }
+
+            paymentStatus = "PAID";
+            paymentMethodRecorded = "RAZORPAY";
+            paymentRefRecorded = razorId || null;
+          }
+        }
+
         await client.query(
-          `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
-           VALUES ($1, $2, 'TEAM_A', $3, 'HOST_FREE')
-           ON CONFLICT (game_id, user_id) DO NOTHING;`,
-          [targetGameId, creatorUserId, initialPosition],
+          `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status, payment_method, payment_reference)
+           VALUES ($1, $2, 'TEAM_A', $3, $4, $5, $6)
+           ON CONFLICT (game_id, user_id) DO UPDATE 
+           SET payment_status = EXCLUDED.payment_status,
+               payment_method = EXCLUDED.payment_method,
+               payment_reference = EXCLUDED.payment_reference;`,
+          [
+            targetGameId,
+            creatorUserId,
+            initialPosition,
+            paymentStatus,
+            paymentMethodRecorded,
+            paymentRefRecorded,
+          ],
         );
       }
 
@@ -377,6 +614,8 @@ export class GamesService {
 
       const entryFee = parseFloat(game.entry_fee || "0.00");
       const paymentMethod = paymentDetails?.paymentMethod || "WALLET";
+      let paymentMethodRecorded = entryFee > 0 ? "WALLET" : "FREE";
+      let paymentRefRecorded: string | null = null;
 
       if (entryFee > 0) {
         if (paymentMethod === "WALLET") {
@@ -435,18 +674,82 @@ export class GamesService {
               gameId,
             ],
           );
+
+          paymentMethodRecorded = "WALLET";
+          paymentRefRecorded = txRes.rows[0]?.id;
         } else if (paymentMethod === "RAZORPAY") {
           if (
-            paymentDetails?.razorpayPaymentId ||
-            paymentDetails?.razorpayOrderId
+            !paymentDetails?.razorpayPaymentId ||
+            !paymentDetails?.razorpayOrderId
           ) {
-            const razorId =
-              paymentDetails.razorpayPaymentId ||
-              paymentDetails.razorpayOrderId;
-            logger.info(
-              `Player ${userId} joined game ${gameId} via Razorpay reference ${razorId}`,
+            throw new ApiError(
+              400,
+              "Razorpay payment details (order ID and payment ID) are required",
+              "MISSING_PAYMENT_DETAILS",
             );
           }
+
+          const razorId = paymentDetails.razorpayPaymentId;
+          const razorOrderId = paymentDetails.razorpayOrderId;
+
+          if (
+            paymentDetails.razorpaySignature &&
+            !razorOrderId.startsWith("rzp_order_mock_")
+          ) {
+            const secret =
+              env.RAZORPAY_KEY_SECRET || "0TkqPajfyDM5ng6e3CQxIzYy";
+            const generatedSignature = crypto
+              .createHmac("sha256", secret)
+              .update(`${razorOrderId}|${razorId}`)
+              .digest("hex");
+
+            if (generatedSignature !== paymentDetails.razorpaySignature) {
+              throw new ApiError(
+                400,
+                "Invalid Razorpay payment signature",
+                "INVALID_SIGNATURE",
+              );
+            }
+          }
+
+          const poRes = await client.query(
+            `SELECT id, user_id, amount_paise, status, purpose 
+             FROM public.payment_orders 
+             WHERE (provider_order_id = $1 OR id = $1) 
+             FOR UPDATE;`,
+            [razorOrderId],
+          );
+
+          if (poRes.rows.length > 0) {
+            const po = poRes.rows[0];
+            if (po.user_id !== userId) {
+              throw new ApiError(
+                403,
+                "Payment order belongs to another user",
+                "FORBIDDEN",
+              );
+            }
+            if (po.status === "PAID") {
+              throw new ApiError(
+                400,
+                "Payment order has already been processed",
+                "ALREADY_PROCESSED",
+              );
+            }
+            await client.query(
+              `UPDATE public.payment_orders 
+               SET status = 'PAID', paid_at = CURRENT_TIMESTAMP, provider_payment_id = $1, updated_at = CURRENT_TIMESTAMP 
+               WHERE id = $2;`,
+              [razorId, po.id],
+            );
+          }
+
+          logger.info(
+            `Player ${userId} joined game ${gameId} via Razorpay reference ${razorId}. Wallet balance unchanged.`,
+          );
+
+          paymentMethodRecorded = "RAZORPAY";
+          paymentRefRecorded = razorId;
         }
       }
 
@@ -463,10 +766,17 @@ export class GamesService {
       const assignedTeam = teamACount <= teamBCount ? "TEAM_A" : "TEAM_B";
 
       const insertRes = await client.query(
-        `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
-         VALUES ($1, $2, $3, $4, 'PAID')
+        `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status, payment_method, payment_reference)
+         VALUES ($1, $2, $3, $4, 'PAID', $5, $6)
          RETURNING id;`,
-        [gameId, userId, assignedTeam, (position || "MID").toUpperCase()],
+        [
+          gameId,
+          userId,
+          assignedTeam,
+          (position || "MID").toUpperCase(),
+          paymentMethodRecorded,
+          paymentRefRecorded,
+        ],
       );
       rosterId = insertRes.rows[0]?.id;
 
@@ -531,14 +841,104 @@ export class GamesService {
   }
 
   static async leaveGame(userId: string, gameId: string) {
-    const left = await GamesRepository.leaveGame(gameId, userId);
-    if (!left) {
-      throw new ApiError(400, "Player is not in this game", "NOT_IN_GAME");
+    const client = await dbPool.connect();
+    let wasRefunded = false;
+    let entryFee = 0;
+    let newBal: number | null = null;
+
+    try {
+      await client.query("BEGIN");
+
+      const gameRes = await client.query(
+        `SELECT id, title, entry_fee, status FROM public.games WHERE id = $1 FOR UPDATE;`,
+        [gameId],
+      );
+      if (gameRes.rows.length === 0) {
+        throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
+      }
+      const game = gameRes.rows[0];
+
+      const playerRes = await client.query(
+        `SELECT id, payment_status, payment_method, payment_reference 
+         FROM public.game_players 
+         WHERE game_id = $1 AND user_id = $2 
+         FOR UPDATE;`,
+        [gameId, userId],
+      );
+      if (playerRes.rows.length === 0) {
+        throw new ApiError(400, "Player is not in this game", "NOT_IN_GAME");
+      }
+      const playerRecord = playerRes.rows[0];
+
+      entryFee = parseFloat(game.entry_fee || "0.00");
+
+      if (entryFee > 0 && playerRecord.payment_status === "PAID") {
+        const refundRef = `LEAVE_REFUND:${gameId}:${userId}`;
+        const existingRefund = await client.query(
+          `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+          [userId, refundRef],
+        );
+
+        if (existingRefund.rows.length === 0) {
+          const txRes = await client.query(
+            `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+             VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+             RETURNING id, balance_after;`,
+            [
+              userId,
+              entryFee,
+              `Refund for leaving match "${game.title || "Football Match"}"`,
+              refundRef,
+            ],
+          );
+          newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
+
+          await client.query(
+            `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+             VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+             ON CONFLICT (id) DO NOTHING;`,
+            [
+              txRes.rows[0]?.id,
+              userId,
+              entryFee,
+              newBal,
+              `Refund for leaving match "${game.title || "Football Match"}"`,
+              refundRef,
+            ],
+          );
+          wasRefunded = true;
+        }
+      }
+
+      await client.query(
+        `DELETE FROM public.game_players WHERE game_id = $1 AND user_id = $2;`,
+        [gameId, userId],
+      );
+
+      if (game.status === "FULL") {
+        await client.query(
+          `UPDATE public.games SET status = 'OPEN_FOR_JOINING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+          [gameId],
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    if (wasRefunded && newBal !== null) {
+      sendWalletUpdate(userId, { walletBalance: newBal });
     }
 
     sendUserNotification(userId, {
       title: "⚽ Left Match",
-      message: "You have left the match roster.",
+      message: wasRefunded
+        ? `You left the match. ₹${entryFee.toFixed(2)} refunded to your wallet.`
+        : "You have left the match roster.",
       type: "INFO",
     });
 
@@ -567,7 +967,7 @@ export class GamesService {
       );
     }
 
-    return { success: true, gameId };
+    return { success: true, gameId, refunded: wasRefunded };
   }
 
   static async getAuthorizedVideos(

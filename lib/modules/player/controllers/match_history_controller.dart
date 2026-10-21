@@ -90,7 +90,21 @@ class MatchHistoryController extends GetxController {
 
   List<GameModel> get filteredHistoryGames {
     final query = searchController.text.trim().toLowerCase();
+    final filter = activeFilter.value.toUpperCase();
+
     return historyGames.where((game) {
+      final statusUpper = game.status.toUpperCase();
+
+      if (filter == 'COMPLETED') {
+        if (statusUpper != 'COMPLETED' && statusUpper != 'FINISHED') {
+          return false;
+        }
+      } else if (filter == 'CANCELLED') {
+        if (statusUpper != 'CANCELLED') {
+          return false;
+        }
+      }
+
       if (query.isNotEmpty) {
         final title = game.title.toLowerCase();
         final court = game.courtName.toLowerCase();

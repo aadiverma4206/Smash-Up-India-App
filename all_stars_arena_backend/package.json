@@ -9,7 +9,7 @@
     "dev": "tsx watch src/server.ts",
     "tunnel": "lt --port 5000",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests --runInBand",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests --runInBand",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,json}\"",
 "format:check": "prettier --check \"src/**/*.{ts,tsx,js,json}\""
   },

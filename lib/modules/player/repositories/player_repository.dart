@@ -73,8 +73,11 @@ class PlayerRepository {
     final cacheKey = 'player_history_${status ?? 'ALL'}_$offset';
 
     try {
-      final response =
-          await remoteDataSource.getHistory(limit: limit, offset: offset);
+      final response = await remoteDataSource.getHistory(
+        limit: limit,
+        offset: offset,
+        status: status,
+      );
       final list = response.data ?? [];
 
       if (Get.isRegistered<DatabaseService>()) {

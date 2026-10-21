@@ -103,10 +103,18 @@ class PlayerRemoteDataSource {
   }
 
   Future<ApiResponseModel<List<GameModel>>> getHistory(
-      {int limit = 20, int offset = 0}) async {
+      {int limit = 20, int offset = 0, String? status}) async {
+    final Map<String, dynamic> queryParams = {
+      'limit': limit,
+      'offset': offset,
+    };
+    if (status != null && status.isNotEmpty && status.toUpperCase() != 'ALL') {
+      queryParams['status'] = status.toUpperCase();
+    }
+
     final response = await dioClient.dio.get(
       ApiConstants.playerHistory,
-      queryParameters: {'limit': limit, 'offset': offset},
+      queryParameters: queryParams,
     );
     return ApiResponseParser.parse<List<GameModel>>(
       response.data,

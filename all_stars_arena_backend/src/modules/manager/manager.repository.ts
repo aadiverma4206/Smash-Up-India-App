@@ -423,12 +423,18 @@ export class ManagerRepository {
                SELECT COALESCE(json_agg(
                  json_build_object(
                    'userId', gp.user_id,
+                   'user_id', gp.user_id,
                    'name', COALESCE(pu.name, 'Player'),
                    'profileImageUrl', pu.profile_image_url,
-                   'team', COALESCE(gp.team, 'TEAM_A'),
+                   'profile_image_url', pu.profile_image_url,
+                   'team', UPPER(COALESCE(NULLIF(gp.team::text, ''), 'TEAM_A')),
                    'position', COALESCE(gp.position, 'MID'),
-                   'ovr', COALESCE(pd.ovr_rating, 80)
+                   'ovr', COALESCE(pd.ovr_rating, 80),
+                   'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
+                   'payment_status', COALESCE(gp.payment_status, 'PAID'),
+                   'phone', pu.phone
                  )
+                 ORDER BY gp.team ASC, gp.joined_at ASC
                ), '[]'::json)
                FROM public.game_players gp
                JOIN public.users pu ON pu.id = gp.user_id
@@ -739,7 +745,7 @@ export class ManagerRepository {
     const player = userRes.rows[0];
 
     const historyRes = await dbPool.query(
-      `SELECT gp.game_id, gp.payment_status, gp.team, gp.position as game_position, gp.created_at as joined_at,
+      `SELECT gp.game_id, gp.payment_status, gp.team, gp.position as game_position, gp.joined_at,
               g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,
               g.entry_fee, g.status as match_status,
               crt.name as court_name, clb.name as club_name,
@@ -816,14 +822,14 @@ export class ManagerRepository {
     const game = gameRes.rows[0];
 
     const playersRes = await dbPool.query(
-      `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.created_at as joined_at,
+      `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.joined_at,
               u.name, u.email, u.phone, u.profile_image_url,
               pd.elo_rating, pd.ovr_rating
        FROM public.game_players gp
        JOIN public.users u ON u.id = gp.user_id
        LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
        WHERE gp.game_id = $1
-       ORDER BY gp.created_at ASC;`,
+       ORDER BY gp.joined_at ASC;`,
       [gameId],
     );
 
@@ -861,14 +867,14 @@ export class ManagerRepository {
 
   static async getGamePlayers(gameId: string) {
     const playersRes = await dbPool.query(
-      `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.created_at as joined_at,
+      `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.joined_at,
               u.name, u.email, u.phone, u.profile_image_url,
               pd.elo_rating, pd.ovr_rating
        FROM public.game_players gp
        JOIN public.users u ON u.id = gp.user_id
        LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
        WHERE gp.game_id = $1
-       ORDER BY gp.team ASC, gp.created_at ASC;`,
+       ORDER BY gp.team ASC, gp.joined_at ASC;`,
       [gameId],
     );
 
@@ -892,12 +898,22 @@ export class ManagerRepository {
       ovr_rating: Number(r.ovr_rating || 75),
     }));
 
-    const teamA = players.filter((p: any) =>
-      p.team.toUpperCase().includes("A"),
-    );
-    const teamB = players.filter((p: any) =>
-      p.team.toUpperCase().includes("B"),
-    );
+    const isTeamA = (teamStr: string) => {
+      const t = (teamStr || "").trim().toUpperCase();
+      return (
+        t === "TEAM_A" ||
+        t === "TEAM A" ||
+        t === "A" ||
+        (t.endsWith("A") && !t.includes("TEAM_B") && !t.includes("B"))
+      );
+    };
+    const isTeamB = (teamStr: string) => {
+      const t = (teamStr || "").trim().toUpperCase();
+      return t === "TEAM_B" || t === "TEAM B" || t === "B" || t.endsWith("B");
+    };
+
+    const teamA = players.filter((p: any) => isTeamA(p.team));
+    const teamB = players.filter((p: any) => isTeamB(p.team));
 
     return {
       totalPlayers: players.length,

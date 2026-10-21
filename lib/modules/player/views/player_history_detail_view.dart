@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../controllers/match_history_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../core/utils/image_utils.dart';
@@ -661,10 +660,8 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
                 controller.selectedRosterTeamFilter.value == 'TEAM_B'
                     ? 'TEAM_B'
                     : 'TEAM_A';
-            final teamACount =
-                roster.where((p) => p.team.toUpperCase().contains('A')).length;
-            final teamBCount =
-                roster.where((p) => p.team.toUpperCase().contains('B')).length;
+            final teamACount = roster.where((p) => p.isTeamA).length;
+            final teamBCount = roster.where((p) => p.isTeamB).length;
 
             return Row(
               children: [
@@ -765,12 +762,8 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
                     ? 'TEAM_B'
                     : 'TEAM_A';
             final filteredRoster = filterTab == 'TEAM_B'
-                ? roster
-                    .where((p) => p.team.toUpperCase().contains('B'))
-                    .toList()
-                : roster
-                    .where((p) => p.team.toUpperCase().contains('A'))
-                    .toList();
+                ? roster.where((p) => p.isTeamB).toList()
+                : roster.where((p) => p.isTeamA).toList();
 
             if (filteredRoster.isEmpty) {
               return Padding(
@@ -797,7 +790,7 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final player = filteredRoster[index];
-                final isTeamA = player.team.toUpperCase().contains('A');
+                final isTeamA = player.isTeamA;
                 final hasImage = player.profileImageUrl.isValidNetworkUrl;
 
                 return Container(
@@ -868,14 +861,6 @@ class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
                                               ? Colors.white70
                                               : Colors.black87)),
                                 ),
-                                const SizedBox(width: 6),
-                                Text('OVR: ${player.ovr}',
-                                    style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark
-                                            ? AppColors.textSecondaryDark
-                                            : Colors.grey.shade600)),
                               ],
                             ),
                           ],

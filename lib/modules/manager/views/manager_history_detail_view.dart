@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../core/services/auth_service.dart';
@@ -1266,10 +1265,8 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                 controller.selectedRosterTeamFilter.value == 'TEAM_B'
                     ? 'TEAM_B'
                     : 'TEAM_A';
-            final teamACount =
-                roster.where((p) => p.team.toUpperCase().contains('A')).length;
-            final teamBCount =
-                roster.where((p) => p.team.toUpperCase().contains('B')).length;
+            final teamACount = roster.where((p) => p.isTeamA).length;
+            final teamBCount = roster.where((p) => p.isTeamB).length;
 
             return Row(
               children: [
@@ -1378,12 +1375,8 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                     ? 'TEAM_B'
                     : 'TEAM_A';
             final filteredRoster = filterTab == 'TEAM_B'
-                ? roster
-                    .where((p) => p.team.toUpperCase().contains('B'))
-                    .toList()
-                : roster
-                    .where((p) => p.team.toUpperCase().contains('A'))
-                    .toList();
+                ? roster.where((p) => p.isTeamB).toList()
+                : roster.where((p) => p.isTeamA).toList();
 
             if (filteredRoster.isEmpty) {
               return Padding(
@@ -1411,7 +1404,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final player = filteredRoster[index];
-                final isTeamA = player.team.toUpperCase().contains('A');
+                final isTeamA = player.isTeamA;
 
                 return Container(
                   padding:
@@ -1463,7 +1456,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Position: ${player.position} • OVR: ${player.ovr}',
+                              'Position: ${player.position}',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: isDark

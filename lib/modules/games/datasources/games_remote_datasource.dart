@@ -5,11 +5,27 @@ import '../../../data/models/api_response_model.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/court_model.dart';
 import '../../../data/models/video_model.dart';
+import '../../../data/models/wallet_models.dart';
 
 class GamesRemoteDataSource {
   final DioClient dioClient;
 
   GamesRemoteDataSource({required this.dioClient});
+
+  Future<ApiResponseModel<RazorpayOrderModel>> createMatchOrder(
+      double amount, {String? gameId}) async {
+    final response = await dioClient.dio.post(
+      '${ApiConstants.games}/order',
+      data: {
+        'amount': amount,
+        if (gameId != null && gameId.isNotEmpty) 'gameId': gameId,
+      },
+    );
+    return ApiResponseParser.parse<RazorpayOrderModel>(
+      response.data,
+      (json) => RazorpayOrderModel.fromJson(json as Map<String, dynamic>),
+    );
+  }
 
   Future<List<ClubModel>> getClubs({String? city}) async {
     try {

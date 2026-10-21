@@ -87,6 +87,22 @@ class GameRosterPlayerModel {
     );
   }
 
+  bool get isTeamA {
+    final t = team.trim().toUpperCase();
+    return t == 'TEAM_A' ||
+        t == 'TEAM A' ||
+        t == 'A' ||
+        (t.endsWith('A') && !t.contains('TEAM_B') && !t.contains('B'));
+  }
+
+  bool get isTeamB {
+    final t = team.trim().toUpperCase();
+    return t == 'TEAM_B' ||
+        t == 'TEAM B' ||
+        t == 'B' ||
+        (t.endsWith('B') && !t.contains('TEAM_A') && !t.contains('A'));
+  }
+
   Map<String, dynamic> toJson() => {
         'userId': userId,
         'name': name,

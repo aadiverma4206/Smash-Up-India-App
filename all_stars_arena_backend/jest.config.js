@@ -5,7 +5,7 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
-    '^.+\\.tsx?$': [
+    '^.+\\.[tj]sx?$': [
       'ts-jest',
       {
         useESM: true,
@@ -15,6 +15,8 @@ export default {
       },
     ],
   },
+  transformIgnorePatterns: ['node_modules/(?!(http-proxy-middleware)/)'],
+  extensionsToTreatAsEsm: ['.ts'],
   testMatch: ['**/tests/**/*.test.ts'],
   forceExit: true,
 };

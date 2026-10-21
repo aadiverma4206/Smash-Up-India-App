@@ -26,6 +26,11 @@ export const initDbTables = async () => {
       ALTER TABLE public.player_details ADD COLUMN IF NOT EXISTS secondary_position VARCHAR(16);
       ALTER TABLE public.player_details ADD COLUMN IF NOT EXISTS elo_rating INT DEFAULT 1200;
       ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS payment_status VARCHAR(32) DEFAULT 'PAID';
+      ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      UPDATE public.game_players SET created_at = joined_at WHERE created_at IS NULL AND joined_at IS NOT NULL;
+      UPDATE public.game_players SET joined_at = created_at WHERE joined_at IS NULL AND created_at IS NOT NULL;
 
       ALTER TABLE public.games DROP CONSTRAINT IF EXISTS games_entry_fee_check;
       ALTER TABLE public.games ADD CONSTRAINT games_entry_fee_check CHECK (entry_fee >= 0);

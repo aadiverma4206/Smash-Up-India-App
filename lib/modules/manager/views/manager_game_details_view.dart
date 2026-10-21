@@ -840,10 +840,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           ? 'TEAM_A'
           : controller.selectedRosterTeamFilter.value;
 
-      final teamAPlayers =
-          roster.where((p) => p.team.toUpperCase().contains('A')).toList();
-      final teamBPlayers =
-          roster.where((p) => p.team.toUpperCase().contains('B')).toList();
+      final teamAPlayers = roster.where((p) => p.isTeamA).toList();
+      final teamBPlayers = roster.where((p) => p.isTeamB).toList();
 
       final teamACount = teamAPlayers.length;
       final teamBCount = teamBPlayers.length;
@@ -1099,21 +1097,6 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                                     'Pos: ${player.position}',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: context.textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    ' • ',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: context.textSecondary,
-                                    ),
-                                  ),
-                                  Text(
-                                    'OVR: ${player.ovr}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
                                       color: context.textSecondary,
                                     ),
                                   ),

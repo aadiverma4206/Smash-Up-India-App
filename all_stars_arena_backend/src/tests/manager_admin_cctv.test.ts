@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import request from "supertest";
 import bcrypt from "bcryptjs";
 import app from "../app.js";

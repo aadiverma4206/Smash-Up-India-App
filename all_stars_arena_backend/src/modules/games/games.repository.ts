@@ -116,13 +116,14 @@ export class GamesRepository {
                     'name', COALESCE(pu.name, 'Player'),
                     'profileImageUrl', pu.profile_image_url,
                     'profile_image_url', pu.profile_image_url,
-                    'team', COALESCE(gp.team, 'TEAM_A'),
+                    'team', UPPER(COALESCE(NULLIF(gp.team::text, ''), 'TEAM_A')),
                     'position', COALESCE(gp.position, 'MID'),
                     'ovr', COALESCE(pd.ovr_rating, 80),
                     'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
                     'payment_status', COALESCE(gp.payment_status, 'PAID'),
                     'phone', pu.phone
                   )
+                  ORDER BY gp.team ASC, gp.joined_at ASC
                 ), '[]'::json)
                 FROM public.game_players gp
                 JOIN public.users pu ON pu.id = gp.user_id

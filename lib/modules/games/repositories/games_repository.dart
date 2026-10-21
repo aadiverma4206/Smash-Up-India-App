@@ -2,12 +2,23 @@ import '../datasources/games_remote_datasource.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/court_model.dart';
 import '../../../data/models/video_model.dart';
+import '../../../data/models/wallet_models.dart';
 import '../../../core/errors/app_exception.dart';
 
 class GamesRepository {
   final GamesRemoteDataSource remoteDataSource;
 
   GamesRepository({required this.remoteDataSource});
+
+  Future<RazorpayOrderModel> createMatchOrder(double amount,
+      {String? gameId}) async {
+    final response =
+        await remoteDataSource.createMatchOrder(amount, gameId: gameId);
+    if (response.data == null) {
+      throw AppException('Failed to create match payment order.');
+    }
+    return response.data!;
+  }
 
   Future<List<ClubModel>> getClubs({String? city}) async {
     return await remoteDataSource.getClubs(city: city);

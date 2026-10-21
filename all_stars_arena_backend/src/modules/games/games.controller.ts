@@ -78,6 +78,42 @@ export const getGameByIdController = asyncHandler(
   },
 );
 
+export const createMatchOrderController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const targetGameId = req.params.id || req.body.gameId;
+    let amountRupees = Number(req.body.amountRupees || req.body.amount || 0);
+
+    if (!userId) throw new ApiError(401, "Unauthorized");
+
+    // If gameId is provided, we can fetch fee from DB if amount not passed
+    if (targetGameId && amountRupees <= 0) {
+      const gRes = await dbPool.query(
+        "SELECT entry_fee FROM public.games WHERE id = $1;",
+        [targetGameId],
+      );
+      if (gRes.rows.length > 0) {
+        amountRupees = parseFloat(gRes.rows[0].entry_fee || "0.00");
+      }
+    }
+
+    if (isNaN(amountRupees) || amountRupees <= 0) {
+      throw new ApiError(400, "Valid match payment amount is required");
+    }
+
+    const result = await GamesService.createMatchRazorpayOrder(
+      userId,
+      amountRupees,
+      targetGameId,
+      req.body.purpose || "MATCH_JOIN",
+    );
+
+    res
+      .status(200)
+      .json(ApiResponse.success("Match payment order created", result));
+  },
+);
+
 export const createGameController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
@@ -199,18 +235,25 @@ export const joinGameController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
     const gameId = req.params.id || req.body?.gameId;
-    const {
-      position = "MID",
-      paymentMethod,
-      walletPin,
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature,
-    } = req.body || {};
+    const position = req.body?.position;
+    const payment = req.body?.paymentDetails || {};
+    const paymentMethod =
+      payment.paymentMethod || req.body?.paymentMethod || "WALLET";
+    const walletPin = payment.walletPin || req.body?.walletPin;
+    const razorpayOrderId =
+      payment.razorpayOrderId || req.body?.razorpayOrderId;
+    const razorpayPaymentId =
+      payment.razorpayPaymentId || req.body?.razorpayPaymentId;
+    const razorpaySignature =
+      payment.razorpaySignature || req.body?.razorpaySignature;
 
     if (!userId) throw new ApiError(401, "Unauthorized");
     if (!gameId) {
-      throw new ApiError(400, "Match ID (gameId) is required", "VALIDATION_ERROR");
+      throw new ApiError(
+        400,
+        "Match ID (gameId) is required",
+        "VALIDATION_ERROR",
+      );
     }
     if (req.user?.roleId !== 3) {
       throw new ApiError(

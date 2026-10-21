@@ -47,6 +47,9 @@ class GameDetailsController extends GetxController {
   final RxString selectedJoinPaymentMethod = 'RAZORPAY'.obs;
   final RxDouble walletBalance = 0.0.obs;
 
+  final RxnString currentPaymentOrderId = RxnString();
+  final RxnString currentRazorpayOrderId = RxnString();
+
   String _gameId = '';
 
   String get gameId {
@@ -143,8 +146,8 @@ class GameDetailsController extends GetxController {
       if (_gameId.isEmpty) _gameId = g.id;
 
       if (g.roster != null) {
-        teamARoster.value = g.roster!.where((p) => p.team == 'TEAM_A').toList();
-        teamBRoster.value = g.roster!.where((p) => p.team == 'TEAM_B').toList();
+        teamARoster.value = g.roster!.where((p) => p.isTeamA).toList();
+        teamBRoster.value = g.roster!.where((p) => p.isTeamB).toList();
       }
 
       if (g.status == 'COMPLETED' || isUserInGame || isManagerOrAdmin) {
@@ -234,9 +237,10 @@ class GameDetailsController extends GetxController {
     paymentStatus.value = 'Creating Order...';
 
     try {
-      final idempotencyKey =
-          'join_pay_${DateTime.now().millisecondsSinceEpoch}';
-      final order = await _walletRepo.createTopupOrder(fee, idempotencyKey);
+      final targetGameId = gameId.isNotEmpty ? gameId : (game.value?.id ?? '');
+      final order = await repository.createMatchOrder(fee, gameId: targetGameId);
+
+      currentRazorpayOrderId.value = order.orderId;
 
       final user = AuthService.to.currentUser.value;
       final contact =
@@ -255,7 +259,8 @@ class GameDetailsController extends GetxController {
         'name': 'ALL STARS ARENA',
         'description':
             'Player Entry Fee - ${game.value?.title ?? "Football Match"}',
-        'order_id': order.orderId,
+        if (order.orderId.isNotEmpty && !order.orderId.startsWith('rzp_order_mock_'))
+          'order_id': order.orderId,
         'retry': {'enabled': true, 'max_count': 1},
         'prefill': {
           'contact': contact,
@@ -387,23 +392,18 @@ class GameDetailsController extends GetxController {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    paymentStatus.value = 'Verifying Payment & Finalizing Roster...';
+    paymentStatus.value = 'Payment Verified! Finalizing Roster...';
 
     try {
-      if (response.orderId != null && response.orderId!.isNotEmpty) {
-        try {
-          await _walletRepo.verifyTopupPayment(
-            razorpayOrderId: response.orderId!,
-            razorpayPaymentId: response.paymentId ?? '',
-            razorpaySignature: response.signature ?? '',
-          );
-        } catch (_) {}
-      }
+      final razorpayOrderIdToUse =
+          (response.orderId != null && response.orderId!.isNotEmpty)
+              ? response.orderId!
+              : (currentRazorpayOrderId.value ?? '');
 
       await _executeJoinGameOnServer(
         position: selectedPosition.value,
         paymentMethod: 'RAZORPAY',
-        razorpayOrderId: response.orderId,
+        razorpayOrderId: razorpayOrderIdToUse,
         razorpayPaymentId: response.paymentId,
         razorpaySignature: response.signature,
       );

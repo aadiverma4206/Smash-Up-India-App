@@ -202,7 +202,12 @@ export class PlayerRepository {
     };
   }
 
-  static async getHistory(userId: string, limit = 20, offset = 0, statusFilter?: string) {
+  static async getHistory(
+    userId: string,
+    limit = 20,
+    offset = 0,
+    statusFilter?: string,
+  ) {
     const conditions: string[] = [
       "gp.user_id = $1",
       "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
@@ -246,12 +251,18 @@ export class PlayerRepository {
                 SELECT COALESCE(json_agg(
                   json_build_object(
                     'userId', gp_r.user_id,
+                    'user_id', gp_r.user_id,
                     'name', COALESCE(pu.name, 'Player'),
                     'profileImageUrl', pu.profile_image_url,
-                    'team', COALESCE(gp_r.team, 'TEAM_A'),
+                    'profile_image_url', pu.profile_image_url,
+                    'team', UPPER(COALESCE(NULLIF(gp_r.team::text, ''), 'TEAM_A')),
                     'position', COALESCE(gp_r.position, 'MID'),
-                    'ovr', COALESCE(pd.ovr_rating, 80)
+                    'ovr', COALESCE(pd.ovr_rating, 80),
+                    'paymentStatus', COALESCE(gp_r.payment_status, 'PAID'),
+                    'payment_status', COALESCE(gp_r.payment_status, 'PAID'),
+                    'phone', pu.phone
                   )
+                  ORDER BY gp_r.team ASC, gp_r.joined_at ASC
                 ), '[]'::json)
                 FROM public.game_players gp_r
                 JOIN public.users pu ON pu.id = gp_r.user_id

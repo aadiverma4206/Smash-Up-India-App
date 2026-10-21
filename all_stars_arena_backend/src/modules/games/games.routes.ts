@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getGamesController,
   getGameByIdController,
+  createMatchOrderController,
   createGameController,
   requestSlotController,
   getActivityLogsController,
@@ -30,6 +31,8 @@ router.get("/:id/activity", getActivityLogsController);
 
 router.use(authenticateToken);
 
+router.post("/order", requireRole([1, 2, 3]), createMatchOrderController);
+router.post("/:id/order", requireRole([1, 2, 3]), createMatchOrderController);
 router.post("/create", requireRole([1, 2, 3]), createGameController);
 router.post("/", requireRole([1, 2, 3]), createGameController);
 router.post("/:id/request-slot", requireRole([3]), requestSlotController);

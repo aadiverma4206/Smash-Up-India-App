@@ -11,6 +11,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 
@@ -28,6 +29,9 @@ class CreateGameController extends GetxController {
   }
 
   late Razorpay _razorpay;
+
+  final RxnString currentPaymentOrderId = RxnString();
+  final RxnString currentRazorpayOrderId = RxnString();
 
   final formKey = GlobalKey<FormState>();
 
@@ -337,14 +341,75 @@ class CreateGameController extends GetxController {
     final userRole =
         AuthService.to.currentUser.value?.roleName?.toUpperCase() ?? '';
     final isManagerOrAdmin = userRole == 'MANAGER' || userRole == 'ADMIN';
+    final fee = double.tryParse(entryFeeController.text.trim()) ?? 0.0;
 
-    if (!isManagerOrAdmin && selectedPaymentMethod.value == 'WALLET') {
-      final fee = double.tryParse(entryFeeController.text.trim()) ?? 0.0;
-      if (fee > 0) {
+    // Free game or Manager/Admin
+    if (fee <= 0 || isManagerOrAdmin) {
+      paymentStatus.value = 'Creating Game...';
+      await _createGameOnServer();
+      return;
+    }
+
+    // Payment via Wallet
+    if (selectedPaymentMethod.value == 'WALLET') {
+      if (walletBalance.value < fee) {
         isProcessing.value = false;
-        _promptPinAndAuthorizeWalletPayment(fee: fee);
+        ErrorHandler.showErrorSnackBar(
+          'Insufficient Wallet Balance',
+          'Your wallet balance is ₹${walletBalance.value.toStringAsFixed(0)}. Please choose Razorpay to pay ₹${fee.toStringAsFixed(0)}.',
+        );
         return;
       }
+      isProcessing.value = false;
+      _promptPinAndAuthorizeWalletPayment(fee: fee);
+      return;
+    }
+
+    // Payment via Razorpay
+    if (selectedPaymentMethod.value == 'RAZORPAY') {
+      paymentStatus.value = 'Creating Razorpay Order...';
+
+      try {
+        final order = await repository.createMatchOrder(fee);
+
+        currentRazorpayOrderId.value = order.orderId;
+
+        final user = AuthService.to.currentUser.value;
+        final contact =
+            (user != null && user.phone.isNotEmpty) ? user.phone : '9876543210';
+        final email = (user != null && user.email.isNotEmpty)
+            ? user.email
+            : 'player@allstarsarena.com';
+
+        final key = order.keyId.isNotEmpty
+            ? order.keyId
+            : ApiConstants.razorpayKey;
+
+        final options = {
+          'key': key,
+          'amount':
+              order.amountPaisa > 0 ? order.amountPaisa : (fee * 100).toInt(),
+          'name': 'ALL STARS ARENA',
+          'description':
+              'Host Game Entry Fee - ${titleController.text.trim().isNotEmpty ? titleController.text.trim() : "Football Match"}',
+          if (order.orderId.isNotEmpty &&
+              !order.orderId.startsWith('rzp_order_mock_'))
+            'order_id': order.orderId,
+          'retry': {'enabled': true, 'max_count': 1},
+          'prefill': {
+            'contact': contact,
+            'email': email,
+          },
+          'theme': {'color': '#2EA44F'},
+        };
+
+        paymentStatus.value = 'Opening Razorpay Gateway...';
+        _razorpay.open(options);
+      } catch (e) {
+        isProcessing.value = false;
+        ErrorHandler.showErrorSnackBar('Razorpay Order Failed', e);
+      }
+      return;
     }
 
     paymentStatus.value = 'Creating Game...';
@@ -452,41 +517,46 @@ class CreateGameController extends GetxController {
   Future<void> processTestModePayment() async {
     isProcessing.value = true;
     paymentStatus.value = 'Creating Order...';
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 400));
 
     paymentStatus.value = 'Opening Razorpay Gateway (Test Mode)...';
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    paymentStatus.value = 'Verifying Payment...';
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    paymentStatus.value = 'Finalizing Game Creation...';
     await Future.delayed(const Duration(milliseconds: 500));
 
-    await _createGameOnServer();
+    paymentStatus.value = 'Verifying Payment...';
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    paymentStatus.value = 'Finalizing Game Creation...';
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    final mockPaymentId = 'pay_mock_${DateTime.now().millisecondsSinceEpoch}';
+    final mockOrderId =
+        'rzp_order_mock_${DateTime.now().millisecondsSinceEpoch}';
+
+    await _createGameOnServer(
+      paymentId: mockPaymentId,
+      razorpayOrderId: mockOrderId,
+      razorpaySignature: 'mock_signature',
+    );
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    paymentStatus.value = 'Verifying Payment...';
+    paymentStatus.value = 'Payment Verified! Creating Match...';
 
     try {
-      if (response.orderId != null && response.orderId!.isNotEmpty) {
-        await _walletRepo.verifyTopupPayment(
-          razorpayOrderId: response.orderId!,
-          razorpayPaymentId: response.paymentId ?? '',
-          razorpaySignature: response.signature ?? '',
-        );
-      }
+      final razorpayOrderIdToUse =
+          (response.orderId != null && response.orderId!.isNotEmpty)
+              ? response.orderId!
+              : (currentRazorpayOrderId.value ?? '');
 
       paymentStatus.value = 'Finalizing Game Creation...';
       await _createGameOnServer(
         paymentId: response.paymentId,
-        razorpayOrderId: response.orderId,
+        razorpayOrderId: razorpayOrderIdToUse,
         razorpaySignature: response.signature,
       );
     } catch (e) {
       isProcessing.value = false;
-      ErrorHandler.showErrorSnackBar('Verification Error', e);
+      ErrorHandler.showErrorSnackBar('Game Creation Error', e);
     }
   }
 
@@ -553,6 +623,7 @@ class CreateGameController extends GetxController {
         'paymentMethod': selectedPaymentMethod.value,
         if (walletPin != null && walletPin.isNotEmpty) 'walletPin': walletPin,
         if (paymentId != null) 'paymentReference': paymentId,
+        if (paymentId != null) 'razorpayPaymentId': paymentId,
         if (razorpayOrderId != null) 'razorpayOrderId': razorpayOrderId,
         if (razorpaySignature != null) 'razorpaySignature': razorpaySignature,
       });

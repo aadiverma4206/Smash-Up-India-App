@@ -18,11 +18,7 @@ const router = Router();
 
 router.head("/:filename", optionalAuthenticateToken, streamVideoFileController);
 
-router.get(
-  "/:id/stream",
-  optionalAuthenticateToken,
-  streamVideoFileController,
-);
+router.get("/:id/stream", optionalAuthenticateToken, streamVideoFileController);
 
 router.get(
   "/:id",
