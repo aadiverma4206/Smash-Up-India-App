@@ -128,8 +128,9 @@ export const runLifecycleCycle = async () => {
     await client.query("BEGIN");
 
     const startingGames = await client.query(
-      `SELECT g.id, g.club_id, g.court_id, g.title, g.match_date, g.start_time, g.end_time
+      `SELECT g.id, c.club_id, g.court_id, g.title, g.match_date, g.start_time, g.end_time
        FROM public.games g
+       LEFT JOIN public.courts c ON c.id = g.court_id
        WHERE g.approval_status = 'APPROVED'
          AND g.status IN ('OPEN_FOR_JOINING', 'FULL')
          AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP
@@ -263,8 +264,9 @@ export const runLifecycleCycle = async () => {
     await client.query("BEGIN");
 
     const endingGames = await client.query(
-      `SELECT g.id, g.club_id, g.court_id, g.title, g.match_date, g.end_time
+      `SELECT g.id, c.club_id, g.court_id, g.title, g.match_date, g.end_time
        FROM public.games g
+       LEFT JOIN public.courts c ON c.id = g.court_id
        WHERE g.status = 'ONGOING'
          AND (g.match_date + g.end_time) <= CURRENT_TIMESTAMP
        FOR UPDATE OF g SKIP LOCKED;`,
