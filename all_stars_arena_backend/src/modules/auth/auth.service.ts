@@ -15,7 +15,7 @@ export class AuthService {
   }
 
   static async sendRegisterOtp(data: {
-    name: string;
+    name?: string;
     email: string;
     phone: string;
     city?: string;
@@ -111,12 +111,62 @@ export class AuthService {
     };
   }
 
+  /**
+   * Generates a unique username derived from the user's email address prefix.
+   * Extracts everything before the '@' sign.
+   * If that username already exists or is unavailable, generates an alternative unique username.
+   */
+  static async generateUniqueUsername(email: string): Promise<string> {
+    const atPart = (email.split("@")[0] || "").trim();
+    const base = atPart.split("+")[0].trim().toLowerCase();
+    let baseUsername = base.replace(/[^a-z0-9._-]/g, "");
+    baseUsername = baseUsername.replace(/^[._-]+|[._-]+$/g, "");
+    if (!baseUsername) {
+      baseUsername = "player";
+    }
+    if (baseUsername.length > 50) {
+      baseUsername = baseUsername.substring(0, 50);
+    }
+
+    const isTaken = async (candidate: string): Promise<boolean> => {
+      const res = await dbPool.query(
+        `SELECT 1 FROM public.users WHERE LOWER(name) = LOWER($1) LIMIT 1;`,
+        [candidate],
+      );
+      return (res.rowCount ?? 0) > 0;
+    };
+
+    if (!(await isTaken(baseUsername))) {
+      return baseUsername;
+    }
+
+    const endsWithDigit = /\d$/.test(baseUsername);
+    let counter = 1;
+    while (counter <= 100) {
+      const candidate = endsWithDigit
+        ? `${baseUsername}_${counter}`
+        : `${baseUsername}${counter}`;
+      if (!(await isTaken(candidate))) {
+        return candidate;
+      }
+      counter++;
+    }
+
+    while (true) {
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const candidate = `${baseUsername}_${randomSuffix}`;
+      if (!(await isTaken(candidate))) {
+        return candidate;
+      }
+    }
+  }
+
   static async registerPlayer(data: {
-    name: string;
+    name?: string;
     email: string;
     phone: string;
     password: string;
-    city: string;
+    city?: string;
     verificationToken: string;
   }) {
     try {
@@ -154,10 +204,13 @@ export class AuthService {
       );
     }
 
+    // Determine unique username from email prefix (or alternative if already exists)
+    const uniqueUsername = await this.generateUniqueUsername(normalizedEmail);
+
     const passwordHash = await bcrypt.hash(data.password, 12);
 
     const userId = await AuthRepository.registerPlayer({
-      name: data.name.trim(),
+      name: uniqueUsername,
       email: normalizedEmail,
       phone: normalizedPhone,
       passwordHash,

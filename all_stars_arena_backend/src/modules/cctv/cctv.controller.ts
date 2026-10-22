@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { CctvService } from "./cctv.service.js";
+import { AuthRepository } from "../auth/auth.repository.js";
 import { CctvRecordingService } from "../../services/cctvRecording.service.js";
 import { MediaMtxService } from "../../services/mediaMtx.service.js";
 import { ApiResponse, ApiError } from "../../utils/apiResponse.js";
@@ -122,12 +123,24 @@ export const testCameraConnection = asyncHandler(
 
 export const getClubCameras = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    const clubId = (req.params.clubId || req.query.clubId) as string;
-    if (!clubId)
+    let clubId = (req.params.clubId || req.query.clubId) as string | undefined;
+
+    if (!clubId) {
+      if (req.user?.roleId === 1) {
+        // Admin has full system-wide access to all cameras
+        clubId = "";
+      } else if (req.user?.roleId === 2 && req.user?.id) {
+        const mgrClubs = await AuthRepository.getManagerClubIds(req.user.id);
+        clubId = mgrClubs[0] || "";
+      }
+    }
+
+    if (!clubId && req.user?.roleId !== 1) {
       throw new ApiError(400, "Club ID is required", "MISSING_CLUB_ID");
+    }
 
     const cameras = await CctvService.getClubCameras(
-      clubId,
+      clubId || "",
       req.user?.id,
       req.user?.roleId,
     );

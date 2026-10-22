@@ -229,9 +229,9 @@ export class PlayerRepository {
     values.push(limit, offset);
 
     const query = `
-       SELECT g.id, g.club_id, g.court_id, g.creator_id, g.title, g.description,
+       SELECT g.id, COALESCE(crt.club_id, 'all_stars_arena_club') as club_id, g.court_id, g.creator_id, g.title, g.description,
               to_char(g.match_date::date, 'YYYY-MM-DD') as match_date, g.start_time, g.end_time,
-              g.status, g.format, g.privacy, g.entry_fee, g.entry_fee as per_player_fee, g.entry_fee as my_entry_fee,
+              g.status, g.format, 'PUBLIC' as privacy, g.entry_fee, g.entry_fee as per_player_fee, g.entry_fee as my_entry_fee,
               g.team_a_score, g.team_b_score, g.winner_team,
               COALESCE(
                 (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
@@ -271,8 +271,8 @@ export class PlayerRepository {
               ) as roster
        FROM public.game_players gp
        JOIN public.games g ON g.id = gp.game_id
-       LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
+       LEFT JOIN public.clubs c ON c.id = crt.club_id
        WHERE ${conditions.join(" AND ")}
        ORDER BY g.match_date DESC, g.start_time DESC, g.created_at DESC
        LIMIT $${idx++} OFFSET $${idx++};`;
@@ -286,29 +286,29 @@ export class PlayerRepository {
     const stats = await this.getStats(userId);
 
     const activeRes = await dbPool.query(
-      `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position
+      `SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position
        FROM public.game_players gp
        JOIN public.games g ON g.id = gp.game_id
-       LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
+       LEFT JOIN public.clubs c ON c.id = crt.club_id
        WHERE gp.user_id = $1 AND g.status = 'ONGOING'
        ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
       [userId],
     );
 
     const upcomingRes = await dbPool.query(
-      `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position
+      `SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position
        FROM public.game_players gp
        JOIN public.games g ON g.id = gp.game_id
-       LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
+       LEFT JOIN public.clubs c ON c.id = crt.club_id
        WHERE gp.user_id = $1 AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))
        ORDER BY g.match_date ASC, g.start_time ASC LIMIT 1;`,
       [userId],
     );
 
     const recentRes = await dbPool.query(
-      `SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position,
+      `SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position,
               CASE
                 WHEN g.winner_team = 'DRAW' THEN 'DRAW'
                 WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
@@ -316,8 +316,8 @@ export class PlayerRepository {
               END as result
        FROM public.game_players gp
        JOIN public.games g ON g.id = gp.game_id
-       LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
+       LEFT JOIN public.clubs c ON c.id = crt.club_id
        WHERE gp.user_id = $1 AND g.status = 'COMPLETED'
        ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
       [userId],
@@ -339,11 +339,11 @@ export class PlayerRepository {
 
     if (tab === "WAITLISTED") {
       query = `
-        SELECT g.*, c.name as club_name, crt.name as court_name, gw.position as waitlist_position, gw.status as waitlist_status, gw.joined_at as waitlist_joined_at
+        SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gw.position as waitlist_position, gw.status as waitlist_status, gw.joined_at as waitlist_joined_at
         FROM public.game_waitlist gw
         JOIN public.games g ON g.id = gw.game_id
-        LEFT JOIN public.clubs c ON c.id = g.club_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
+        LEFT JOIN public.clubs c ON c.id = crt.club_id
         WHERE gw.user_id = $1
         ORDER BY g.match_date ASC, g.start_time ASC;
       `;
@@ -359,12 +359,12 @@ export class PlayerRepository {
 
       query = `
         SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
-               g.*, c.name as club_name, crt.name as court_name,
+               g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
                (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
         FROM public.game_players gp
         JOIN public.games g ON g.id = gp.game_id
-        LEFT JOIN public.clubs c ON c.id = g.club_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
+        LEFT JOIN public.clubs c ON c.id = crt.club_id
         WHERE gp.user_id = $1 ${statusCondition}
         ORDER BY g.match_date DESC, g.start_time DESC;
       `;

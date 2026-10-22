@@ -48,7 +48,7 @@ export class GamesService {
   ) {
     if (gameId) {
       const gameRes = await dbPool.query(
-        `SELECT id, entry_fee, max_players, status FROM public.games WHERE id = $1;`,
+        `SELECT id, entry_fee, format, status FROM public.games WHERE id = $1;`,
         [gameId],
       );
       if (gameRes.rows.length === 0) {
@@ -289,17 +289,13 @@ export class GamesService {
       newGame = await GamesRepository.createGame(
         {
           id: targetGameId,
-          title: data.title || "11v11 Football Showdown",
-          clubId: data.clubId,
+          title: data.title || "Pitch Booking",
           courtId: data.courtId,
           creatorId: creatorUserId,
           creatorRoleName,
           createdByPlayer: isPlayerCreator,
           format: formatKey,
-          maxPlayers,
           entryFee,
-          skillRequirement: skillReq,
-          privacy: (data.privacy || "PUBLIC").toUpperCase(),
           matchDate: data.matchDate,
           startTime: data.startTime,
           endTime: data.endTime,
@@ -307,6 +303,13 @@ export class GamesService {
         },
         client,
       );
+
+      newGame.club_id = "all_stars_arena_club";
+      newGame.club_name = "All Stars Turf Raipur";
+      newGame.court_name = data.courtId === "court_2" ? "Court 2" : "Court 1";
+      newGame.max_players = maxPlayers;
+      newGame.privacy = "PUBLIC";
+      newGame.skill_requirement = skillReq;
 
       if (isPlayerCreator) {
         const initialPosition = ((data as any).position || "ST").toUpperCase();
@@ -331,7 +334,7 @@ export class GamesService {
               }
             }
             const walletRes = await client.query(
-              `SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;`,
+              `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1 FOR UPDATE;`,
               [creatorUserId],
             );
             const currentBalance = parseFloat(
@@ -619,7 +622,8 @@ export class GamesService {
         countRes.rows[0]?.current_count || "0",
         10,
       );
-      if (currentPlayersCount >= game.max_players) {
+      const maxPlayers = game.max_players || FORMAT_PLAYER_COUNTS[game.format] || 22;
+      if (currentPlayersCount >= maxPlayers) {
         throw new ApiError(
           400,
           "Match is already at full player capacity",
@@ -649,7 +653,7 @@ export class GamesService {
           }
 
           const walletRes = await client.query(
-            `SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;`,
+            `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1 FOR UPDATE;`,
             [userId],
           );
           const currentBalance = parseFloat(
@@ -795,7 +799,7 @@ export class GamesService {
       );
       rosterId = insertRes.rows[0]?.id;
 
-      if (currentPlayersCount + 1 >= game.max_players) {
+      if (currentPlayersCount + 1 >= maxPlayers) {
         await client.query(
           `UPDATE public.games SET status = 'FULL', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
           [gameId],
@@ -1182,7 +1186,7 @@ export class GamesService {
             );
           } else {
             const wRes = await client.query(
-              `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+              `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
               [pUserId],
             );
             newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");

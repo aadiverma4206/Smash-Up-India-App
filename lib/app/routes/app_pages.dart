@@ -406,6 +406,25 @@ class AppPages {
       binding: AdminBinding(),
     ),
     GetPage(
+      name: Routes.adminCctv,
+      page: () => const MediaServerCctvScreen(),
+      binding: CctvBinding(),
+    ),
+    GetPage(
+      name: Routes.adminCctvLive,
+      page: () {
+        final args = Get.arguments;
+        int chan = 1;
+        if (args is Map && args['channel'] != null) {
+          chan = (args['channel'] as num).toInt();
+        } else if (args is int) {
+          chan = args;
+        }
+        return MediaServerCctvScreen(initialChannel: chan);
+      },
+      binding: CctvBinding(),
+    ),
+    GetPage(
       name: Routes.faq,
       page: () => const FaqView(),
     ),

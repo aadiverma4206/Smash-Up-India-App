@@ -149,8 +149,8 @@ export class ManagerRepository {
       : "court_1";
     const query = `
       INSERT INTO public.games
-      (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, match_date, start_time, end_time, privacy, status, approval_status, manager_id, description)
-      VALUES ($1, 'all_stars_arena_club', $2, $3, 'MANAGER', false, $4, $5, $6, $7, $8, $9, $10, 'OPEN_FOR_JOINING', 'APPROVED', $3, $11)
+      (title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, manager_id, description)
+      VALUES ($1, $2, $3, 'MANAGER', false, $4, $5, $6, $7, $8, 'OPEN_FOR_JOINING', 'APPROVED', $3, $9)
       RETURNING *;
     `;
     const res = await dbPool.query(query, [
@@ -158,12 +158,10 @@ export class ManagerRepository {
       normalizedCourtId,
       data.creatorId,
       data.format,
-      data.maxPlayers,
       data.entryFee,
       data.matchDate,
       data.startTime,
       data.endTime,
-      data.privacy,
       data.description || null,
     ]);
     return res.rows[0];
@@ -294,13 +292,15 @@ export class ManagerRepository {
     const query = `
       SELECT req.*, u.name as player_name, u.profile_image_url as player_image,
              pd.position as player_position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,
-             g.title as game_title, g.match_date, g.start_time, g.end_time, g.format, g.max_players,
+             g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,
+             CASE WHEN g.format = '5v5' THEN 10 WHEN g.format = '7v7' THEN 14 ELSE 22 END as max_players,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_roster_count
       FROM public.game_slot_requests req
       JOIN public.games g ON g.id = req.game_id
       JOIN public.users u ON u.id = req.user_id
       LEFT JOIN public.player_details pd ON pd.user_id = req.user_id
-      WHERE g.club_id = $1 AND req.status IN ('PENDING', 'APPROVED')
+      LEFT JOIN public.courts crt ON crt.id = g.court_id
+      WHERE (crt.club_id = $1 OR crt.club_id = 'all_stars_arena_club' OR $1 = 'all_stars_arena_club') AND req.status IN ('PENDING', 'APPROVED')
       ORDER BY req.updated_at DESC, req.created_at ASC;
     `;
     const res = await dbPool.query(query, [clubId]);
@@ -312,7 +312,7 @@ export class ManagerRepository {
     statusTab?: string,
     courtFilter?: string,
   ) {
-    const conditions: string[] = ["g.club_id = 'all_stars_arena_club'"];
+    const conditions: string[] = ["(g.court_id IN ('court_1', 'court_2') OR g.court_id IS NOT NULL)"];
     const values: any[] = [];
 
     const tabUpper = (statusTab || "").toUpperCase();
@@ -383,7 +383,7 @@ export class ManagerRepository {
     courtFilter?: string,
   ) {
     const conditions: string[] = [
-      "(g.club_id = $1 OR g.club_id = 'all_stars_arena_club')",
+      "(g.court_id IN ('court_1', 'court_2') OR g.court_id IS NOT NULL)",
       "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
       "(UPPER(g.status::text) = 'CANCELLED' OR g.match_date::date <= CURRENT_DATE)",
     ];
@@ -625,7 +625,9 @@ export class ManagerRepository {
     }
 
     const query = `
-      SELECT g.id, g.title, g.format, g.max_players, g.entry_fee, g.privacy,
+      SELECT g.id, g.title, g.format, 
+             CASE WHEN g.format = '5v5' THEN 10 WHEN g.format = '7v7' THEN 14 ELSE 22 END as max_players, 
+             g.entry_fee, 'PUBLIC' as privacy,
              g.match_date, g.start_time, g.end_time, g.status, g.approval_status,
              g.created_by_player, g.creator_role_name, g.rejection_reason,
              g.team_a_score, g.team_b_score, g.winner_team,

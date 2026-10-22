@@ -38,15 +38,15 @@ export const registerPlayerController = asyncHandler(
   async (req: Request, res: Response) => {
     const { name, email, phone, password, city = "Raipur" } = req.body;
 
-    if (!name || !email || !phone || !password) {
-      throw new ApiError(400, "Name, email, phone, and password are required");
+    if (!email || !phone || !password) {
+      throw new ApiError(400, "Email, phone, and password are required");
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const dbRes = await dbPool.query(
       "SELECT public.register_player($1, $2, $3, $4, $5) as user_id;",
-      [name, email, phone, passwordHash, city],
+      [name || null, email, phone, passwordHash, city],
     );
 
     const userId = dbRes.rows[0]?.user_id;

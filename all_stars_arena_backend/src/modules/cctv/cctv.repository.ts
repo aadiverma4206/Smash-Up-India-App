@@ -146,7 +146,7 @@ export class CctvRepository {
     return res.rows[0] || null;
   }
 
-  static async getCamerasByClub(clubId: string) {
+  static async getCamerasByClub(clubId?: string) {
     const res = await dbPool.query(
       `SELECT cam.id, cam.club_id, cam.court_id, cam.name, cam.camera_type,
               cam.connection_type, cam.ip_address, cam.port, cam.serial_number,
@@ -156,9 +156,9 @@ export class CctvRepository {
               crt.name as court_name
        FROM public.cctv_cameras cam
        LEFT JOIN public.courts crt ON crt.id = cam.court_id
-       WHERE cam.club_id = $1
+       WHERE ($1::text IS NULL OR $1::text = '' OR cam.club_id = $1)
        ORDER BY cam.created_at DESC;`,
-      [clubId],
+      [clubId || null],
     );
     return res.rows;
   }

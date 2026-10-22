@@ -5,10 +5,21 @@ export class WalletRepository {
     const res = await dbPool.query(
       `SELECT wallet_balance, wallet_pin_set_at, wallet_pin_failed_attempts, wallet_pin_locked_until,
               (wallet_pin_hash IS NOT NULL) as is_pin_set
-       FROM public.player_details
+       FROM public.player_wallets
        WHERE user_id = $1::VARCHAR;`,
       [userId],
     );
+    if (!res.rows[0]) {
+      const created = await dbPool.query(
+        `INSERT INTO public.player_wallets (user_id, wallet_balance)
+         VALUES ($1::VARCHAR, 0.00)
+         ON CONFLICT (user_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+         RETURNING wallet_balance, wallet_pin_set_at, wallet_pin_failed_attempts, wallet_pin_locked_until,
+                   (wallet_pin_hash IS NOT NULL) as is_pin_set;`,
+        [userId],
+      );
+      return created.rows[0] || null;
+    }
     return res.rows[0] || null;
   }
 

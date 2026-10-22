@@ -305,7 +305,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
                 if (index == 0) controller.loadDashboard();
-                if (index == 1) Get.toNamed('/manager/cctv');
+                if (index == 1) Get.toNamed(Routes.adminCctv);
                 if (index == 2) Get.toNamed(Routes.adminProfile);
                 if (index == 3) _confirmLogout(context);
               },
@@ -757,7 +757,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       {
         'icon': Icons.videocam_rounded,
         'title': 'CCTV Network',
-        'route': '/manager/cctv',
+        'route': Routes.adminCctv,
       },
     ];
 

@@ -23,8 +23,8 @@ export const initDbTables = async () => {
     await dbPool.query(`
       ALTER TABLE public.users ADD COLUMN IF NOT EXISTS latest_otp VARCHAR(10);
       ALTER TABLE public.users ADD COLUMN IF NOT EXISTS date_of_birth DATE;
-      ALTER TABLE public.player_details ADD COLUMN IF NOT EXISTS secondary_position VARCHAR(16);
-      ALTER TABLE public.player_details ADD COLUMN IF NOT EXISTS elo_rating INT DEFAULT 1200;
+      ALTER TABLE public.player_wallets ADD COLUMN IF NOT EXISTS secondary_position VARCHAR(16);
+      ALTER TABLE public.player_wallets ADD COLUMN IF NOT EXISTS elo_rating INT DEFAULT 1200;
       ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS payment_status VARCHAR(32) DEFAULT 'PAID';
       ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
       ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
@@ -444,8 +444,8 @@ export const initDbTables = async () => {
           v_current_wallet_balance NUMERIC(10,2) := 0.00;
       BEGIN
           SELECT COALESCE(wallet_balance, 0.00) INTO v_current_wallet_balance
-          FROM public.player_details
-          WHERE public.player_details.user_id = p_user_id;
+          FROM public.player_wallets
+          WHERE public.player_wallets.user_id = p_user_id;
 
           RETURN QUERY
           WITH combined_ledger AS (
@@ -560,7 +560,7 @@ export const initDbTables = async () => {
               RAISE EXCEPTION 'Wallet PIN must be exactly 6 numeric digits';
           END IF;
 
-          UPDATE public.player_details
+          UPDATE public.player_wallets
           SET wallet_pin_hash = crypt(p_pin, gen_salt('bf')),
               wallet_pin_set_at = CURRENT_TIMESTAMP,
               wallet_pin_failed_attempts = 0,
@@ -569,7 +569,7 @@ export const initDbTables = async () => {
           WHERE user_id = p_user_id;
 
           IF NOT FOUND THEN
-              INSERT INTO public.player_details (
+              INSERT INTO public.player_wallets (
                   user_id,
                   wallet_pin_hash,
                   wallet_pin_set_at,
@@ -598,7 +598,7 @@ export const initDbTables = async () => {
       BEGIN
           SELECT wallet_pin_hash, wallet_pin_failed_attempts, wallet_pin_locked_until
           INTO v_hash, v_failed, v_locked_until
-          FROM public.player_details
+          FROM public.player_wallets
           WHERE user_id = p_user_id
           FOR UPDATE;
 
@@ -615,14 +615,14 @@ export const initDbTables = async () => {
           IF p_pin IS NULL OR p_pin !~ '^[0-9]{6}$' THEN
               v_failed := COALESCE(v_failed, 0) + 1;
               IF v_failed >= 5 THEN
-                  UPDATE public.player_details
+                  UPDATE public.player_wallets
                   SET wallet_pin_failed_attempts = v_failed,
                       wallet_pin_locked_until = CURRENT_TIMESTAMP + INTERVAL '15 minutes',
                       updated_at = CURRENT_TIMESTAMP
                   WHERE user_id = p_user_id;
                   RAISE EXCEPTION 'WALLET_PIN_LOCKED';
               ELSE
-                  UPDATE public.player_details
+                  UPDATE public.player_wallets
                   SET wallet_pin_failed_attempts = v_failed,
                       updated_at = CURRENT_TIMESTAMP
                   WHERE user_id = p_user_id;
@@ -633,7 +633,7 @@ export const initDbTables = async () => {
           -- Compare hash
           IF v_hash = crypt(p_pin, v_hash) THEN
               -- Success: reset failed attempts
-              UPDATE public.player_details
+              UPDATE public.player_wallets
               SET wallet_pin_failed_attempts = 0,
                   wallet_pin_locked_until = NULL,
                   updated_at = CURRENT_TIMESTAMP
@@ -643,14 +643,14 @@ export const initDbTables = async () => {
               -- Failed: increment attempts and lock after 5
               v_failed := COALESCE(v_failed, 0) + 1;
               IF v_failed >= 5 THEN
-                  UPDATE public.player_details
+                  UPDATE public.player_wallets
                   SET wallet_pin_failed_attempts = v_failed,
                       wallet_pin_locked_until = CURRENT_TIMESTAMP + INTERVAL '15 minutes',
                       updated_at = CURRENT_TIMESTAMP
                   WHERE user_id = p_user_id;
                   RAISE EXCEPTION 'WALLET_PIN_LOCKED';
               ELSE
-                  UPDATE public.player_details
+                  UPDATE public.player_wallets
                   SET wallet_pin_failed_attempts = v_failed,
                       updated_at = CURRENT_TIMESTAMP
                   WHERE user_id = p_user_id;
@@ -751,7 +751,7 @@ export const initDbTables = async () => {
 
           IF v_entry_fee > 0 THEN
               SELECT wallet_balance INTO v_wallet_balance
-              FROM public.player_details WHERE user_id = p_user_id FOR UPDATE;
+              FROM public.player_wallets WHERE user_id = p_user_id FOR UPDATE;
 
               IF v_wallet_balance IS NULL OR v_wallet_balance < v_entry_fee THEN
                   RAISE EXCEPTION 'INSUFFICIENT_WALLET_BALANCE';

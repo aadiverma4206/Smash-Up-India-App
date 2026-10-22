@@ -15,6 +15,7 @@ import {
   cancelGameController,
   submitMatchScoreController,
 } from "../manager/manager.controller.js";
+import cctvRoutes from "../cctv/cctv.routes.js";
 import {
   authenticateToken,
   requireRole,
@@ -25,6 +26,8 @@ const router = Router();
 
 router.use(authenticateToken);
 router.use(requireRole([1]));
+
+router.use("/cctv", cctvRoutes);
 
 router.get("/dashboard", getAdminDashboardController);
 router.get("/users", getUsersController);

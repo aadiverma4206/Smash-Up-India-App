@@ -542,15 +542,10 @@ class CreateGameController extends GetxController {
     try {
       final newGame = await repository.createGame({
         'title': 'Pitch Booking - $courtName',
-        'clubId': 'all_stars_arena_club',
         'courtId': courtId,
         'courtName': courtName,
         'format': '11v11',
-        'maxPlayers': 22,
-        'reservePlayersCount': 0,
         'entryFee': fee,
-        'skillRequirement': 'ANY',
-        'privacy': 'PUBLIC',
         'matchDate': dateStr,
         'startTime': startStr,
         'endTime': endStr,

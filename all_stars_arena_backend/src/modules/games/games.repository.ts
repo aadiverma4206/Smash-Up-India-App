@@ -86,11 +86,23 @@ export class GamesRepository {
 
     values.push(limit, offset);
     const query = `
-      SELECT g.*, c.name as club_name, c.address as club_address, c.city, crt.name as court_name,
+      SELECT g.*, 
+             COALESCE(crt.club_id, 'all_stars_arena_club') as club_id,
+             COALESCE(c.name, 'All Stars Turf Raipur') as club_name, 
+             c.address as club_address, 
+             c.city, 
+             COALESCE(crt.name, CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
+             CASE 
+               WHEN g.format = '5v5' THEN 10 
+               WHEN g.format = '7v7' THEN 14 
+               ELSE 22 
+             END as max_players,
+             'PUBLIC' as privacy,
+             'INTERMEDIATE' as skill_requirement,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count
       FROM public.games g
-      LEFT JOIN public.clubs c ON c.id = g.club_id
       LEFT JOIN public.courts crt ON crt.id = g.court_id
+      LEFT JOIN public.clubs c ON c.id = crt.club_id
       ${whereClause}
       ORDER BY g.match_date ASC, g.start_time ASC
       LIMIT $${idx++} OFFSET $${idx++};
@@ -102,7 +114,17 @@ export class GamesRepository {
 
   static async getGameById(gameId: string) {
     const res = await dbPool.query(
-      `SELECT g.*, c.name as club_name, crt.name as court_name,
+      `SELECT g.*, 
+              COALESCE(crt.club_id, 'all_stars_arena_club') as club_id,
+              COALESCE(c.name, 'All Stars Turf Raipur') as club_name, 
+              COALESCE(crt.name, CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
+              CASE 
+                WHEN g.format = '5v5' THEN 10 
+                WHEN g.format = '7v7' THEN 14 
+                ELSE 22 
+              END as max_players,
+              'PUBLIC' as privacy,
+              'INTERMEDIATE' as skill_requirement,
               (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
               COALESCE(
                 (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
@@ -131,8 +153,8 @@ export class GamesRepository {
                 WHERE gp.game_id = g.id
               ) as roster
        FROM public.games g
-       LEFT JOIN public.clubs c ON c.id = g.club_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
+       LEFT JOIN public.clubs c ON c.id = crt.club_id
        WHERE g.id = $1;`,
       [gameId],
     );
@@ -161,76 +183,73 @@ export class GamesRepository {
     data: {
       id?: string;
       title: string;
-      clubId: string;
+      clubId?: string;
       courtId: string;
       creatorId: string;
       creatorRoleName: string;
       createdByPlayer: boolean;
       format: string;
-      maxPlayers: number;
+      maxPlayers?: number;
       entryFee: number;
-      skillRequirement: string;
-      privacy: string;
+      skillRequirement?: string;
+      privacy?: string;
       matchDate: string;
       startTime: string;
       endTime: string;
       description?: string;
+      approvalStatus?: string;
+      managerId?: string;
     },
     dbClient: any = dbPool,
   ) {
+    const approvalStatus = (data as any).approvalStatus || "APPROVED";
+    const managerId = (data as any).managerId || null;
+
     if (data.id) {
-      const approvalStatus = (data as any).approvalStatus || "APPROVED";
       const query = `
         INSERT INTO public.games
-        (id, title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'OPEN_FOR_JOINING', $16, $17)
+        (id, title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, description, manager_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'OPEN_FOR_JOINING', $12, $13, $14)
         RETURNING *;
       `;
       const res = await dbClient.query(query, [
         data.id,
         data.title,
-        data.clubId,
         data.courtId,
         data.creatorId,
         data.creatorRoleName,
         data.createdByPlayer,
         data.format,
-        data.maxPlayers,
         data.entryFee,
-        data.skillRequirement || "ANY",
-        data.privacy || "PUBLIC",
         data.matchDate,
         data.startTime,
         data.endTime,
         approvalStatus,
         data.description || null,
+        managerId,
       ]);
       return res.rows[0];
     } else {
-      const approvalStatus = (data as any).approvalStatus || "APPROVED";
       const query = `
         INSERT INTO public.games
-        (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'OPEN_FOR_JOINING', $15, $16)
+        (title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, description, manager_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'OPEN_FOR_JOINING', $11, $12, $13)
         RETURNING *;
       `;
       const res = await dbClient.query(query, [
         data.title,
-        data.clubId,
         data.courtId,
         data.creatorId,
         data.creatorRoleName,
         data.createdByPlayer,
         data.format,
-        data.maxPlayers,
         data.entryFee,
-        data.skillRequirement || "ANY",
-        data.privacy || "PUBLIC",
         data.matchDate,
         data.startTime,
         data.endTime,
         approvalStatus,
         data.description || null,
+        managerId,
       ]);
       return res.rows[0];
     }
@@ -274,11 +293,11 @@ export class GamesRepository {
 
     const query = `
       SELECT req.*, g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,
-             g.status as game_status, c.name as club_name, crt.name as court_name
+             g.status as game_status, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name
       FROM public.game_slot_requests req
       JOIN public.games g ON g.id = req.game_id
-      LEFT JOIN public.clubs c ON c.id = g.club_id
       LEFT JOIN public.courts crt ON crt.id = g.court_id
+      LEFT JOIN public.clubs c ON c.id = crt.club_id
       ${whereClause}
       ORDER BY req.created_at DESC;
     `;

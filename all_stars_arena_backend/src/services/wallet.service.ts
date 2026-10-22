@@ -152,7 +152,7 @@ export const verifyAndSettlePayment = async (
   const txId = settleRes.rows[0]?.tx_id;
 
   const walletRes = await dbPool.query(
-    "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;",
+    "SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;",
     [userId],
   );
   const newBalance = walletRes.rows[0]?.wallet_balance || 0;
@@ -187,7 +187,7 @@ export const getWalletHistory = async (
   );
 
   const balanceRes = await dbPool.query(
-    "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;",
+    "SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;",
     [userId],
   );
 
@@ -222,7 +222,7 @@ export const joinGameWithWallet = async (
   const rosterId = res.rows[0]?.roster_id;
 
   const walletRes = await dbPool.query(
-    "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;",
+    "SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;",
     [userId],
   );
   const newBalance = walletRes.rows[0]?.wallet_balance || 0;

@@ -348,7 +348,7 @@ export class ManagerService {
             }
           } else {
             const wRes = await client.query(
-              `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+              `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
               [pUserId],
             );
             newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
@@ -491,7 +491,7 @@ export class ManagerService {
       const entryFee = parseFloat(game.entry_fee || "0.00");
       if (entryFee > 0 && slotReq.payment_status !== "PAID") {
         const walletRes = await client.query(
-          `SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;`,
+          `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1 FOR UPDATE;`,
           [slotReq.user_id],
         );
         const currentBalance = parseFloat(
@@ -689,7 +689,7 @@ export class ManagerService {
           );
         } else {
           const wRes = await client.query(
-            `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+            `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
             [slotReq.user_id],
           );
           newBalance = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
@@ -896,7 +896,7 @@ export class ManagerService {
             }
           } else {
             const wRes = await client.query(
-              `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+              `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
               [pUserId],
             );
             newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");

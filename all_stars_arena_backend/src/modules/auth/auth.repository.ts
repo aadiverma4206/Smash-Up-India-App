@@ -43,6 +43,7 @@ export class AuthRepository {
        LEFT JOIN public.admin_details ad ON ad.user_id = u.id
        LEFT JOIN public.manager_details md ON md.user_id = u.id
        WHERE LOWER(TRIM(u.email)) = $1
+          OR LOWER(TRIM(u.name)) = $1
           OR TRIM(u.phone) = $2
           OR TRIM(u.phone) = $3
           OR ($4 <> '' AND LENGTH($4) >= 10 AND RIGHT(REGEXP_REPLACE(u.phone, '[^0-9]', '', 'g'), 10) = RIGHT($4, 10))

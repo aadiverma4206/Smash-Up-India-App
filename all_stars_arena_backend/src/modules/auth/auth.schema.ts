@@ -5,7 +5,7 @@ const passwordRegex =
 
 export const registerSendOtpSchema = z.object({
   body: z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
+    name: z.string().optional(),
     email: z.string().email("Invalid email address"),
     phone: z
       .string()
@@ -27,7 +27,7 @@ export const registerVerifyOtpSchema = z.object({
 
 export const registerPlayerSchema = z.object({
   body: z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
+    name: z.string().optional(),
     email: z.string().email("Invalid email address"),
     phone: z.string().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number"),
     password: z
