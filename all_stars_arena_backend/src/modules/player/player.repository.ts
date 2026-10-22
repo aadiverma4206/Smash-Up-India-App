@@ -349,15 +349,12 @@ export class PlayerRepository {
       `;
     } else {
       let statusCondition = "";
-      if (tab === "UPCOMING") {
-        statusCondition =
-          "AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))";
-      } else if (tab === "ONGOING") {
+      if (tab === "ONGOING") {
         statusCondition = "AND g.status = 'ONGOING'";
-      } else if (tab === "COMPLETED") {
-        statusCondition = "AND g.status = 'COMPLETED'";
-      } else if (tab === "CANCELLED") {
-        statusCondition = "AND g.status = 'CANCELLED'";
+      } else {
+        // UPCOMING / Active matches (completed & cancelled strictly excluded)
+        statusCondition =
+          "AND g.status IN ('OPEN_FOR_JOINING', 'FULL', 'CONFIRMED') AND g.status NOT IN ('COMPLETED', 'CANCELLED') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))";
       }
 
       query = `

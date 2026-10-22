@@ -745,7 +745,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed('/games/find'),
+          onTap: () => Get.toNamed('/games/create'),
           borderRadius: BorderRadius.circular(30),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
@@ -758,12 +758,12 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.sports_soccer_rounded,
+                  child: const Icon(Icons.stadium_rounded,
                       color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  'Join Game',
+                  'Book Turf Pitch Now',
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -781,30 +781,31 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final actions = [
       {
-        'icon': Icons.groups_rounded,
-        'title': 'Find Matches',
-        'route': '/games/find'
+        'icon': Icons.stadium_rounded,
+        'title': 'Book Pitch',
+        'route': '/games/create',
       },
       {
-        'icon': Icons.add_circle_outline_rounded,
-        'title': 'Create Game',
-        'route': '/games/create'
+        'icon': Icons.stadium_outlined,
+        'title': 'Available Court',
+        'route': '',
       },
       {
         'icon': Icons.account_balance_wallet_rounded,
         'title': 'Check Wallet',
-        'route': '/wallet'
+        'route': '/wallet',
       },
     ];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: actions.map((item) {
+        final route = (item['route'] as String?) ?? '';
         return Expanded(
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () => Get.toNamed(item['route'] as String),
+              onTap: route.isNotEmpty ? () => Get.toNamed(route) : null,
               borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -1163,15 +1164,15 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [
       {
-        'icon': Icons.search_rounded,
-        'title': 'Find Games',
-        'route': '/games/find',
+        'icon': Icons.stadium_rounded,
+        'title': 'Book Pitch',
+        'route': '/games/create',
         'color': AppColors.primary
       },
       {
-        'icon': Icons.add_circle_outline_rounded,
-        'title': 'Create Game',
-        'route': '/games/create',
+        'icon': Icons.stadium_outlined,
+        'title': 'Turf Courts',
+        'route': Routes.courts,
         'color': const Color(0xFF0288D1)
       },
       {

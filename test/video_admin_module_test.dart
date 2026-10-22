@@ -24,7 +24,9 @@ void main() {
       expect(admin.onlineCameras, 16);
     });
 
-    test('AdminDashboardModel deserializes production backend payload correctly', () {
+    test(
+        'AdminDashboardModel deserializes production backend payload correctly',
+        () {
       final json = {
         'totalUsers': 12,
         'totalClubs': 3,
@@ -57,7 +59,9 @@ void main() {
       expect(user.status, 'ACTIVE');
     });
 
-    test('AdminUserModel deserializes production backend DB row without roleName', () {
+    test(
+        'AdminUserModel deserializes production backend DB row without roleName',
+        () {
       final json = {
         'id': '9948293',
         'name': 'John Doe',
@@ -92,7 +96,8 @@ void main() {
       expect(log.ipAddress, '192.168.1.1');
     });
 
-    test('VideoModel deserializes short-lived signed S3 playback URL securely', () {
+    test('VideoModel deserializes short-lived signed S3 playback URL securely',
+        () {
       final json = {
         'id': 'vid_501',
         'gameId': 'gam_e101',

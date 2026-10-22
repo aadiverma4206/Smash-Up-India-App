@@ -2,30 +2,27 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/create_game_controller.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
-import '../../../core/utils/app_date_utils.dart';
 import '../../../core/responsive/responsive_builder.dart';
+import '../../../core/utils/app_date_utils.dart';
+import '../../../app/theme/app_colors.dart';
 
 class CreateGameView extends StatelessWidget {
   const CreateGameView({super.key});
 
-  static Future<TimeOfDay?> _showCustomTimePicker({
+  Future<TimeOfDay?> _showCustomTimePicker({
     required BuildContext context,
     required TimeOfDay initialTime,
   }) async {
-    return await showTimePicker(
+    return showTimePicker(
       context: context,
       initialTime: initialTime,
-      initialEntryMode: TimePickerEntryMode.dial,
       builder: (BuildContext context, Widget? child) {
         final mediaQuery = MediaQuery.of(context);
         final dialogWidth = math.min(mediaQuery.size.width * 0.9, 360.0);
 
         return MediaQuery(
-          data: mediaQuery.copyWith(
-            alwaysUse24HourFormat: false,
-          ),
+          data: mediaQuery.copyWith(alwaysUse24HourFormat: false),
           child: Theme(
             data: Theme.of(context).copyWith(
               colorScheme: Theme.of(context).colorScheme.copyWith(
@@ -33,25 +30,35 @@ class CreateGameView extends StatelessWidget {
                     onPrimary: Colors.white,
                     surface: context.cardColor,
                     onSurface: context.textPrimary,
-                    surfaceContainerHighest:
-                        AppColors.primary.withValues(alpha: 0.12),
                   ),
               timePickerTheme: TimePickerThemeData(
                 backgroundColor: context.cardColor,
-                hourMinuteColor: AppColors.primary.withValues(alpha: 0.15),
-                hourMinuteTextColor: AppColors.primary,
-                dayPeriodColor: AppColors.primary.withValues(alpha: 0.15),
-                dayPeriodTextColor: AppColors.primary,
+                hourMinuteShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: context.borderColor, width: 1),
+                ),
+                dayPeriodShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: context.borderColor, width: 1),
+                ),
                 dayPeriodBorderSide:
-                    const BorderSide(color: AppColors.primary, width: 1.5),
-                dialHandColor: AppColors.primary,
-                dialBackgroundColor: context.backgroundColor,
-                dialTextColor: context.textPrimary,
-                entryModeIconColor: AppColors.primary,
+                    BorderSide(color: context.borderColor, width: 1),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                   side: BorderSide(color: context.borderColor, width: 1),
                 ),
+                dayPeriodTextColor: WidgetStateColor.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return Colors.white;
+                  }
+                  return context.textPrimary;
+                }),
+                dayPeriodColor: WidgetStateColor.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return AppColors.primary;
+                  }
+                  return context.backgroundColor;
+                }),
               ),
             ),
             child: Center(
@@ -68,13 +75,13 @@ class CreateGameView extends StatelessWidget {
     );
   }
 
-  static Future<DateTime?> _showCustomDatePicker({
+  Future<DateTime?> _showCustomDatePicker({
     required BuildContext context,
     required DateTime initialDate,
     required DateTime firstDate,
     required DateTime lastDate,
   }) async {
-    return await showDatePicker(
+    return showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: firstDate,
@@ -84,9 +91,7 @@ class CreateGameView extends StatelessWidget {
         final dialogWidth = math.min(mediaQuery.size.width * 0.9, 360.0);
 
         return MediaQuery(
-          data: mediaQuery.copyWith(
-            alwaysUse24HourFormat: false,
-          ),
+          data: mediaQuery.copyWith(alwaysUse24HourFormat: false),
           child: Theme(
             data: Theme.of(context).copyWith(
               colorScheme: Theme.of(context).colorScheme.copyWith(
@@ -131,7 +136,7 @@ class CreateGameView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Create Football Game',
+        title: const Text('Book Pitch',
             style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
       ),
@@ -174,15 +179,7 @@ class CreateGameView extends StatelessWidget {
                         const SizedBox(height: 20),
                         _buildSectionHeader(
                           context,
-                          title: 'Match Details & Entry Fee',
-                          icon: Icons.sports_soccer_rounded,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildMatchDetailsCard(context, controller),
-                        const SizedBox(height: 20),
-                        _buildSectionHeader(
-                          context,
-                          title: 'Match Date & Timing',
+                          title: 'Pitch Booking Date & Time Slot',
                           icon: Icons.calendar_month_rounded,
                         ),
                         const SizedBox(height: 10),
@@ -190,7 +187,7 @@ class CreateGameView extends StatelessWidget {
                         const SizedBox(height: 20),
                         _buildSectionHeader(
                           context,
-                          title: 'Guidelines & Description',
+                          title: 'Pitch Notes & Special Requests',
                           icon: Icons.description_rounded,
                         ),
                         const SizedBox(height: 10),
@@ -272,7 +269,7 @@ class CreateGameView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Text(
               'Select Pitch / Court *',
               style: TextStyle(
@@ -292,16 +289,16 @@ class CreateGameView extends StatelessWidget {
                   onTap: () {
                     controller.selectedCourt.value = court;
                   },
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primary.withValues(alpha: 0.12)
                           : context.backgroundColor,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
                             ? AppColors.primary
@@ -321,17 +318,32 @@ class CreateGameView extends StatelessWidget {
                               ? AppColors.primary
                               : context.textSecondary,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          court.name,
-                          style: TextStyle(
-                            color: isSelected
-                                ? AppColors.primary
-                                : context.textPrimary,
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.w600,
-                            fontSize: 14,
-                          ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              court.name,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : context.textPrimary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${court.surfaceType} • ₹${court.basePricePerHour.toStringAsFixed(0)}/hr',
+                              style: TextStyle(
+                                color: context.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -345,296 +357,13 @@ class CreateGameView extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchDetailsCard(
-      BuildContext context, CreateGameController controller) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Game Type / Format *',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: context.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Obx(() {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                children: controller.formats.map((fmt) {
-                  final isSelected = controller.selectedFormat.value == fmt;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: Text(
-                        fmt,
-                        style: TextStyle(
-                          color:
-                              isSelected ? Colors.white : context.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      selected: isSelected,
-                      selectedColor: AppColors.primary,
-                      backgroundColor: context.backgroundColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: isSelected
-                              ? AppColors.primary
-                              : context.borderColor,
-                        ),
-                      ),
-                      onSelected: (_) => controller.setFormat(fmt),
-                    ),
-                  );
-                }).toList(),
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
-          Obx(() => Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Max Players: ${controller.maxPlayers.value} (${controller.maxPlayers.value ~/ 2} vs ${controller.maxPlayers.value ~/ 2})',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: controller.titleController,
-            textInputAction: TextInputAction.next,
-            style: TextStyle(color: context.textPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Match Title *',
-              hintText: 'e.g. Sunday Football Showdown',
-              prefixIcon:
-                  const Icon(Icons.title_rounded, color: AppColors.primary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: context.borderColor, width: 1.2),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.primary, width: 1.8),
-              ),
-            ),
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) {
-                return 'Match title is required';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: controller.entryFeeController,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.next,
-            style: TextStyle(color: context.textPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Entry Fee Per Player (₹) *',
-              hintText: 'e.g. 200',
-              prefixIcon:
-                  const Icon(Icons.currency_rupee, color: AppColors.primary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: context.borderColor, width: 1.2),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.primary, width: 1.8),
-              ),
-            ),
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) {
-                return 'Entry fee is required';
-              }
-              final fee = double.tryParse(val.trim());
-              if (fee == null || fee < 0) {
-                return 'Enter a valid non-negative entry fee';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 14),
-          Obx(
-            () => TextFormField(
-              controller: controller.reservePlayersController,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.next,
-              style: TextStyle(color: context.textPrimary, fontSize: 14),
-              decoration: InputDecoration(
-                labelText: 'Extra Reserve / Substitute Players Count *',
-                hintText: 'e.g. 2',
-                prefixIcon: const Icon(Icons.person_add_alt_1_rounded,
-                    color: AppColors.primary),
-                helperText:
-                    'Extra players on reserve bench (e.g. 2 reserves = ${controller.maxPlayers.value + (int.tryParse(controller.reserveCountRx.value) ?? 0)} total capacity)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: context.borderColor, width: 1.2),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 1.8),
-                ),
-              ),
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Reserve count is required';
-                }
-                final count = int.tryParse(val.trim());
-                if (count == null || count < 0 || count > 10) {
-                  return 'Enter a valid count (0 to 10)';
-                }
-                return null;
-              },
-            ),
-          ),
-          const SizedBox(height: 14),
-          Obx(
-            () => DropdownButtonFormField<String>(
-              value: controller.skillRequirement.value,
-              hint: Text('Select Skill Level',
-                  style: TextStyle(color: context.textSecondary, fontSize: 14)),
-              dropdownColor: context.cardColor,
-              style: TextStyle(color: context.textPrimary, fontSize: 14),
-              decoration: InputDecoration(
-                labelText: 'Required Skill Level *',
-                prefixIcon:
-                    const Icon(Icons.star_rounded, color: AppColors.primary),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: context.borderColor, width: 1.2),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 1.8),
-                ),
-              ),
-              items: controller.skills.map((s) {
-                return DropdownMenuItem<String>(
-                  value: s,
-                  child: Text(s),
-                );
-              }).toList(),
-              validator: (val) {
-                if (val == null || val.isEmpty) {
-                  return 'Please select required skill level';
-                }
-                return null;
-              },
-              onChanged: (val) {
-                if (val != null) controller.skillRequirement.value = val;
-              },
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text('Match Privacy',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: context.textSecondary)),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Obx(() {
-                  final isPublic = controller.privacy.value == 'PUBLIC';
-                  return ChoiceChip(
-                    label: Center(
-                      child: Text('Public Lobby',
-                          style: TextStyle(
-                              color: isPublic
-                                  ? Colors.white
-                                  : context.textSecondary,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                    selected: isPublic,
-                    selectedColor: AppColors.primary,
-                    backgroundColor: context.backgroundColor,
-                    onSelected: (selected) {
-                      if (selected) controller.privacy.value = 'PUBLIC';
-                    },
-                  );
-                }),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Obx(() {
-                  final isPrivate = controller.privacy.value == 'PRIVATE';
-                  return ChoiceChip(
-                    label: Center(
-                      child: Text('Private Match',
-                          style: TextStyle(
-                              color: isPrivate
-                                  ? Colors.white
-                                  : context.textSecondary,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                    selected: isPrivate,
-                    selectedColor: AppColors.primary,
-                    backgroundColor: context.backgroundColor,
-                    onSelected: (selected) {
-                      if (selected) controller.privacy.value = 'PRIVATE';
-                    },
-                  );
-                }),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildScheduleCard(
       BuildContext context, CreateGameController controller) {
     return Obx(() {
       final selectedDate = controller.selectedDate.value;
       final startTime = controller.startTime.value;
       final endTime = controller.endTime.value;
+      final duration = controller.durationMinutes;
 
       return Container(
         padding: const EdgeInsets.all(16),
@@ -647,7 +376,7 @@ class CreateGameView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Match Date *',
+              'Booking Date *',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -692,7 +421,7 @@ class CreateGameView extends StatelessWidget {
                         selectedDate != null
                             ? AppDateUtils.formatDate(selectedDate,
                                 format: 'EEEE, dd MMMM yyyy')
-                            : 'Tap to select match date',
+                            : 'Tap to select booking date',
                         style: TextStyle(
                           color: selectedDate != null
                               ? context.textPrimary
@@ -752,22 +481,20 @@ class CreateGameView extends StatelessWidget {
                           child: Row(
                             children: [
                               const Icon(Icons.access_time_rounded,
-                                  color: AppColors.primary, size: 20),
+                                  color: AppColors.primary, size: 18),
                               const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  startTime != null
-                                      ? AppDateUtils.formatTime(startTime)
-                                      : 'Select Start',
-                                  style: TextStyle(
-                                    color: startTime != null
-                                        ? context.textPrimary
-                                        : context.textSecondary,
-                                    fontWeight: startTime != null
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    fontSize: 14,
-                                  ),
+                              Text(
+                                startTime != null
+                                    ? AppDateUtils.formatTime(startTime)
+                                    : 'Select Start',
+                                style: TextStyle(
+                                  color: startTime != null
+                                      ? context.textPrimary
+                                      : context.textSecondary,
+                                  fontWeight: startTime != null
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 13,
                                 ),
                               ),
                             ],
@@ -815,22 +542,20 @@ class CreateGameView extends StatelessWidget {
                           child: Row(
                             children: [
                               const Icon(Icons.access_time_filled_rounded,
-                                  color: AppColors.primary, size: 20),
+                                  color: AppColors.primary, size: 18),
                               const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  endTime != null
-                                      ? AppDateUtils.formatTime(endTime)
-                                      : 'Select End',
-                                  style: TextStyle(
-                                    color: endTime != null
-                                        ? context.textPrimary
-                                        : context.textSecondary,
-                                    fontWeight: endTime != null
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    fontSize: 14,
-                                  ),
+                              Text(
+                                endTime != null
+                                    ? AppDateUtils.formatTime(endTime)
+                                    : 'Select End',
+                                style: TextStyle(
+                                  color: endTime != null
+                                      ? context.textPrimary
+                                      : context.textSecondary,
+                                  fontWeight: endTime != null
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 13,
                                 ),
                               ),
                             ],
@@ -849,16 +574,39 @@ class CreateGameView extends StatelessWidget {
                       buildEndTimeWidget(),
                     ],
                   );
-                } else {
-                  return Row(
-                    children: [
-                      Expanded(child: buildStartTimeWidget()),
-                      const SizedBox(width: 12),
-                      Expanded(child: buildEndTimeWidget()),
-                    ],
-                  );
                 }
+
+                return Row(
+                  children: [
+                    Expanded(child: buildStartTimeWidget()),
+                    const SizedBox(width: 12),
+                    Expanded(child: buildEndTimeWidget()),
+                  ],
+                );
               },
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timelapse_rounded,
+                      size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Booking Duration: $duration Minutes (${(duration / 60.0).toStringAsFixed(1)} hrs)',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -881,8 +629,9 @@ class CreateGameView extends StatelessWidget {
         textInputAction: TextInputAction.done,
         style: TextStyle(color: context.textPrimary, fontSize: 13),
         decoration: InputDecoration(
-          labelText: 'Match Rules & Extra Details (Optional)',
-          hintText: 'e.g. Bring black & white jerseys. Standard rules apply.',
+          labelText: 'Pitch Booking Notes & Special Requests (Optional)',
+          hintText:
+              'e.g. Need warm-up bibs, extra footballs, or floodlights turned on early.',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -902,22 +651,18 @@ class CreateGameView extends StatelessWidget {
   Widget _buildSummaryAndSubmitButton(
       BuildContext context, CreateGameController controller) {
     return Obx(() {
-      final fee = controller.entryFeeRx.value.isEmpty
-          ? '0'
-          : controller.entryFeeRx.value;
-      final reserves = controller.reserveCountRx.value.isEmpty
-          ? '0'
-          : controller.reserveCountRx.value;
-      final fmt = controller.selectedFormat.value;
-      final mainCount = controller.maxPlayers.value;
+      final court = controller.selectedCourt.value;
+      final courtName = court?.name ?? 'Select Court';
+      final totalAmount = controller.pitchBookingAmount;
+      final duration = controller.durationMinutes;
 
       return Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               border:
                   Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
             ),
@@ -926,24 +671,39 @@ class CreateGameView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.groups_rounded,
-                        color: AppColors.primary, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$fmt ($mainCount Main + $reserves Subs)',
-                      style: TextStyle(
-                          color: context.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13),
+                    const Icon(Icons.stadium_rounded,
+                        color: AppColors.primary, size: 22),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          courtName,
+                          style: TextStyle(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$duration mins (${(duration / 60.0).toStringAsFixed(1)} hrs)',
+                          style: TextStyle(
+                            color: context.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 Text(
-                  '₹$fee / player',
+                  '₹${totalAmount.toStringAsFixed(0)}',
                   style: const TextStyle(
-                      color: Colors.amber,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14),
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
                 ),
               ],
             ),
@@ -951,9 +711,11 @@ class CreateGameView extends StatelessWidget {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 52,
             child: AppButton(
-              text: 'Create $fmt Football Game',
+              text: court != null
+                  ? 'Book ${court.name} Pitch • ₹${totalAmount.toStringAsFixed(0)}'
+                  : 'Select Pitch / Court to Book',
               isLoading: controller.isLoading.value,
               onPressed: controller.proceedToCheckout,
             ),

@@ -446,6 +446,21 @@ export class GamesService {
         );
       }
 
+      await client.query(
+        `INSERT INTO public.court_bookings (court_id, club_id, user_id, booking_date, start_time, end_time, amount_paid, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED')
+         ON CONFLICT DO NOTHING;`,
+        [
+          data.courtId,
+          data.clubId || "all_stars_arena_club",
+          creatorUserId,
+          data.matchDate,
+          data.startTime,
+          data.endTime,
+          entryFee,
+        ],
+      );
+
       await GamesRepository.addActivityLog(
         {
           gameId: newGame.id,

@@ -12,7 +12,7 @@ import {
 const router = Router();
 
 router.use(authenticateToken);
-router.use(requireRole([3]));
+router.use(requireRole([1, 2, 3]));
 
 router.post("/", createBookingController);
 router.get("/mine", getUserBookingsController);

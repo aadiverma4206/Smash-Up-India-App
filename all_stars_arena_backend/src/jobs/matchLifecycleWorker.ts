@@ -15,8 +15,11 @@ export const runLifecycleCycle = async () => {
       "ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;",
     );
 
+    // =========================================================================
+    // STEP 1: Auto-cancel all unapproved or expired past/overdue matches
+    // =========================================================================
     const unapprovedGames = await client.query(
-      `SELECT g.id, g.creator_id, g.title, g.entry_fee, g.match_date, g.start_time
+      `SELECT g.id, g.creator_id, g.title, g.entry_fee, g.match_date, g.start_time, g.end_time, g.approval_status
        FROM public.games g
        WHERE g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
          AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP
@@ -40,49 +43,73 @@ export const runLifecycleCycle = async () => {
       );
 
       const paidPlayers = await client.query(
-        `SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount
+        `SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount, gp.payment_method, gp.payment_reference, gp.payment_status, gp.refund_status
          FROM public.game_players gp
          JOIN public.games g ON g.id = gp.game_id
-         WHERE gp.game_id = $1 AND gp.payment_status = 'PAID';`,
+         WHERE gp.game_id = $1 AND gp.payment_status = 'PAID'
+         FOR UPDATE;`,
         [game.id],
       );
 
       for (const player of paidPlayers.rows) {
         const refundAmt = Number(player.refund_amount);
-        if (refundAmt > 0) {
-          await client.query(
-            `INSERT INTO public.wallets (user_id, balance)
-             VALUES ($1, $2)
-             ON CONFLICT (user_id)
-             DO UPDATE SET balance = public.wallets.balance + $2, updated_at = CURRENT_TIMESTAMP;`,
-            [player.user_id, refundAmt],
+        if (
+          refundAmt > 0 &&
+          player.refund_status !== "REFUNDED_TO_WALLET" &&
+          player.payment_status !== "REFUNDED"
+        ) {
+          const refundRef = `MATCH_REFUND:${game.id}:${player.user_id}`;
+
+          const existingRefund = await client.query(
+            `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+            [player.user_id, refundRef],
           );
 
-          await client.query(
-            `INSERT INTO public.wallet_transactions (
-               wallet_id, user_id, type, amount, status, description
-             ) VALUES (
-               (SELECT id FROM public.wallets WHERE user_id = $1),
-               $1, 'REFUND', $2, 'SUCCESS',
-               $3
-             );`,
-            [
-              player.user_id,
-              refundAmt,
-              `Automated refund: Match "${game.title}" was auto-cancelled due to manager non-approval`,
-            ],
-          );
+          if (existingRefund.rows.length === 0) {
+            const refundDesc = `Automated refund: Match "${game.title || "Football Match"}" was auto-cancelled due to manager non-approval`;
 
-          await client.query(
-            `UPDATE public.game_players
-             SET payment_status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP
-             WHERE game_id = $1 AND user_id = $2;`,
-            [game.id, player.user_id],
-          );
+            const txRes = await client.query(
+              `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+               RETURNING id, balance_after;`,
+              [player.user_id, refundAmt, refundDesc, refundRef],
+            );
+            const newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
 
-          logger.info(
-            `💰 [LifecycleWorker] Refunded ₹${refundAmt} to user ${player.user_id} for auto-cancelled game ${game.id}`,
-          );
+            await client.query(
+              `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+               ON CONFLICT (id) DO NOTHING;`,
+              [
+                txRes.rows[0]?.id,
+                player.user_id,
+                refundAmt,
+                newBal,
+                refundDesc,
+                refundRef,
+              ],
+            );
+
+            await client.query(
+              `UPDATE public.game_players
+               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP
+               WHERE game_id = $3 AND user_id = $4;`,
+              [refundRef, refundAmt, game.id, player.user_id],
+            );
+
+            if (player.payment_reference) {
+              await client.query(
+                `UPDATE public.payment_orders
+                 SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP
+                 WHERE provider_payment_id = $1 OR provider_order_id = $1 OR id = $1;`,
+                [player.payment_reference],
+              );
+            }
+
+            logger.info(
+              `💰 [LifecycleWorker] Refunded ₹${refundAmt} to user ${player.user_id} for auto-cancelled game ${game.id}`,
+            );
+          }
         }
       }
 

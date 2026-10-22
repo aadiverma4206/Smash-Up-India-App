@@ -21,7 +21,6 @@ import '../../modules/player/views/player_history_standalone_view.dart';
 import '../../modules/player/views/player_history_detail_view.dart';
 import '../../modules/notifications/views/notifications_view.dart';
 import '../../modules/games/views/games_list_view.dart';
-import '../../modules/games/views/find_games_view.dart';
 import '../../modules/games/views/create_game_view.dart';
 import '../../modules/games/views/game_checkout_view.dart';
 import '../../modules/games/views/my_matches_view.dart';
@@ -198,7 +197,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.findGames,
-      page: () => const FindGamesView(),
+      page: () => const CreateGameView(),
       binding: PlayerBinding(),
     ),
     GetPage(

@@ -91,9 +91,6 @@ class MyMatchesView extends StatelessWidget {
   Widget _buildMyMatchCard(BuildContext context, GameModel game, String tab) {
     Color statusColor = AppColors.primary;
     if (tab == 'ONGOING') statusColor = Colors.orange;
-    if (tab == 'COMPLETED') statusColor = AppColors.secondary;
-    if (tab == 'CANCELLED') statusColor = Colors.redAccent;
-    if (tab == 'WAITLISTED') statusColor = Colors.purpleAccent;
 
     return Card(
       color: context.cardColor,

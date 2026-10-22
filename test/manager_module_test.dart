@@ -27,7 +27,9 @@ void main() {
       expect(dashboard.onlineCctvCount, 4);
     });
 
-    test('ManagerDashboardModel handles backend payload with nested stats and missing top-level keys', () {
+    test(
+        'ManagerDashboardModel handles backend payload with nested stats and missing top-level keys',
+        () {
       final json = {
         'club': {
           'id': 'clb_103',
@@ -55,7 +57,9 @@ void main() {
       expect(dashboard.occupancyRatePercentage, 0.0);
     });
 
-    test('ManagerDashboardModel gracefully defaults all missing and null fields', () {
+    test(
+        'ManagerDashboardModel gracefully defaults all missing and null fields',
+        () {
       final json = <String, dynamic>{};
       final dashboard = ManagerDashboardModel.fromJson(json);
       expect(dashboard.totalRevenue, 0.0);

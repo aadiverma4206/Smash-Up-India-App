@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/game_details_controller.dart';
 import '../../../data/models/game_model.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_loader.dart';
-import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/payment_processing_overlay.dart';
 import '../../../core/utils/app_date_utils.dart';
 
 class GameDetailsView extends StatelessWidget {
@@ -18,7 +17,7 @@ class GameDetailsView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Match Details',
+        title: const Text('Booking Details',
             style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
         actions: [
@@ -30,12 +29,12 @@ class GameDetailsView extends StatelessWidget {
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const AppLoader(message: 'Loading match pitch...');
+          return const AppLoader(message: 'Loading booking details...');
         }
         final game = controller.game.value;
         if (game == null) {
           return const Center(
-              child: Text('Match not found',
+              child: Text('Booking not found',
                   style: TextStyle(color: Colors.white)));
         }
 
@@ -44,18 +43,12 @@ class GameDetailsView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildScoreboard(context, game),
+              _buildBookingInfoCard(context, game),
               const SizedBox(height: 16),
-              _buildMatchInfoCard(context, game),
-              const SizedBox(height: 20),
-              _buildPitchRosters(context, controller, game),
-              const SizedBox(height: 20),
-              _buildMatchActions(context, controller, game),
-              const SizedBox(height: 10),
               _buildHostCancelCard(context, controller, game),
               const SizedBox(height: 20),
               _buildVideoSection(context, controller, game),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
             ],
           ),
         );
@@ -63,106 +56,10 @@ class GameDetailsView extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreboard(BuildContext context, GameModel game) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  game.format,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12),
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (game.status == 'ONGOING' || game.status == 'STARTED')
-                      ? Colors.orange
-                      : (game.status == 'FULL'
-                          ? Colors.purple
-                          : AppColors.secondary),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  game.status,
-                  style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Column(
-                children: [
-                  const Icon(Icons.shield_rounded,
-                      color: Colors.blue, size: 36),
-                  const SizedBox(height: 4),
-                  const Text('TEAM A',
-                      style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
-                  Text('${game.teamAScore}',
-                      style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: context.textPrimary)),
-                ],
-              ),
-              Text('VS',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: context.textSecondary)),
-              Column(
-                children: [
-                  const Icon(Icons.shield_rounded, color: Colors.red, size: 36),
-                  const SizedBox(height: 4),
-                  const Text('TEAM B',
-                      style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
-                  Text('${game.teamBScore}',
-                      style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: context.textPrimary)),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildBookingInfoCard(BuildContext context, GameModel game) {
+    final totalFee =
+        game.entryFee > 0 ? game.entryFee : game.perPlayerFee;
 
-  Widget _buildMatchInfoCard(BuildContext context, GameModel game) {
     return Card(
       color: context.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -171,671 +68,165 @@ class GameDetailsView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(game.title,
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: context.textPrimary)),
-            const SizedBox(height: 8),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.stadium_rounded,
-                    color: AppColors.primary, size: 18),
-                const SizedBox(width: 8),
                 Expanded(
-                  child: Text('${game.clubName} (${game.courtName})',
-                      style: TextStyle(color: context.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    game.title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: context.textPrimary,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    game.status.replaceAll('_', ' '),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.stadium_rounded,
+                    color: AppColors.primary, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${game.clubName} • ${game.courtName}',
+                    style: TextStyle(
+                      color: context.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             Row(
               children: [
                 const Icon(Icons.calendar_today_rounded,
                     color: AppColors.primary, size: 18),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                      '${AppDateUtils.formatDate(game.matchDate)} • ${AppDateUtils.formatTimeRange(game.startTime, game.endTime)}',
-                      style: TextStyle(color: context.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                    '${AppDateUtils.formatDate(game.matchDate)} • ${AppDateUtils.formatTimeRange(game.startTime, game.endTime)}',
+                    style: TextStyle(color: context.textSecondary, fontSize: 13),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             Row(
               children: [
                 const Icon(Icons.currency_rupee_rounded,
-                    color: Colors.amber, size: 18),
-                const SizedBox(width: 8),
+                    color: Colors.amber, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                      'Entry Fee: ₹${game.perPlayerFee.toStringAsFixed(0)} / player',
-                      style: const TextStyle(
-                          color: Colors.amber, fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                    'Pitch Booking Fee: ₹${totalFee.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ],
             ),
             if (game.description != null && game.description!.isNotEmpty) ...[
-              Divider(color: context.borderColor, height: 20),
-              Text('Rules / Notes: ${game.description}',
-                  style: TextStyle(color: context.textSecondary, fontSize: 13)),
+              Divider(color: context.borderColor, height: 24),
+              Text(
+                'Notes / Guidelines: ${game.description}',
+                style: TextStyle(color: context.textSecondary, fontSize: 13),
+              ),
             ],
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildPitchRosters(
-      BuildContext context, GameDetailsController controller, GameModel game) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Pitch Roster',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: context.textPrimary)),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: context.cardColor,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.5)),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    const Text('TEAM A',
-                        style: TextStyle(
-                            color: Colors.blue, fontWeight: FontWeight.bold)),
-                    const Divider(color: Colors.blue),
-                    if (controller.teamARoster.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text('No players yet',
-                            style: TextStyle(
-                                color: context.textSecondary, fontSize: 12)),
-                      )
-                    else
-                      ...controller.teamARoster.map((p) =>
-                          _buildPlayerTile(context, p, Colors.blue, game)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: context.cardColor,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    const Text('TEAM B',
-                        style: TextStyle(
-                            color: Colors.red, fontWeight: FontWeight.bold)),
-                    const Divider(color: Colors.red),
-                    if (controller.teamBRoster.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text('No players yet',
-                            style: TextStyle(
-                                color: context.textSecondary, fontSize: 12)),
-                      )
-                    else
-                      ...controller.teamBRoster.map((p) =>
-                          _buildPlayerTile(context, p, Colors.red, game)),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPlayerTile(BuildContext context, GameRosterPlayerModel player,
-      Color teamColor, GameModel game) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 13,
-            backgroundColor: teamColor,
-            child: Text(
-              player.position,
-              style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  player.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.textPrimary, fontSize: 12),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Paid ₹${game.perPlayerFee.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMatchActions(
-      BuildContext context, GameDetailsController controller, GameModel game) {
-    if (game.status == 'COMPLETED' || game.status == 'CANCELLED') {
-      return const SizedBox();
-    }
-
-    final isJoined = controller.isUserInGame;
-
-    if (isJoined) {
-      return Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-              onPressed: controller.switchTeam,
-              icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white),
-              label: const Text('Switch Team Side',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.redAccent)),
-              onPressed: controller.leaveMatch,
-              icon: const Icon(Icons.exit_to_app_rounded,
-                  color: Colors.redAccent),
-              label: const Text('Leave Match',
-                  style: TextStyle(
-                      color: Colors.redAccent, fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Select Position to Play:',
-            style: TextStyle(color: context.textSecondary, fontSize: 13)),
-        const SizedBox(height: 6),
-        Obx(
-          () => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: context.cardColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.primary),
-            ),
-            child: DropdownButton<String>(
-              value: controller.selectedPosition.value,
-              isExpanded: true,
-              underline: const SizedBox(),
-              dropdownColor: context.cardColor,
-              style: TextStyle(color: context.textPrimary),
-              items: [
-                'GK',
-                'CB',
-                'LB',
-                'RB',
-                'CDM',
-                'CM',
-                'CAM',
-                'ST',
-                'LW',
-                'RW'
-              ].map((pos) {
-                return DropdownMenuItem<String>(
-                  value: pos,
-                  child: Text('Position: $pos'),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) controller.selectedPosition.value = val;
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        if (game.status == 'FULL') ...[
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purpleAccent),
-              onPressed: controller.joinWaitlist,
-              icon: const Icon(Icons.queue_rounded, color: Colors.white),
-              label: const Text('Match Full - Join Reserve Waitlist',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ] else ...[
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.all(14)),
-              onPressed: () {
-                controller.requestJoinMatch(context, () {
-                  _showJoinPaymentBottomSheet(context, controller, game);
-                });
-              },
-              icon:
-                  const Icon(Icons.sports_soccer_rounded, color: Colors.white),
-              label: Text(
-                  'Join Match (₹${game.perPlayerFee.toStringAsFixed(0)})',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  void _showJoinPaymentBottomSheet(
-      BuildContext context, GameDetailsController controller, GameModel game) {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: context.cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-        ),
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Join Match & Pay Entry Fee',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: context.textPrimary,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Get.back(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: context.backgroundColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: context.borderColor),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(game.title,
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: context.textPrimary,
-                                fontSize: 15)),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Position: ${controller.selectedPosition.value} • ${game.clubName} (${game.courtName})',
-                          style: TextStyle(
-                              color: context.textSecondary, fontSize: 12),
-                        ),
-                        Divider(color: context.borderColor, height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Entry Fee Payable:',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: context.textPrimary)),
-                            Text('₹${game.perPlayerFee.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.amber,
-                                    fontSize: 18)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Select Payment Method',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: context.textPrimary),
-                  ),
-                  const SizedBox(height: 8),
-                  Obx(() {
-                    final selected = controller.selectedJoinPaymentMethod.value;
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: context.backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: context.borderColor),
-                      ),
-                      child: Column(
-                        children: [
-                          InkWell(
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(12)),
-                            onTap: () => controller
-                                .selectedJoinPaymentMethod.value = 'RAZORPAY',
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 12),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    selected == 'RAZORPAY'
-                                        ? Icons.radio_button_checked_rounded
-                                        : Icons.radio_button_unchecked_rounded,
-                                    color: selected == 'RAZORPAY'
-                                        ? AppColors.primary
-                                        : context.textSecondary,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: const [
-                                        Text('Razorpay Gateway (UPI, Cards)',
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.bold)),
-                                        SizedBox(height: 2),
-                                        Text(
-                                            'Supports GooglePay, PhonePe, Cards & Test Mode',
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.grey)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Divider(color: context.borderColor, height: 1),
-                          InkWell(
-                            borderRadius: const BorderRadius.vertical(
-                                bottom: Radius.circular(12)),
-                            onTap: () => controller
-                                .selectedJoinPaymentMethod.value = 'WALLET',
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 12),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    selected == 'WALLET'
-                                        ? Icons.radio_button_checked_rounded
-                                        : Icons.radio_button_unchecked_rounded,
-                                    color: selected == 'WALLET'
-                                        ? AppColors.primary
-                                        : context.textSecondary,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('ALL STARS ARENA Wallet',
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Available Balance: ₹${controller.walletBalance.value.toStringAsFixed(0)}',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: controller
-                                                        .walletBalance.value >=
-                                                    game.perPlayerFee
-                                                ? AppColors.primary
-                                                : AppColors.error,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 20),
-                  Obx(
-                    () => AppButton(
-                      text:
-                          'Pay ₹${game.perPlayerFee.toStringAsFixed(0)} & Join Roster',
-                      isLoading: controller.isProcessingPayment.value,
-                      onPressed: controller.executeJoinPaymentAndJoinGame,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 44),
-                      side: BorderSide(
-                          color: AppColors.primary.withValues(alpha: 0.5)),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: const Icon(Icons.bolt_rounded, color: Colors.amber),
-                    label: const Text(
-                      '⚡ Quick Test Payment (Instant Success)',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary),
-                    ),
-                    onPressed: controller.isProcessingPayment.value
-                        ? null
-                        : controller.processTestModeJoinPayment,
-                  ),
-                ],
-              ),
-            ),
-            Obx(
-              () => PaymentProcessingOverlay(
-                isVisible: controller.isProcessingPayment.value,
-                statusText: controller.paymentStatus.value,
-              ),
-            ),
-          ],
-        ),
-      ),
-      isScrollControlled: true,
     );
   }
 
   Widget _buildHostCancelCard(
       BuildContext context, GameDetailsController controller, GameModel game) {
-    if (!controller.isHost) return const SizedBox();
+    if (!controller.canHostCancel) {
+      return const SizedBox.shrink();
+    }
 
-    final canCancel = controller.canHostCancel;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: canCancel
-            ? Colors.red.withValues(alpha: 0.1)
-            : Colors.grey.withValues(alpha: 0.1),
+    return Card(
+      color: Colors.red.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: canCancel
-              ? Colors.redAccent.withValues(alpha: 0.5)
-              : Colors.grey.withValues(alpha: 0.3),
-        ),
+        side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                canCancel ? Icons.stars_rounded : Icons.lock_clock_rounded,
-                color: canCancel ? Colors.redAccent : Colors.grey,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Host Controls',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: context.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            canCancel
-                ? 'You are the host of this match. You can cancel this match before match start time.'
-                : 'Match start time has arrived/passed. As host, you can no longer cancel this match.',
-            style: TextStyle(fontSize: 12.5, color: context.textSecondary),
-          ),
-          if (canCancel) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                onPressed: () => _showHostCancelDialog(context, controller),
-                icon: const Icon(Icons.cancel_rounded, color: Colors.white),
-                label: const Text(
-                  'Cancel Match (Host)',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _showHostCancelDialog(
-      BuildContext context, GameDetailsController controller) {
-    final reasonController = TextEditingController();
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: context.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Hosted Match?',
-            style: TextStyle(
-                color: context.textPrimary, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Are you sure you want to cancel this match? Joined players will be notified and entry fees refunded.',
-              style: TextStyle(color: context.textSecondary, fontSize: 13),
+            const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Colors.redAccent, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Manage Booking',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.redAccent,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: reasonController,
-              style: TextStyle(color: context.textPrimary),
-              decoration: const InputDecoration(
-                labelText: 'Reason for Cancellation (Optional)',
-                hintText: 'e.g. Schedule conflict',
+            const SizedBox(height: 8),
+            Text(
+              'As the booking creator, you can cancel this pitch reservation. Refund will be processed as per arena policy.',
+              style: TextStyle(color: context.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
+              onPressed: () {
+                Get.defaultDialog(
+                  title: 'Cancel Pitch Booking',
+                  middleText: 'Are you sure you want to cancel this booking?',
+                  textConfirm: 'Yes, Cancel',
+                  textCancel: 'No, Keep',
+                  confirmTextColor: Colors.white,
+                  buttonColor: Colors.redAccent,
+                  onConfirm: () {
+                    Get.back();
+                    controller.cancelMatchByHost('Host requested cancellation');
+                  },
+                );
+              },
+              icon: const Icon(Icons.cancel_rounded, size: 18),
+              label: const Text('Cancel Pitch Booking'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('Keep Match',
-                style: TextStyle(color: context.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Get.back();
-              controller.cancelMatchByHost(reasonController.text.trim());
-            },
-            child: const Text('Confirm Cancel',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -844,23 +235,11 @@ class GameDetailsView extends StatelessWidget {
       BuildContext context, GameDetailsController controller, GameModel game) {
     return Obx(() {
       final videos = controller.matchVideos;
-      final selectedVid = controller.selectedVideo.value ??
-          (videos.isNotEmpty ? videos.first : null);
-      final rawVideoUrl =
-          (selectedVid != null && selectedVid.playbackUrl.isNotEmpty)
-              ? selectedVid.playbackUrl
-              : game.videoPlaybackUrl;
+      final selectedVid = controller.selectedVideo.value;
+      final rawVideoUrl = selectedVid?.playbackUrl ?? game.videoPlaybackUrl;
 
-      final bool hasValidVideo = rawVideoUrl != null &&
-          rawVideoUrl.trim().isNotEmpty &&
-          !rawVideoUrl.contains('BigBuckBunny') &&
-          !rawVideoUrl.contains('commondatastorage.googleapis.com') &&
-          !rawVideoUrl.contains('sample/');
-
-      if (!hasValidVideo) {
+      if (rawVideoUrl == null || rawVideoUrl.isEmpty) {
         return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(top: 14),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: context.cardColor,
@@ -876,7 +255,7 @@ class GameDetailsView extends StatelessWidget {
                       color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'CCTV Recorded Match Footage',
+                    'CCTV Recorded Footage',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -889,7 +268,7 @@ class GameDetailsView extends StatelessWidget {
               const EmptyStateWidget(
                 title: 'No CCTV Footage Available',
                 subtitle:
-                    'Footage will be automatically recorded and displayed here once the match starts.',
+                    'Footage will be automatically recorded and displayed here once available.',
                 imageSize: 130,
               ),
             ],
@@ -899,7 +278,9 @@ class GameDetailsView extends StatelessWidget {
 
       final videoUrl = rawVideoUrl;
       final cameraName = selectedVid?.cameraName ?? 'Camera 1';
-      final showMultiCam = controller.isManagerOrAdmin && videos.length > 1;
+      final isManagerOrAdmin =
+          AuthService.to.isManager || AuthService.to.isAdmin;
+      final showMultiCam = isManagerOrAdmin && videos.length > 1;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -913,7 +294,7 @@ class GameDetailsView extends StatelessWidget {
                       color: AppColors.primary, size: 22),
                   const SizedBox(width: 8),
                   Text(
-                    'CCTV Recorded Match Footage',
+                    'CCTV Recorded Footage',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1062,7 +443,7 @@ class GameDetailsView extends StatelessWidget {
               },
               icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
               label: Text(
-                controller.isManagerOrAdmin
+                isManagerOrAdmin
                     ? 'Watch Recorded Match Video ($cameraName)'
                     : 'Watch Recorded Match Video',
                 style: const TextStyle(

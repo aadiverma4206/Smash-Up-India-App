@@ -11,15 +11,12 @@ class GameCheckoutView extends GetView<CreateGameController> {
 
   @override
   Widget build(BuildContext context) {
-    final feeStr = controller.entryFeeController.text.trim().isEmpty
-        ? '200'
-        : controller.entryFeeController.text.trim();
-    final fee = double.tryParse(feeStr) ?? 200.0;
+    final fee = controller.pitchBookingAmount;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Match Payment & Checkout',
+          'Pitch Booking Checkout',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         elevation: 0,
@@ -32,7 +29,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Match Summary',
+                  'Pitch Reservation Summary',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -40,10 +37,10 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                _buildMatchSummaryCard(context),
+                _buildPitchSummaryCard(context),
                 const SizedBox(height: 20),
                 Text(
-                  'Payment Summary',
+                  'Pricing Breakdown',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -68,7 +65,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                 const SizedBox(height: 24),
                 Obx(
                   () => AppButton(
-                    text: 'Host Match & Open Player Slots',
+                    text: 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
                     isLoading: controller.isProcessing.value,
                     onPressed: controller.executePaymentAndCreateGame,
                   ),
@@ -107,24 +104,24 @@ class GameCheckoutView extends GetView<CreateGameController> {
     );
   }
 
-  Widget _buildMatchSummaryCard(BuildContext context) {
-    final title = controller.titleController.text.trim().isEmpty
-        ? '11v11 Football Showdown'
-        : controller.titleController.text.trim();
-    final courtName = controller.selectedCourt.value?.name ?? 'Court 1';
-    final reserves = controller.reservePlayersController.text.trim().isEmpty
-        ? '0'
-        : controller.reservePlayersController.text.trim();
+  Widget _buildPitchSummaryCard(BuildContext context) {
+    final court = controller.selectedCourt.value;
+    final courtName = court?.name ?? 'Court 1';
+    final clubName = controller.selectedClub.value.name.isNotEmpty
+        ? controller.selectedClub.value.name
+        : 'All Stars Turf Raipur';
+    final surface = court?.surfaceType ?? '3G Turf';
+
     final dateFormatted = controller.selectedDate.value != null
         ? AppDateUtils.formatDate(controller.selectedDate.value!,
             format: 'EEEE, dd MMM yyyy')
-        : 'Tomorrow';
+        : 'Selected Date';
     final timeRange =
         (controller.startTime.value != null && controller.endTime.value != null)
             ? AppDateUtils.formatTimeRange(
                 controller.startTime.value!, controller.endTime.value!)
-            : '6:00 PM - 7:30 PM';
-    final skillText = controller.skillRequirement.value ?? 'INTERMEDIATE';
+            : 'Selected Time';
+    final duration = controller.durationMinutes;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -144,7 +141,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.sports_soccer_rounded,
+                child: const Icon(Icons.stadium_rounded,
                     color: AppColors.primary, size: 24),
               ),
               const SizedBox(width: 12),
@@ -153,7 +150,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      '$clubName • $courtName',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -162,7 +159,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'All Stars Arena • $courtName',
+                      '$surface • Professional Turf Pitch',
                       style: TextStyle(
                         fontSize: 12,
                         color: context.textSecondary,
@@ -210,7 +207,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '11v11 (22 Main + $reserves Subs)',
+                  '$courtName Slot',
                   style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 11,
@@ -226,7 +223,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  skillText,
+                  '$duration mins (${(duration / 60.0).toStringAsFixed(1)} hrs)',
                   style: const TextStyle(
                       color: Colors.amber,
                       fontSize: 11,
@@ -241,6 +238,10 @@ class GameCheckoutView extends GetView<CreateGameController> {
   }
 
   Widget _buildPricingSummaryCard(BuildContext context, double fee) {
+    final court = controller.selectedCourt.value;
+    final hourlyRate = court?.basePricePerHour ?? 1200.0;
+    final duration = controller.durationMinutes;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -253,9 +254,9 @@ class GameCheckoutView extends GetView<CreateGameController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Host Entry Fee',
+              Text('Pitch Hourly Rate',
                   style: TextStyle(color: context.textSecondary, fontSize: 13)),
-              Text('₹${fee.toStringAsFixed(0)}',
+              Text('₹${hourlyRate.toStringAsFixed(0)} / hr',
                   style: TextStyle(
                       color: context.textPrimary,
                       fontWeight: FontWeight.bold,
@@ -266,7 +267,20 @@ class GameCheckoutView extends GetView<CreateGameController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Arena Platform Fee',
+              Text('Duration ($duration mins)',
+                  style: TextStyle(color: context.textSecondary, fontSize: 13)),
+              Text('${(duration / 60.0).toStringAsFixed(1)} hrs',
+                  style: TextStyle(
+                      color: context.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Arena Maintenance & Lights',
                   style: TextStyle(color: context.textSecondary, fontSize: 13)),
               const Text('₹0 (Included)',
                   style: TextStyle(
@@ -286,9 +300,10 @@ class GameCheckoutView extends GetView<CreateGameController> {
                       fontSize: 15)),
               Text('₹${fee.toStringAsFixed(0)}',
                   style: const TextStyle(
-                      color: Colors.amber,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20)),
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  )),
             ],
           ),
         ],
@@ -324,32 +339,36 @@ class GameCheckoutView extends GetView<CreateGameController> {
                       color: selected == 'RAZORPAY'
                           ? AppColors.primary
                           : context.textSecondary,
-                      size: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.payment_rounded,
+                          color: Colors.blue, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.payment_rounded,
-                                  color: AppColors.primary, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Razorpay Gateway (UPI, Cards)',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: context.textPrimary,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'Razorpay Gateway',
+                            style: TextStyle(
+                              color: context.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Supports GooglePay, PhonePe, Cards & Test Mode',
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          Text(
+                            'UPI, Credit / Debit Cards, NetBanking',
+                            style: TextStyle(
+                              color: context.textSecondary,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -375,39 +394,44 @@ class GameCheckoutView extends GetView<CreateGameController> {
                       color: selected == 'WALLET'
                           ? AppColors.primary
                           : context.textSecondary,
-                      size: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.account_balance_wallet_rounded,
+                          color: AppColors.primary, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.account_balance_wallet_rounded,
-                                  color: AppColors.primary, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'ALL STARS ARENA Wallet',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: context.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
                           Text(
-                            'Available Balance: ₹${controller.walletBalance.value.toStringAsFixed(0)}',
+                            'Arena Player Wallet',
                             style: TextStyle(
-                              fontSize: 11,
-                              color: controller.walletBalance.value >= fee
-                                  ? AppColors.primary
-                                  : AppColors.error,
-                              fontWeight: FontWeight.w600,
+                              color: context.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
                           ),
+                          Obx(() {
+                            final balance = controller.walletBalance.value;
+                            final hasSufficient = balance >= fee;
+                            return Text(
+                              'Available Balance: ₹${balance.toStringAsFixed(0)} ${hasSufficient ? "(Sufficient)" : "(Insufficient)"}',
+                              style: TextStyle(
+                                color: hasSufficient
+                                    ? AppColors.primary
+                                    : Colors.redAccent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          }),
                         ],
                       ),
                     ),
@@ -425,19 +449,19 @@ class GameCheckoutView extends GetView<CreateGameController> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: Colors.blue.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded,
-              color: AppColors.primary, size: 20),
+          const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Razorpay Test Mode Active. You can make test payments or click Quick Test Payment for instant verification.',
-              style: TextStyle(fontSize: 11, color: context.textPrimary),
+              'Test Environment: You can use the Quick Test Payment button below for immediate simulation, or proceed with standard Razorpay test checkout.',
+              style: TextStyle(color: context.textPrimary, fontSize: 12),
             ),
           ),
         ],

@@ -35,13 +35,7 @@ class CreateGameController extends GetxController {
 
   final formKey = GlobalKey<FormState>();
 
-  final titleController = TextEditingController();
-  final entryFeeController = TextEditingController();
-  final reservePlayersController = TextEditingController();
   final descriptionController = TextEditingController();
-
-  final entryFeeRx = ''.obs;
-  final reserveCountRx = ''.obs;
 
   final availableClubs = <ClubModel>[].obs;
   final Rx<ClubModel> selectedClub = ClubModel(
@@ -53,41 +47,6 @@ class CreateGameController extends GetxController {
 
   final availableCourts = <CourtModel>[].obs;
   final Rxn<CourtModel> selectedCourt = Rxn<CourtModel>();
-
-  final formats = ['1v1', '2v2', '3v3', '4v4', '5v5', '7v7', '11v11'];
-  final selectedFormat = '11v11'.obs;
-  final maxPlayers = 22.obs;
-
-  void setFormat(String fmt) {
-    selectedFormat.value = fmt;
-    switch (fmt) {
-      case '1v1':
-        maxPlayers.value = 2;
-        break;
-      case '2v2':
-        maxPlayers.value = 4;
-        break;
-      case '3v3':
-        maxPlayers.value = 6;
-        break;
-      case '4v4':
-        maxPlayers.value = 8;
-        break;
-      case '5v5':
-        maxPlayers.value = 10;
-        break;
-      case '7v7':
-        maxPlayers.value = 14;
-        break;
-      case '11v11':
-      default:
-        maxPlayers.value = 22;
-        break;
-    }
-  }
-
-  final skillRequirement = RxnString();
-  final privacy = 'PUBLIC'.obs;
 
   final Rxn<DateTime> selectedDate = Rxn<DateTime>();
   final Rxn<TimeOfDay> startTime = Rxn<TimeOfDay>();
@@ -101,7 +60,20 @@ class CreateGameController extends GetxController {
   final selectedPaymentMethod = 'RAZORPAY'.obs;
   final walletBalance = 0.0.obs;
 
-  final skills = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'PRO', 'ANY'];
+  int get durationMinutes {
+    if (startTime.value == null || endTime.value == null) return 90;
+    final startM = startTime.value!.hour * 60 + startTime.value!.minute;
+    final endM = endTime.value!.hour * 60 + endTime.value!.minute;
+    var diff = endM - startM;
+    if (diff <= 0) diff += 24 * 60;
+    return diff;
+  }
+
+  double get pitchBookingAmount {
+    final court = selectedCourt.value;
+    final hourlyRate = court?.basePricePerHour ?? 1200.0;
+    return (hourlyRate * (durationMinutes / 60.0)).roundToDouble();
+  }
 
   @override
   void onInit() {
@@ -110,33 +82,16 @@ class CreateGameController extends GetxController {
     loadVenues();
     fetchWalletBalance();
 
-    titleController.clear();
-    entryFeeController.clear();
-    reservePlayersController.clear();
     descriptionController.clear();
-
-    entryFeeRx.value = '';
-    reserveCountRx.value = '';
     selectedDate.value = null;
     startTime.value = null;
     endTime.value = null;
-    skillRequirement.value = null;
     selectedCourt.value = null;
-
-    entryFeeController.addListener(() {
-      entryFeeRx.value = entryFeeController.text.trim();
-    });
-    reservePlayersController.addListener(() {
-      reserveCountRx.value = reservePlayersController.text.trim();
-    });
   }
 
   @override
   void onClose() {
     _razorpay.clear();
-    titleController.dispose();
-    entryFeeController.dispose();
-    reservePlayersController.dispose();
     descriptionController.dispose();
     super.onClose();
   }
@@ -213,7 +168,6 @@ class CreateGameController extends GetxController {
       availableCourts.assignAll([court1, court2]);
     }
 
-    // Do NOT pre-select court; let user explicitly select pitch / court.
     selectedCourt.value = null;
   }
 
@@ -269,7 +223,7 @@ class CreateGameController extends GetxController {
     if (endMinutes <= startMinutes && newEnd.hour >= startTime.value!.hour) {
       ErrorHandler.showErrorSnackBar(
         'Invalid End Time',
-        'Match end time must be after start time (${AppDateUtils.formatTime(startTime.value!)})',
+        'Pitch booking end time must be after start time (${AppDateUtils.formatTime(startTime.value!)})',
       );
       final autoEndMinutes = (startMinutes + 90) % (24 * 60);
       endTime.value =
@@ -280,27 +234,15 @@ class CreateGameController extends GetxController {
   }
 
   bool validateForm() {
-    if (!formKey.currentState!.validate()) {
-      ErrorHandler.showErrorSnackBar(
-          'Validation Error', 'Please fill in all required fields');
-      return false;
-    }
-
     if (selectedCourt.value == null) {
       ErrorHandler.showErrorSnackBar(
-          'Validation Error', 'Please select a court');
-      return false;
-    }
-
-    if (skillRequirement.value == null || skillRequirement.value!.isEmpty) {
-      ErrorHandler.showErrorSnackBar(
-          'Validation Error', 'Please select required skill level');
+          'Validation Error', 'Please select Court 1 or Court 2');
       return false;
     }
 
     if (selectedDate.value == null) {
       ErrorHandler.showErrorSnackBar(
-          'Validation Error', 'Please select a match date');
+          'Validation Error', 'Please select a booking date');
       return false;
     }
 
@@ -321,13 +263,6 @@ class CreateGameController extends GetxController {
       return false;
     }
 
-    final fee = double.tryParse(entryFeeController.text.trim()) ?? -1.0;
-    if (fee < 0) {
-      ErrorHandler.showErrorSnackBar(
-          'Validation Error', 'Please enter a valid non-negative entry fee');
-      return false;
-    }
-
     return true;
   }
 
@@ -341,11 +276,11 @@ class CreateGameController extends GetxController {
     final userRole =
         AuthService.to.currentUser.value?.roleName?.toUpperCase() ?? '';
     final isManagerOrAdmin = userRole == 'MANAGER' || userRole == 'ADMIN';
-    final fee = double.tryParse(entryFeeController.text.trim()) ?? 0.0;
+    final fee = pitchBookingAmount;
 
-    // Free game or Manager/Admin
+    // Free booking or Manager/Admin
     if (fee <= 0 || isManagerOrAdmin) {
-      paymentStatus.value = 'Creating Game...';
+      paymentStatus.value = 'Confirming Pitch Booking...';
       await _createGameOnServer();
       return;
     }
@@ -384,13 +319,13 @@ class CreateGameController extends GetxController {
         final key =
             order.keyId.isNotEmpty ? order.keyId : ApiConstants.razorpayKey;
 
+        final courtTitle = selectedCourt.value?.name ?? 'Court';
         final options = {
           'key': key,
           'amount':
               order.amountPaisa > 0 ? order.amountPaisa : (fee * 100).toInt(),
           'name': 'ALL STARS ARENA',
-          'description':
-              'Host Game Entry Fee - ${titleController.text.trim().isNotEmpty ? titleController.text.trim() : "Football Match"}',
+          'description': 'Pitch Reservation - $courtTitle',
           if (order.orderId.isNotEmpty &&
               !order.orderId.startsWith('rzp_order_mock_'))
             'order_id': order.orderId,
@@ -411,7 +346,7 @@ class CreateGameController extends GetxController {
       return;
     }
 
-    paymentStatus.value = 'Creating Game...';
+    paymentStatus.value = 'Confirming Pitch Booking...';
     await _createGameOnServer();
   }
 
@@ -442,31 +377,39 @@ class CreateGameController extends GetxController {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Enter your 6-digit Wallet PIN to authorize game creation fee of ₹${fee.toStringAsFixed(0)}.',
+                    'Enter your 6-digit Wallet PIN to authorize pitch booking fee of ₹${fee.toStringAsFixed(0)}.',
                     style:
                         TextStyle(color: context.textSecondary, fontSize: 13),
                   ),
                   const SizedBox(height: 14),
                   TextField(
                     controller: pinController,
-                    obscureText: true,
                     keyboardType: TextInputType.number,
+                    obscureText: true,
                     maxLength: 6,
+                    autofocus: true,
                     style: TextStyle(
-                        color: context.textPrimary,
-                        fontWeight: FontWeight.bold),
+                      color: context.textPrimary,
+                      letterSpacing: 8,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
                     decoration: InputDecoration(
-                      hintText: 'Enter 6-digit PIN',
-                      hintStyle:
-                          TextStyle(color: context.textSecondary, fontSize: 13),
+                      hintText: '••••••',
                       counterText: '',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded,
-                          color: AppColors.primary),
-                      filled: true,
-                      fillColor: context.backgroundColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: context.borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: context.borderColor, width: 1.2),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: AppColors.primary, width: 1.8),
                       ),
                     ),
                   ),
@@ -482,41 +425,38 @@ class CreateGameController extends GetxController {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                onPressed: () async {
+                onPressed: () {
                   final pin = pinController.text.trim();
                   if (pin.length != 6) {
-                    ErrorHandler.showErrorSnackBar(
-                        'Invalid PIN', 'Please enter a 6-digit PIN');
+                    ErrorHandler.showErrorSnackBar('Invalid PIN',
+                        'Please enter your complete 6-digit PIN');
                     return;
                   }
-
-                  try {
-                    Get.back();
-                    isProcessing.value = true;
-                    paymentStatus.value = 'Authorizing & Creating Game...';
-                    await _createGameOnServer(walletPin: pin);
-                  } catch (e) {
-                    isProcessing.value = false;
-                    ErrorHandler.showErrorSnackBar('Authorization Failed', e);
-                  }
+                  Get.back();
+                  isProcessing.value = true;
+                  paymentStatus.value = 'Debiting Wallet & Confirming...';
+                  _createGameOnServer(walletPin: pin);
                 },
-                child: const Text('Authorize & Create',
-                    style: TextStyle(color: Colors.white)),
+                child: const Text('Confirm Pay',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           );
         },
       ),
+      barrierDismissible: false,
     );
   }
 
   Future<void> processTestModePayment() async {
     isProcessing.value = true;
-    paymentStatus.value = 'Creating Order...';
-    await Future.delayed(const Duration(milliseconds: 400));
+    paymentStatus.value = 'Preparing Quick Pitch Booking...';
+    await Future.delayed(const Duration(milliseconds: 300));
 
     paymentStatus.value = 'Opening Razorpay Gateway (Test Mode)...';
     await Future.delayed(const Duration(milliseconds: 500));
@@ -524,7 +464,7 @@ class CreateGameController extends GetxController {
     paymentStatus.value = 'Verifying Payment...';
     await Future.delayed(const Duration(milliseconds: 400));
 
-    paymentStatus.value = 'Finalizing Game Creation...';
+    paymentStatus.value = 'Finalizing Pitch Booking...';
     await Future.delayed(const Duration(milliseconds: 400));
 
     final mockPaymentId = 'pay_mock_${DateTime.now().millisecondsSinceEpoch}';
@@ -539,7 +479,7 @@ class CreateGameController extends GetxController {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    paymentStatus.value = 'Payment Verified! Creating Match...';
+    paymentStatus.value = 'Payment Verified! Confirming Booking...';
 
     try {
       final razorpayOrderIdToUse =
@@ -547,7 +487,7 @@ class CreateGameController extends GetxController {
               ? response.orderId!
               : (currentRazorpayOrderId.value ?? '');
 
-      paymentStatus.value = 'Finalizing Game Creation...';
+      paymentStatus.value = 'Finalizing Pitch Booking...';
       await _createGameOnServer(
         paymentId: response.paymentId,
         razorpayOrderId: razorpayOrderIdToUse,
@@ -555,7 +495,7 @@ class CreateGameController extends GetxController {
       );
     } catch (e) {
       isProcessing.value = false;
-      ErrorHandler.showErrorSnackBar('Game Creation Error', e);
+      ErrorHandler.showErrorSnackBar('Booking Error', e);
     }
   }
 
@@ -597,24 +537,20 @@ class CreateGameController extends GetxController {
         ? AppDateUtils.format24HourTime(endTime.value!)
         : '19:30';
 
-    final fee = double.tryParse(entryFeeController.text.trim()) ?? 0.0;
-    final reserveCount =
-        int.tryParse(reservePlayersController.text.trim()) ?? 0;
+    final fee = pitchBookingAmount;
 
     try {
       final newGame = await repository.createGame({
-        'title': titleController.text.trim().isEmpty
-            ? 'Football Game'
-            : titleController.text.trim(),
+        'title': 'Pitch Booking - $courtName',
         'clubId': 'all_stars_arena_club',
         'courtId': courtId,
         'courtName': courtName,
-        'format': selectedFormat.value,
-        'maxPlayers': maxPlayers.value,
-        'reservePlayersCount': reserveCount,
+        'format': '11v11',
+        'maxPlayers': 22,
+        'reservePlayersCount': 0,
         'entryFee': fee,
-        'skillRequirement': skillRequirement.value ?? 'ANY',
-        'privacy': privacy.value,
+        'skillRequirement': 'ANY',
+        'privacy': 'PUBLIC',
         'matchDate': dateStr,
         'startTime': startStr,
         'endTime': endStr,
@@ -640,7 +576,7 @@ class CreateGameController extends GetxController {
     } catch (e) {
       isProcessing.value = false;
       errorMessage.value = ErrorHandler.getErrorMessage(e);
-      ErrorHandler.showErrorSnackBar('Game Creation Error', e);
+      ErrorHandler.showErrorSnackBar('Pitch Booking Error', e);
     }
   }
 }

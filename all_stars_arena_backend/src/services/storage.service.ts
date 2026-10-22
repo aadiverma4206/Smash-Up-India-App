@@ -21,13 +21,10 @@ export const s3Client = new S3Client({
   region: s3Region,
   endpoint: env.AWS_S3_ENDPOINT || undefined,
   forcePathStyle: Boolean(env.AWS_S3_ENDPOINT),
-  credentials:
-    s3AccessKey && s3SecretKey
-      ? {
-          accessKeyId: s3AccessKey,
-          secretAccessKey: s3SecretKey,
-        }
-      : undefined,
+  credentials: {
+    accessKeyId: s3AccessKey || "AKIAIOSFODNN7EXAMPLE",
+    secretAccessKey: s3SecretKey || "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  },
 });
 
 export const getSignedPlaybackUrl = async (

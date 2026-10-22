@@ -9,7 +9,7 @@ class MyMatchesController extends GetxController {
   final RxList<GameModel> matchesList = <GameModel>[].obs;
   final RxBool isLoading = false.obs;
 
-  final tabs = ['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED', 'WAITLISTED'];
+  final tabs = ['UPCOMING', 'ONGOING'];
 
   @override
   void onInit() {

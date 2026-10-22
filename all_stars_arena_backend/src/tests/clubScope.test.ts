@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import { clubScope } from "../middlewares/clubScope.js";
 
 describe("Club Scope Middleware Tests", () => {

@@ -9,11 +9,8 @@ class EnvConfig {
       dotenv.env['APP_NAME']?.trim() ?? 'ALL STARS ARENA';
 
   static String get baseUrl {
-    final envUrl = dotenv.env['BASE_URL']?.trim();
-    if (envUrl != null && envUrl.isNotEmpty) {
-      return envUrl;
-    }
-    return '';
+    final envUrl = dotenv.env['BASE_URL'];
+    return _sanitizeUrl(envUrl);
   }
 
   static String get razorpayKeyId =>
@@ -27,6 +24,32 @@ class EnvConfig {
   static int get receiveTimeout {
     final val = dotenv.env['RECEIVE_TIMEOUT']?.trim();
     return val != null ? (int.tryParse(val) ?? 15000) : 15000;
+  }
+
+  /// Sanitizes and extracts pure, valid HTTP/HTTPS URL from `.env` strings
+  /// even if comments like `(For Android Emulator)` or `# local dev` were appended on the same line.
+  static String _sanitizeUrl(String? raw) {
+    if (raw == null) return '';
+    var url = raw.trim();
+    if (url.isEmpty) return '';
+
+    // Strip inline comment starting with #
+    if (url.contains('#')) {
+      url = url.split('#').first.trim();
+    }
+
+    // Extract valid HTTP/HTTPS URL and drop any trailing descriptions/text
+    final urlMatch = RegExp(r'https?://[^\s#()]+').firstMatch(url);
+    if (urlMatch != null) {
+      url = urlMatch.group(0) ?? url;
+    }
+
+    // Remove trailing slashes
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+
+    return url;
   }
 
   static Future<void> init({String envFile = '.env'}) async {

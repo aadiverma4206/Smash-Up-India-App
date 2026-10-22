@@ -1,0 +1,1458 @@
+[
+  {
+    "file": "src\\config\\test_query.js",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.role_id, u.status\n     FROM public.users u\n     WHERE LOWER(TRIM(u.email)) = $1\n        OR TRIM(u.phone) = $2\n        OR TRIM(u.phone) = $3\n        OR ($4 <> '' AND LENGTH($4) >= 10 AND RIGHT(REGEXP_REPLACE(u.phone, '[^0-9]', '', 'g'), 10) = RIGHT($4, 10))\n     LIMIT 1;"
+  },
+  {
+    "file": "src\\jobs\\cctvRecording.js",
+    "sql": "SELECT id, game_id, club_id, court_id, s3_object_key\n         FROM public.cctv_recordings\n         WHERE status = 'RECORDING' AND stop_deadline <= CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\jobs\\cctvRecording.js",
+    "sql": "UPDATE public.cctv_recordings\n           SET status = 'COMPLETED', actual_stop_time = CURRENT_TIMESTAMP\n           WHERE id = $1;"
+  },
+  {
+    "file": "src\\jobs\\cctvRecording.js",
+    "sql": "INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, status)\n           VALUES ($1, $2, $3, $4, $5, $6, 'AVAILABLE')\n           ON CONFLICT DO NOTHING;"
+  },
+  {
+    "file": "src\\jobs\\cctvRecording.js",
+    "sql": "INSERT INTO public.audit_logs (admin_name, action, target, details)\n           VALUES ('CCTV_WORKER', 'AUTO_STOP_RECORDING', $1, $2);"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycle.js",
+    "sql": "UPDATE public.games\n         SET status = 'ONGOING'\n         WHERE status IN ('OPEN_FOR_JOINING', 'FULL')\n           AND match_date <= CURRENT_DATE\n           AND start_time <= CURRENT_TIME\n           AND end_time > CURRENT_TIME\n         RETURNING id;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT g.id, g.creator_id, g.title, g.entry_fee, g.match_date, g.start_time\n       FROM public.games g\n       WHERE g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'\n         AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP\n       FOR UPDATE OF g SKIP LOCKED;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "UPDATE public.games\n         SET status = 'CANCELLED',\n             approval_status = 'REJECTED',\n             rejection_reason = 'Auto-cancelled: Game was not approved by manager before scheduled start time',\n             cancellation_reason = 'Auto-cancelled: Game was not approved by manager before scheduled start time',\n             updated_at = CURRENT_TIMESTAMP\n         WHERE id = $1;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount\n         FROM public.game_players gp\n         JOIN public.games g ON g.id = gp.game_id\n         WHERE gp.game_id = $1 AND gp.payment_status = 'PAID';"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "INSERT INTO public.wallets (user_id, balance)\n             VALUES ($1, $2)\n             ON CONFLICT (user_id)\n             DO UPDATE SET balance = public.wallets.balance + $2, updated_at = CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "INSERT INTO public.wallet_transactions (\n               wallet_id, user_id, type, amount, status, description\n             ) VALUES (\n               (SELECT id FROM public.wallets WHERE user_id = $1),\n               $1, 'REFUND', $2, 'SUCCESS',\n               $3\n             );"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "UPDATE public.game_players\n             SET payment_status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP\n             WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT g.id, g.club_id, g.court_id, g.title, g.match_date, g.start_time, g.end_time\n       FROM public.games g\n       WHERE g.approval_status = 'APPROVED'\n         AND g.status IN ('OPEN_FOR_JOINING', 'FULL')\n         AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP\n         AND (g.match_date + g.end_time) > CURRENT_TIMESTAMP\n       FOR UPDATE OF g SKIP LOCKED;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "UPDATE public.games\n         SET status = 'ONGOING', updated_at = CURRENT_TIMESTAMP\n         WHERE id = $1;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT id, is_enabled FROM public.cctv_cameras\n           WHERE (court_id = $1 OR club_id = $2 OR court_id IS NULL)\n             AND is_enabled = true\n           ORDER BY (CASE WHEN court_id = $1 THEN 0 WHEN club_id = $2 THEN 1 ELSE 2 END)\n           LIMIT 1;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT id FROM public.cctv_recordings WHERE game_id = $1 LIMIT 1;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT user_id FROM public.club_managers WHERE club_id = $1;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "INSERT INTO public.notifications (user_id, title, body, message, type, data)\n             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT user_id FROM public.game_players WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "INSERT INTO public.notifications (user_id, title, body, message, type, data)\n             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT g.id, g.club_id, g.court_id, g.title, g.match_date, g.end_time\n       FROM public.games g\n       WHERE g.status = 'ONGOING'\n         AND (g.match_date + g.end_time) <= CURRENT_TIMESTAMP\n       FOR UPDATE OF g SKIP LOCKED;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "UPDATE public.games\n         SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP\n         WHERE id = $1;"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "UPDATE public.cctv_recordings\n         SET recording_status = 'POST_MATCH',\n             stop_deadline = CURRENT_TIMESTAMP + ($2 || ' minutes')::interval,\n             post_match_stop_at = CURRENT_TIMESTAMP + ($2 || ' minutes')::interval\n         WHERE game_id = $1 AND (status = 'RECORDING' OR recording_status = 'RECORDING');"
+  },
+  {
+    "file": "src\\jobs\\matchLifecycleWorker.ts",
+    "sql": "SELECT rec.id, rec.game_id\n       FROM public.cctv_recordings rec\n       WHERE (rec.status = 'RECORDING' OR rec.recording_status IN ('RECORDING', 'POST_MATCH'))\n         AND (\n           rec.stop_deadline <= CURRENT_TIMESTAMP\n           OR rec.post_match_stop_at <= CURRENT_TIMESTAMP\n         )\n       FOR UPDATE SKIP LOCKED;"
+  },
+  {
+    "file": "src\\jobs\\paymentReconciliation.js",
+    "sql": "SELECT po.*, u.email as user_email\n         FROM public.payment_orders po\n         JOIN public.users u ON u.id = po.user_id\n         WHERE po.status = 'PENDING' AND po.provider_order_id IS NOT NULL AND po.expires_at > CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\jobs\\paymentReconciliation.ts",
+    "sql": "SELECT po.*, u.email as user_email\n         FROM public.payment_orders po\n         JOIN public.users u ON u.id = po.user_id\n         WHERE po.status = 'PENDING' AND po.provider_order_id IS NOT NULL AND po.expires_at > CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\middlewares\\auth.js",
+    "sql": "SELECT u.id, u.email, u.phone, u.role_id, u.status,\n              ad.admin_type, ad.is_owner\n       FROM public.users u\n       LEFT JOIN public.admin_details ad ON ad.user_id = u.id\n       WHERE u.id = $1;"
+  },
+  {
+    "file": "src\\middlewares\\auth.middleware.ts",
+    "sql": "SELECT u.id, u.email, u.phone, u.role_id, u.status,\n              ad.admin_type, ad.is_owner\n       FROM public.users u\n       LEFT JOIN public.admin_details ad ON ad.user_id = u.id\n       WHERE u.id = $1;"
+  },
+  {
+    "file": "src\\middlewares\\auth.middleware.ts",
+    "sql": "SELECT u.id, u.email, u.phone, u.role_id, u.status,\n              ad.admin_type, ad.is_owner\n       FROM public.users u\n       LEFT JOIN public.admin_details ad ON ad.user_id = u.id\n       WHERE u.id = $1;"
+  },
+  {
+    "file": "src\\middlewares\\clubScope.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT COALESCE(SUM(amount_paid), 0) as total_revenue\n      FROM public.court_bookings\n      WHERE status IN ('CONFIRMED', 'COMPLETED', 'PAID');"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT COALESCE(SUM(amount), 0) as total_refunds\n      FROM public.transactions\n      WHERE type ILIKE '%REFUND%';"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT COALESCE(SUM(amount), 0) as total_refunds\n        FROM public.wallet_transactions\n        WHERE description ILIKE '%REFUND%';"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.role_id, u.status, u.city, u.profile_image_url, u.created_at,\n           ad.admin_type, ad.is_owner\n    FROM public.users u\n    LEFT JOIN public.admin_details ad ON ad.user_id = u.id\n    WHERE 1=1"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.role_id, u.status, u.city, u.profile_image_url, u.created_at, u.updated_at,\n            ad.admin_type, ad.is_owner\n     FROM public.users u\n     LEFT JOIN public.admin_details ad ON ad.user_id = u.id\n     WHERE u.id = $1 LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "UPDATE public.users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, name, email, phone, role_id, status;"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, user_id, action, target, details, ip_address)\n       VALUES ($1, $2, $3, $4, $5, $6, $7);"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT public.create_manager_account($1, $2, $3, $4, $5, $6, $7) as user_id;"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, user_id, action, target, details, ip_address)\n     VALUES ($1, $2, $3, 'MANAGER_ACCOUNT_CREATED', $4, $5, $6);"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT public.create_admin_account($1, $2, $3, $4, $5, $6, $7) as user_id;"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, user_id, action, target, details, ip_address)\n     VALUES ($1, $2, $3, 'ADMIN_ACCOUNT_CREATED', $4, $5, $6);"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "UPDATE public.clubs SET status = 'ACTIVE' WHERE id = $1 RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details, ip_address)\n     VALUES ($1, $2, 'CLUB_VENUE_APPROVED', $3, $4, $5);"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "INSERT INTO public.club_managers (club_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "SELECT public.resolve_match_dispute($1, $2, $3, $4, $5);"
+  },
+  {
+    "file": "src\\modules\\admin\\admin.controller.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details, ip_address)\n     VALUES ($1, $2, 'MATCH_DISPUTE_RESOLVED', $3, $4, $5);"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT id FROM public.users\n       WHERE LOWER(TRIM(email)) = $1\n          OR TRIM(phone) = $2\n          OR TRIM(phone) = $3\n          OR ($4 <> '' AND LENGTH($4) >= 10 AND RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = RIGHT($4, 10))\n       UNION\n       SELECT id::text FROM public.user_identity_history\n       WHERE (identity_type = 'EMAIL' AND LOWER(TRIM(normalized_value)) = $1)\n          OR (identity_type = 'PHONE' AND TRIM(normalized_value) = $2)\n          OR (identity_type = 'PHONE' AND TRIM(normalized_value) = $3)\n          OR ($4 <> '' AND LENGTH($4) >= 10 AND identity_type = 'PHONE' AND RIGHT(REGEXP_REPLACE(normalized_value, '[^0-9]', '', 'g'), 10) = RIGHT($4, 10));"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT u.*,\n              ad.admin_type, ad.is_owner,\n              md.employee_code\n       FROM public.users u\n       LEFT JOIN public.admin_details ad ON ad.user_id = u.id\n       LEFT JOIN public.manager_details md ON md.user_id = u.id\n       WHERE LOWER(TRIM(u.email)) = $1\n          OR TRIM(u.phone) = $2\n          OR TRIM(u.phone) = $3\n          OR ($4 <> '' AND LENGTH($4) >= 10 AND RIGHT(REGEXP_REPLACE(u.phone, '[^0-9]', '', 'g'), 10) = RIGHT($4, 10))\n       LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT club_id FROM public.club_managers WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT * FROM public.player_details WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT * FROM public.player_stats WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT public.register_player($1, $2, $3, $4, $5) as user_id;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "INSERT INTO public.user_sessions\n       (user_id, refresh_token_hash, device_info, ip_address, is_revoked, expires_at)\n       VALUES ($1, $2, $3, $4, false, $5)\n       RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT * FROM public.user_sessions WHERE refresh_token_hash = $1;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "UPDATE public.user_sessions SET is_revoked = true WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT public.logout_all_sessions($1) as revoked_count;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "UPDATE public.users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "SELECT id, device_info, ip_address, created_at, expires_at\n       FROM public.user_sessions\n       WHERE user_id = $1 AND is_revoked = false AND expires_at > CURRENT_TIMESTAMP\n       ORDER BY created_at DESC;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "DELETE FROM public.user_device_tokens WHERE device_token = $1 AND user_id <> $2;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "INSERT INTO public.user_device_tokens (user_id, device_token, device_type, is_active)\n         VALUES ($1, $2, $3, true)\n         ON CONFLICT (user_id, device_token)\n         DO UPDATE SET is_active = true, device_type = EXCLUDED.device_type, updated_at = CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "UPDATE public.user_device_tokens SET is_active = true, device_type = $3, updated_at = CURRENT_TIMESTAMP\n           WHERE user_id = $1 AND device_token = $2;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "INSERT INTO public.user_device_tokens (user_id, device_token, device_type, is_active)\n           SELECT $1, $2, $3, true\n           WHERE NOT EXISTS (\n             SELECT 1 FROM public.user_device_tokens WHERE user_id = $1 AND device_token = $2\n           );"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.repository.ts",
+    "sql": "DELETE FROM public.user_device_tokens WHERE user_id = $1 AND device_token = $2;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.service.ts",
+    "sql": "UPDATE public.users\n         SET latest_otp = (\n           SELECT otp_hash FROM public.otp_verifications\n           WHERE identifier = $1 AND purpose = 'REGISTRATION'\n           ORDER BY created_at DESC LIMIT 1\n         ), updated_at = CURRENT_TIMESTAMP\n         WHERE LOWER(email) = $1\n            OR phone = $2\n            OR ($3 <> '' AND LENGTH($3) >= 10 AND RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = RIGHT($3, 10))"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.service.ts",
+    "sql": "UPDATE public.users\n         SET latest_otp = (\n           SELECT otp_hash FROM public.otp_verifications\n           WHERE identifier = $1 AND purpose = 'REGISTRATION'\n           ORDER BY created_at DESC LIMIT 1\n         )\n         WHERE id = $2;"
+  },
+  {
+    "file": "src\\modules\\auth\\auth.service.ts",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.role_id, u.status, u.city, u.profile_image_url,\n              ad.admin_type, ad.is_owner, md.employee_code\n       FROM public.users u\n       LEFT JOIN public.admin_details ad ON ad.user_id = u.id\n       LEFT JOIN public.manager_details md ON md.user_id = u.id\n       WHERE u.id = $1;"
+  },
+  {
+    "file": "src\\modules\\bookings\\bookings.service.ts",
+    "sql": "INSERT INTO public.court_bookings\n         (court_id, club_id, user_id, booking_date, start_time, end_time, amount_paid, status)\n         VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED')\n         RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\bookings\\bookings.service.ts",
+    "sql": "SELECT b.*, crt.name as court_name, clb.name as club_name\n       FROM public.court_bookings b\n       JOIN public.courts crt ON crt.id = b.court_id\n       JOIN public.clubs clb ON clb.id = b.club_id\n       WHERE b.user_id = $1\n       ORDER BY b.booking_date DESC, b.start_time DESC;"
+  },
+  {
+    "file": "src\\modules\\bookings\\bookings.service.ts",
+    "sql": "SELECT * FROM public.court_bookings WHERE id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\bookings\\bookings.service.ts",
+    "sql": "UPDATE public.court_bookings\n       SET status = 'CANCELLED', cancellation_reason = $1\n       WHERE id = $2 RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "SELECT 1 FROM public.courts WHERE id = $1 AND club_id = $2;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "INSERT INTO public.cctv_cameras\n      (club_id, court_id, name, rtsp_url_encrypted, encrypted_connection_reference, ip_address, port, serial_number, protocol, is_enabled, status, health_status, created_by)\n      VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8, true, 'ONLINE', 'ONLINE', $9)\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "updated_at = CURRENT_TIMESTAMP"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "UPDATE public.cctv_cameras\n      SET ${fields.join(\", \")}\n      WHERE id = $${idx}\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "SELECT cam.id, cam.club_id, cam.court_id, cam.name, cam.camera_type,\n              cam.connection_type, cam.ip_address, cam.port, cam.serial_number,\n              cam.protocol, cam.is_enabled, cam.status, cam.health_status,\n              cam.last_seen_at, cam.last_connection_at, cam.last_successful_connection,\n              cam.last_error, cam.created_at, cam.updated_at,\n              crt.name as court_name\n       FROM public.cctv_cameras cam\n       LEFT JOIN public.courts crt ON crt.id = cam.court_id\n       WHERE cam.club_id = $1\n       ORDER BY cam.created_at DESC;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "SELECT * FROM public.cctv_cameras\n       WHERE (court_id = $1 OR (club_id = $2 AND court_id IS NULL))\n         AND is_enabled = true\n       ORDER BY court_id NULLS LAST\n       LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "INSERT INTO public.cctv_recordings\n      (game_id, club_id, court_id, camera_id, start_time, started_at, scheduled_match_end, scheduled_match_end_at, stop_deadline, post_match_stop_at, s3_object_key, storage_object_key, status, recording_status)\n      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5, $5, $6, $6, $7, $7, 'RECORDING', 'RECORDING')\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "UPDATE public.cctv_recordings\n       SET status = $1, recording_status = $1, actual_stop_time = COALESCE($2, CURRENT_TIMESTAMP), actual_stopped_at = COALESCE($2, CURRENT_TIMESTAMP)\n       WHERE id = $3 RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "UPDATE public.cctv_recordings\n       SET stop_deadline = $1, post_match_stop_at = $1\n       WHERE id = $2 RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "SELECT rec.*, cam.name as camera_name, cam.status as camera_status\n       FROM public.cctv_recordings rec\n       LEFT JOIN public.cctv_cameras cam ON cam.id = rec.camera_id\n       WHERE rec.game_id = $1\n       ORDER BY rec.created_at DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "SELECT * FROM public.cctv_recordings WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "SELECT rec.id, rec.game_id, rec.club_id, rec.court_id, rec.camera_id,\n             rec.status, rec.recording_status, rec.error_code, rec.error_message,\n             rec.retry_count, rec.started_at, rec.created_at,\n             cam.name as camera_name, g.title as game_title\n      FROM public.cctv_recordings rec\n      LEFT JOIN public.cctv_cameras cam ON cam.id = rec.camera_id\n      LEFT JOIN public.games g ON g.id = rec.game_id\n      WHERE rec.status = 'FAILED' OR rec.recording_status = 'FAILED'"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "INSERT INTO public.game_videos\n      (game_id, club_id, court_id, cctv_id, title, video_url, uploaded_by_id, status)\n      VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')\n      ON CONFLICT DO NOTHING\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.repository.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)\n       VALUES ($1, $2, $3, $4, $5);"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.service.ts",
+    "sql": "Updated CCTV Camera '${updated.name}'"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.service.ts",
+    "sql": "SELECT gv.*, cam.name as camera_name\n      FROM public.game_videos gv\n      LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id\n      WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'"
+  },
+  {
+    "file": "src\\modules\\cctv\\cctv.service.ts",
+    "sql": "SELECT gv.*, cam.name as camera_name\n         FROM public.game_videos gv\n         LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id\n         WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'\n         ORDER BY gv.created_at ASC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\community\\community.controller.ts",
+    "sql": "SELECT p.*, u.name as author_name, u.profile_image_url as author_avatar\n     FROM public.community_posts p\n     JOIN public.users u ON u.id = p.author_id\n     WHERE p.city = $1\n     ORDER BY p.created_at DESC LIMIT $2;"
+  },
+  {
+    "file": "src\\modules\\community\\community.controller.ts",
+    "sql": "INSERT INTO public.community_posts (city, author_id, content, image_url, tags)\n     VALUES ($1, $2, $3, $4, $5) RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\community\\community.controller.ts",
+    "sql": "INSERT INTO public.post_likes (post_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\community\\community.controller.ts",
+    "sql": "SELECT * FROM public.polls WHERE city = $1 ORDER BY created_at DESC LIMIT 10;"
+  },
+  {
+    "file": "src\\modules\\community\\community.controller.ts",
+    "sql": "SELECT * FROM public.poll_options WHERE poll_id = $1 ORDER BY id ASC;"
+  },
+  {
+    "file": "src\\modules\\community\\community.controller.ts",
+    "sql": "INSERT INTO public.poll_votes (poll_id, user_id, option_id) VALUES ($1, $2, $3);"
+  },
+  {
+    "file": "src\\modules\\courts\\courts.service.ts",
+    "sql": "SELECT * FROM public.clubs WHERE status = 'ACTIVE' AND city = $1 ORDER BY name ASC;"
+  },
+  {
+    "file": "src\\modules\\courts\\courts.service.ts",
+    "sql": "SELECT * FROM public.clubs WHERE status = 'ACTIVE' ORDER BY name ASC;"
+  },
+  {
+    "file": "src\\modules\\courts\\courts.service.ts",
+    "sql": "SELECT crt.*, clb.name as club_name, clb.city FROM public.courts crt JOIN public.clubs clb ON clb.id = crt.club_id WHERE crt.club_id = $1 AND crt.status = 'AVAILABLE';"
+  },
+  {
+    "file": "src\\modules\\courts\\courts.service.ts",
+    "sql": "SELECT crt.*, clb.name as club_name, clb.city FROM public.courts crt JOIN public.clubs clb ON clb.id = crt.club_id WHERE crt.status = 'AVAILABLE';"
+  },
+  {
+    "file": "src\\modules\\courts\\courts.service.ts",
+    "sql": "SELECT crt.*, clb.name as club_name, clb.address, clb.city\n       FROM public.courts crt\n       JOIN public.clubs clb ON clb.id = crt.club_id\n       WHERE crt.id = $1;"
+  },
+  {
+    "file": "src\\modules\\courts\\courts.service.ts",
+    "sql": "SELECT id, start_time, end_time, status\n       FROM public.court_bookings\n       WHERE court_id = $1 AND booking_date = $2 AND status = 'CONFIRMED';"
+  },
+  {
+    "file": "src\\modules\\games\\games.controller.ts",
+    "sql": "SELECT user_id FROM public.club_managers WHERE club_id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT g.*, c.name as club_name, c.address as club_address, c.city, crt.name as court_name,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count\n      FROM public.games g\n      LEFT JOIN public.clubs c ON c.id = g.club_id\n      LEFT JOIN public.courts crt ON crt.id = g.court_id\n      ${whereClause}\n      ORDER BY g.match_date ASC, g.start_time ASC\n      LIMIT $${idx++} OFFSET $${idx++};"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT g.*, c.name as club_name, crt.name as court_name,\n              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,\n              COALESCE(\n                (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),\n                g.video_playback_url\n              ) as video_playback_url,\n              (\n                SELECT COALESCE(json_agg(\n                  json_build_object(\n                    'userId', gp.user_id,\n                    'user_id', gp.user_id,\n                    'name', COALESCE(pu.name, 'Player'),\n                    'profileImageUrl', pu.profile_image_url,\n                    'profile_image_url', pu.profile_image_url,\n                    'team', UPPER(COALESCE(NULLIF(gp.team::text, ''), 'TEAM_A')),\n                    'position', COALESCE(gp.position, 'MID'),\n                    'ovr', COALESCE(pd.ovr_rating, 80),\n                    'paymentStatus', COALESCE(gp.payment_status, 'PAID'),\n                    'payment_status', COALESCE(gp.payment_status, 'PAID'),\n                    'phone', pu.phone\n                  )\n                  ORDER BY gp.team ASC, gp.joined_at ASC\n                ), '[]'::json)\n                FROM public.game_players gp\n                JOIN public.users pu ON pu.id = gp.user_id\n                LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id\n                WHERE gp.game_id = g.id\n              ) as roster\n       FROM public.games g\n       LEFT JOIN public.clubs c ON c.id = g.club_id\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       WHERE g.id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT COUNT(*) as overlap_count\n       FROM public.games\n       WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED'\n         AND ((start_time <= $3 AND end_time > $3)\n           OR (start_time < $4 AND end_time >= $4)\n           OR (start_time >= $3 AND end_time <= $4));"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "INSERT INTO public.games\n        (id, title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'OPEN_FOR_JOINING', $16, $17)\n        RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "INSERT INTO public.games\n        (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status, description)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'OPEN_FOR_JOINING', $15, $16)\n        RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "INSERT INTO public.game_slot_requests\n      (game_id, user_id, position, entry_fee, status)\n      VALUES ($1, $2, $3, $4, $5)\n      ON CONFLICT (game_id, user_id) DO UPDATE SET\n        position = EXCLUDED.position,\n        status = EXCLUDED.status,\n        updated_at = CURRENT_TIMESTAMP\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT req.*, g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,\n             g.status as game_status, c.name as club_name, crt.name as court_name\n      FROM public.game_slot_requests req\n      JOIN public.games g ON g.id = req.game_id\n      LEFT JOIN public.clubs c ON c.id = g.club_id\n      LEFT JOIN public.courts crt ON crt.id = g.court_id\n      ${whereClause}\n      ORDER BY req.created_at DESC;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "INSERT INTO public.game_activity_logs\n      (game_id, actor_id, actor_name, actor_role_name, action_type, details)\n      VALUES ($1, $2, $3, $4, $5, $6)\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT * FROM public.game_activity_logs\n      WHERE game_id = $1\n      ORDER BY created_at ASC;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT gp.*, u.name, u.profile_image_url, pd.position as player_position, pd.ovr_rating, pd.elo_rating\n       FROM public.game_players gp\n       JOIN public.users u ON u.id = gp.user_id\n       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id\n       WHERE gp.game_id = $1\n       ORDER BY gp.team ASC, gp.joined_at ASC;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "DELETE FROM public.game_players WHERE game_id = $1 AND user_id = $2 RETURNING id;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT gw.*, u.name, u.profile_image_url\n       FROM public.game_waitlist gw\n       JOIN public.users u ON u.id = gw.user_id\n       WHERE gw.game_id = $1\n       ORDER BY gw.joined_at ASC;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT COUNT(*) as waitlist_count FROM public.game_waitlist WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "INSERT INTO public.game_waitlist (game_id, user_id, position)\n       VALUES ($1, $2, $3)\n       ON CONFLICT (game_id, user_id) DO UPDATE SET position = EXCLUDED.position\n       RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "DELETE FROM public.game_waitlist WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "DELETE FROM public.game_waitlist\n       WHERE id = (\n         SELECT id FROM public.game_waitlist\n         WHERE game_id = $1\n         ORDER BY joined_at ASC LIMIT 1\n       )\n       RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT gv.*,\n              gv.cctv_id,\n              COALESCE(cam.name, 'Camera ' || ROW_NUMBER() OVER(PARTITION BY gv.game_id ORDER BY gv.created_at ASC)) as camera_name,\n              COALESCE(cam.camera_type, 'RTSP_DOME') as camera_type,\n              COALESCE(cam.status, 'ONLINE') as camera_status,\n              COALESCE(crt.name, 'Court 1') as court_name,\n              COALESCE(clb.name, 'All Stars Turf') as club_name,\n              COALESCE(rec.started_at, rec.created_at, gv.created_at) as started_at,\n              COALESCE(rec.actual_stopped_at, rec.actual_stop_time, gv.created_at) as actual_stopped_at,\n              COALESCE(rec.duration_seconds, 5400) as duration_seconds\n       FROM public.game_videos gv\n       LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id\n       LEFT JOIN public.courts crt ON crt.id = COALESCE(gv.court_id, cam.court_id)\n       LEFT JOIN public.clubs clb ON clb.id = gv.club_id\n       LEFT JOIN public.cctv_recordings rec ON (rec.game_id = gv.game_id AND (rec.camera_id = gv.cctv_id OR gv.cctv_id IS NULL))\n       WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'\n       ORDER BY gv.created_at ASC;"
+  },
+  {
+    "file": "src\\modules\\games\\games.repository.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id, entry_fee, max_players, status FROM public.games WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.payment_orders (\n         id, user_id, provider, provider_order_id, idempotency_key,\n         amount_paise, currency, purpose, status, metadata, expires_at\n       ) VALUES ($1, $2, 'RAZORPAY', $3, $4, $5, 'INR', $6, 'PENDING', $7, CURRENT_TIMESTAMP + INTERVAL '30 minutes')\n       ON CONFLICT (id) DO UPDATE \n       SET provider_order_id = EXCLUDED.provider_order_id, updated_at = CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id, status, role_id FROM public.users WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id, name, club_id, status FROM public.courts WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)\n         VALUES ($1, 'all_stars_arena_club', $2, 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')\n         ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id FROM public.games\n         WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED'\n           AND ((start_time <= $3 AND end_time > $3)\n             OR (start_time < $4 AND end_time >= $4)\n             OR (start_time >= $3 AND end_time <= $4))\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n               VALUES ($1, 'PAYMENT', $2, 0, 'SUCCESS', $3, $4)\n               RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n               VALUES ($1, $2, 'DEBIT', $3, $4, $5, 'SUCCESS', $6)\n               ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.payment_orders \n                 SET status = 'PAID', paid_at = CURRENT_TIMESTAMP, provider_payment_id = $1, updated_at = CURRENT_TIMESTAMP \n                 WHERE (provider_order_id = $2 OR id = $2) AND user_id = $3;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.game_players (game_id, user_id, team, position, payment_status, payment_method, payment_reference)\n           VALUES ($1, $2, 'TEAM_A', $3, $4, $5, $6)\n           ON CONFLICT (game_id, user_id) DO UPDATE \n           SET payment_status = EXCLUDED.payment_status,\n               payment_method = EXCLUDED.payment_method,\n               payment_reference = EXCLUDED.payment_reference;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT DISTINCT u.id as user_id\n           FROM public.users u\n           LEFT JOIN public.club_managers cm ON cm.user_id = u.id\n           WHERE (u.role_id = 2 AND u.status = 'ACTIVE')\n              OR (cm.club_id = $1 AND u.status = 'ACTIVE');"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT user_id FROM public.club_managers WHERE club_id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT * FROM public.games WHERE id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id, status, role_id FROM public.users WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT COUNT(*) as current_count FROM public.game_players WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n             VALUES ($1, 'PAYMENT', $2, 0, 'SUCCESS', $3, $4)\n             RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n             VALUES ($1, $2, 'DEBIT', $3, $4, $5, 'SUCCESS', $6)\n             ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id, user_id, amount_paise, status, purpose \n             FROM public.payment_orders \n             WHERE (provider_order_id = $1 OR id = $1) \n             FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.payment_orders \n               SET status = 'PAID', paid_at = CURRENT_TIMESTAMP, provider_payment_id = $1, updated_at = CURRENT_TIMESTAMP \n               WHERE id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT team, COUNT(*) as count FROM public.game_players WHERE game_id = $1 GROUP BY team;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.game_players (game_id, user_id, team, position, payment_status, payment_method, payment_reference)\n         VALUES ($1, $2, $3, $4, 'PAID', $5, $6)\n         RETURNING id;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.games SET status = 'FULL', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT public.switch_player_team($1, $2) as new_team;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id, title, entry_fee, status FROM public.games WHERE id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id, payment_status, payment_method, payment_reference \n         FROM public.game_players \n         WHERE game_id = $1 AND user_id = $2 \n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n             VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)\n             RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n             VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)\n             ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "DELETE FROM public.game_players WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.games SET status = 'OPEN_FOR_JOINING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT * FROM public.games WHERE id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.games SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.cctv_recordings SET status = 'CANCELLED', recording_status = 'CANCELLED', actual_stopped_at = CURRENT_TIMESTAMP WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT user_id FROM public.game_players WHERE game_id = $1 AND payment_status = 'PAID' AND user_id != $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)\n               RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)\n               ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.game_players SET payment_status = 'REFUNDED' WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\games\\games.service.ts",
+    "sql": "UPDATE public.game_slot_requests SET status = 'CANCELLED', payment_status = 'REFUNDED' WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\leaderboard\\leaderboard.controller.ts",
+    "sql": "SELECT u.id, u.name, u.city, u.profile_image_url as avatar_url,\n              pd.position, pd.ovr_rating,\n              ps.matches_played, ps.wins, ps.points, ps.goals_scored, ps.win_rate\n       FROM public.users u\n       JOIN public.player_details pd ON pd.user_id = u.id\n       JOIN public.player_stats ps ON ps.user_id = u.id\n       WHERE u.city = $1 AND u.status = 'ACTIVE'\n       ORDER BY ps.points DESC, ps.wins DESC, pd.ovr_rating DESC\n       LIMIT $2;"
+  },
+  {
+    "file": "src\\modules\\leaderboard\\leaderboard.controller.ts",
+    "sql": "SELECT u.id, u.name, u.city, u.profile_image_url as avatar_url,\n              pd.position, pd.ovr_rating,\n              ps.matches_played, ps.wins, ps.points, ps.goals_scored, ps.win_rate\n       FROM public.users u\n       JOIN public.player_details pd ON pd.user_id = u.id\n       JOIN public.player_stats ps ON ps.user_id = u.id\n       WHERE u.status = 'ACTIVE'\n       ORDER BY ps.points DESC, ps.wins DESC, pd.ovr_rating DESC\n       LIMIT $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT clb.* FROM public.clubs clb\n         JOIN public.club_managers cm ON cm.club_id = clb.id\n         WHERE cm.user_id = $1 LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT clb.* FROM public.clubs clb WHERE clb.id = 'all_stars_arena_club' LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT * FROM public.clubs ORDER BY created_at ASC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT COUNT(*) as total_games FROM public.games WHERE club_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT COUNT(*) as total_bookings, COALESCE(SUM(amount_paid), 0) as total_revenue\n       FROM public.court_bookings WHERE club_id = $1 AND status = 'CONFIRMED';"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT COUNT(*) as total_courts FROM public.courts WHERE club_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT COUNT(*) as total_cameras,\n              COUNT(*) FILTER (WHERE status = 'ONLINE') as online_cameras,\n              COUNT(*) FILTER (WHERE status = 'RECORDING') as recording_cameras\n       FROM public.cctv_cameras WHERE club_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "INSERT INTO public.courts\n      (club_id, name, environment, surface, base_price, peak_multiplier, weekend_multiplier, status)\n      VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "updated_at = CURRENT_TIMESTAMP"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.courts SET ${fields.join(\", \")} WHERE id = $${idx} RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "INSERT INTO public.games\n      (title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, max_players, entry_fee, match_date, start_time, end_time, privacy, status, approval_status, manager_id, description)\n      VALUES ($1, 'all_stars_arena_club', $2, $3, 'MANAGER', false, $4, $5, $6, $7, $8, $9, $10, 'OPEN_FOR_JOINING', 'APPROVED', $3, $11)\n      RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "updated_at = CURRENT_TIMESTAMP"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.games SET ${fields.join(\", \")} WHERE id = $${idx} RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.games SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.games\n       SET status = 'ONGOING',\n           match_date = CURRENT_DATE,\n           start_time = CURRENT_TIME,\n           end_time = CURRENT_TIME + INTERVAL '90 minutes',\n           updated_at = CURRENT_TIMESTAMP\n       WHERE id = $1\n       RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.games\n       SET status = 'COMPLETED',\n           end_time = CURRENT_TIME,\n           updated_at = CURRENT_TIMESTAMP\n       WHERE id = $1\n       RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT b.*, crt.name as court_name, u.name as player_name, u.phone as player_phone\n       FROM public.court_bookings b\n       JOIN public.courts crt ON crt.id = b.court_id\n       JOIN public.users u ON u.id = b.user_id\n       WHERE b.club_id = $1\n       ORDER BY b.booking_date DESC, b.start_time DESC;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT req.*, u.name as player_name, u.profile_image_url as player_image,\n             pd.position as player_position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,\n             g.title as game_title, g.match_date, g.start_time, g.end_time, g.format, g.max_players,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_roster_count\n      FROM public.game_slot_requests req\n      JOIN public.games g ON g.id = req.game_id\n      JOIN public.users u ON u.id = req.user_id\n      LEFT JOIN public.player_details pd ON pd.user_id = req.user_id\n      WHERE g.club_id = $1 AND req.status IN ('PENDING', 'APPROVED')\n      ORDER BY req.updated_at DESC, req.created_at ASC;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT g.*,\n             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,\n             (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count,\n             (\n               SELECT COALESCE(json_agg(\n                 json_build_object(\n                   'userId', gp.user_id,\n                   'user_id', gp.user_id,\n                   'name', COALESCE(pu.name, 'Player'),\n                   'profileImageUrl', pu.profile_image_url,\n                   'profile_image_url', pu.profile_image_url,\n                   'team', COALESCE(gp.team, 'TEAM_A'),\n                   'position', COALESCE(gp.position, 'MID'),\n                   'ovr', COALESCE(pd.ovr_rating, 80),\n                   'paymentStatus', COALESCE(gp.payment_status, 'PAID'),\n                   'payment_status', COALESCE(gp.payment_status, 'PAID'),\n                   'phone', pu.phone\n                 )\n               ), '[]'::json)\n               FROM public.game_players gp\n               JOIN public.users pu ON pu.id = gp.user_id\n               LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id\n               WHERE gp.game_id = g.id\n             ) as roster\n      FROM public.games g\n      WHERE ${conditions.join(\" AND \")}\n      ORDER BY g.match_date ASC, g.start_time ASC;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT g.*,\n             to_char(g.match_date::date, 'YYYY-MM-DD') as match_date,\n             COALESCE(\n               (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),\n               g.video_playback_url\n             ) as video_playback_url,\n             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,\n             u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') * g.entry_fee as total_amount_collected,\n             (\n               SELECT COALESCE(json_agg(\n                 json_build_object(\n                   'userId', gp.user_id,\n                   'user_id', gp.user_id,\n                   'name', COALESCE(pu.name, 'Player'),\n                   'profileImageUrl', pu.profile_image_url,\n                   'profile_image_url', pu.profile_image_url,\n                   'team', UPPER(COALESCE(NULLIF(gp.team::text, ''), 'TEAM_A')),\n                   'position', COALESCE(gp.position, 'MID'),\n                   'ovr', COALESCE(pd.ovr_rating, 80),\n                   'paymentStatus', COALESCE(gp.payment_status, 'PAID'),\n                   'payment_status', COALESCE(gp.payment_status, 'PAID'),\n                   'phone', pu.phone\n                 )\n                 ORDER BY gp.team ASC, gp.joined_at ASC\n               ), '[]'::json)\n               FROM public.game_players gp\n               JOIN public.users pu ON pu.id = gp.user_id\n               LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id\n               WHERE gp.game_id = g.id\n             ) as roster\n      FROM public.games g\n      LEFT JOIN public.users u ON u.id = g.creator_id\n      WHERE ${conditions.join(\" AND \")}\n      ORDER BY g.match_date DESC, g.start_time DESC, g.created_at DESC\n      LIMIT $${idx++} OFFSET $${idx++};"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT id FROM public.clubs WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT crt.id, crt.club_id, crt.name, crt.environment, crt.surface, crt.base_price,\n             crt.peak_multiplier, crt.weekend_multiplier, crt.peak_window_start, crt.peak_window_end,\n             crt.status, crt.image_url, crt.created_at, crt.updated_at,\n             (SELECT COUNT(*) FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true) as camera_count,\n             (SELECT cam.status FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true LIMIT 1) as camera_status\n      FROM public.courts crt\n      WHERE crt.club_id = $1\n      ORDER BY\n          CASE\n              WHEN crt.id = 'court_1' THEN 1\n              WHEN crt.id = 'court_2' THEN 2\n              ELSE 999\n          END,\n          crt.name;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT crt.*, 'All Stars Turf Raipur' as club_name, 'VIP Road, Raipur' as club_address\n       FROM public.courts crt\n       WHERE crt.id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT g.id, g.title FROM public.games g\n         WHERE g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'\n           AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.games\n           SET status = 'CANCELLED', approval_status = 'REJECTED',\n               rejection_reason = 'Auto-cancelled: Not approved by start time',\n               cancellation_reason = 'Auto-cancelled: Not approved by start time',\n               updated_at = CURRENT_TIMESTAMP\n           WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount\n           FROM public.game_players gp\n           JOIN public.games g ON g.id = gp.game_id\n           WHERE gp.game_id = $1 AND gp.payment_status = 'PAID';"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "INSERT INTO public.wallets (user_id, balance) VALUES ($1, $2)\n               ON CONFLICT (user_id) DO UPDATE SET balance = public.wallets.balance + $2, updated_at = CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "INSERT INTO public.wallet_transactions (wallet_id, user_id, type, amount, status, description)\n               VALUES ((SELECT id FROM public.wallets WHERE user_id = $1), $1, 'REFUND', $2, 'SUCCESS', $3);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.game_players SET payment_status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT g.id, g.club_id, g.title, crt.name as court_name\n         FROM public.games g\n         LEFT JOIN public.courts crt ON crt.id = g.court_id\n         WHERE g.approval_status = 'APPROVED'\n           AND g.status IN ('OPEN_FOR_JOINING', 'FULL', 'SCHEDULED')\n           AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP\n           AND (g.match_date + g.end_time) > CURRENT_TIMESTAMP;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.games SET status = 'ONGOING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT user_id FROM public.club_managers WHERE club_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "INSERT INTO public.notifications (user_id, title, body, message, type, data)\n             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT user_id FROM public.game_players WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "INSERT INTO public.notifications (user_id, title, body, message, type, data)\n             VALUES ($1, $2, $3, $3, 'MATCH_AUTO_STARTED', $4);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT g.id, g.title, g.format, g.max_players, g.entry_fee, g.privacy,\n             g.match_date, g.start_time, g.end_time, g.status, g.approval_status,\n             g.created_by_player, g.creator_role_name, g.rejection_reason,\n             g.team_a_score, g.team_b_score, g.winner_team,\n             u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,\n             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') as paid_players_count,\n             cam.id as camera_id, cam.status as camera_status,\n             rec.id as recording_id, rec.recording_status\n      FROM public.games g\n      LEFT JOIN public.users u ON u.id = g.creator_id\n      LEFT JOIN public.cctv_cameras cam ON cam.court_id = g.court_id AND cam.is_enabled = true\n      LEFT JOIN public.cctv_recordings rec ON rec.game_id = g.id AND rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING')\n      WHERE ${conditions.join(\" AND \")}\n      ORDER BY g.match_date ASC, g.start_time ASC\n      LIMIT 20;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT g.*,\n             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,\n             u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,\n             u.profile_image_url as host_image, pd.elo_rating as host_elo, pd.position as host_position,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count\n      FROM public.games g\n      JOIN public.users u ON u.id = g.creator_id\n      LEFT JOIN public.player_details pd ON pd.user_id = g.creator_id\n      WHERE g.club_id = 'all_stars_arena_club' AND g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'\n      ORDER BY g.match_date ASC, g.start_time ASC;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,\n             u.city, u.bio,\n             pd.position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,\n             (SELECT COUNT(*) FROM public.game_players gp WHERE gp.user_id = u.id) as matches_played\n      FROM public.users u\n      LEFT JOIN public.player_details pd ON pd.user_id = u.id\n      WHERE ${conditions.join(\" AND \")}\n      ORDER BY LOWER(u.name) ASC\n      LIMIT $${idx++} OFFSET $${idx++};"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT COUNT(*) as total_count\n      FROM public.users u\n      WHERE ${conditions.join(\" AND \")};"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,\n              u.city, u.bio,\n              pd.position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot\n       FROM public.users u\n       LEFT JOIN public.player_details pd ON pd.user_id = u.id\n       WHERE u.id = $1 AND u.role_id = 3;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT gp.game_id, gp.payment_status, gp.team, gp.position as game_position, gp.joined_at,\n              g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,\n              g.entry_fee, g.status as match_status,\n              crt.name as court_name, clb.name as club_name,\n              gv.video_url\n       FROM public.game_players gp\n       INNER JOIN public.games g ON g.id = gp.game_id\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       LEFT JOIN public.clubs clb ON clb.id = g.club_id\n       LEFT JOIN public.game_videos gv ON gv.game_id = g.id AND gv.status = 'AVAILABLE'\n       WHERE gp.user_id = $1\n       ORDER BY g.match_date DESC, g.start_time DESC;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND role_id = 3 RETURNING id, name, email, status;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT g.*, crt.name as court_name, clb.name as club_name,\n              u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,\n              u.profile_image_url as host_image, pd.elo_rating as host_elo\n       FROM public.games g\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       LEFT JOIN public.clubs clb ON clb.id = g.club_id\n       LEFT JOIN public.users u ON u.id = g.creator_id\n       LEFT JOIN public.player_details pd ON pd.user_id = g.creator_id\n       WHERE g.id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.joined_at,\n              u.name, u.email, u.phone, u.profile_image_url,\n              pd.elo_rating, pd.ovr_rating\n       FROM public.game_players gp\n       JOIN public.users u ON u.id = gp.user_id\n       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id\n       WHERE gp.game_id = $1\n       ORDER BY gp.joined_at ASC;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT * FROM public.cctv_recordings WHERE game_id = $1 ORDER BY created_at DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.joined_at,\n              u.name, u.email, u.phone, u.profile_image_url,\n              pd.elo_rating, pd.ovr_rating\n       FROM public.game_players gp\n       JOIN public.users u ON u.id = gp.user_id\n       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id\n       WHERE gp.game_id = $1\n       ORDER BY gp.team ASC, gp.joined_at ASC;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.role_id, u.profile_image_url,\n             'All Stars Arena Turf' as club_name, 'VIP Road, Raipur' as club_address, 'Raipur' as club_city\n      FROM public.users u\n      WHERE u.id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.repository.ts",
+    "sql": "UPDATE public.users\n      SET profile_image_url = $1, updated_at = CURRENT_TIMESTAMP\n      WHERE id = $2\n      RETURNING id, name, email, phone, role_id, profile_image_url;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT g.*\n         FROM public.games g\n         JOIN public.club_managers cm ON cm.club_id = g.club_id\n         WHERE g.id = $1 AND cm.user_id = $2\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT id FROM public.games\n         WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED' AND approval_status = 'APPROVED' AND id <> $3\n           AND ((start_time <= $4 AND end_time > $4)\n             OR (start_time < $5 AND end_time >= $5)\n             OR (start_time >= $4 AND end_time <= $5));"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.games\n         SET approval_status = 'APPROVED', manager_id = $1, updated_at = CURRENT_TIMESTAMP\n         WHERE id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT g.*\n         FROM public.games g\n         JOIN public.club_managers cm ON cm.club_id = g.club_id\n         WHERE g.id = $1 AND cm.user_id = $2\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.games\n         SET approval_status = 'REJECTED', status = 'CANCELLED', rejection_reason = $1, manager_id = $2, updated_at = CURRENT_TIMESTAMP\n         WHERE id = $3;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT user_id, payment_method, payment_reference, payment_status, refund_status \n         FROM public.game_players \n         WHERE game_id = $1 AND payment_status = 'PAID'\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)\n               RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)\n               ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.game_players \n               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP \n               WHERE game_id = $3 AND user_id = $4;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.payment_orders \n                 SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP \n                 WHERE provider_payment_id = $1 OR provider_order_id = $1 OR id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT * FROM public.game_slot_requests WHERE id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT g.*\n         FROM public.games g\n         JOIN public.club_managers cm ON cm.club_id = g.club_id\n         WHERE g.id = $1 AND cm.user_id = $2\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT name FROM public.users WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT COUNT(*) as roster_count FROM public.game_players WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT wallet_balance FROM public.player_details WHERE user_id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n           VALUES ($1, 'PAYMENT', $2, 0, 'SUCCESS', $3, $4)\n           RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n           VALUES ($1, $2, 'DEBIT', $3, $4, $5, 'SUCCESS', $6)\n           ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT team, COUNT(*) as count FROM public.game_players WHERE game_id = $1 GROUP BY team;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)\n         VALUES ($1, $2, $3, $4, 'PAID');"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.game_slot_requests SET status = 'APPROVED', payment_status = 'PAID', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.games SET status = 'FULL', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT * FROM public.game_slot_requests WHERE id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT g.*\n         FROM public.games g\n         JOIN public.club_managers cm ON cm.club_id = g.club_id\n         WHERE g.id = $1 AND cm.user_id = $2\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT name FROM public.users WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "DELETE FROM public.game_players WHERE game_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n             VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)\n             RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n             VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)\n             ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.game_slot_requests\n         SET status = 'REJECTED', rejection_reason = $1, payment_status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP\n         WHERE id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT g.* FROM public.games g WHERE g.id = $1 FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT g.*\n         FROM public.games g\n         JOIN public.club_managers cm ON cm.club_id = g.club_id\n         WHERE g.id = $1 AND cm.user_id = $2\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.games SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT id FROM public.cctv_recordings WHERE game_id = $1 AND (status = 'RECORDING' OR recording_status = 'RECORDING');"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.cctv_recordings SET status = 'CANCELLED', recording_status = 'CANCELLED', actual_stopped_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT user_id, payment_method, payment_reference, payment_status, refund_status \n         FROM public.game_players \n         WHERE game_id = $1 AND payment_status = 'PAID'\n         FOR UPDATE;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)\n               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)\n               RETURNING id, balance_after;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)\n               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)\n               ON CONFLICT (id) DO NOTHING;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.game_players \n               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP \n               WHERE game_id = $3 AND user_id = $4;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.payment_orders \n                 SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP \n                 WHERE provider_payment_id = $1 OR provider_order_id = $1 OR id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT wallet_balance FROM public.player_details WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.game_slot_requests SET status = 'CANCELLED', payment_status = 'REFUNDED' WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)\n         VALUES ($1, $2, 'MATCH_CANCELLED', $3, $4);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)\n           VALUES ($1, $2, 'WALLET_REFUND_PROCESSED', $3, $4);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.cctv_cameras SET status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT (g.match_date + g.start_time) <= CURRENT_TIMESTAMP as is_past\n       FROM public.games g WHERE g.id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.games\n       SET match_date = $1,\n           start_time = $2,\n           end_time = $3,\n           court_id = COALESCE($4, court_id),\n           updated_at = CURRENT_TIMESTAMP\n       WHERE id = $5\n       RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT user_id FROM public.game_players WHERE game_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.notifications (user_id, title, body, message, type, data)\n           VALUES ($1, '📅 Match Rescheduled', $2, $2, 'MATCH_RESCHEDULED', $3);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n           SET recording_status = 'POST_MATCH',\n               stop_deadline = CURRENT_TIMESTAMP + INTERVAL '10 minutes',\n               updated_at = CURRENT_TIMESTAMP\n           WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)\n           VALUES ($1, 'RECORDING_POST_MATCH_STARTED', $2, $3);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "UPDATE public.cctv_cameras SET status = 'ONLINE', updated_at = CURRENT_TIMESTAMP WHERE court_id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT id, name, email, role_id, status FROM public.users WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)\n       VALUES ($1, $2, 'BLOCK_PLAYER', $3, $4);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT id, name, email, role_id, status FROM public.users WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)\n       VALUES ($1, $2, 'UNBLOCK_PLAYER', $3, $4);"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\manager\\manager.service.ts",
+    "sql": "SELECT 1 FROM public.club_managers WHERE club_id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\notifications\\notifications.service.ts",
+    "sql": "SELECT id, user_id, title, COALESCE(body, message, '') as body,\n             type, data, link_url, game_id, club_id,\n             is_read, created_at\n      FROM public.notifications\n      WHERE ${whereClause}\n      ORDER BY created_at DESC\n      LIMIT $${idx++} OFFSET $${idx++};"
+  },
+  {
+    "file": "src\\modules\\notifications\\notifications.service.ts",
+    "sql": "SELECT COUNT(*) as unread_count FROM public.notifications WHERE user_id = $1 AND is_read = false;"
+  },
+  {
+    "file": "src\\modules\\notifications\\notifications.service.ts",
+    "sql": "SELECT COUNT(*) as total_count FROM public.notifications WHERE ${whereClause};"
+  },
+  {
+    "file": "src\\modules\\notifications\\notifications.service.ts",
+    "sql": "INSERT INTO public.notifications (\n         user_id, title, body, message, type, data, link_url, club_id, game_id, is_read\n       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false)\n       RETURNING id, user_id, title, COALESCE(body, message) as body, type, data, is_read, created_at;"
+  },
+  {
+    "file": "src\\modules\\notifications\\notifications.service.ts",
+    "sql": "UPDATE public.notifications SET is_read = true WHERE id = $1 AND user_id = $2 RETURNING id;"
+  },
+  {
+    "file": "src\\modules\\notifications\\notifications.service.ts",
+    "sql": "UPDATE public.notifications SET is_read = true WHERE user_id = $1 AND is_read = false;"
+  },
+  {
+    "file": "src\\modules\\notifications\\notifications.service.ts",
+    "sql": "DELETE FROM public.notifications WHERE id = $1 AND user_id = $2;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT u.id, u.name, u.email, u.phone, u.city, u.bio, u.status as account_status, u.date_of_birth,\n              COALESCE(u.profile_image_url, '') as avatar_url,\n              pd.position, pd.secondary_position, pd.preferred_foot, pd.skill_level,\n              pd.ovr_rating, pd.elo_rating, pd.badges, pd.wallet_balance\n       FROM public.users u\n       LEFT JOIN public.player_details pd ON pd.user_id = u.id\n       WHERE u.id = $1;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "updated_at = CURRENT_TIMESTAMP"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "UPDATE public.users SET ${userFields.join(\", \")} WHERE id = $${idx};"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "updated_at = CURRENT_TIMESTAMP"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "UPDATE public.player_details SET ${pdFields.join(\", \")} WHERE user_id = $${idx};"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "UPDATE public.users SET profile_image_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT * FROM public.player_stats WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT COUNT(*)::int as joined_count FROM public.game_players WHERE user_id = $1;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT g.id, g.club_id, g.court_id, g.creator_id, g.title, g.description,\n              to_char(g.match_date::date, 'YYYY-MM-DD') as match_date, g.start_time, g.end_time,\n              g.status, g.format, g.privacy, g.entry_fee, g.entry_fee as per_player_fee, g.entry_fee as my_entry_fee,\n              g.team_a_score, g.team_b_score, g.winner_team,\n              COALESCE(\n                (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),\n                g.video_playback_url\n              ) as video_playback_url,\n              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,\n              c.name as club_name,\n              gp.team as my_team, gp.position as my_position,\n              CASE\n                WHEN UPPER(g.status::text) NOT IN ('COMPLETED', 'FINISHED') THEN 'PENDING'\n                WHEN g.winner_team = 'DRAW' THEN 'DRAW'\n                WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'\n                ELSE 'LOSS'\n              END as result,\n              (SELECT COUNT(*) FROM public.game_players gp_cnt WHERE gp_cnt.game_id = g.id) as current_players_count,\n              (\n                SELECT COALESCE(json_agg(\n                  json_build_object(\n                    'userId', gp_r.user_id,\n                    'user_id', gp_r.user_id,\n                    'name', COALESCE(pu.name, 'Player'),\n                    'profileImageUrl', pu.profile_image_url,\n                    'profile_image_url', pu.profile_image_url,\n                    'team', UPPER(COALESCE(NULLIF(gp_r.team::text, ''), 'TEAM_A')),\n                    'position', COALESCE(gp_r.position, 'MID'),\n                    'ovr', COALESCE(pd.ovr_rating, 80),\n                    'paymentStatus', COALESCE(gp_r.payment_status, 'PAID'),\n                    'payment_status', COALESCE(gp_r.payment_status, 'PAID'),\n                    'phone', pu.phone\n                  )\n                  ORDER BY gp_r.team ASC, gp_r.joined_at ASC\n                ), '[]'::json)\n                FROM public.game_players gp_r\n                JOIN public.users pu ON pu.id = gp_r.user_id\n                LEFT JOIN public.player_details pd ON pd.user_id = gp_r.user_id\n                WHERE gp_r.game_id = g.id\n              ) as roster\n       FROM public.game_players gp\n       JOIN public.games g ON g.id = gp.game_id\n       LEFT JOIN public.clubs c ON c.id = g.club_id\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       WHERE ${conditions.join(\" AND \")}\n       ORDER BY g.match_date DESC, g.start_time DESC, g.created_at DESC\n       LIMIT $${idx++} OFFSET $${idx++};"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position\n       FROM public.game_players gp\n       JOIN public.games g ON g.id = gp.game_id\n       LEFT JOIN public.clubs c ON c.id = g.club_id\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       WHERE gp.user_id = $1 AND g.status = 'ONGOING'\n       ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position\n       FROM public.game_players gp\n       JOIN public.games g ON g.id = gp.game_id\n       LEFT JOIN public.clubs c ON c.id = g.club_id\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       WHERE gp.user_id = $1 AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))\n       ORDER BY g.match_date ASC, g.start_time ASC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT g.*, c.name as club_name, crt.name as court_name, gp.team as user_team, gp.position as user_position,\n              CASE\n                WHEN g.winner_team = 'DRAW' THEN 'DRAW'\n                WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'\n                ELSE 'LOSS'\n              END as result\n       FROM public.game_players gp\n       JOIN public.games g ON g.id = gp.game_id\n       LEFT JOIN public.clubs c ON c.id = g.club_id\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       WHERE gp.user_id = $1 AND g.status = 'COMPLETED'\n       ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT g.*, c.name as club_name, crt.name as court_name, gw.position as waitlist_position, gw.status as waitlist_status, gw.joined_at as waitlist_joined_at\n        FROM public.game_waitlist gw\n        JOIN public.games g ON g.id = gw.game_id\n        LEFT JOIN public.clubs c ON c.id = g.club_id\n        LEFT JOIN public.courts crt ON crt.id = g.court_id\n        WHERE gw.user_id = $1\n        ORDER BY g.match_date ASC, g.start_time ASC;"
+  },
+  {
+    "file": "src\\modules\\player\\player.repository.ts",
+    "sql": "SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,\n               g.*, c.name as club_name, crt.name as court_name,\n               (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count\n        FROM public.game_players gp\n        JOIN public.games g ON g.id = gp.game_id\n        LEFT JOIN public.clubs c ON c.id = g.club_id\n        LEFT JOIN public.courts crt ON crt.id = g.court_id\n        WHERE gp.user_id = $1 ${statusCondition}\n        ORDER BY g.match_date DESC, g.start_time DESC;"
+  },
+  {
+    "file": "src\\modules\\tournaments\\tournaments.service.ts",
+    "sql": "SELECT * FROM public.tournaments WHERE city = $1 ORDER BY start_date ASC;"
+  },
+  {
+    "file": "src\\modules\\tournaments\\tournaments.service.ts",
+    "sql": "SELECT * FROM public.tournaments ORDER BY start_date ASC;"
+  },
+  {
+    "file": "src\\modules\\tournaments\\tournaments.service.ts",
+    "sql": "SELECT t.*, c.name as club_name FROM public.tournaments t LEFT JOIN public.clubs c ON c.id = t.club_id WHERE t.id = $1;"
+  },
+  {
+    "file": "src\\modules\\tournaments\\tournaments.service.ts",
+    "sql": "SELECT tm.*, u.name as captain_name\n       FROM public.tournament_teams tm\n       JOIN public.users u ON u.id = tm.captain_id\n       WHERE tm.tournament_id = $1;"
+  },
+  {
+    "file": "src\\modules\\tournaments\\tournaments.service.ts",
+    "sql": "SELECT bm.*, ta.name as team_a_name, tb.name as team_b_name\n       FROM public.tournament_bracket_matches bm\n       LEFT JOIN public.tournament_teams ta ON ta.id = bm.team_a_id\n       LEFT JOIN public.tournament_teams tb ON tb.id = bm.team_b_id\n       WHERE bm.tournament_id = $1\n       ORDER BY bm.match_order ASC;"
+  },
+  {
+    "file": "src\\modules\\tournaments\\tournaments.service.ts",
+    "sql": "INSERT INTO public.tournament_teams (tournament_id, name, captain_id, logo, status)\n       VALUES ($1, $2, $3, $4, 'CONFIRMED') RETURNING *;"
+  },
+  {
+    "file": "src\\modules\\videos\\videos.controller.ts",
+    "sql": "SELECT gv.*, cam.name as camera_name, cam.camera_type\n     FROM public.game_videos gv\n     LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id\n     WHERE gv.id = $1;"
+  },
+  {
+    "file": "src\\modules\\videos\\videos.controller.ts",
+    "sql": "SELECT gv.*, cam.name as camera_name, cam.camera_type\n     FROM public.game_videos gv\n     LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id\n     WHERE gv.id = $1;"
+  },
+  {
+    "file": "src\\modules\\videos\\videos.controller.ts",
+    "sql": "SELECT video_url FROM public.game_videos WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\videos\\videos.controller.ts",
+    "sql": "SELECT video_url FROM public.game_videos WHERE game_id = $1 AND status = 'AVAILABLE' ORDER BY created_at DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.repository.ts",
+    "sql": "SELECT wallet_balance, wallet_pin_set_at, wallet_pin_failed_attempts, wallet_pin_locked_until,\n              (wallet_pin_hash IS NOT NULL) as is_pin_set\n       FROM public.player_details\n       WHERE user_id = $1::VARCHAR;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.repository.ts",
+    "sql": "UPDATE public.payment_orders\n       SET provider_order_id = $1::VARCHAR, status = 'PENDING', updated_at = CURRENT_TIMESTAMP\n       WHERE id = $2::VARCHAR;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.repository.ts",
+    "sql": "INSERT INTO public.payment_webhook_events\n       (provider, event_id, event_type, payment_order_id, signature_verified, payload, processing_status)\n       VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::BOOLEAN, $6::JSONB, 'RECEIVED')\n       ON CONFLICT (provider, event_id) DO NOTHING\n       RETURNING id;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.repository.ts",
+    "sql": "UPDATE public.payment_webhook_events\n       SET processing_status = $1::VARCHAR, processed_at = CURRENT_TIMESTAMP\n       WHERE event_id = $2::VARCHAR;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.repository.ts",
+    "sql": "UPDATE public.payment_orders\n       SET status = $1::VARCHAR, metadata = metadata || $2::jsonb, updated_at = CURRENT_TIMESTAMP\n       WHERE id = $3::VARCHAR;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.service.ts",
+    "sql": "SELECT id FROM public.payment_orders WHERE provider_order_id = $1 OR id = $1 LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.service.ts",
+    "sql": "SELECT id FROM public.payment_orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.service.ts",
+    "sql": "SELECT purpose, user_id, amount_paise FROM public.payment_orders WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.service.ts",
+    "sql": "SELECT id FROM public.payment_orders WHERE id = $1;"
+  },
+  {
+    "file": "src\\modules\\wallet\\wallet.service.ts",
+    "sql": "SELECT purpose, user_id FROM public.payment_orders WHERE id = $1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_cameras\n           SET status = 'ONLINE', health_status = 'ONLINE',\n               last_connection_at = CURRENT_TIMESTAMP,\n               last_successful_connection = CURRENT_TIMESTAMP,\n               last_error = NULL\n           WHERE id = $1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_cameras\n           SET status = 'OFFLINE', health_status = 'OFFLINE',\n               last_connection_at = CURRENT_TIMESTAMP,\n               last_error = $1\n           WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_cameras\n           SET status = 'OFFLINE', health_status = 'OFFLINE',\n               last_connection_at = CURRENT_TIMESTAMP,\n               last_error = $1\n           WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "INSERT INTO public.cctv_recordings (\n           game_id, club_id, court_id, camera_id,\n           start_time, started_at, scheduled_match_end, scheduled_match_end_at,\n           stop_deadline, post_match_stop_at,\n           local_temp_path, status, recording_status\n         ) VALUES ($1, $2, $3, $4, $5, $5, $6, $6, $7, $7, $8, 'STARTING', 'STARTING')\n         RETURNING id;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n         SET status = 'STARTING', recording_status = 'STARTING',\n             local_temp_path = $1, error_code = NULL, error_message = NULL\n         WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n         SET status = 'FAILED', recording_status = 'FAILED',\n             error_code = 'FFMPEG_SPAWN_ERROR', error_message = $1\n         WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n           SET status = 'RECORDING', recording_status = 'RECORDING', error_code = NULL, error_message = NULL\n           WHERE id = $1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n           SET status = 'FAILED', recording_status = 'FAILED',\n               error_code = 'PREMATURE_PROCESS_EXIT', error_message = $1\n           WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n         SET status = 'FAILED', recording_status = 'FAILED',\n             error_code = 'FFMPEG_RUNTIME_ERROR', error_message = $1\n         WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "SELECT rec.*, g.title as game_title, g.club_id as g_club_id, g.court_id as g_court_id\n       FROM public.cctv_recordings rec\n       LEFT JOIN public.games g ON g.id = rec.game_id\n       WHERE rec.game_id = $1 OR rec.id = $1\n       ORDER BY rec.created_at DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n         SET status = 'FAILED', recording_status = 'FAILED',\n             actual_stopped_at = $1, error_code = 'EMPTY_RECORDING_FILE',\n             error_message = 'Recorded video file is missing or empty'\n         WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n       SET status = $1, recording_status = $2,\n           actual_stop_time = $3, actual_stopped_at = $3,\n           manual_stop = $4, playback_status = 'READY',\n           duration_seconds = $5, local_temp_path = $6,\n           error_code = NULL, error_message = NULL,\n           updated_at = CURRENT_TIMESTAMP\n       WHERE id = $7;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "INSERT INTO public.cctv_recording_segments (\n           recording_id, game_id, segment_order, s3_object_key,\n           local_file_path, duration_seconds, file_size_bytes, status\n         ) VALUES ($1, $2, 1, $3, $4, $5, $6, 'READY');"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, uploaded_by_id, status)\n       VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')\n       ON CONFLICT DO NOTHING;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.games\n       SET video_playback_url = $1\n       WHERE id = $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)\n       VALUES ($1, $2, $3, $4);"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "SELECT rec.*, gv.video_url, seg.file_size_bytes\n       FROM public.cctv_recordings rec\n       LEFT JOIN public.game_videos gv ON gv.game_id = rec.game_id\n       LEFT JOIN public.cctv_recording_segments seg ON seg.recording_id = rec.id\n       WHERE rec.game_id = $1\n       ORDER BY rec.created_at DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "SELECT DISTINCT ON (rec.game_id)\n        rec.id as recording_id,\n        rec.game_id as \"matchId\",\n        COALESCE(g.title, 'Match Recording - ' || rec.game_id) as title,\n        COALESCE(rec.duration_seconds, 0) as \"durationSeconds\",\n        COALESCE(rec.started_at, rec.created_at) as \"timestamp\",\n        LOWER(rec.status) as status,\n        COALESCE(seg.file_size_bytes, 0) as \"fileSizeBytes\",\n        rec.local_temp_path\n      FROM public.cctv_recordings rec\n      LEFT JOIN public.games g ON g.id = rec.game_id\n      LEFT JOIN public.cctv_recording_segments seg ON seg.recording_id = rec.id\n      WHERE rec.status IN ('COMPLETED', 'RECORDING', 'STOPPED')\n         OR rec.recording_status IN ('COMPLETED', 'RECORDING', 'STOPPED_MANUALLY')\n      ORDER BY rec.game_id, rec.created_at DESC\n      LIMIT $1 OFFSET $2;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "SELECT g.*, c.name as club_name, crt.name as court_name\n       FROM public.games g\n       LEFT JOIN public.clubs c ON c.id = g.club_id\n       LEFT JOIN public.courts crt ON crt.id = g.court_id\n       WHERE g.id = $1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "SELECT rec.*, seg.file_size_bytes\n       FROM public.cctv_recordings rec\n       LEFT JOIN public.cctv_recording_segments seg ON seg.recording_id = rec.id\n       WHERE rec.game_id = $1\n       ORDER BY rec.created_at DESC LIMIT 1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "SELECT rec.*, cam.ip_address, cam.port, cam.rtsp_url_encrypted\n         FROM public.cctv_recordings rec\n         LEFT JOIN public.cctv_cameras cam ON cam.id = rec.camera_id\n         WHERE rec.status IN ('RECORDING', 'STARTING')\n            OR rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING');"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "SELECT * FROM public.cctv_recordings WHERE id = $1;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "UPDATE public.cctv_recordings\n       SET stop_deadline = $1, post_match_stop_at = $1, updated_at = CURRENT_TIMESTAMP\n       WHERE id = $2\n       RETURNING *;"
+  },
+  {
+    "file": "src\\services\\cctvRecording.service.ts",
+    "sql": "INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)\n       VALUES ($1, 'EXTENDED_DEADLINE', $2, $3);"
+  },
+  {
+    "file": "src\\services\\email.service.ts",
+    "sql": "UPDATE public.users SET latest_otp = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
+  },
+  {
+    "file": "src\\services\\match.service.ts",
+    "sql": "INSERT INTO public.live_score_logs\n     (game_id, team_a_score, team_b_score, updated_by_user_id, is_final)\n     VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at;"
+  },
+  {
+    "file": "src\\services\\match.service.ts",
+    "sql": "UPDATE public.games\n       SET team_a_score = $1, team_b_score = $2, status = 'ONGOING'\n       WHERE id = $3;"
+  },
+  {
+    "file": "src\\services\\match.service.ts",
+    "sql": "SELECT g.*, c.name as club_name, c.address as club_address\n     FROM public.games g\n     LEFT JOIN public.clubs c ON c.id = g.club_id\n     ORDER BY g.match_date ASC, g.start_time ASC;"
+  },
+  {
+    "file": "src\\services\\match.service.ts",
+    "sql": "SELECT g.*, c.name as club_name, crt.name as court_name\n     FROM public.games g\n     LEFT JOIN public.clubs c ON c.id = g.club_id\n     LEFT JOIN public.courts crt ON crt.id = g.court_id\n     WHERE g.id = $1;"
+  },
+  {
+    "file": "src\\services\\match.service.ts",
+    "sql": "SELECT gp.*, u.name, u.profile_image_url, pd.elo_rating, pd.ovr_rating\n     FROM public.game_players gp\n     JOIN public.users u ON u.id = gp.user_id\n     LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id\n     WHERE gp.game_id = $1;"
+  },
+  {
+    "file": "src\\services\\match.service.ts",
+    "sql": "SELECT * FROM public.live_score_logs\n     WHERE game_id = $1 ORDER BY created_at DESC;"
+  },
+  {
+    "file": "src\\services\\otp.service.ts",
+    "sql": "UPDATE public.otp_verifications\n     SET is_used = TRUE\n     WHERE identifier = $1 AND purpose = $2 AND is_used = FALSE"
+  },
+  {
+    "file": "src\\services\\otp.service.ts",
+    "sql": "INSERT INTO public.otp_verifications\n     (user_id, identifier, channel, purpose, otp_hash, attempt_count, max_attempts, is_used, expires_at)\n     VALUES ($1, $2, 'EMAIL', $3, $4, 0, 5, FALSE, $5)"
+  },
+  {
+    "file": "src\\services\\otp.service.ts",
+    "sql": "UPDATE public.users\n       SET latest_otp = $1, updated_at = CURRENT_TIMESTAMP\n       WHERE id = $2\n          OR LOWER(email) = $3\n          OR phone = $4\n          OR ($5 <> '' AND LENGTH($5) >= 10 AND RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = RIGHT($5, 10))"
+  },
+  {
+    "file": "src\\services\\otp.service.ts",
+    "sql": "SELECT * FROM public.otp_verifications\n     WHERE identifier = $1 AND purpose = $2 AND is_used = FALSE AND expires_at > CURRENT_TIMESTAMP\n     ORDER BY created_at DESC LIMIT 1"
+  },
+  {
+    "file": "src\\services\\otp.service.ts",
+    "sql": "UPDATE public.otp_verifications\n       SET attempt_count = attempt_count + 1\n       WHERE id = $1"
+  },
+  {
+    "file": "src\\services\\otp.service.ts",
+    "sql": "UPDATE public.otp_verifications\n     SET is_used = TRUE, used_at = CURRENT_TIMESTAMP\n     WHERE id = $1"
+  },
+  {
+    "file": "src\\services\\realtime.service.ts",
+    "sql": "INSERT INTO public.notifications (\n             user_id, title, body, message, type, data, is_read\n           ) VALUES ($1, $2, $3, $4, $5, $6, false);"
+  },
+  {
+    "file": "src\\services\\realtime.service.ts",
+    "sql": "SELECT device_token FROM public.user_device_tokens WHERE user_id = $1 AND is_active = true;"
+  },
+  {
+    "file": "src\\services\\realtime.service.ts",
+    "sql": "UPDATE public.user_device_tokens SET is_active = false WHERE user_id = $1 AND device_token = ANY($2::text[]);"
+  },
+  {
+    "file": "src\\services\\storage.service.ts",
+    "sql": "Deleted object from S3: ${objectKey}"
+  },
+  {
+    "file": "src\\services\\wallet.service.ts",
+    "sql": "UPDATE public.payment_orders\n       SET provider_order_id = $1, status = 'PENDING'\n       WHERE id = $2"
+  },
+  {
+    "file": "src\\services\\wallet.service.ts",
+    "sql": "SELECT id FROM public.payment_orders WHERE provider_order_id = $1 OR id = $1 LIMIT 1;"
+  },
+  {
+    "file": "src\\services\\wallet.service.ts",
+    "sql": "SELECT id FROM public.payment_orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1;"
+  }
+]

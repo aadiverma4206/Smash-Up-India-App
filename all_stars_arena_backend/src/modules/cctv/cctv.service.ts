@@ -735,7 +735,7 @@ export class CctvService {
       query += ` AND gv.cctv_id = $2 ORDER BY gv.created_at DESC LIMIT 1;`;
       params.push(cctvId);
     } else {
-      query += ` ORDER BY gv.created_at ASC LIMIT 1;`;
+      query += ` ORDER BY gv.created_at DESC LIMIT 1;`;
     }
 
     let videoRes = await dbPool.query(query, params);
@@ -746,7 +746,7 @@ export class CctvService {
          FROM public.game_videos gv
          LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id
          WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'
-         ORDER BY gv.created_at ASC LIMIT 1;`,
+         ORDER BY gv.created_at DESC LIMIT 1;`,
         [gameId],
       );
     }

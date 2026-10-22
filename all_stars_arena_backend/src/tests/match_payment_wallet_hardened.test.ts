@@ -24,7 +24,10 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
       [name, email, phone, pwdHash],
     );
     const userId = res.rows[0].user_id;
-    await dbPool.query(`SELECT public.set_wallet_pin($1, $2);`, [userId, testPin]);
+    await dbPool.query(`SELECT public.set_wallet_pin($1, $2);`, [
+      userId,
+      testPin,
+    ]);
     if (balance > 0) {
       await dbPool.query(
         `UPDATE public.player_details SET wallet_balance = $1 WHERE user_id = $2;`,
@@ -90,7 +93,10 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     const rzpOrderId = orderRes.body.data.razorpayOrderId;
     const rzpPaymentId = `pay_rzp_mock_${Date.now()}`;
     const secret = env.RAZORPAY_KEY_SECRET || "0TkqPajfyDM5ng6e3CQxIzYy";
-    const sig = crypto.createHmac("sha256", secret).update(`${rzpOrderId}|${rzpPaymentId}`).digest("hex");
+    const sig = crypto
+      .createHmac("sha256", secret)
+      .update(`${rzpOrderId}|${rzpPaymentId}`)
+      .digest("hex");
 
     const joinRes = await request(app)
       .post(`/api/v1/games/${gameId}/join`)
@@ -176,7 +182,9 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
         },
       });
     expect(joinRes.status).toBe(400);
-    expect(joinRes.body.error?.code || joinRes.body.code).toBe("INSUFFICIENT_WALLET_BALANCE");
+    expect(joinRes.body.error?.code || joinRes.body.code).toBe(
+      "INSUFFICIENT_WALLET_BALANCE",
+    );
 
     const afterBalRes = await dbPool.query(
       `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
@@ -204,7 +212,10 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     const rzpOrderId = orderRes.body.data.razorpayOrderId;
     const rzpPaymentId = `pay_mock_topup_${Date.now()}`;
     const secret = env.RAZORPAY_KEY_SECRET || "0TkqPajfyDM5ng6e3CQxIzYy";
-    const sig = crypto.createHmac("sha256", secret).update(`${rzpOrderId}|${rzpPaymentId}`).digest("hex");
+    const sig = crypto
+      .createHmac("sha256", secret)
+      .update(`${rzpOrderId}|${rzpPaymentId}`)
+      .digest("hex");
 
     const verifyRes = await request(app)
       .post("/api/v1/wallet/topup/verify")
@@ -272,7 +283,9 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
       });
 
     expect(joinRes.status).toBe(400);
-    expect(joinRes.body.error?.code || joinRes.body.code).toBe("INVALID_SIGNATURE");
+    expect(joinRes.body.error?.code || joinRes.body.code).toBe(
+      "INVALID_SIGNATURE",
+    );
   });
 
   // 7. Duplicate Razorpay callback/webhook does not create a duplicate credit
@@ -294,10 +307,14 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
       },
     };
 
-    const res1 = await request(app).post("/api/v1/webhooks/razorpay").send(payload);
+    const res1 = await request(app)
+      .post("/api/v1/webhooks/razorpay")
+      .send(payload);
     expect(res1.status).toBe(200);
 
-    const res2 = await request(app).post("/api/v1/webhooks/razorpay").send(payload);
+    const res2 = await request(app)
+      .post("/api/v1/webhooks/razorpay")
+      .send(payload);
     expect(res2.status).toBe(200);
     expect(res2.body.data.status).toBe("IGNORED_DUPLICATE");
   });
@@ -322,7 +339,9 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
       `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
       [player.userId],
     );
-    expect(parseFloat(midBalRes.rows[0].wallet_balance)).toBe(balanceBefore - fee);
+    expect(parseFloat(midBalRes.rows[0].wallet_balance)).toBe(
+      balanceBefore - fee,
+    );
 
     // Manager cancels match
     const cancelRes = await request(app)
@@ -366,7 +385,10 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     const rzpOrderId = orderRes.body.data.razorpayOrderId;
     const rzpPaymentId = `pay_rzp_cancel_test_${Date.now()}`;
     const secret = env.RAZORPAY_KEY_SECRET || "0TkqPajfyDM5ng6e3CQxIzYy";
-    const sig = crypto.createHmac("sha256", secret).update(`${rzpOrderId}|${rzpPaymentId}`).digest("hex");
+    const sig = crypto
+      .createHmac("sha256", secret)
+      .update(`${rzpOrderId}|${rzpPaymentId}`)
+      .digest("hex");
 
     await request(app)
       .post(`/api/v1/games/${gameId}/join`)
@@ -393,7 +415,9 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
       [player.userId],
     );
     // Refund fee credited to wallet
-    expect(parseFloat(afterBalRes.rows[0].wallet_balance)).toBe(balanceBefore + fee);
+    expect(parseFloat(afterBalRes.rows[0].wallet_balance)).toBe(
+      balanceBefore + fee,
+    );
   });
 
   // 10. Rejected player-created match refunds eligible payments correctly
@@ -469,11 +493,17 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
       request(app)
         .post(`/api/v1/games/${gameId1}/join`)
         .set("Authorization", `Bearer ${poorPlayer.token}`)
-        .send({ position: "ST", paymentDetails: { paymentMethod: "WALLET", walletPin: testPin } }),
+        .send({
+          position: "ST",
+          paymentDetails: { paymentMethod: "WALLET", walletPin: testPin },
+        }),
       request(app)
         .post(`/api/v1/games/${gameId2}/join`)
         .set("Authorization", `Bearer ${poorPlayer.token}`)
-        .send({ position: "ST", paymentDetails: { paymentMethod: "WALLET", walletPin: testPin } }),
+        .send({
+          position: "ST",
+          paymentDetails: { paymentMethod: "WALLET", walletPin: testPin },
+        }),
     ]);
 
     // One must succeed (200) and one must fail (400)
@@ -495,7 +525,10 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     await request(app)
       .post(`/api/v1/games/${gameId}/join`)
       .set("Authorization", `Bearer ${player.token}`)
-      .send({ position: "MID", paymentDetails: { paymentMethod: "WALLET", walletPin: testPin } });
+      .send({
+        position: "MID",
+        paymentDetails: { paymentMethod: "WALLET", walletPin: testPin },
+      });
 
     // Simultaneous cancellation requests
     await Promise.all([
@@ -524,7 +557,10 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     const joinRes = await request(app)
       .post(`/api/v1/games/non_existent_game_99999/join`)
       .set("Authorization", `Bearer ${player.token}`)
-      .send({ position: "ST", paymentDetails: { paymentMethod: "WALLET", walletPin: testPin } });
+      .send({
+        position: "ST",
+        paymentDetails: { paymentMethod: "WALLET", walletPin: testPin },
+      });
 
     expect(joinRes.status).toBe(404);
 
@@ -543,7 +579,11 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     const orderRes = await request(app)
       .post("/api/v1/wallet/topup/order")
       .set("Authorization", `Bearer ${victim.token}`)
-      .send({ amountRupees: 100, idempotencyKey: `victim_topup_${Date.now()}`, walletPin: testPin });
+      .send({
+        amountRupees: 100,
+        idempotencyKey: `victim_topup_${Date.now()}`,
+        walletPin: testPin,
+      });
 
     const victimOrderId = orderRes.body.data.paymentOrderId;
 
@@ -569,13 +609,19 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     const join1 = await request(app)
       .post(`/api/v1/games/${gameId}/join`)
       .set("Authorization", `Bearer ${player.token}`)
-      .send({ position: "ST", paymentDetails: { paymentMethod: "WALLET", walletPin: testPin } });
+      .send({
+        position: "ST",
+        paymentDetails: { paymentMethod: "WALLET", walletPin: testPin },
+      });
     expect(join1.status).toBe(200);
 
     const join2 = await request(app)
       .post(`/api/v1/games/${gameId}/join`)
       .set("Authorization", `Bearer ${player.token}`)
-      .send({ position: "MID", paymentDetails: { paymentMethod: "WALLET", walletPin: testPin } });
+      .send({
+        position: "MID",
+        paymentDetails: { paymentMethod: "WALLET", walletPin: testPin },
+      });
     expect(join2.status).toBe(400);
     expect(join2.body.error?.code || join2.body.code).toBe("ALREADY_JOINED");
 

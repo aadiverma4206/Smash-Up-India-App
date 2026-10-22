@@ -331,7 +331,9 @@ export class WalletService {
 
     const wallet = await this.getWallet(userId);
 
-    const topupAmount = (Number(orderPurposeRes.rows[0]?.amount_paise || 0) / 100).toFixed(2);
+    const topupAmount = (
+      Number(orderPurposeRes.rows[0]?.amount_paise || 0) / 100
+    ).toFixed(2);
     sendWalletUpdate(userId, { walletBalance: wallet.walletBalance, txId });
     sendUserNotification(userId, {
       title: "⚽ Top-Up Successful",
@@ -447,7 +449,9 @@ export class WalletService {
               const targetUserId = userId || orderRes.rows[0]?.user_id;
               if (targetUserId) {
                 const wallet = await this.getWallet(targetUserId);
-                sendWalletUpdate(targetUserId, { walletBalance: wallet.walletBalance });
+                sendWalletUpdate(targetUserId, {
+                  walletBalance: wallet.walletBalance,
+                });
               }
             } else {
               logger.info(

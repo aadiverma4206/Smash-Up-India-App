@@ -1,10 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
 import 'package:all_stars_arena/core/errors/error_mapper.dart';
 import 'package:all_stars_arena/core/errors/app_exception.dart';
 import 'package:all_stars_arena/core/security/encryption_service.dart';
 
 void main() {
+  setUpAll(() {
+    dotenv.testLoad(mergeWith: {'API_BASE_URL': 'http://localhost:5000'});
+  });
+
   group('Network & Error Mapping Tests', () {
     test('ErrorMapper maps Dio 401 response to AuthException', () {
       final dioException = DioException(
@@ -12,7 +17,11 @@ void main() {
         response: Response(
           requestOptions: RequestOptions(path: '/api/v1/test'),
           statusCode: 401,
-          data: {'success': false, 'message': 'Invalid token', 'error': {'code': 'UNAUTHORIZED'}},
+          data: {
+            'success': false,
+            'message': 'Invalid token',
+            'error': {'code': 'UNAUTHORIZED'}
+          },
         ),
       );
 
@@ -22,7 +31,8 @@ void main() {
       expect(exception.code, 'UNAUTHORIZED');
     });
 
-    test('ErrorMapper maps Dio connection error to NetworkException (Offline)', () {
+    test('ErrorMapper maps Dio connection error to NetworkException (Offline)',
+        () {
       final dioException = DioException(
         requestOptions: RequestOptions(path: '/api/v1/test'),
         type: DioExceptionType.connectionError,
@@ -33,7 +43,9 @@ void main() {
       expect(exception.code, 'NO_INTERNET');
     });
 
-    test('ErrorMapper extracts field error details from Zod/Joi validation response', () {
+    test(
+        'ErrorMapper extracts field error details from Zod/Joi validation response',
+        () {
       final dioException = DioException(
         requestOptions: RequestOptions(path: '/api/v1/auth/login'),
         response: Response(
@@ -96,7 +108,8 @@ void main() {
 
   group('Encryption & Security Layer Tests', () {
     test('EncryptionService encrypts and decrypts string correctly', () {
-      final encryptionService = EncryptionService(secretKey: 'all_stars_arena_secure_aes_key');
+      final encryptionService =
+          EncryptionService(secretKey: 'all_stars_arena_secure_aes_key');
       const plainText = 'rtsp://admin:secret123@192.168.1.100:554/stream1';
 
       final encrypted = encryptionService.encrypt(plainText);
