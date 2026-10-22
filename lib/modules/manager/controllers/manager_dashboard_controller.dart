@@ -33,6 +33,7 @@ class ManagerDashboardController extends GetxController
   final RxBool isLoading = false.obs;
   final RxBool isSlotsLoading = false.obs;
   final RxBool isActionLoading = false.obs;
+  final RxBool isUpdatingCourt = false.obs;
   final RxInt selectedNavIndex = 0.obs;
   final RxString searchQuery = ''.obs;
 
@@ -153,6 +154,42 @@ class ManagerDashboardController extends GetxController
 
   void changeNavIndex(int index) {
     selectedNavIndex.value = index;
+    if (index == 1) {
+      loadManagerData();
+    }
+  }
+
+  Future<bool> updateCourtStatusAndPrice({
+    required String courtId,
+    required double basePrice,
+    required String status,
+  }) async {
+    isUpdatingCourt.value = true;
+    try {
+      final updated = await repository.updateCourtPricing(
+        courtId: courtId,
+        basePrice: basePrice,
+        status: status,
+      );
+      final idx = courts.indexWhere((c) => c.id == courtId);
+      if (idx != -1) {
+        courts[idx] = updated;
+      }
+      Get.snackbar(
+        'Court Updated',
+        '${updated.name} updated: ₹${basePrice.toStringAsFixed(0)}/hr • $status',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFF00C853),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      isUpdatingCourt.value = false;
+      return true;
+    } catch (e) {
+      isUpdatingCourt.value = false;
+      ErrorHandler.showErrorSnackBar('Court Update Failed', e);
+      return false;
+    }
   }
 
   @override

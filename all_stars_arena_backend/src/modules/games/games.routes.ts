@@ -31,10 +31,10 @@ router.get("/:id/activity", getActivityLogsController);
 
 router.use(authenticateToken);
 
-router.post("/order", requireRole([1, 2, 3]), createMatchOrderController);
-router.post("/:id/order", requireRole([1, 2, 3]), createMatchOrderController);
-router.post("/create", requireRole([1, 2, 3]), createGameController);
-router.post("/", requireRole([1, 2, 3]), createGameController);
+router.post("/order", requireRole([3]), createMatchOrderController);
+router.post("/:id/order", requireRole([3]), createMatchOrderController);
+router.post("/create", requireRole([3]), createGameController);
+router.post("/", requireRole([3]), createGameController);
 router.post("/:id/request-slot", requireRole([3]), requestSlotController);
 router.post("/join", requireRole([3]), joinGameController);
 router.post("/:id/join", requireRole([3]), joinGameController);

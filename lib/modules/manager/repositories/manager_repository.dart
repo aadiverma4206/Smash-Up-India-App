@@ -132,6 +132,26 @@ class ManagerRepository {
     return response.data ?? [];
   }
 
+  Future<CourtModel> updateCourtPricing({
+    required String courtId,
+    double? basePrice,
+    String? status,
+    double? peakMultiplier,
+    double? weekendMultiplier,
+  }) async {
+    final response = await remoteDataSource.updateCourtPricing(
+      courtId: courtId,
+      basePrice: basePrice,
+      status: status,
+      peakMultiplier: peakMultiplier,
+      weekendMultiplier: weekendMultiplier,
+    );
+    if (response.data == null) {
+      throw Exception(response.message);
+    }
+    return response.data!;
+  }
+
   Future<List<BookingModel>> getClubBookings() async {
     final response = await remoteDataSource.getClubBookings();
     return response.data ?? [];

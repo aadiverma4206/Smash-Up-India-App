@@ -89,6 +89,7 @@ export class ManagerRepository {
     courtId: string,
     data: {
       basePrice?: number;
+      status?: "AVAILABLE" | "BLOCKED" | "MAINTENANCE";
       peakMultiplier?: number;
       weekendMultiplier?: number;
       peakWindowStart?: string;
@@ -102,6 +103,10 @@ export class ManagerRepository {
     if (data.basePrice !== undefined) {
       fields.push(`base_price = $${idx++}`);
       values.push(data.basePrice);
+    }
+    if (data.status) {
+      fields.push(`status = $${idx++}`);
+      values.push(data.status);
     }
     if (data.peakMultiplier !== undefined) {
       fields.push(`peak_multiplier = $${idx++}`);
@@ -387,8 +392,12 @@ export class ManagerRepository {
       "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
       "(UPPER(g.status::text) = 'CANCELLED' OR g.match_date::date <= CURRENT_DATE)",
     ];
-    const values: any[] = [clubId || "all_stars_arena_club"];
-    let idx = 2;
+    const values: any[] = [];
+    let idx = 1;
+
+    const targetClubId = clubId || "all_stars_arena_club";
+    conditions.push(`g.club_id = $${idx++}`);
+    values.push(targetClubId);
 
     if (statusFilter && statusFilter.toUpperCase() !== "ALL") {
       const upperStatus = statusFilter.toUpperCase();

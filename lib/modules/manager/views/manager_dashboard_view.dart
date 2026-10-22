@@ -6,7 +6,7 @@ import '../controllers/manager_dashboard_controller.dart';
 import '../controllers/manager_games_controller.dart';
 import 'manager_players_view.dart';
 import 'manager_history_view.dart';
-import '../../games/views/create_game_view.dart';
+import 'manager_courts_management_view.dart';
 import '../../cctv/views/media_server_cctv_view.dart';
 import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/game_model.dart';
@@ -82,7 +82,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            const CreateGameView(),
+            const ManagerCourtsManagementView(),
             const ManagerPlayersView(),
             const ManagerHistoryView(),
           ],
@@ -111,7 +111,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                   currentIndex: controller.selectedNavIndex.value,
                   onTap: (index) {
                     controller.changeNavIndex(index);
-                    if (index == 0) controller.loadManagerData();
+                    if (index == 0 || index == 1) controller.loadManagerData();
                   },
                   type: BottomNavigationBarType.fixed,
                   backgroundColor: Theme.of(context).cardColor,
@@ -144,8 +144,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                       label: 'Home',
                     ),
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.add_circle_outline_rounded, size: 22),
-                      label: 'Create',
+                      icon: Icon(Icons.stadium_rounded, size: 22),
+                      label: 'Courts',
                     ),
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.people_alt_rounded, size: 22),
@@ -321,12 +321,9 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               selectedIndex: controller.selectedNavIndex.value,
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
-                if (index == 0) controller.loadManagerData();
-                if (index == 2) {
-                  Get.toNamed(Routes.createGame);
-                }
-                if (index == 3) Get.toNamed('/manager/players');
-                if (index == 4) Get.toNamed('/manager/history');
+                if (index == 0 || index == 1) controller.loadManagerData();
+                if (index == 2) Get.toNamed('/manager/players');
+                if (index == 3) Get.toNamed('/manager/history');
               },
               labelType: NavigationRailLabelType.all,
               selectedIconTheme: const IconThemeData(color: Color(0xFF00C853)),
@@ -348,9 +345,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                     icon: Icon(Icons.apps_rounded), label: Text('Control')),
                 NavigationRailDestination(
                     icon: Icon(Icons.stadium_rounded), label: Text('Courts')),
-                NavigationRailDestination(
-                    icon: Icon(Icons.add_circle_outline_rounded),
-                    label: Text('Create')),
                 NavigationRailDestination(
                     icon: Icon(Icons.people_alt_rounded),
                     label: Text('Players')),

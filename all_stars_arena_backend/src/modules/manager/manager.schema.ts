@@ -30,7 +30,8 @@ export const updateCourtPricingSchema = z.object({
     id: z.string().min(1, "Court ID is required"),
   }),
   body: z.object({
-    basePrice: z.number().min(100).optional(),
+    basePrice: z.number().min(0).optional(),
+    status: z.enum(["AVAILABLE", "BLOCKED", "MAINTENANCE"]).optional(),
     peakMultiplier: z.number().min(1.0).optional(),
     weekendMultiplier: z.number().min(1.0).optional(),
     peakWindowStart: z.string().optional(),

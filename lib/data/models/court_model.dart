@@ -83,5 +83,29 @@ class CourtModel {
     );
   }
 
+  CourtModel copyWith({
+    String? id,
+    String? clubId,
+    String? clubName,
+    String? name,
+    String? surfaceType,
+    double? basePricePerHour,
+    String? status,
+    String? city,
+    String? address,
+  }) {
+    return CourtModel(
+      id: id ?? this.id,
+      clubId: clubId ?? this.clubId,
+      clubName: clubName ?? this.clubName,
+      name: name ?? this.name,
+      surfaceType: surfaceType ?? this.surfaceType,
+      basePricePerHour: basePricePerHour ?? this.basePricePerHour,
+      status: status ?? this.status,
+      city: city ?? this.city,
+      address: address ?? this.address,
+    );
+  }
+
   Map<String, dynamic> toJson() => _$CourtModelToJson(this);
 }

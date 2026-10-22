@@ -193,6 +193,28 @@ class ManagerRemoteDataSource {
     );
   }
 
+  Future<ApiResponseModel<CourtModel>> updateCourtPricing({
+    required String courtId,
+    double? basePrice,
+    String? status,
+    double? peakMultiplier,
+    double? weekendMultiplier,
+  }) async {
+    final response = await dioClient.dio.put(
+      '/manager/courts/$courtId/pricing',
+      data: {
+        if (basePrice != null) 'basePrice': basePrice,
+        if (status != null) 'status': status,
+        if (peakMultiplier != null) 'peakMultiplier': peakMultiplier,
+        if (weekendMultiplier != null) 'weekendMultiplier': weekendMultiplier,
+      },
+    );
+    return ApiResponseParser.parse<CourtModel>(
+      response.data,
+      (json) => CourtModel.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
   Future<ApiResponseModel<List<BookingModel>>> getClubBookings() async {
     final response = await dioClient.dio.get('/manager/bookings');
     return ApiResponseParser.parse<List<BookingModel>>(

@@ -42,6 +42,7 @@ import '../../modules/manager/views/manager_dashboard_view.dart';
 import '../../modules/manager/views/manager_games_view.dart';
 import '../../modules/manager/views/manager_game_details_view.dart';
 import '../../modules/manager/views/manager_courts_view.dart';
+import '../../modules/manager/views/manager_courts_management_view.dart';
 import '../../modules/manager/views/manager_bookings_view.dart';
 import '../../modules/manager/views/manager_players_view.dart';
 import '../../modules/manager/views/manager_player_detail_view.dart';
@@ -279,6 +280,11 @@ class AppPages {
     GetPage(
       name: '/manager/courts',
       page: () => const ManagerCourtsView(),
+      binding: ManagerBinding(),
+    ),
+    GetPage(
+      name: '/manager/courts/manage',
+      page: () => const ManagerCourtsManagementView(),
       binding: ManagerBinding(),
     ),
     GetPage(
