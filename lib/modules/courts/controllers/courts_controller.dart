@@ -12,6 +12,10 @@ class CourtsController extends GetxController {
   final RxList<BookingModel> bookings = <BookingModel>[].obs;
   final RxBool isLoading = false.obs;
 
+  // Filter state
+  final RxString selectedStatusFilter = 'ALL'.obs; // ALL, AVAILABLE, MAINTENANCE, BLOCKED
+  final RxString searchQuery = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -35,6 +39,38 @@ class CourtsController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  void setStatusFilter(String status) {
+    selectedStatusFilter.value = status;
+  }
+
+  void setSearchQuery(String query) {
+    searchQuery.value = query;
+  }
+
+  List<CourtModel> get filteredCourts {
+    return courts.where((court) {
+      final statusMatch = selectedStatusFilter.value == 'ALL' ||
+          court.status.toUpperCase() == selectedStatusFilter.value;
+
+      final query = searchQuery.value.trim().toLowerCase();
+      final searchMatch = query.isEmpty ||
+          court.name.toLowerCase().contains(query) ||
+          court.surfaceType.toLowerCase().contains(query) ||
+          court.clubName.toLowerCase().contains(query) ||
+          court.city.toLowerCase().contains(query);
+
+      return statusMatch && searchMatch;
+    }).toList();
+  }
+
+  int get totalCount => courts.length;
+  int get availableCount =>
+      courts.where((c) => c.status.toUpperCase() == 'AVAILABLE').length;
+  int get maintenanceCount =>
+      courts.where((c) => c.status.toUpperCase() == 'MAINTENANCE').length;
+  int get blockedCount =>
+      courts.where((c) => c.status.toUpperCase() == 'BLOCKED').length;
 
   Future<void> bookCourt(
       String courtId, String date, String startTime, String endTime) async {

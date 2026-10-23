@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getDashboardController,
+  getClubMetricsController,
   getManagerClubController,
   getManagerCourtsController,
   getCourtSlotsController,
@@ -65,6 +66,7 @@ router.use(requireRole([1, 2]));
 
 router.get("/dashboard", getDashboardController);
 router.get("/club", getManagerClubController);
+router.get("/metrics", getClubMetricsController);
 
 router.get("/courts", getManagerCourtsController);
 router.get("/courts/:courtId/slots", getCourtSlotsController);

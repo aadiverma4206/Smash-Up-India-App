@@ -241,10 +241,11 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     for (final candidateUrl in candidates) {
       if (!mounted) return;
 
+      VideoPlayerController? tempController;
       try {
         AppLogger.info('📡 [CCTV Stream] Trying candidate: $candidateUrl');
         final uri = Uri.parse(candidateUrl);
-        final controller = VideoPlayerController.networkUrl(
+        tempController = VideoPlayerController.networkUrl(
           uri,
           videoPlayerOptions: VideoPlayerOptions(
             mixWithOthers: true,
@@ -252,20 +253,21 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           ),
         );
 
-        await controller.initialize().timeout(const Duration(seconds: 4));
-        await controller.setVolume(0.0);
-        await controller.play();
+        await tempController.initialize().timeout(const Duration(seconds: 4));
+        await tempController.setVolume(0.0);
+        await tempController.play();
 
         if (!mounted) {
-          await controller.dispose();
+          await tempController.dispose();
           return;
         }
 
-        controller.addListener(() {
+        final activeController = tempController;
+        activeController.addListener(() {
           if (!mounted) return;
           try {
-            if (controller.value.hasError && !_hasError) {
-              _handleStreamRuntimeError(controller.value.errorDescription);
+            if (activeController.value.hasError && !_hasError) {
+              _handleStreamRuntimeError(activeController.value.errorDescription);
             }
           } catch (_) {}
         });
@@ -288,7 +290,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
             '✅ [CCTV Stream] Live video stream connected: $candidateUrl');
 
         setState(() {
-          _controller = controller;
+          _controller = activeController;
           _isInitialized = true;
           _hasError = false;
         });
@@ -297,6 +299,12 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         lastError = e.toString();
         AppLogger.warning(
             '❌ [CCTV Stream] Candidate failed: $candidateUrl ($e)');
+        if (tempController != null) {
+          try {
+            await tempController.pause();
+            await tempController.dispose();
+          } catch (_) {}
+        }
       }
     }
 
@@ -709,144 +717,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                         },
                       );
                     },
-                  ),
-                  const SizedBox(height: 18),
-                  InkWell(
-                    onTap: _showUrlDialog,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderColor, width: 1.2),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.dns_rounded,
-                                color: AppColors.primary, size: 19),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'MediaMTX Base URL',
-                                  style: TextStyle(
-                                    color: textPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _baseUrl,
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontSize: 11,
-                                    fontFamily: 'monospace',
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Edit',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: borderColor, width: 1.2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color:
-                                    AppColors.primary.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.analytics_rounded,
-                                  color: AppColors.primary, size: 18),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Camera & Stream Diagnostics',
-                              style: TextStyle(
-                                color: textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Divider(color: borderColor, height: 22),
-                        _buildInfoRow(
-                            'Active Camera',
-                            _channelNames[_selectedChannel] ??
-                                'CH $_selectedChannel',
-                            context),
-                        _buildInfoRow('Stream Key', _currentStreamKey, context),
-                        _buildInfoRow('Media Server Base', _baseUrl, context,
-                            copyable: true),
-                        _buildInfoRow(
-                            'Full Stream URL',
-                            _activeStreamUrl.isNotEmpty
-                                ? _activeStreamUrl
-                                : _backendProxyHlsUrl,
-                            context,
-                            copyable: true),
-                        _buildInfoRow(
-                            'Stream Mode',
-                            _activeStreamUrl.contains('/cctv-stream')
-                                ? 'Universal Proxy (Port 5000)'
-                                : 'Direct MediaMTX (Port 8888)',
-                            context),
-                        _buildInfoRow(
-                            'Protocol', 'Low-Latency HLS (fMP4)', context),
-                        _buildInfoRow(
-                          'Stream Status',
-                          _isInitialized
-                              ? 'ONLINE 🟢'
-                              : (_hasError ? 'ERROR 🔴' : 'CONNECTING 🟡'),
-                          context,
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -1316,63 +1186,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, BuildContext context,
-      {bool copyable = false}) {
-    final textSecondary = context.textSecondary;
-    final textPrimary = context.textPrimary;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(color: textSecondary, fontSize: 12)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Flexible(
-                  child: Text(
-                    value,
-                    textAlign: TextAlign.end,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12),
-                  ),
-                ),
-                if (copyable) ...[
-                  const SizedBox(width: 6),
-                  InkWell(
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: value));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Copied $label to clipboard'),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(4),
-                    child: const Padding(
-                      padding: EdgeInsets.all(2),
-                      child: Icon(Icons.copy_rounded,
-                          color: AppColors.primary, size: 14),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

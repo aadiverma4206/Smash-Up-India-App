@@ -788,7 +788,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
       {
         'icon': Icons.stadium_outlined,
         'title': 'Available Court',
-        'route': '',
+        'route': Routes.courts,
       },
       {
         'icon': Icons.account_balance_wallet_rounded,

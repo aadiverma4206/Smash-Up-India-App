@@ -140,6 +140,13 @@ class VideoPlayerController extends GetxController {
       _startControlsHideTimer();
     } catch (e) {
       AppLogger.error('❌ Video Player initialization failed: $e');
+      if (videoPlayerController != null) {
+        try {
+          await videoPlayerController!.pause();
+          await videoPlayerController!.dispose();
+        } catch (_) {}
+        videoPlayerController = null;
+      }
       hasError.value = true;
       isBuffering.value = false;
       errorMessage.value =

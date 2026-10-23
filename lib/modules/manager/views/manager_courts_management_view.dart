@@ -16,33 +16,12 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Courts Management',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            Text(
-              'Manage pitch availability & 1-hour hourly pricing',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh Courts',
-            onPressed: () => controller.loadManagerData(),
+        title: const Text(
+          'Courts Management',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
         elevation: 0,
       ),
       body: Obx(() {
@@ -70,214 +49,79 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
         }
 
         final courtsList = controller.courts;
-        final availableCount =
-            courtsList.where((c) => c.status.toUpperCase() == 'AVAILABLE').length;
-        final maintenanceCount =
-            courtsList.where((c) => c.status.toUpperCase() == 'MAINTENANCE').length;
-        final blockedCount =
-            courtsList.where((c) => c.status.toUpperCase() == 'BLOCKED').length;
 
         return RefreshIndicator(
           onRefresh: () => controller.loadManagerData(),
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _buildOverviewCard(
-                context,
-                total: courtsList.length,
-                available: availableCount,
-                maintenance: maintenanceCount,
-                blocked: blockedCount,
-              ),
-              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Pitches & Courts (${courtsList.length})',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          isDark ? AppColors.textPrimaryDark : Colors.black87,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.sports_soccer_rounded,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Pitches & Courts (${courtsList.length})',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                        ),
+                      ),
+                    ],
                   ),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Rate: ₹ / 1 Hour',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                       ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 13,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Rate: ₹ / 1 Hour',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               ...courtsList.map((court) => _buildCourtCard(context, court)),
               const SizedBox(height: 32),
             ],
           ),
         );
       }),
-    );
-  }
-
-  Widget _buildOverviewCard(
-    BuildContext context, {
-    required int total,
-    required int available,
-    required int maintenance,
-    required int blocked,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.sports_soccer_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Turf Courts Status Overview',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'All rates are charged strictly per 1 Hour basis',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _buildMetricItem(
-                context,
-                label: 'Total',
-                value: '$total',
-                color: Colors.blueAccent,
-                icon: Icons.stadium_rounded,
-              ),
-              _buildMetricItem(
-                context,
-                label: 'Available',
-                value: '$available',
-                color: const Color(0xFF00C853),
-                icon: Icons.check_circle_rounded,
-              ),
-              _buildMetricItem(
-                context,
-                label: 'Maintenance',
-                value: '$maintenance',
-                color: Colors.orangeAccent.shade700,
-                icon: Icons.build_circle_rounded,
-              ),
-              _buildMetricItem(
-                context,
-                label: 'Blocked',
-                value: '$blocked',
-                color: Colors.redAccent,
-                icon: Icons.block_rounded,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricItem(
-    BuildContext context, {
-    required String label,
-    required String value,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Expanded(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -288,323 +132,243 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
     Color statusColor;
     Color statusBgColor;
     String statusText;
-    IconData statusIcon;
 
     switch (status) {
       case 'AVAILABLE':
-        statusColor = const Color(0xFF00C853);
-        statusBgColor = const Color(0xFF00C853).withValues(alpha: 0.12);
+        statusColor = const Color(0xFF10B981);
+        statusBgColor = const Color(0xFF10B981).withValues(alpha: 0.12);
         statusText = 'AVAILABLE';
-        statusIcon = Icons.check_circle_rounded;
         break;
       case 'MAINTENANCE':
-        statusColor = Colors.orangeAccent.shade700;
-        statusBgColor = Colors.orange.withValues(alpha: 0.12);
+        statusColor = const Color(0xFFF59E0B);
+        statusBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.12);
         statusText = 'MAINTENANCE';
-        statusIcon = Icons.build_rounded;
         break;
       case 'BLOCKED':
       default:
-        statusColor = Colors.redAccent.shade700;
-        statusBgColor = Colors.red.withValues(alpha: 0.12);
+        statusColor = const Color(0xFFEF4444);
+        statusBgColor = const Color(0xFFEF4444).withValues(alpha: 0.12);
         statusText = 'BLOCKED';
-        statusIcon = Icons.block_rounded;
         break;
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
-          width: 1.2,
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
             blurRadius: 8,
-            offset: const Offset(0, 3),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row
-          Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.stadium_rounded,
-                    color: AppColors.primary,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Colored Status Accent Strip
+              Container(
+                width: 4,
+                color: statusColor,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Court Header
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            court.name,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : Colors.black87,
-                            ),
-                          ),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                            width: 42,
+                            height: 42,
                             decoration: BoxDecoration(
-                              color: statusBgColor,
-                              borderRadius: BorderRadius.circular(20),
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.primary.withValues(alpha: 0.20),
+                                  AppColors.primary.withValues(alpha: 0.08),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: statusColor.withValues(alpha: 0.4),
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                width: 1,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child: const Icon(
+                              Icons.stadium_rounded,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(statusIcon, size: 12, color: statusColor),
-                                const SizedBox(width: 4),
-                                Text(
-                                  statusText,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: statusColor,
-                                  ),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      court.name,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? AppColors.textPrimaryDark
+                                            : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: statusBgColor,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: statusColor.withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 6,
+                                            height: 6,
+                                            decoration: BoxDecoration(
+                                              color: statusColor,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            statusText,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.3,
+                                              color: statusColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          _buildTag(court.surfaceType, Icons.grass_rounded),
-                          const SizedBox(width: 6),
-                          _buildTag(court.id, Icons.tag_rounded),
-                        ],
+
+                      const SizedBox(height: 10),
+
+                      // Pricing & Action Banner
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hourly Rate (1 hr)',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 1),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      '₹${court.basePricePerHour.toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        color: isDark
+                                            ? AppColors.primary
+                                            : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '/ hour',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade500,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () => _showEditCourtSheet(context, court),
+                              icon: const Icon(Icons.tune_rounded, size: 15),
+                              label: const Text(
+                                'Set Price & Status',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Pricing Highlight Section
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            margin: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF1E1435)
-                  : const Color(0xFFF7FBF9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark
-                    ? AppColors.darkBorder
-                    : const Color(0xFFD1E7DD),
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Hourly Price (1 Hour)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          '₹${court.basePricePerHour.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Text(
-                          '/ hour',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _showEditCourtSheet(context, court),
-                  icon: const Icon(Icons.edit_rounded, size: 16),
-                  label: const Text(
-                    'Set Price & Status',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Quick status buttons strip
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-            child: Row(
-              children: [
-                const Text(
-                  'Quick Status:',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _buildQuickStatusChip(
-                  context,
-                  court: court,
-                  targetStatus: 'AVAILABLE',
-                  label: 'Available',
-                  activeColor: const Color(0xFF00C853),
-                ),
-                const SizedBox(width: 6),
-                _buildQuickStatusChip(
-                  context,
-                  court: court,
-                  targetStatus: 'MAINTENANCE',
-                  label: 'Maintenance',
-                  activeColor: Colors.orangeAccent.shade700,
-                ),
-                const SizedBox(width: 6),
-                _buildQuickStatusChip(
-                  context,
-                  court: court,
-                  targetStatus: 'BLOCKED',
-                  label: 'Blocked',
-                  activeColor: Colors.redAccent.shade700,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickStatusChip(
-    BuildContext context, {
-    required CourtModel court,
-    required String targetStatus,
-    required String label,
-    required Color activeColor,
-  }) {
-    final isCurrent = court.status.toUpperCase() == targetStatus;
-
-    return InkWell(
-      onTap: isCurrent
-          ? null
-          : () {
-              controller.updateCourtStatusAndPrice(
-                courtId: court.id,
-                basePrice: court.basePricePerHour,
-                status: targetStatus,
-              );
-            },
-      borderRadius: BorderRadius.circular(8),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isCurrent
-              ? activeColor.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isCurrent
-                ? activeColor
-                : Colors.grey.withValues(alpha: 0.3),
-            width: isCurrent ? 1.4 : 1,
+            ],
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-            color: isCurrent ? activeColor : Colors.grey,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTag(String text, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: Colors.grey),
-          const SizedBox(width: 3),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -618,272 +382,342 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
     final isSaving = false.obs;
 
     Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(
-            top: BorderSide(
-              color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
-            ),
+      SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.88,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, -4),
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top Drag Handle & Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+                  child: Column(
                     children: [
-                      Text(
-                        'Edit ${court.name}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : Colors.black87,
+                      Center(
+                        child: Container(
+                          width: 38,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Set 1-Hour pricing and availability status',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Edit ${court.name}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Configure hourly rate & pitch availability',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Get.back(),
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFF1F5F9),
+                              padding: const EdgeInsets.all(8),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Get.back(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // 1-Hour Price Section
-              Text(
-                'Price Per 1 Hour (₹)',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
                 ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
-                ),
-                decoration: InputDecoration(
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    child: Text(
-                      '₹',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 0, minHeight: 0),
-                  suffixText: '/ 1 Hour',
-                  suffixStyle: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey,
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.darkInputBg
-                      : const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark
-                          ? AppColors.darkBorder
-                          : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: AppColors.primary,
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
 
-              // Quick increment price chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildIncrementChip(priceController, 500, label: '₹500/hr'),
-                    _buildIncrementChip(priceController, 800, label: '₹800/hr'),
-                    _buildIncrementChip(priceController, 1000, label: '₹1000/hr'),
-                    _buildIncrementChip(priceController, 1200, label: '₹1200/hr'),
-                    _buildIncrementChip(priceController, 1500, label: '₹1500/hr'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
 
-              // Status Selector
-              Text(
-                'Court Availability Status',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Obx(() => Column(
-                    children: [
-                      _buildStatusOption(
-                        context,
-                        title: 'AVAILABLE',
-                        subtitle:
-                            'Pitch is open and ready for match creation & bookings',
-                        color: const Color(0xFF00C853),
-                        icon: Icons.check_circle_rounded,
-                        current: selectedStatus.value,
-                        onTap: () => selectedStatus.value = 'AVAILABLE',
-                      ),
-                      const SizedBox(height: 8),
-                      _buildStatusOption(
-                        context,
-                        title: 'MAINTENANCE',
-                        subtitle:
-                            'Pitch is undergoing turf repairs or scheduled maintenance',
-                        color: Colors.orangeAccent.shade700,
-                        icon: Icons.build_rounded,
-                        current: selectedStatus.value,
-                        onTap: () => selectedStatus.value = 'MAINTENANCE',
-                      ),
-                      const SizedBox(height: 8),
-                      _buildStatusOption(
-                        context,
-                        title: 'BLOCKED',
-                        subtitle:
-                            'Pitch is temporarily closed or blocked for private club events',
-                        color: Colors.redAccent.shade700,
-                        icon: Icons.block_rounded,
-                        current: selectedStatus.value,
-                        onTap: () => selectedStatus.value = 'BLOCKED',
-                      ),
-                    ],
-                  )),
-              const SizedBox(height: 24),
-
-              // Action Buttons
-              Obx(() => SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: isSaving.value
-                          ? null
-                          : () async {
-                              final newPrice =
-                                  double.tryParse(priceController.text.trim());
-                              if (newPrice == null || newPrice < 0) {
-                                Get.snackbar(
-                                  'Invalid Price',
-                                  'Please enter a valid price per 1 hour.',
-                                  snackPosition: SnackPosition.TOP,
-                                  backgroundColor: Colors.redAccent,
-                                  colorText: Colors.white,
-                                );
-                                return;
-                              }
-
-                              isSaving.value = true;
-                              final ok = await controller
-                                  .updateCourtStatusAndPrice(
-                                courtId: court.id,
-                                basePrice: newPrice,
-                                status: selectedStatus.value,
-                              );
-                              isSaving.value = false;
-
-                              if (ok) {
-                                Get.back();
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                // Scrollable Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Price Label
+                        Text(
+                          'Price Per 1 Hour (₹)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF0F172A),
+                          ),
                         ),
-                        elevation: 2,
-                      ),
-                      child: isSaving.value
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Save Changes',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                        const SizedBox(height: 8),
+
+                        // TextField
+                        TextField(
+                          controller: priceController,
+                          keyboardType: TextInputType.number,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF0F172A),
+                          ),
+                          decoration: InputDecoration(
+                            prefixIcon: const Padding(
+                              padding: EdgeInsets.only(left: 14, right: 8),
+                              child: Text(
+                                '₹',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
+                            prefixIconConstraints:
+                                const BoxConstraints(minWidth: 0, minHeight: 0),
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.only(right: 14),
+                              child: Text(
+                                '/ 1 Hour',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                            suffixIconConstraints:
+                                const BoxConstraints(minWidth: 0, minHeight: 0),
+                            filled: true,
+                            fillColor: isDark
+                                ? const Color(0xFF1E293B)
+                                : const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Availability Section
+                        Text(
+                          'Court Availability Status',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        Obx(() => Column(
+                              children: [
+                                _buildStatusOption(
+                                  context,
+                                  title: 'AVAILABLE',
+                                  subtitle:
+                                      'Pitch is open and ready for match creation & bookings',
+                                  color: const Color(0xFF10B981),
+                                  icon: Icons.check_circle_rounded,
+                                  current: selectedStatus.value,
+                                  onTap: () => selectedStatus.value = 'AVAILABLE',
+                                ),
+                                const SizedBox(height: 10),
+                                _buildStatusOption(
+                                  context,
+                                  title: 'MAINTENANCE',
+                                  subtitle:
+                                      'Pitch is undergoing turf repairs or scheduled maintenance',
+                                  color: const Color(0xFFF59E0B),
+                                  icon: Icons.build_rounded,
+                                  current: selectedStatus.value,
+                                  onTap: () => selectedStatus.value = 'MAINTENANCE',
+                                ),
+                                const SizedBox(height: 10),
+                                _buildStatusOption(
+                                  context,
+                                  title: 'BLOCKED',
+                                  subtitle:
+                                      'Pitch is temporarily closed or blocked for private club events',
+                                  color: const Color(0xFFEF4444),
+                                  icon: Icons.block_rounded,
+                                  current: selectedStatus.value,
+                                  onTap: () => selectedStatus.value = 'BLOCKED',
+                                ),
+                              ],
+                            )),
+                      ],
                     ),
-                  )),
-              const SizedBox(height: 12),
-            ],
+                  ),
+                ),
+
+                // Save Action Footer
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: Obx(() {
+                    final saving = isSaving.value;
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: saving
+                            ? null
+                            : () async {
+                                final newPrice =
+                                    double.tryParse(priceController.text.trim());
+                                if (newPrice == null || newPrice < 0) {
+                                  Get.snackbar(
+                                    'Invalid Price',
+                                    'Please enter a valid price per 1 hour.',
+                                    snackPosition: SnackPosition.TOP,
+                                    backgroundColor: Colors.redAccent,
+                                    colorText: Colors.white,
+                                  );
+                                  return;
+                                }
+
+                                isSaving.value = true;
+                                try {
+                                  final ok = await controller
+                                      .updateCourtStatusAndPrice(
+                                    courtId: court.id,
+                                    basePrice: newPrice,
+                                    status: selectedStatus.value,
+                                  );
+                                  if (ok && context.mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                } finally {
+                                  isSaving.value = false;
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          disabledBackgroundColor:
+                              AppColors.primary.withValues(alpha: 0.8),
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: saving
+                            ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Saving Changes...',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Text(
+                                'Save Changes',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
         ),
       ),
       isScrollControlled: true,
-    );
-  }
-
-  Widget _buildIncrementChip(
-    TextEditingController controller,
-    int value, {
-    required String label,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6.0),
-      child: ActionChip(
-        label: Text(label, style: const TextStyle(fontSize: 11)),
-        onPressed: () {
-          controller.text = value.toString();
-        },
-        backgroundColor: Colors.grey.withValues(alpha: 0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
+      backgroundColor: Colors.transparent,
     );
   }
 
@@ -899,61 +733,76 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
     final isSelected = current == title;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
             color: isSelected
-                ? color
-                : (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected
-                          ? color
-                          : (isDark
-                              ? AppColors.textPrimaryDark
-                              : Colors.black87),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
+                ? color.withValues(alpha: 0.1)
+                : (isDark ? const Color(0xFF1E293B) : const Color(0xFFFAFAFA)),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected
+                  ? color
+                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              width: isSelected ? 1.5 : 1,
             ),
-            if (isSelected)
-              Icon(Icons.radio_button_checked, color: color, size: 18)
-            else
-              Icon(Icons.radio_button_off, color: Colors.grey.shade400, size: 18),
-          ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                        color: isSelected
+                            ? color
+                            : (isDark
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF0F172A)),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                isSelected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color: isSelected ? color : Colors.grey.shade400,
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );

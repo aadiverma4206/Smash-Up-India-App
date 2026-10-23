@@ -42,7 +42,9 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     }
 
     if (playerId.isNotEmpty) {
-      controller.fetchPlayerDetailHistory(playerId);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.fetchPlayerDetailHistory(playerId);
+      });
     }
   }
 
@@ -80,22 +82,10 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
           isDark ? AppColors.darkBackground : const Color(0xFFF4F6F9),
       appBar: AppBar(
         title: const Text(
-          'Player Profile & History',
+          'Player Profile',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Refresh Profile',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              if (playerId.isNotEmpty) {
-                controller.fetchPlayerDetailHistory(playerId,
-                    forceReload: true);
-              }
-            },
-          ),
-        ],
       ),
       body: SafeArea(
         child: Obx(() {
@@ -122,25 +112,21 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
           final String email = (playerMap['email'] ?? '').toString();
           final String city = (playerMap['city'] ?? '').toString();
           final String bio = (playerMap['bio'] ?? '').toString();
-          final String position = (playerMap['position'] ?? 'ST').toString();
-          final String skillLevel = (playerMap['skill_level'] ?? '').toString();
-          final String preferredFoot =
-              (playerMap['preferred_foot'] ?? '').toString();
-          final int elo = int.tryParse(playerMap['elo_rating']?.toString() ??
-                  playerMap['elo']?.toString() ??
-                  '750') ??
-              750;
-          final int ovr =
-              int.tryParse(playerMap['ovr_rating']?.toString() ?? '0') ?? 0;
           final bool isBlocked =
               (playerMap['status']?.toString().toUpperCase() == 'BLOCKED') ||
                   (playerMap['status']?.toString().toUpperCase() ==
                       'SUSPENDED') ||
                   (playerMap['isBlocked'] == true);
-          final String? avatarUrl =
-              playerMap['profile_image_url']?.toString() ??
-                  playerMap['avatarUrl']?.toString() ??
-                  playerMap['profileImageUrl']?.toString();
+          final String? avatarUrl = (playerMap['profile_image_url'] ??
+                  playerMap['avatarUrl'] ??
+                  playerMap['profileImageUrl'] ??
+                  playerMap['avatar_url'] ??
+                  playerMap['image'] ??
+                  playerMap['profile_image'] ??
+                  playerMap['picture'] ??
+                  playerMap['avatar'])
+              ?.toString()
+              .resolvedImageUrl;
 
           final filteredHistory = historyList.where((item) {
             final match = item as Map<String, dynamic>;
@@ -180,11 +166,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   email: email,
                   city: city,
                   bio: bio,
-                  position: position,
-                  skillLevel: skillLevel,
-                  preferredFoot: preferredFoot,
-                  elo: elo,
-                  ovr: ovr,
                   isBlocked: isBlocked,
                   avatarUrl: avatarUrl,
                   playerId: playerId,
@@ -229,11 +210,6 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     required String email,
     required String city,
     required String bio,
-    required String position,
-    required String skillLevel,
-    required String preferredFoot,
-    required int elo,
-    required int ovr,
     required bool isBlocked,
     required String? avatarUrl,
     required String playerId,
@@ -242,7 +218,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A);
     final textSecondary =
-        isDark ? AppColors.textSecondaryDark : const Color(0xFF475569);
+        isDark ? Colors.grey.shade400 : Colors.grey.shade600;
 
     return Container(
       decoration: BoxDecoration(
@@ -250,408 +226,382 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isBlocked
-              ? Colors.redAccent.withValues(alpha: 0.6)
-              : (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+              ? Colors.redAccent.withValues(alpha: 0.5)
+              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
           width: isBlocked ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(16),
+      child: Stack(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  Container(
-                    width: 68,
-                    height: 68,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isBlocked ? Colors.redAccent : AppColors.primary,
-                        width: 2.5,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(34),
-                      child: avatarUrl.isValidNetworkUrl
-                          ? CachedNetworkImage(
-                              imageUrl: avatarUrl!,
-                              width: 68,
-                              height: 68,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) =>
-                                  _buildDefaultAvatar(name, size: 68),
-                            )
-                          : _buildDefaultAvatar(name, size: 68),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: isBlocked
-                            ? Colors.redAccent
-                            : const Color(0xFF00C853),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: cardBg, width: 2),
-                      ),
-                      child: Icon(
-                        isBlocked ? Icons.close_rounded : Icons.check_rounded,
-                        size: 11,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
+          // Top-Right Status Badge
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isBlocked
+                    ? Colors.redAccent.withValues(alpha: 0.12)
+                    : const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isBlocked
+                      ? Colors.redAccent
+                      : const Color(0xFF10B981),
+                  width: 1.2,
+                ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              child: Text(
+                isBlocked ? 'BLOCKED' : 'ACTIVE',
+                style: TextStyle(
+                  color: isBlocked
+                      ? Colors.redAccent
+                      : const Color(0xFF10B981),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 10,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+
+          // Main Centered Content
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 8),
+
+              // Centered Avatar with Instagram Story Gradient Ring
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(2.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: isBlocked
+                          ? [Colors.redAccent, Colors.red.shade900]
+                          : [
+                              const Color(0xFFF09433),
+                              const Color(0xFFE6683C),
+                              const Color(0xFFDC2743),
+                              const Color(0xFFCC2366),
+                              const Color(0xFFBC1888),
+                            ],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Stack(
                       children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                              color: textPrimary,
-                              letterSpacing: -0.3,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(38),
+                          child: avatarUrl.isValidNetworkUrl
+                              ? CachedNetworkImage(
+                                  imageUrl: avatarUrl!,
+                                  width: 76,
+                                  height: 76,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(
+                                    width: 76,
+                                    height: 76,
+                                    color: Colors.grey.shade300,
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.primary),
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (_, __, ___) =>
+                                      _buildDefaultAvatar(name, size: 76),
+                                )
+                              : _buildDefaultAvatar(name, size: 76),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isBlocked
-                                ? Colors.redAccent.withValues(alpha: 0.12)
-                                : const Color(0xFF00C853)
-                                    .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
                               color: isBlocked
                                   ? Colors.redAccent
-                                  : const Color(0xFF00C853),
-                              width: 1.2,
+                                  : const Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: cardBg, width: 2),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: isBlocked
-                                      ? Colors.redAccent
-                                      : const Color(0xFF00C853),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                isBlocked ? 'BLOCKED' : 'ACTIVE',
-                                style: TextStyle(
-                                  color: isBlocked
-                                      ? Colors.redAccent
-                                      : const Color(0xFF00C853),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
+                            child: Icon(
+                              isBlocked
+                                  ? Icons.close_rounded
+                                  : Icons.check_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
-                    if (phone.isNotEmpty) ...[
-                      InkWell(
-                        onTap: () => _makePhoneCall(phone),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2.0),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.phone_rounded,
-                                  size: 15, color: AppColors.primary),
-                              const SizedBox(width: 6),
-                              Text(
-                                phone,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: textPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              IconButton(
-                                icon: const Icon(Icons.copy_rounded,
-                                    size: 14, color: AppColors.primary),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                tooltip: 'Copy Phone',
-                                onPressed: () =>
-                                    _copyToClipboard(phone, 'Phone Number'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (email.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.mail_outline_rounded,
-                              size: 14, color: textSecondary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              email,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: textSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.copy_rounded,
-                                size: 13, color: textSecondary),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            tooltip: 'Copy Email',
-                            onPressed: () =>
-                                _copyToClipboard(email, 'Email Address'),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (city.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 14, color: textSecondary),
-                          const SizedBox(width: 6),
-                          Text(
-                            city,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (bio.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkInputBg : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '"$bio"',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: textSecondary,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildBadgePill(
-                icon: Icons.sports_soccer_rounded,
-                label: 'Position: $position',
-                color: AppColors.primary,
-                isDark: isDark,
-              ),
-              _buildBadgePill(
-                icon: Icons.emoji_events_rounded,
-                label: 'ELO: $elo',
-                color: const Color(0xFFF59E0B),
-                isDark: isDark,
-              ),
-              if (ovr > 0)
-                _buildBadgePill(
-                  icon: Icons.shield_rounded,
-                  label: 'OVR: $ovr',
-                  color: const Color(0xFF8B5CF6),
-                  isDark: isDark,
-                ),
-              if (skillLevel.isNotEmpty)
-                _buildBadgePill(
-                  icon: Icons.trending_up_rounded,
-                  label: skillLevel,
-                  color: const Color(0xFF0284C7),
-                  isDark: isDark,
-                ),
-              if (preferredFoot.isNotEmpty)
-                _buildBadgePill(
-                  icon: Icons.directions_run_rounded,
-                  label: '$preferredFoot Foot',
-                  color: const Color(0xFF10B981),
-                  isDark: isDark,
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              if (phone.isNotEmpty) ...[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: isDark
-                            ? AppColors.darkBorder
-                            : const Color(0xFFCBD5E1),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    onPressed: () => _makePhoneCall(phone),
-                    icon: const Icon(Icons.call_rounded,
-                        size: 16, color: AppColors.primary),
-                    label: Text(
-                      'Call Player',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
-                      ),
-                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Centered Player Name
+              Text(
+                name,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                  letterSpacing: -0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              // Centered Location Info
+              if (city.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.location_on_outlined,
+                        size: 13, color: textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      city,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ],
-              Expanded(
-                child: isBlocked
-                    ? ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00C853),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+
+              const SizedBox(height: 12),
+
+              // Centered Contact Details Pills (Phone & Email)
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (phone.isNotEmpty)
+                    InkWell(
+                      onTap: () => _makePhoneCall(phone),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFE2E8F0),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
                         ),
-                        onPressed: () =>
-                            _confirmUnblock(context, playerId, name),
-                        icon: const Icon(Icons.check_circle_outline_rounded,
-                            size: 17),
-                        label: const Text(
-                          'UNBLOCK PLAYER',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                            letterSpacing: 0.3,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.phone_rounded,
+                                size: 13, color: AppColors.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              phone,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () =>
+                                  _copyToClipboard(phone, 'Phone Number'),
+                              child: Icon(Icons.copy_rounded,
+                                  size: 12, color: textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (email.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.mail_outline_rounded,
+                              size: 13, color: textSecondary),
+                          const SizedBox(width: 6),
+                          Text(
+                            email,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: textSecondary,
+                            ),
                           ),
-                        ),
-                      )
-                    : OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                              color: Color(0xFFEF4444), width: 1.5),
-                          foregroundColor: const Color(0xFFEF4444),
-                          backgroundColor:
-                              const Color(0xFFEF4444).withValues(alpha: 0.05),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          const SizedBox(width: 6),
+                          InkWell(
+                            onTap: () =>
+                                _copyToClipboard(email, 'Email Address'),
+                            child: Icon(Icons.copy_rounded,
+                                size: 12, color: textSecondary),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onPressed: () =>
-                            _showBlockModal(context, playerId, name),
-                        icon: const Icon(Icons.block_rounded, size: 16),
-                        label: const Text(
-                          'BLOCK PLAYER',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                            letterSpacing: 0.3,
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+
+              if (bio.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  bio,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: textSecondary,
+                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              const SizedBox(height: 16),
+
+              // Action Buttons Row
+              Row(
+                children: [
+                  if (phone.isNotEmpty) ...[
+                    Expanded(
+                      child: SizedBox(
+                        height: 38,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark
+                                ? const Color(0xFF1E293B)
+                                : const Color(0xFFF1F5F9),
+                            foregroundColor: textPrimary,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(
+                                color: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          onPressed: () => _makePhoneCall(phone),
+                          icon: const Icon(Icons.call_rounded,
+                              size: 15, color: AppColors.primary),
+                          label: const Text(
+                            'Call Player',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: SizedBox(
+                      height: 38,
+                      child: isBlocked
+                          ? ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              onPressed: () =>
+                                  _confirmUnblock(context, playerId, name),
+                              icon: const Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  size: 15),
+                              label: const Text(
+                                'UNBLOCK',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            )
+                          : OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                    color: Color(0xFFEF4444), width: 1.2),
+                                foregroundColor: const Color(0xFFEF4444),
+                                backgroundColor: const Color(0xFFEF4444)
+                                    .withValues(alpha: 0.06),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              onPressed: () =>
+                                  _showBlockModal(context, playerId, name),
+                              icon: const Icon(Icons.block_rounded, size: 15),
+                              label: const Text(
+                                'BLOCK PLAYER',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBadgePill({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.18 : 0.10),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withValues(alpha: isDark ? 0.35 : 0.25),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: color),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
           ),
         ],
       ),
@@ -665,11 +615,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
   }) {
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A);
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
 
     final totalMatches = statsMap['totalMatches'] ?? 0;
-    final completedMatches = statsMap['completedMatches'] ?? 0;
     final totalPaid = statsMap['totalPaid'] ?? 0;
     final cancelledMatches = statsMap['cancelledMatches'] ?? 0;
     final totalRefunded = statsMap['totalRefunded'] ?? 0;
@@ -679,101 +626,61 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
       children: [
         Row(
           children: [
+            const Icon(Icons.analytics_rounded,
+                size: 18, color: AppColors.primary),
+            const SizedBox(width: 6),
             Text(
-              'Player Activity Metrics',
+              'Activity Overview',
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
                 color: textPrimary,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'Financials & Games',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Turf participation and financial transaction summary for this player.',
-          style: TextStyle(
-            fontSize: 12,
-            color: textSecondary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final double cardAspectRatio =
-                constraints.maxWidth < 360 ? 1.4 : 1.6;
-
-            return GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: cardAspectRatio,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildStatMetricCard(
-                  context: context,
-                  isDark: isDark,
-                  title: 'Matches Played',
-                  value: '$totalMatches',
-                  subtitle: '$completedMatches Completed',
-                  icon: Icons.sports_soccer_rounded,
-                  accentColor: const Color(0xFF00C853),
-                  bgLight: const Color(0xFFF0FDF4),
-                  bgDark: const Color(0xFF062316),
-                ),
-                _buildStatMetricCard(
-                  context: context,
-                  isDark: isDark,
-                  title: 'Total Paid',
-                  value: '₹$totalPaid',
-                  subtitle: 'Match Entry Fees',
-                  icon: Icons.account_balance_wallet_rounded,
-                  accentColor: const Color(0xFF0284C7),
-                  bgLight: const Color(0xFFF0F9FF),
-                  bgDark: const Color(0xFF082236),
-                ),
-                _buildStatMetricCard(
-                  context: context,
-                  isDark: isDark,
-                  title: 'Cancelled Matches',
-                  value: '$cancelledMatches',
-                  subtitle: 'Cancelled Bookings',
-                  icon: Icons.cancel_outlined,
-                  accentColor: const Color(0xFFEF4444),
-                  bgLight: const Color(0xFFFEF2F2),
-                  bgDark: const Color(0xFF2A0D12),
-                ),
-                _buildStatMetricCard(
-                  context: context,
-                  isDark: isDark,
-                  title: 'Amount Refunded',
-                  value: '₹$totalRefunded',
-                  subtitle: 'Returned to Player',
-                  icon: Icons.replay_circle_filled_rounded,
-                  accentColor: const Color(0xFFD97706),
-                  bgLight: const Color(0xFFFFFBEB),
-                  bgDark: const Color(0xFF291B07),
-                ),
-              ],
-            );
-          },
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 2.2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _buildStatMetricCard(
+              context: context,
+              isDark: isDark,
+              title: 'Matches Played',
+              value: '$totalMatches',
+              icon: Icons.sports_soccer_rounded,
+              color: const Color(0xFF10B981),
+            ),
+            _buildStatMetricCard(
+              context: context,
+              isDark: isDark,
+              title: 'Total Paid',
+              value: '₹$totalPaid',
+              icon: Icons.account_balance_wallet_rounded,
+              color: const Color(0xFF0284C7),
+            ),
+            _buildStatMetricCard(
+              context: context,
+              isDark: isDark,
+              title: 'Cancelled Matches',
+              value: '$cancelledMatches',
+              icon: Icons.cancel_outlined,
+              color: const Color(0xFFEF4444),
+            ),
+            _buildStatMetricCard(
+              context: context,
+              isDark: isDark,
+              title: 'Amount Refunded',
+              value: '₹$totalRefunded',
+              icon: Icons.replay_circle_filled_rounded,
+              color: const Color(0xFFF59E0B),
+            ),
+          ],
         ),
       ],
     );
@@ -784,83 +691,71 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     required bool isDark,
     required String title,
     required String value,
-    required String subtitle,
     required IconData icon,
-    required Color accentColor,
-    required Color bgLight,
-    required Color bgDark,
+    required Color color,
   }) {
-    final cardBg = isDark ? bgDark : bgLight;
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A);
-    final labelColor = isDark
-        ? AppColors.textPrimaryDark.withValues(alpha: 0.85)
-        : const Color(0xFF1E293B);
+    final textSecondary =
+        isDark ? Colors.grey.shade400 : Colors.grey.shade600;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: accentColor.withValues(alpha: isDark ? 0.35 : 0.22),
-          width: 1.2,
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: accentColor, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
                   title,
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: labelColor,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
+                    color: textSecondary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: textPrimary,
-              letterSpacing: -0.5,
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: accentColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

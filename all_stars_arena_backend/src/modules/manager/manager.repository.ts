@@ -58,6 +58,42 @@ export class ManagerRepository {
     };
   }
 
+  static async getClubMetricsData(clubId: string) {
+    const revenueRes = await dbPool.query(
+      `SELECT COALESCE(SUM(amount_paid), 0) as total_revenue
+       FROM public.court_bookings WHERE (club_id = $1 OR $1 = 'all_stars_arena_club');`,
+      [clubId],
+    );
+
+    const pendingRes = await dbPool.query(
+      `SELECT COUNT(*) as pending_count
+       FROM public.game_slot_requests req
+       JOIN public.games g ON g.id = req.game_id
+       LEFT JOIN public.courts crt ON crt.id = g.court_id
+       WHERE (crt.club_id = $1 OR $1 = 'all_stars_arena_club') AND req.status = 'PENDING';`,
+      [clubId],
+    );
+
+    const bookingsRes = await dbPool.query(
+      `SELECT COUNT(*) as total_bookings
+       FROM public.court_bookings WHERE (club_id = $1 OR $1 = 'all_stars_arena_club');`,
+      [clubId],
+    );
+
+    const cctvRes = await dbPool.query(
+      `SELECT COUNT(*) as online_cctv
+       FROM public.cctv_cameras WHERE (club_id = $1 OR $1 = 'all_stars_arena_club') AND (status = 'ONLINE' OR is_enabled = true);`,
+      [clubId],
+    );
+
+    return {
+      revenue: Number(revenueRes.rows[0]?.total_revenue || 0),
+      pendingRequests: Number(pendingRes.rows[0]?.pending_count || 0),
+      bookings: Number(bookingsRes.rows[0]?.total_bookings || 0),
+      cctvOnline: Number(cctvRes.rows[0]?.online_cctv || 0),
+    };
+  }
+
   static async createCourt(data: {
     clubId: string;
     name: string;

@@ -21,6 +21,14 @@ class ManagerRemoteDataSource {
     );
   }
 
+  Future<ApiResponseModel<Map<String, dynamic>>> getClubMetrics() async {
+    final response = await dioClient.dio.get('/manager/metrics');
+    return ApiResponseParser.parse<Map<String, dynamic>>(
+      response.data,
+      (json) => json as Map<String, dynamic>,
+    );
+  }
+
   Future<ApiResponseModel<List<SlotRequestModel>>> getPendingRequests() async {
     final response = await dioClient.dio.get('/manager/requests');
     return ApiResponseParser.parse<List<SlotRequestModel>>(

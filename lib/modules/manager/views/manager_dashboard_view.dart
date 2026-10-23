@@ -203,16 +203,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                           const SizedBox(height: 20),
                           _buildMetricsSection(context, d),
                           const SizedBox(height: 20),
-                          _buildPendingPlayerGamesSection(context),
-                          const SizedBox(height: 20),
-                          _buildPendingSlotRequestsSection(context),
-                          const SizedBox(height: 20),
-                          _buildCourtWiseGamesSection(context),
-                          const SizedBox(height: 20),
-                          _buildClubMatchesSection(context),
-                          const SizedBox(height: 20),
-                          _buildQuickModulesGrid(context),
-                          const SizedBox(height: 20),
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -984,24 +974,34 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               color: isDark ? AppColors.textPrimaryDark : Colors.black87),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            _buildSmallStatCard(
-                context,
-                'Revenue',
-                '₹${d?.totalRevenue.toStringAsFixed(0) ?? "0"}',
-                Icons.payments_outlined),
-            _buildSmallStatCard(
-                context,
-                'Pending Req',
-                '${controller.pendingRequests.length}',
-                Icons.person_add_outlined),
-            _buildSmallStatCard(context, 'Bookings', '${d?.totalBookings ?? 0}',
-                Icons.stadium_outlined),
-            _buildSmallStatCard(context, 'CCTV',
-                '${d?.onlineCctvCount ?? 0} Online', Icons.videocam_outlined),
-          ],
-        ),
+        Obx(() {
+          final m = controller.clubMetrics;
+          final revenue = m['revenue'] != null
+              ? (m['revenue'] as num).toStringAsFixed(0)
+              : (d?.totalRevenue?.toStringAsFixed(0) ?? "0");
+          final pending = m['pendingRequests'] != null
+              ? '${m['pendingRequests']}'
+              : '${controller.pendingRequests.length}';
+          final bookings = m['bookings'] != null
+              ? '${m['bookings']}'
+              : '${d?.totalBookings ?? 0}';
+          final cctv = m['cctvOnline'] != null
+              ? '${m['cctvOnline']} Online'
+              : '${d?.onlineCctvCount ?? 0} Online';
+
+          return Row(
+            children: [
+              _buildSmallStatCard(
+                  context, 'Revenue', '₹$revenue', Icons.payments_outlined),
+              _buildSmallStatCard(
+                  context, 'Pending Req', pending, Icons.person_add_outlined),
+              _buildSmallStatCard(
+                  context, 'Bookings', bookings, Icons.stadium_outlined),
+              _buildSmallStatCard(
+                  context, 'CCTV', cctv, Icons.videocam_outlined),
+            ],
+          );
+        }),
       ],
     );
   }
@@ -1055,6 +1055,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildPendingPlayerGamesSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1286,6 +1287,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildPendingSlotRequestsSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1611,6 +1613,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildCourtWiseGamesSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1961,6 +1964,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildClubMatchesSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -2161,6 +2165,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildQuickModulesGrid(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [

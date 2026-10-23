@@ -23,6 +23,11 @@ class ManagerRepository {
     return response.data!;
   }
 
+  Future<Map<String, dynamic>> getClubMetrics() async {
+    final response = await remoteDataSource.getClubMetrics();
+    return response.data ?? {};
+  }
+
   Future<List<SlotRequestModel>> getPendingRequests() async {
     final response = await remoteDataSource.getPendingRequests();
     return response.data ?? [];

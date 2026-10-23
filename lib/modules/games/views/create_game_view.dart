@@ -269,7 +269,7 @@ class CreateGameView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
               'Select Pitch / Court *',
               style: TextStyle(
@@ -279,77 +279,95 @@ class CreateGameView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              children: courts.map((court) {
-                final isSelected = selectedCourt?.id == court.id ||
-                    selectedCourt?.name == court.name;
-                return InkWell(
-                  onTap: () {
-                    controller.selectedCourt.value = court;
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.12)
-                          : context.backgroundColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : context.borderColor,
-                        width: isSelected ? 1.8 : 1.2,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isSelected
-                              ? Icons.radio_button_checked_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          size: 20,
-                          color: isSelected
-                              ? AppColors.primary
-                              : context.textSecondary,
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              court.name,
-                              style: TextStyle(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = courts.length >= 2
+                    ? (constraints.maxWidth - 10) / 2
+                    : constraints.maxWidth;
+
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: courts.map((court) {
+                    final isSelected = selectedCourt?.id == court.id ||
+                        selectedCourt?.name == court.name;
+
+                    return SizedBox(
+                      width: itemWidth,
+                      child: InkWell(
+                        onTap: () {
+                          controller.selectedCourt.value = court;
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.12)
+                                : context.backgroundColor,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : context.borderColor,
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected
+                                    ? Icons.radio_button_checked_rounded
+                                    : Icons.radio_button_unchecked_rounded,
+                                size: 18,
                                 color: isSelected
                                     ? AppColors.primary
-                                    : context.textPrimary,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w600,
-                                fontSize: 14,
+                                    : context.textSecondary,
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${court.surfaceType} • ₹${court.basePricePerHour.toStringAsFixed(0)}/hr',
-                              style: TextStyle(
-                                color: context.textSecondary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      court.name,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : context.textPrimary,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${court.surfaceType} • ₹${court.basePricePerHour.toStringAsFixed(0)}/hr',
+                                      style: TextStyle(
+                                        color: context.textSecondary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
           ],
         );

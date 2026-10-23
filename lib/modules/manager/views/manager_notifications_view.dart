@@ -269,26 +269,6 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Notifications & Alerts'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.mark_email_read_rounded),
-            tooltip: 'Mark All Read',
-            onPressed: () async {
-              final userId =
-                  Get.find<AuthService>().currentUser.value?.id ?? '';
-              if (userId.isNotEmpty) {
-                await repository.markAllNotificationsRead();
-                await dbService.markAllLocalNotificationsRead(userId);
-                _fetchAndSyncNotifications();
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh Notifications',
-            onPressed: _fetchAndSyncNotifications,
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(

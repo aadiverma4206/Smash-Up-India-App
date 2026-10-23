@@ -135,27 +135,35 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Refresh Directory',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => controller.fetchAllPlayers(
-              search: searchController.text.trim().isEmpty
-                  ? null
-                  : searchController.text.trim(),
-              status: selectedStatus.value,
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
+            // Centered Search & Filter Card
             Container(
-              color: isDark ? AppColors.darkCard : Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Search Bar
                   TextField(
                     controller: searchController,
                     onChanged: _onSearchChanged,
@@ -173,7 +181,7 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                         fontSize: 13,
                       ),
                       prefixIcon: const Icon(Icons.search_rounded,
-                          color: AppColors.primary, size: 22),
+                          color: AppColors.primary, size: 20),
                       suffixIcon: searchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear_rounded, size: 18),
@@ -185,15 +193,15 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                           : null,
                       filled: true,
                       fillColor: isDark
-                          ? AppColors.darkInputBg
+                          ? const Color(0xFF1E293B)
                           : const Color(0xFFF8FAFC),
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                          horizontal: 14, vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
                           color: isDark
-                              ? AppColors.darkBorder
+                              ? const Color(0xFF334155)
                               : const Color(0xFFE2E8F0),
                         ),
                       ),
@@ -201,7 +209,7 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
                           color: isDark
-                              ? AppColors.darkBorder
+                              ? const Color(0xFF334155)
                               : const Color(0xFFE2E8F0),
                         ),
                       ),
@@ -212,148 +220,63 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: ['ACTIVE', 'BLOCKED'].map((status) {
-                              return Obx(() {
-                                final isSelected =
-                                    selectedStatus.value == status;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 6.0),
-                                  child: InkWell(
-                                    onTap: () => _onStatusFilter(status),
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? AppColors.primary
-                                            : (isDark
-                                                ? AppColors.darkInputBg
-                                                : const Color(0xFFF1F5F9)),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? AppColors.primary
-                                              : (isDark
-                                                  ? AppColors.darkBorder
-                                                  : const Color(0xFFE2E8F0)),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        status,
-                                        style: TextStyle(
-                                          color: isSelected
-                                              ? Colors.white
-                                              : (isDark
-                                                  ? AppColors.textPrimaryDark
-                                                  : const Color(0xFF334155)),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              });
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Obx(() {
-                        return PopupMenuButton<String>(
-                          initialValue: selectedSort.value,
-                          tooltip: 'Sort Players',
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          color: Theme.of(context).cardColor,
-                          onSelected: (val) => selectedSort.value = val,
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'NAME_ASC',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.sort_by_alpha_rounded,
-                                      size: 16, color: AppColors.primary),
-                                  SizedBox(width: 8),
-                                  Text('Name (A - Z)',
-                                      style: TextStyle(fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'ELO_DESC',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.emoji_events_rounded,
-                                      size: 16, color: Color(0xFFF59E0B)),
-                                  SizedBox(width: 8),
-                                  Text('Highest ELO',
-                                      style: TextStyle(fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'MATCHES_DESC',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.sports_soccer_rounded,
-                                      size: 16, color: Color(0xFF00C853)),
-                                  SizedBox(width: 8),
-                                  Text('Most Matches',
-                                      style: TextStyle(fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ],
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppColors.darkInputBg
-                                  : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isDark
-                                    ? AppColors.darkBorder
-                                    : const Color(0xFFE2E8F0),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.sort_rounded,
-                                    size: 15,
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : const Color(0xFF64748B)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _getSortLabel(selectedSort.value),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : const Color(0xFF475569),
+
+                  const SizedBox(height: 12),
+
+                  // Status Filter Chips Row
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['ALL', 'ACTIVE', 'BLOCKED'].map((status) {
+                        return Obx(() {
+                          final isSelected = selectedStatus.value == status;
+                          final label = status == 'ALL'
+                              ? 'All Players'
+                              : (status == 'ACTIVE' ? 'Active' : 'Blocked');
+
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: InkWell(
+                              onTap: () => _onStatusFilter(status),
+                              borderRadius: BorderRadius.circular(10),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : (isDark
+                                          ? const Color(0xFF1E293B)
+                                          : const Color(0xFFF1F5F9)),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : (isDark
+                                            ? const Color(0xFF334155)
+                                            : const Color(0xFFE2E8F0)),
+                                    width: 1,
                                   ),
                                 ),
-                              ],
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (isDark
+                                            ? AppColors.textPrimaryDark
+                                            : const Color(0xFF334155)),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        );
-                      }),
-                    ],
+                          );
+                        });
+                      }).toList(),
+                    ),
                   ),
                 ],
               ),
@@ -406,12 +329,6 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
     );
   }
 
-  String _getSortLabel(String sort) {
-    if (sort == 'ELO_DESC') return 'Top ELO';
-    if (sort == 'MATCHES_DESC') return 'Matches';
-    return 'Name A-Z';
-  }
-
   Widget _buildPlayerCard(
       BuildContext context, bool isDark, Map<String, dynamic> player) {
     final cardBg = Theme.of(context).cardColor;
@@ -428,9 +345,16 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
         (player['status']?.toString().toUpperCase() == 'BLOCKED') ||
             (player['status']?.toString().toUpperCase() == 'SUSPENDED') ||
             (player['isBlocked'] == true);
-    final String? avatarUrl = player['profile_image_url']?.toString() ??
-        player['avatarUrl']?.toString() ??
-        player['profileImageUrl']?.toString();
+    final String? avatarUrl = (player['profile_image_url'] ??
+            player['avatarUrl'] ??
+            player['profileImageUrl'] ??
+            player['avatar_url'] ??
+            player['image'] ??
+            player['profile_image'] ??
+            player['picture'] ??
+            player['avatar'])
+        ?.toString()
+        .resolvedImageUrl;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

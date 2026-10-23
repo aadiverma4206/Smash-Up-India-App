@@ -333,21 +333,32 @@ class CctvLiveController extends GetxController {
   Future<void> _tryFallbackVideoPlayer(int channel, String rawUrl) async {
     AppLogger.info(
         'Attempting fallback VideoPlayerController for Channel $channel...');
+
+    final oldFallback = fallbackVideoPlayerController;
+    fallbackVideoPlayerController = null;
+    if (oldFallback != null) {
+      try {
+        await oldFallback.pause();
+        await oldFallback.dispose();
+      } catch (_) {}
+    }
+
+    vp.VideoPlayerController? tempVpController;
     try {
       final targetUrl = rawUrl.isNotEmpty
           ? rawUrl
           : 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 
-      final vpController = vp.VideoPlayerController.networkUrl(
+      tempVpController = vp.VideoPlayerController.networkUrl(
         Uri.parse(targetUrl),
         videoPlayerOptions: vp.VideoPlayerOptions(mixWithOthers: true),
       );
 
-      await vpController.initialize();
-      await vpController.setVolume(isMuted.value ? 0.0 : 1.0);
-      await vpController.play();
+      await tempVpController.initialize();
+      await tempVpController.setVolume(isMuted.value ? 0.0 : 1.0);
+      await tempVpController.play();
 
-      fallbackVideoPlayerController = vpController;
+      fallbackVideoPlayerController = tempVpController;
       isUsingFallbackPlayer.value = true;
       isPlaying.value = true;
       channelStatuses[channel] = 'Live';
@@ -355,6 +366,12 @@ class CctvLiveController extends GetxController {
       isPlayerInitializing.value = false;
     } catch (e) {
       AppLogger.error('Fallback player failed for CH $channel: $e');
+      if (tempVpController != null) {
+        try {
+          await tempVpController.pause();
+          await tempVpController.dispose();
+        } catch (_) {}
+      }
       channelStatuses[channel] = 'Connection failed';
       errorMessage.value =
           'Unable to render live video feed. Please verify MediaMTX / camera stream connection.';

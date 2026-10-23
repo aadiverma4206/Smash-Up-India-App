@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../repositories/manager_repository.dart';
+import 'package:all_stars_arena/modules/manager/repositories/manager_repository.dart';
 import '../../../data/models/manager_models.dart';
 import '../../../data/models/court_model.dart';
 import '../../../data/models/booking_model.dart';
@@ -14,6 +14,7 @@ class ManagerDashboardController extends GetxController
   final ManagerRepository repository = Get.find<ManagerRepository>();
 
   final Rxn<ManagerDashboardModel> dashboard = Rxn<ManagerDashboardModel>();
+  final RxMap<String, dynamic> clubMetrics = <String, dynamic>{}.obs;
   final RxList<CourtModel> courts = <CourtModel>[].obs;
   final RxList<BookingModel> bookings = <BookingModel>[].obs;
   final RxList<SlotRequestModel> pendingRequests = <SlotRequestModel>[].obs;
@@ -241,6 +242,7 @@ class ManagerDashboardController extends GetxController
       bookings.assignAll(bkgs);
 
       await fetchPendingPlayerGames();
+      await fetchClubMetrics();
 
       if (courts.isNotEmpty) {
         final clampedIndex =
@@ -253,6 +255,15 @@ class ManagerDashboardController extends GetxController
       AppLogger.warning('Manager dashboard error: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchClubMetrics() async {
+    try {
+      final metrics = await repository.getClubMetrics();
+      clubMetrics.assignAll(metrics);
+    } catch (e) {
+      AppLogger.warning('Error fetching club metrics: $e');
     }
   }
 

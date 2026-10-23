@@ -15,6 +15,12 @@ import { ApiError } from "../../utils/apiResponse.js";
 import { logger } from "../../utils/logger.js";
 
 export class ManagerService {
+  static async getClubMetrics(userId: string) {
+    const club = await ManagerRepository.getManagerClub(userId);
+    const clubId = club?.id || "all_stars_arena_club";
+    return await ManagerRepository.getClubMetricsData(clubId);
+  }
+
   static async getDashboard(userId: string) {
     const club = await ManagerRepository.getManagerClub(userId);
     if (!club) {

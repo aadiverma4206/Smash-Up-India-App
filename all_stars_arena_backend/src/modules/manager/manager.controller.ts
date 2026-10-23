@@ -34,6 +34,16 @@ export const getManagerClubController = asyncHandler(
   },
 );
 
+export const getClubMetricsController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id || req.user?.userId;
+    if (!userId) throw new ApiError(401, "Unauthorized");
+
+    const metrics = await ManagerService.getClubMetrics(userId);
+    res.status(200).json(ApiResponse.success("Club metrics retrieved", metrics));
+  },
+);
+
 export const createCourtController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const {
