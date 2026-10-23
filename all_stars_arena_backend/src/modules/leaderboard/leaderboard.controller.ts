@@ -10,22 +10,18 @@ export const getLeaderboardController = asyncHandler(
 
     const query = city
       ? `SELECT u.id, u.name, u.city, u.profile_image_url as avatar_url,
-              pd.position, pd.ovr_rating,
               ps.matches_played, ps.wins, ps.points, ps.goals_scored, ps.win_rate
        FROM public.users u
-       JOIN public.player_details pd ON pd.user_id = u.id
        JOIN public.player_stats ps ON ps.user_id = u.id
        WHERE u.city = $1 AND u.status = 'ACTIVE'
-       ORDER BY ps.points DESC, ps.wins DESC, pd.ovr_rating DESC
+       ORDER BY ps.points DESC, ps.wins DESC, ps.goals_scored DESC
        LIMIT $2;`
       : `SELECT u.id, u.name, u.city, u.profile_image_url as avatar_url,
-              pd.position, pd.ovr_rating,
               ps.matches_played, ps.wins, ps.points, ps.goals_scored, ps.win_rate
        FROM public.users u
-       JOIN public.player_details pd ON pd.user_id = u.id
        JOIN public.player_stats ps ON ps.user_id = u.id
        WHERE u.status = 'ACTIVE'
-       ORDER BY ps.points DESC, ps.wins DESC, pd.ovr_rating DESC
+       ORDER BY ps.points DESC, ps.wins DESC, ps.goals_scored DESC
        LIMIT $1;`;
 
     const values = city ? [city, limit] : [limit];

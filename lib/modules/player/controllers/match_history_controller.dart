@@ -38,7 +38,6 @@ class MatchHistoryController extends GetxController {
   @override
   void onClose() {
     scrollController.dispose();
-    searchController.dispose();
     super.onClose();
   }
 

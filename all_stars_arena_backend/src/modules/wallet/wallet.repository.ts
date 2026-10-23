@@ -4,7 +4,10 @@ export class WalletRepository {
   static async getWalletDetails(userId: string) {
     const res = await dbPool.query(
       `SELECT wallet_balance, wallet_pin_set_at, wallet_pin_failed_attempts, wallet_pin_locked_until,
-              (wallet_pin_hash IS NOT NULL) as is_pin_set
+              CASE
+                WHEN wallet_pin_hash IS NOT NULL AND LENGTH(TRIM(wallet_pin_hash)) > 0 THEN true
+                ELSE false
+              END as is_pin_set
        FROM public.player_wallets
        WHERE user_id = $1::VARCHAR;`,
       [userId],
@@ -15,7 +18,10 @@ export class WalletRepository {
          VALUES ($1::VARCHAR, 0.00)
          ON CONFLICT (user_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
          RETURNING wallet_balance, wallet_pin_set_at, wallet_pin_failed_attempts, wallet_pin_locked_until,
-                   (wallet_pin_hash IS NOT NULL) as is_pin_set;`,
+                   CASE
+                     WHEN wallet_pin_hash IS NOT NULL AND LENGTH(TRIM(wallet_pin_hash)) > 0 THEN true
+                     ELSE false
+                   END as is_pin_set;`,
         [userId],
       );
       return created.rows[0] || null;

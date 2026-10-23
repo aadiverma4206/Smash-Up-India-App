@@ -660,7 +660,17 @@ class WalletView extends GetView<WalletController> {
                             AppButton(
                               text: '+ Add Money (Razorpay)',
                               showArrow: true,
-                              onPressed: () => Get.toNamed('/wallet/add-money'),
+                              onPressed: () {
+                                if (!hasPin) {
+                                  ErrorHandler.showWarningSnackBar(
+                                    'PIN Setup Required',
+                                    'Please set up a 6-digit Wallet PIN first before adding money.',
+                                  );
+                                  _showSetupPinDialog(context);
+                                  return;
+                                }
+                                Get.toNamed('/wallet/add-money');
+                              },
                             ),
                             const SizedBox(height: 28),
                             Row(

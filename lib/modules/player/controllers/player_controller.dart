@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../repositories/player_repository.dart';
 import '../../../data/models/player_profile_model.dart';
 import '../../../data/models/player_stats_model.dart';
 import '../../../data/models/player_dashboard_summary_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../app/theme/app_colors.dart';
@@ -98,7 +101,7 @@ class PlayerController extends GetxController {
       DynamicStatCardModel(
         id: 'joined',
         label: 'Joined',
-        value: '${s.matchesJoined > 0 ? s.matchesJoined : s.matchesPlayed}',
+        value: '${s.matchesJoined}',
         icon: Icons.sports_soccer_rounded,
         color: const Color(0xFF00C853),
       ),
@@ -131,10 +134,6 @@ class PlayerController extends GetxController {
     String? bio,
     String? city,
     String? dateOfBirth,
-    String? position,
-    String? secondaryPosition,
-    String? preferredFoot,
-    String? skillLevel,
   }) async {
     isLoading.value = true;
     try {
@@ -143,18 +142,29 @@ class PlayerController extends GetxController {
       if (bio != null) updateData['bio'] = bio;
       if (city != null) updateData['city'] = city;
       if (dateOfBirth != null) updateData['dateOfBirth'] = dateOfBirth;
-      if (position != null) updateData['position'] = position;
-      if (secondaryPosition != null) {
-        updateData['secondaryPosition'] = secondaryPosition;
-      }
-      if (preferredFoot != null) updateData['preferredFoot'] = preferredFoot;
-      if (skillLevel != null) updateData['skillLevel'] = skillLevel;
 
       final updatedProfile = await repository.updateProfile(updateData);
       profile.value = updatedProfile;
+
+      // Instantly sync updated profile details into AuthService currentUser in memory
+      final user = AuthService.to.currentUser.value;
+      if (user != null) {
+        AuthService.to.currentUser.value = UserModel(
+          id: user.id,
+          name: updatedProfile.name,
+          email: user.email,
+          phone: user.phone,
+          roleName: user.roleName,
+          roleId: user.roleId,
+          status: user.status,
+          city: updatedProfile.city,
+          profileImageUrl: updatedProfile.avatarUrl ?? user.profileImageUrl,
+        );
+      }
+
       Get.back();
       ErrorHandler.showSuccessSnackBar(
-        'Success',
+        'Profile Updated',
         'Profile updated successfully!',
       );
     } catch (e) {
@@ -167,11 +177,46 @@ class PlayerController extends GetxController {
   Future<void> uploadAvatar(String filePath) async {
     isUploadingAvatar.value = true;
     try {
+      final oldAvatarUrl = profile.value?.avatarUrl.resolvedImageUrl;
       final updatedProfile = await repository.uploadAvatar(filePath);
       profile.value = updatedProfile;
+
+      final newAvatarUrl = updatedProfile.avatarUrl.resolvedImageUrl;
+
+      try {
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+      } catch (_) {}
+
+      if (oldAvatarUrl != null && oldAvatarUrl.isNotEmpty) {
+        try {
+          await CachedNetworkImage.evictFromCache(oldAvatarUrl);
+        } catch (_) {}
+      }
+      if (newAvatarUrl != null && newAvatarUrl.isNotEmpty) {
+        try {
+          await CachedNetworkImage.evictFromCache(newAvatarUrl);
+        } catch (_) {}
+      }
+
+      final user = AuthService.to.currentUser.value;
+      if (user != null) {
+        AuthService.to.currentUser.value = UserModel(
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          roleName: user.roleName,
+          roleId: user.roleId,
+          status: user.status,
+          city: user.city,
+          profileImageUrl: updatedProfile.avatarUrl ?? user.profileImageUrl,
+        );
+      }
+
       ErrorHandler.showSuccessSnackBar(
         'Avatar Updated',
-        'Profile image uploaded and synced to S3!',
+        'Profile photo updated successfully!',
       );
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Upload Failed', e);

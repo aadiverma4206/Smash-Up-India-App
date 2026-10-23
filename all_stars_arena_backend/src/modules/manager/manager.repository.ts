@@ -332,14 +332,13 @@ export class ManagerRepository {
   static async getPendingRequests(clubId: string) {
     const query = `
       SELECT req.*, u.name as player_name, u.profile_image_url as player_image,
-             pd.position as player_position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,
+             req.position as player_position,
              g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,
              CASE WHEN g.format = '5v5' THEN 10 WHEN g.format = '7v7' THEN 14 ELSE 22 END as max_players,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_roster_count
       FROM public.game_slot_requests req
       JOIN public.games g ON g.id = req.game_id
       JOIN public.users u ON u.id = req.user_id
-      LEFT JOIN public.player_details pd ON pd.user_id = req.user_id
       LEFT JOIN public.courts crt ON crt.id = g.court_id
       WHERE (crt.club_id = $1 OR crt.club_id = 'all_stars_arena_club' OR $1 = 'all_stars_arena_club') AND req.status IN ('PENDING', 'APPROVED')
       ORDER BY req.updated_at DESC, req.created_at ASC;
@@ -397,7 +396,6 @@ export class ManagerRepository {
                    'profile_image_url', pu.profile_image_url,
                    'team', COALESCE(gp.team, 'TEAM_A'),
                    'position', COALESCE(gp.position, 'MID'),
-                   'ovr', COALESCE(pd.ovr_rating, 80),
                    'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
                    'payment_status', COALESCE(gp.payment_status, 'PAID'),
                    'phone', pu.phone
@@ -405,7 +403,6 @@ export class ManagerRepository {
                ), '[]'::json)
                FROM public.game_players gp
                JOIN public.users pu ON pu.id = gp.user_id
-               LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
                WHERE gp.game_id = g.id
              ) as roster
       FROM public.games g
@@ -474,7 +471,6 @@ export class ManagerRepository {
                    'profile_image_url', pu.profile_image_url,
                    'team', UPPER(COALESCE(NULLIF(gp.team::text, ''), 'TEAM_A')),
                    'position', COALESCE(gp.position, 'MID'),
-                   'ovr', COALESCE(pd.ovr_rating, 80),
                    'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
                    'payment_status', COALESCE(gp.payment_status, 'PAID'),
                    'phone', pu.phone
@@ -483,7 +479,6 @@ export class ManagerRepository {
                ), '[]'::json)
                FROM public.game_players gp
                JOIN public.users pu ON pu.id = gp.user_id
-               LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
                WHERE gp.game_id = g.id
              ) as roster
       FROM public.games g
@@ -699,11 +694,10 @@ export class ManagerRepository {
       SELECT g.*,
              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,
-             u.profile_image_url as host_image, pd.elo_rating as host_elo, pd.position as host_position,
+             u.profile_image_url as host_image,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count
       FROM public.games g
       JOIN public.users u ON u.id = g.creator_id
-      LEFT JOIN public.player_details pd ON pd.user_id = g.creator_id
       WHERE g.club_id = 'all_stars_arena_club' AND g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
       ORDER BY g.match_date ASC, g.start_time ASC;
     `;
@@ -723,7 +717,7 @@ export class ManagerRepository {
 
     if (search && search.trim().length > 0) {
       conditions.push(
-        `(u.name ILIKE $${idx} OR u.email ILIKE $${idx} OR u.phone ILIKE $${idx} OR pd.position ILIKE $${idx})`,
+        `(u.name ILIKE $${idx} OR u.email ILIKE $${idx} OR u.phone ILIKE $${idx})`,
       );
       values.push(`%${search.trim()}%`);
       idx++;
@@ -751,10 +745,8 @@ export class ManagerRepository {
     const query = `
       SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,
              u.city, u.bio,
-             pd.position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.user_id = u.id) as matches_played
       FROM public.users u
-      LEFT JOIN public.player_details pd ON pd.user_id = u.id
       WHERE ${conditions.join(" AND ")}
       ORDER BY LOWER(u.name) ASC
       LIMIT $${idx++} OFFSET $${idx++};
@@ -778,9 +770,7 @@ export class ManagerRepository {
     const userRes = await dbPool.query(
       `SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,
               u.city, u.bio,
-              pd.position, pd.skill_level, pd.ovr_rating, pd.elo_rating, pd.preferred_foot
        FROM public.users u
-       LEFT JOIN public.player_details pd ON pd.user_id = u.id
        WHERE u.id = $1 AND u.role_id = 3;`,
       [playerId],
     );
@@ -855,12 +845,11 @@ export class ManagerRepository {
     const gameRes = await dbPool.query(
       `SELECT g.*, crt.name as court_name, clb.name as club_name,
               u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,
-              u.profile_image_url as host_image, pd.elo_rating as host_elo
+              u.profile_image_url as host_image
        FROM public.games g
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        LEFT JOIN public.clubs clb ON clb.id = g.club_id
        LEFT JOIN public.users u ON u.id = g.creator_id
-       LEFT JOIN public.player_details pd ON pd.user_id = g.creator_id
        WHERE g.id = $1;`,
       [gameId],
     );
@@ -870,11 +859,9 @@ export class ManagerRepository {
 
     const playersRes = await dbPool.query(
       `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.joined_at,
-              u.name, u.email, u.phone, u.profile_image_url,
-              pd.elo_rating, pd.ovr_rating
+              u.name, u.email, u.phone, u.profile_image_url
        FROM public.game_players gp
        JOIN public.users u ON u.id = gp.user_id
-       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
        WHERE gp.game_id = $1
        ORDER BY gp.joined_at ASC;`,
       [gameId],
@@ -900,9 +887,6 @@ export class ManagerRepository {
       phone: r.phone,
       profileImageUrl: r.profile_image_url,
       profile_image_url: r.profile_image_url,
-      eloRating: Number(r.elo_rating || 1200),
-      ovr: Number(r.ovr_rating || 75),
-      ovr_rating: Number(r.ovr_rating || 75),
     }));
 
     return {
@@ -915,11 +899,9 @@ export class ManagerRepository {
   static async getGamePlayers(gameId: string) {
     const playersRes = await dbPool.query(
       `SELECT gp.id as roster_id, gp.user_id, gp.team, gp.position, gp.payment_status, gp.joined_at,
-              u.name, u.email, u.phone, u.profile_image_url,
-              pd.elo_rating, pd.ovr_rating
+              u.name, u.email, u.phone, u.profile_image_url
        FROM public.game_players gp
        JOIN public.users u ON u.id = gp.user_id
-       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
        WHERE gp.game_id = $1
        ORDER BY gp.team ASC, gp.joined_at ASC;`,
       [gameId],
@@ -940,9 +922,6 @@ export class ManagerRepository {
       phone: r.phone,
       profileImageUrl: r.profile_image_url,
       profile_image_url: r.profile_image_url,
-      eloRating: Number(r.elo_rating || 1200),
-      ovr: Number(r.ovr_rating || 75),
-      ovr_rating: Number(r.ovr_rating || 75),
     }));
 
     const isTeamA = (teamStr: string) => {

@@ -73,6 +73,14 @@ class WalletController extends GetxController {
   }
 
   Future<void> initiateTopup(double amountRupees) async {
+    if (wallet.value?.hasPin != true) {
+      ErrorHandler.showWarningSnackBar(
+        'PIN Setup Required',
+        'Please set up a 6-digit Wallet PIN first before adding money.',
+      );
+      return;
+    }
+
     if (amountRupees <= 0 || amountRupees > 50000) {
       ErrorHandler.showErrorSnackBar(
           'Invalid Amount', 'Top-up amount must be between ₹1 and ₹50,000');

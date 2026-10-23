@@ -3,10 +3,15 @@ import '../datasources/auth_remote_datasource.dart';
 import '../repositories/auth_repository.dart';
 import '../controllers/auth_controller.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/storage/secure_storage_service.dart';
+import '../../../app/bindings/initial_binding.dart';
 
 class AuthBinding extends Bindings {
   @override
   void dependencies() {
+    if (!Get.isRegistered<DioClient>()) {
+      InitialBinding().dependencies();
+    }
     Get.lazyPut<AuthRemoteDataSource>(
       () => AuthRemoteDataSource(dioClient: Get.find<DioClient>()),
     );

@@ -91,7 +91,7 @@ class AuthService extends GetxService {
 
     try {
       if (Get.isRegistered<PreferencesService>()) {
-        await Get.find<PreferencesService>().clearUserData();
+        await Get.find<PreferencesService>().clearAll();
       }
     } catch (e) {
       AppLogger.error('Failed to clear PreferencesService during logout: $e');

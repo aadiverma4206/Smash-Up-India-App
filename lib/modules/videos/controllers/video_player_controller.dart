@@ -332,7 +332,11 @@ class VideoPlayerController extends GetxController {
   void onClose() {
     _controlsTimer?.cancel();
     videoPlayerController?.removeListener(_videoListener);
-    videoPlayerController?.dispose();
+    try {
+      videoPlayerController?.pause();
+      videoPlayerController?.dispose();
+    } catch (_) {}
+    videoPlayerController = null;
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);

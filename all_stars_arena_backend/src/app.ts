@@ -84,6 +84,12 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/hls", express.static(HlsStreamingService.getHlsBaseDir()));
 
+const profileImagesStoreDir = path.join(process.cwd(), "Profile_images_store");
+if (!fs.existsSync(profileImagesStoreDir)) {
+  fs.mkdirSync(profileImagesStoreDir, { recursive: true });
+}
+app.use("/Profile_images_store", express.static(profileImagesStoreDir));
+
 app.use(
   ["/cctv-stream", "/cam*"],
   createProxyMiddleware({

@@ -36,7 +36,7 @@ class PlayerStatsModel {
                 json['joinedMatches'] ??
                 json['joined_matches'] as num?)
             ?.toInt() ??
-        played;
+        0;
 
     List<DynamicStatCustomItem>? customList;
     if (json['customStats'] is List) {

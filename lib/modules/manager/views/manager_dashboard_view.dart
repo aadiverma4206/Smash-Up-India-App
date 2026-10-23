@@ -25,14 +25,19 @@ class ManagerDashboardView extends StatefulWidget {
 }
 
 class _ManagerDashboardViewState extends State<ManagerDashboardView> {
-  late final ManagerDashboardController controller;
   late final ScrollController _scrollController;
   final ValueNotifier<double> _headerProgress = ValueNotifier<double>(0.0);
+
+  ManagerDashboardController get controller {
+    if (Get.isRegistered<ManagerDashboardController>()) {
+      return Get.find<ManagerDashboardController>();
+    }
+    return Get.put(ManagerDashboardController());
+  }
 
   @override
   void initState() {
     super.initState();
-    controller = Get.find<ManagerDashboardController>();
     _scrollController = ScrollController();
   }
 
@@ -638,46 +643,49 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
   }
 
   Widget _buildProfileAvatar(BuildContext context) {
-    final user = AuthService.to.currentUser.value;
-    final avatarUrl = user?.profileImageUrl ?? '';
+    return Obx(() {
+      final user = AuthService.to.currentUser.value;
+      final rawAvatar = user?.profileImageUrl ?? '';
+      final avatarUrl = rawAvatar.resolvedImageUrl ?? '';
 
-    return InkWell(
-      onTap: () => Get.toNamed(Routes.managerProfile),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.primary, width: 1.8),
-          boxShadow: const [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: avatarUrl.isValidNetworkUrl
-              ? CachedNetworkImage(
-                  imageUrl: avatarUrl,
-                  width: 38,
-                  height: 38,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => const Icon(
+      return InkWell(
+        onTap: () => Get.toNamed(Routes.managerProfile),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.primary, width: 1.8),
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: avatarUrl.isValidNetworkUrl
+                ? CachedNetworkImage(
+                    imageUrl: avatarUrl,
+                    width: 38,
+                    height: 38,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => const Icon(
+                      Icons.person_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  )
+                : const Icon(
                     Icons.person_rounded,
                     color: AppColors.primary,
                     size: 20,
                   ),
-                )
-              : const Icon(
-                  Icons.person_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildLogoutButton(BuildContext context) {

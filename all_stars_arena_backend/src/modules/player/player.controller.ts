@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs";
 import { Response } from "express";
 import { PlayerRepository } from "./player.repository.js";
 import { GamesRepository } from "../games/games.repository.js";
@@ -38,34 +40,82 @@ export const uploadPlayerAvatar = asyncHandler(
     const userId = req.user?.id;
     if (!userId) throw new ApiError(401, "Unauthorized");
 
-    if (!req.file) {
+    const uploadedFile =
+      req.file ||
+      (req.files && (req.files as Express.Multer.File[])[0]);
+
+    if (!uploadedFile) {
       throw new ApiError(400, "No image file uploaded");
     }
 
-    const currentProfile = await PlayerRepository.getProfile(userId);
-    if (
-      currentProfile?.avatarUrl &&
-      currentProfile.avatarUrl.includes("players/")
-    ) {
+    const profileImagesStoreDir = path.join(process.cwd(), "Profile_images_store");
+    if (!fs.existsSync(profileImagesStoreDir)) {
+      fs.mkdirSync(profileImagesStoreDir, { recursive: true });
+    }
+
+    const userProfile = await PlayerRepository.getProfile(userId);
+    const email = userProfile?.email || req.user?.email || "user";
+    const phone = userProfile?.phone || req.user?.phone || "0000";
+
+    // 1. Email prefix before @
+    const emailPrefix = email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "");
+
+    // 2. Last 4 digits of phone
+    const cleanPhone = phone.replace(/[^0-9]/g, "");
+    const lastDigits =
+      cleanPhone.length >= 4
+        ? cleanPhone.slice(-4)
+        : cleanPhone || "0000";
+
+    // 3. File extension
+    let ext = path.extname(uploadedFile.originalname).toLowerCase();
+    if (!ext || ext.length < 2) {
+      if (uploadedFile.mimetype?.includes("png")) ext = ".png";
+      else if (uploadedFile.mimetype?.includes("webp")) ext = ".webp";
+      else ext = ".jpg";
+    }
+
+    // 4. Formatted filename: e.g. aadiverma4206_3585.jpg
+    const filename = `${emailPrefix}_${lastDigits}${ext}`;
+    const filePath = path.join(profileImagesStoreDir, filename);
+
+    // Delete old profile image if it had a different filename/extension
+    const oldAvatarUrl = userProfile?.avatarUrl || userProfile?.avatar_url;
+    if (oldAvatarUrl && oldAvatarUrl.includes("/Profile_images_store/")) {
       try {
-        const oldKey = currentProfile.avatarUrl.substring(
-          currentProfile.avatarUrl.indexOf("players/"),
-        );
-        await deleteS3Object(oldKey);
+        const oldFileName = path.basename(oldAvatarUrl);
+        const oldFilePath = path.join(profileImagesStoreDir, oldFileName);
+        if (oldFilePath !== filePath && fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
       } catch (_) {}
     }
 
-    const extension = req.file.mimetype.split("/")[1] || "jpg";
-    const { publicUrl } = await uploadProfileImageToS3(
-      userId,
-      req.file.buffer,
-      req.file.mimetype,
-      extension,
-    );
+    const fileBuffer =
+      uploadedFile.buffer ||
+      (uploadedFile.path && fs.existsSync(uploadedFile.path)
+        ? fs.readFileSync(uploadedFile.path)
+        : null);
+
+    if (!fileBuffer) {
+      throw new ApiError(400, "Corrupted image file buffer.");
+    }
+
+    // Save/Overwrite file in Profile_images_store
+    fs.writeFileSync(filePath, fileBuffer);
+
+    // Clean temp file if Multer created one
+    if (uploadedFile.path && uploadedFile.path !== filePath && fs.existsSync(uploadedFile.path)) {
+      try {
+        fs.unlinkSync(uploadedFile.path);
+      } catch (_) {}
+    }
+
+    const avatarUrl = `/Profile_images_store/${filename}?v=${Date.now()}`;
 
     const updatedProfile = await PlayerRepository.updateAvatar(
       userId,
-      publicUrl,
+      avatarUrl,
     );
     res
       .status(200)
@@ -81,15 +131,14 @@ export const deletePlayerAvatar = asyncHandler(
     if (!userId) throw new ApiError(401, "Unauthorized");
 
     const currentProfile = await PlayerRepository.getProfile(userId);
-    if (
-      currentProfile?.avatarUrl &&
-      currentProfile.avatarUrl.includes("players/")
-    ) {
+    const oldAvatarUrl = currentProfile?.avatarUrl || currentProfile?.avatar_url;
+    if (oldAvatarUrl && oldAvatarUrl.includes("/Profile_images_store/")) {
       try {
-        const oldKey = currentProfile.avatarUrl.substring(
-          currentProfile.avatarUrl.indexOf("players/"),
-        );
-        await deleteS3Object(oldKey);
+        const oldFileName = path.basename(oldAvatarUrl);
+        const oldFilePath = path.join(process.cwd(), "Profile_images_store", oldFileName);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
       } catch (_) {}
     }
 

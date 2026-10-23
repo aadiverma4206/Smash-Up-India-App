@@ -114,10 +114,9 @@ export const getMatchDetails = async (gameId: string) => {
   }
 
   const playersRes = await dbPool.query(
-    `SELECT gp.*, u.name, u.profile_image_url, pd.elo_rating, pd.ovr_rating
+    `SELECT gp.*, u.name, u.profile_image_url
      FROM public.game_players gp
      JOIN public.users u ON u.id = gp.user_id
-     LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
      WHERE gp.game_id = $1;`,
     [gameId],
   );

@@ -140,7 +140,6 @@ export class GamesRepository {
                     'profile_image_url', pu.profile_image_url,
                     'team', UPPER(COALESCE(NULLIF(gp.team::text, ''), 'TEAM_A')),
                     'position', COALESCE(gp.position, 'MID'),
-                    'ovr', COALESCE(pd.ovr_rating, 80),
                     'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
                     'payment_status', COALESCE(gp.payment_status, 'PAID'),
                     'phone', pu.phone
@@ -149,7 +148,6 @@ export class GamesRepository {
                 ), '[]'::json)
                 FROM public.game_players gp
                 JOIN public.users pu ON pu.id = gp.user_id
-                LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
                 WHERE gp.game_id = g.id
               ) as roster
        FROM public.games g
@@ -346,10 +344,9 @@ export class GamesRepository {
 
   static async getRoster(gameId: string) {
     const res = await dbPool.query(
-      `SELECT gp.*, u.name, u.profile_image_url, pd.position as player_position, pd.ovr_rating, pd.elo_rating
+      `SELECT gp.*, u.name, u.profile_image_url, gp.position as player_position
        FROM public.game_players gp
        JOIN public.users u ON u.id = gp.user_id
-       LEFT JOIN public.player_details pd ON pd.user_id = gp.user_id
        WHERE gp.game_id = $1
        ORDER BY gp.team ASC, gp.joined_at ASC;`,
       [gameId],

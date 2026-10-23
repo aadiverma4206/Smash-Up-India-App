@@ -19,15 +19,23 @@ class MatchHistoryView extends StatefulWidget {
 
 class _MatchHistoryViewState extends State<MatchHistoryView> {
   late final MatchHistoryController controller;
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     if (Get.isRegistered<MatchHistoryController>()) {
       controller = Get.find<MatchHistoryController>();
     } else {
       controller = Get.put(MatchHistoryController());
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Map<String, List<GameModel>> _groupGamesByDate(List<GameModel> gamesList) {
@@ -164,8 +172,11 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
-            controller: controller.searchController,
-            onChanged: (_) => setState(() {}),
+            controller: _searchController,
+            onChanged: (val) {
+              controller.searchController.text = val;
+              setState(() {});
+            },
             style: TextStyle(
               color: isDark ? AppColors.textPrimaryDark : Colors.black87,
               fontSize: 14,
@@ -179,12 +190,13 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
               ),
               prefixIcon:
                   const Icon(Icons.history_rounded, color: AppColors.primary),
-              suffixIcon: controller.searchController.text.isNotEmpty
+              suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: Icon(Icons.clear_rounded,
                           size: 18,
                           color: isDark ? Colors.white70 : Colors.black54),
                       onPressed: () {
+                        _searchController.clear();
                         controller.searchController.clear();
                         FocusScope.of(context).unfocus();
                         setState(() {});

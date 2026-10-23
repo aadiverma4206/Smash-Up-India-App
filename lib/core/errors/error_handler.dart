@@ -86,4 +86,19 @@ class ErrorHandler {
       icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
     );
   }
+
+  static void showWarningSnackBar(String title, String message,
+      {Duration? duration}) {
+    Get.snackbar(
+      title,
+      message,
+      backgroundColor: Colors.amber.shade800,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(12),
+      borderRadius: 10,
+      duration: duration ?? const Duration(seconds: 4),
+      icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+    );
+  }
 }

@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs";
 import { Request, Response } from "express";
 import { ManagerService } from "./manager.service.js";
 import { ManagerRepository } from "./manager.repository.js";
@@ -36,7 +38,7 @@ export const getManagerClubController = asyncHandler(
 
 export const getClubMetricsController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id || req.user?.userId;
+    const userId = req.user?.id || (req.user as any)?.userId;
     if (!userId) throw new ApiError(401, "Unauthorized");
 
     const metrics = await ManagerService.getClubMetrics(userId);
@@ -676,40 +678,88 @@ export const uploadManagerAvatarController = asyncHandler(
     const userId = req.user?.id;
     if (!userId) throw new ApiError(401, "Unauthorized");
 
-    if (!req.file) {
+    const uploadedFile =
+      req.file ||
+      (req.files && (req.files as Express.Multer.File[])[0]);
+
+    if (!uploadedFile) {
       throw new ApiError(400, "No image file uploaded");
     }
 
+    const profileImagesStoreDir = path.join(process.cwd(), "Profile_images_store");
+    if (!fs.existsSync(profileImagesStoreDir)) {
+      fs.mkdirSync(profileImagesStoreDir, { recursive: true });
+    }
+
     const currentProfile = await ManagerRepository.getManagerProfile(userId);
-    if (
-      currentProfile?.profile_image_url &&
-      currentProfile.profile_image_url.includes("players/")
-    ) {
+    const email = currentProfile?.email || req.user?.email || "manager";
+    const phone = currentProfile?.phone || req.user?.phone || "0000";
+
+    // 1. Email prefix before @
+    const emailPrefix = email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "");
+
+    // 2. Last 4 digits of phone
+    const cleanPhone = phone.replace(/[^0-9]/g, "");
+    const lastDigits =
+      cleanPhone.length >= 4
+        ? cleanPhone.slice(-4)
+        : cleanPhone || "0000";
+
+    // 3. File extension
+    let ext = path.extname(uploadedFile.originalname).toLowerCase();
+    if (!ext || ext.length < 2) {
+      if (uploadedFile.mimetype?.includes("png")) ext = ".png";
+      else if (uploadedFile.mimetype?.includes("webp")) ext = ".webp";
+      else ext = ".jpg";
+    }
+
+    // 4. Formatted filename: e.g. manager1_3585.jpg
+    const filename = `${emailPrefix}_${lastDigits}${ext}`;
+    const filePath = path.join(profileImagesStoreDir, filename);
+
+    // Delete old manager profile image if it had a different filename/extension
+    const oldAvatarUrl = currentProfile?.profile_image_url || currentProfile?.avatarUrl;
+    if (oldAvatarUrl && oldAvatarUrl.includes("/Profile_images_store/")) {
       try {
-        const oldKey = currentProfile.profile_image_url.substring(
-          currentProfile.profile_image_url.indexOf("players/"),
-        );
-        await deleteS3Object(oldKey);
+        const oldFileName = path.basename(oldAvatarUrl);
+        const oldFilePath = path.join(profileImagesStoreDir, oldFileName);
+        if (oldFilePath !== filePath && fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
       } catch (_) {}
     }
 
-    const extension = req.file.mimetype.split("/")[1] || "jpg";
-    const { publicUrl } = await uploadProfileImageToS3(
-      userId,
-      req.file.buffer,
-      req.file.mimetype,
-      extension,
-    );
+    const fileBuffer =
+      uploadedFile.buffer ||
+      (uploadedFile.path && fs.existsSync(uploadedFile.path)
+        ? fs.readFileSync(uploadedFile.path)
+        : null);
+
+    if (!fileBuffer) {
+      throw new ApiError(400, "Corrupted image file buffer.");
+    }
+
+    // Save/Overwrite file in Profile_images_store
+    fs.writeFileSync(filePath, fileBuffer);
+
+    // Clean temp file if Multer created one
+    if (uploadedFile.path && uploadedFile.path !== filePath && fs.existsSync(uploadedFile.path)) {
+      try {
+        fs.unlinkSync(uploadedFile.path);
+      } catch (_) {}
+    }
+
+    const avatarUrl = `/Profile_images_store/${filename}?v=${Date.now()}`;
 
     const updatedProfile = await ManagerRepository.updateAvatar(
       userId,
-      publicUrl,
+      avatarUrl,
     );
     res
       .status(200)
       .json(
         ApiResponse.success(
-          "Manager avatar uploaded successfully to S3",
+          "Manager avatar uploaded successfully",
           updatedProfile,
         ),
       );

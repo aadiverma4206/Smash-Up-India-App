@@ -231,7 +231,10 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
     final oldController = _controller;
     _controller = null;
     if (oldController != null) {
-      await oldController.dispose();
+      try {
+        await oldController.pause();
+        await oldController.dispose();
+      } catch (_) {}
     }
 
     final candidates = _buildCandidateUrls(cachedTunnelUrl);

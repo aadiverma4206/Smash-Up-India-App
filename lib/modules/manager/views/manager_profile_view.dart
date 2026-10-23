@@ -8,6 +8,7 @@ import '../../../data/models/user_model.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_loader.dart';
+import '../../../core/widgets/profile_image_viewer_page.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../support/widgets/support_legal_cards.dart';
@@ -189,12 +190,6 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
         title: const Text('Manager Profile',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: fetchManagerProfile,
-          ),
-        ],
       ),
       body: SafeArea(
         child: Obx(() {
@@ -212,9 +207,11 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
           final String phone =
               (profileData['phone'] ?? user?.phone ?? '+91 9876543210')
                   .toString();
-          final String avatarUrl =
+          final String rawAvatarUrl =
               (profileData['profile_image_url'] ?? user?.profileImageUrl ?? '')
                   .toString();
+          final String resolvedAvatarUrl =
+              rawAvatarUrl.resolvedImageUrl ?? '';
           final String clubName =
               (profileData['club_name'] ?? 'All Stars Arena Turf').toString();
           final String clubAddress =
@@ -235,38 +232,46 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.primary, width: 2.5),
-                              boxShadow: const [
-                                BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 3)),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundColor:
-                                  AppColors.primary.withValues(alpha: 0.15),
-                              backgroundImage:
-                                  ImageUtils.isValidNetworkUrl(avatarUrl)
-                                      ? CachedNetworkImageProvider(avatarUrl)
-                                      : null,
-                              child: !ImageUtils.isValidNetworkUrl(avatarUrl)
-                                  ? Text(
-                                      name.isNotEmpty
-                                          ? name[0].toUpperCase()
-                                          : 'M',
-                                      style: const TextStyle(
-                                          fontSize: 36,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary),
-                                    )
-                                  : null,
+                          GestureDetector(
+                            onTap: () => _openProfileImageViewer(
+                                context, name, resolvedAvatarUrl),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: AppColors.primary, width: 2.5),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 8,
+                                      offset: Offset(0, 3)),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(50),
+                                child: resolvedAvatarUrl.isValidNetworkUrl
+                                    ? CachedNetworkImage(
+                                        imageUrl: resolvedAvatarUrl,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, __) => Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: Colors.grey.shade300,
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ),
+                                        errorWidget: (_, __, ___) =>
+                                            _buildDefaultAvatar(name),
+                                      )
+                                    : _buildDefaultAvatar(name),
+                              ),
                             ),
                           ),
                           Positioned(
@@ -510,6 +515,41 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDefaultAvatar(String name) {
+    final initial =
+        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'M';
+    return Container(
+      width: 100,
+      height: 100,
+      color: AppColors.primary.withValues(alpha: 0.15),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 38,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  void _openProfileImageViewer(
+      BuildContext context, String name, String? imageUrl) {
+    Get.to(
+      () => ProfileImageViewerPage(
+        name: name,
+        imageUrl: imageUrl,
+        onEditTap: () {
+          Get.back();
+          _showImagePickerSheet(context);
+        },
+      ),
+      transition: Transition.fadeIn,
+      fullscreenDialog: true,
     );
   }
 }

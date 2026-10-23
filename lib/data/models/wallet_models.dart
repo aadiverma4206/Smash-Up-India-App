@@ -19,12 +19,16 @@ class WalletBalanceModel {
   });
 
   factory WalletBalanceModel.fromJson(Map<String, dynamic> json) {
+    final rawPin = json['isPinSet'] ?? json['hasPin'] ?? json['is_pin_set'];
+    final bool hasPinValue = (rawPin == true ||
+        rawPin?.toString().toLowerCase() == 'true' ||
+        rawPin?.toString() == '1' ||
+        rawPin?.toString() == 't');
+
     return WalletBalanceModel(
       balance:
           (json['walletBalance'] ?? json['balance'] as num?)?.toDouble() ?? 0.0,
-      hasPin:
-          (json['isPinSet'] ?? json['hasPin'] ?? json['is_pin_set'] ?? false) ==
-              true,
+      hasPin: hasPinValue,
       status: (json['status'] ?? 'ACTIVE') as String,
       maxBalanceLimit:
           (json['maxWalletBalance'] ?? json['maxBalanceLimit'] as num?)

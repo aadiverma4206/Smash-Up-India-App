@@ -114,6 +114,7 @@ class CctvLiveController extends GetxController {
     isUsingFallbackPlayer.value = false;
     if (fallbackToDispose != null) {
       try {
+        await fallbackToDispose.pause();
         await fallbackToDispose.dispose();
       } catch (e) {
         AppLogger.warning('Safe dispose Fallback VideoPlayer: $e');

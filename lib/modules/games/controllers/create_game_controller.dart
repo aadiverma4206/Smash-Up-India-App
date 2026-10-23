@@ -79,6 +79,7 @@ class CreateGameController extends GetxController {
   void onInit() {
     super.onInit();
     _initRazorpay();
+    _populateCourts();
     loadVenues();
     fetchWalletBalance();
 
@@ -86,7 +87,6 @@ class CreateGameController extends GetxController {
     selectedDate.value = null;
     startTime.value = null;
     endTime.value = null;
-    selectedCourt.value = null;
   }
 
   @override
@@ -133,7 +133,7 @@ class CreateGameController extends GetxController {
   void _populateCourts([List<CourtModel>? fetchedCourts]) {
     if (fetchedCourts != null && fetchedCourts.isNotEmpty) {
       availableCourts.assignAll(fetchedCourts);
-    } else {
+    } else if (availableCourts.isEmpty) {
       final clubId = selectedClub.value.id.isNotEmpty
           ? selectedClub.value.id
           : 'all_stars_arena_club';
@@ -168,7 +168,18 @@ class CreateGameController extends GetxController {
       availableCourts.assignAll([court1, court2]);
     }
 
-    selectedCourt.value = null;
+    if (availableCourts.isNotEmpty) {
+      if (selectedCourt.value == null) {
+        selectedCourt.value = availableCourts.first;
+      } else {
+        final match = availableCourts.firstWhereOrNull(
+          (c) =>
+              c.id == selectedCourt.value!.id ||
+              c.name == selectedCourt.value!.name,
+        );
+        selectedCourt.value = match ?? availableCourts.first;
+      }
+    }
   }
 
   Future<void> fetchWalletBalance() async {

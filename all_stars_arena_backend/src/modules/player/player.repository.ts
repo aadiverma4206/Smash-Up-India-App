@@ -3,17 +3,30 @@ import { dbPool } from "../../config/db.config.js";
 export class PlayerRepository {
   static async getProfile(userId: string) {
     const res = await dbPool.query(
-      `SELECT u.id, u.name, u.email, u.phone, u.city, u.bio, u.status as account_status, u.date_of_birth,
+      `SELECT u.id, u.name, u.email, u.phone, u.city, u.bio, u.status as account_status,
+              u.date_of_birth::text as date_of_birth,
               COALESCE(u.profile_image_url, '') as avatar_url,
-              pd.position, pd.secondary_position, pd.preferred_foot, pd.skill_level,
-              pd.ovr_rating, pd.elo_rating, pd.badges, pd.wallet_balance
+              pd.wallet_balance
        FROM public.users u
-       LEFT JOIN public.player_details pd ON pd.user_id = u.id
+       LEFT JOIN public.player_wallets pd ON pd.user_id = u.id
        WHERE u.id = $1;`,
       [userId],
     );
     const row = res.rows[0];
     if (!row) return null;
+
+    let dobStr: string | null = null;
+    if (row.date_of_birth) {
+      if (typeof row.date_of_birth === "string") {
+        dobStr = row.date_of_birth.split("T")[0].trim();
+      } else if (row.date_of_birth instanceof Date) {
+        const y = row.date_of_birth.getFullYear();
+        const m = String(row.date_of_birth.getMonth() + 1).padStart(2, "0");
+        const d = String(row.date_of_birth.getDate()).padStart(2, "0");
+        dobStr = `${y}-${m}-${d}`;
+      }
+    }
+
     return {
       userId: row.id,
       id: row.id,
@@ -24,111 +37,61 @@ export class PlayerRepository {
       bio: row.bio || null,
       avatarUrl: row.avatar_url || null,
       avatar_url: row.avatar_url || null,
-      dateOfBirth: row.date_of_birth
-        ? row.date_of_birth.toISOString().split("T")[0]
-        : null,
-      position: row.position || "ST",
-      secondaryPosition: row.secondary_position || null,
-      preferredFoot: row.preferred_foot || "Right",
-      preferred_foot: row.preferred_foot || "Right",
-      skillLevel: row.skill_level || "AMATEUR",
-      skill_level: row.skill_level || "AMATEUR",
-      ovr: row.ovr_rating || 75,
-      ovr_rating: row.ovr_rating || 75,
-      elo: row.elo_rating || 1200,
-      elo_rating: row.elo_rating || 1200,
+      dateOfBirth: dobStr,
+      date_of_birth: dobStr,
       walletBalance: parseFloat(row.wallet_balance || "0.00"),
       wallet_balance: parseFloat(row.wallet_balance || "0.00"),
       accountStatus: row.account_status || "ACTIVE",
     };
   }
 
-  static async updateProfile(
-    userId: string,
-    data: {
-      name?: string;
-      bio?: string;
-      city?: string;
-      avatarUrl?: string;
-      dateOfBirth?: string;
-      position?: string;
-      secondaryPosition?: string;
-      preferredFoot?: string;
-      skillLevel?: string;
-    },
-  ) {
+  static async updateProfile(userId: string, data: any) {
+    const name = data.name;
+    const bio = data.bio;
+    const city = data.city;
+    const avatarUrl =
+      data.avatarUrl || data.avatar_url || data.profile_image_url;
+    const dateOfBirth = data.dateOfBirth || data.date_of_birth;
+
+    const userFields: string[] = [];
+    const userVals: any[] = [];
+    let idx = 1;
+
+    if (name !== undefined && name !== null && String(name).trim() !== "") {
+      userFields.push(`name = $${idx++}`);
+      userVals.push(String(name).trim());
+    }
+    if (bio !== undefined && bio !== null) {
+      userFields.push(`bio = $${idx++}`);
+      userVals.push(String(bio).trim());
+    }
+    if (city !== undefined && city !== null && String(city).trim() !== "") {
+      userFields.push(`city = $${idx++}`);
+      userVals.push(String(city).trim());
+    }
     if (
-      data.name ||
-      data.bio ||
-      data.city ||
-      data.avatarUrl ||
-      data.dateOfBirth
+      avatarUrl !== undefined &&
+      avatarUrl !== null &&
+      String(avatarUrl).trim() !== ""
     ) {
-      const userFields: string[] = [];
-      const userVals: any[] = [];
-      let idx = 1;
+      userFields.push(`profile_image_url = $${idx++}`);
+      userVals.push(String(avatarUrl).trim());
+    }
+    if (
+      dateOfBirth !== undefined &&
+      dateOfBirth !== null &&
+      String(dateOfBirth).trim() !== ""
+    ) {
+      userFields.push(`date_of_birth = $${idx++}`);
+      userVals.push(String(dateOfBirth).trim());
+    }
 
-      if (data.name) {
-        userFields.push(`name = $${idx++}`);
-        userVals.push(data.name);
-      }
-      if (data.bio !== undefined) {
-        userFields.push(`bio = $${idx++}`);
-        userVals.push(data.bio);
-      }
-      if (data.city) {
-        userFields.push(`city = $${idx++}`);
-        userVals.push(data.city);
-      }
-      if (data.avatarUrl) {
-        userFields.push(`profile_image_url = $${idx++}`);
-        userVals.push(data.avatarUrl);
-      }
-      if (data.dateOfBirth) {
-        userFields.push(`date_of_birth = $${idx++}`);
-        userVals.push(data.dateOfBirth);
-      }
+    if (userFields.length > 0) {
       userFields.push(`updated_at = CURRENT_TIMESTAMP`);
-
       userVals.push(userId);
       await dbPool.query(
         `UPDATE public.users SET ${userFields.join(", ")} WHERE id = $${idx};`,
         userVals,
-      );
-    }
-
-    if (
-      data.position ||
-      data.secondaryPosition ||
-      data.preferredFoot ||
-      data.skillLevel
-    ) {
-      const pdFields: string[] = [];
-      const pdVals: any[] = [];
-      let idx = 1;
-
-      if (data.position) {
-        pdFields.push(`position = $${idx++}`);
-        pdVals.push(data.position);
-      }
-      if (data.secondaryPosition !== undefined) {
-        pdFields.push(`secondary_position = $${idx++}`);
-        pdVals.push(data.secondaryPosition);
-      }
-      if (data.preferredFoot) {
-        pdFields.push(`preferred_foot = $${idx++}`);
-        pdVals.push(data.preferredFoot);
-      }
-      if (data.skillLevel) {
-        pdFields.push(`skill_level = $${idx++}`);
-        pdVals.push(data.skillLevel);
-      }
-      pdFields.push(`updated_at = CURRENT_TIMESTAMP`);
-
-      pdVals.push(userId);
-      await dbPool.query(
-        `UPDATE public.player_details SET ${pdFields.join(", ")} WHERE user_id = $${idx};`,
-        pdVals,
       );
     }
 
@@ -155,15 +118,26 @@ export class PlayerRepository {
       )
       .catch(() => ({ rows: [{ joined_count: 0 }] }));
 
+    const playedRes = await dbPool
+      .query(
+        `SELECT COUNT(DISTINCT gp.game_id)::int as played_count
+         FROM public.game_players gp
+         JOIN public.games g ON g.id = gp.game_id
+         WHERE gp.user_id = $1 AND g.status = 'COMPLETED';`,
+        [userId],
+      )
+      .catch(() => ({ rows: [{ played_count: 0 }] }));
+
     const matchesJoined = joinedRes.rows[0]?.joined_count || 0;
+    const realPlayedCount = playedRes.rows[0]?.played_count || 0;
     const row = res.rows[0];
 
     if (!row) {
       return {
         matchesJoined: matchesJoined,
         matches_joined: matchesJoined,
-        matchesPlayed: 0,
-        matches_played: 0,
+        matchesPlayed: realPlayedCount,
+        matches_played: realPlayedCount,
         matchesWon: 0,
         matches_won: 0,
         matchesLost: 0,
@@ -180,25 +154,25 @@ export class PlayerRepository {
       };
     }
 
-    const played = row.matches_played || 0;
+    const played = realPlayedCount > 0 ? realPlayedCount : (matchesJoined > 0 ? row.matches_played || 0 : 0);
     return {
-      matchesJoined: matchesJoined > 0 ? matchesJoined : played,
-      matches_joined: matchesJoined > 0 ? matchesJoined : played,
+      matchesJoined: matchesJoined,
+      matches_joined: matchesJoined,
       matchesPlayed: played,
       matches_played: played,
-      matchesWon: row.matches_won || 0,
-      matches_won: row.matches_won || 0,
-      matchesLost: row.matches_lost || 0,
-      matches_lost: row.matches_lost || 0,
-      matchesDrawn: row.matches_drawn || 0,
-      matches_drawn: row.matches_drawn || 0,
-      goalsScored: row.goals_scored || 0,
-      goals_scored: row.goals_scored || 0,
-      assists: row.assists || 0,
-      motmCount: row.motm_count || 0,
-      motm_count: row.motm_count || 0,
-      winRatePercentage: parseFloat(row.win_rate_percentage) || 0.0,
-      win_rate_percentage: parseFloat(row.win_rate_percentage) || 0.0,
+      matchesWon: matchesJoined > 0 ? (row.matches_won || 0) : 0,
+      matches_won: matchesJoined > 0 ? (row.matches_won || 0) : 0,
+      matchesLost: matchesJoined > 0 ? (row.matches_lost || 0) : 0,
+      matches_lost: matchesJoined > 0 ? (row.matches_lost || 0) : 0,
+      matchesDrawn: matchesJoined > 0 ? (row.matches_drawn || 0) : 0,
+      matches_drawn: matchesJoined > 0 ? (row.matches_drawn || 0) : 0,
+      goalsScored: matchesJoined > 0 ? (row.goals_scored || 0) : 0,
+      goals_scored: matchesJoined > 0 ? (row.goals_scored || 0) : 0,
+      assists: matchesJoined > 0 ? (row.assists || 0) : 0,
+      motmCount: matchesJoined > 0 ? (row.motm_count || 0) : 0,
+      motm_count: matchesJoined > 0 ? (row.motm_count || 0) : 0,
+      winRatePercentage: matchesJoined > 0 ? (parseFloat(row.win_rate_percentage) || 0.0) : 0.0,
+      win_rate_percentage: matchesJoined > 0 ? (parseFloat(row.win_rate_percentage) || 0.0) : 0.0,
     };
   }
 
@@ -257,7 +231,6 @@ export class PlayerRepository {
                     'profile_image_url', pu.profile_image_url,
                     'team', UPPER(COALESCE(NULLIF(gp_r.team::text, ''), 'TEAM_A')),
                     'position', COALESCE(gp_r.position, 'MID'),
-                    'ovr', COALESCE(pd.ovr_rating, 80),
                     'paymentStatus', COALESCE(gp_r.payment_status, 'PAID'),
                     'payment_status', COALESCE(gp_r.payment_status, 'PAID'),
                     'phone', pu.phone
@@ -266,7 +239,6 @@ export class PlayerRepository {
                 ), '[]'::json)
                 FROM public.game_players gp_r
                 JOIN public.users pu ON pu.id = gp_r.user_id
-                LEFT JOIN public.player_details pd ON pd.user_id = gp_r.user_id
                 WHERE gp_r.game_id = g.id
               ) as roster
        FROM public.game_players gp
@@ -347,16 +319,7 @@ export class PlayerRepository {
         WHERE gw.user_id = $1
         ORDER BY g.match_date ASC, g.start_time ASC;
       `;
-    } else {
-      let statusCondition = "";
-      if (tab === "ONGOING") {
-        statusCondition = "AND g.status = 'ONGOING'";
-      } else {
-        // UPCOMING / Active matches (completed & cancelled strictly excluded)
-        statusCondition =
-          "AND g.status IN ('OPEN_FOR_JOINING', 'FULL', 'CONFIRMED') AND g.status NOT IN ('COMPLETED', 'CANCELLED') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))";
-      }
-
+    } else if (tab === "PAST" || tab === "COMPLETED" || tab === "HISTORY") {
       query = `
         SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
                g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
@@ -365,8 +328,33 @@ export class PlayerRepository {
         JOIN public.games g ON g.id = gp.game_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = crt.club_id
-        WHERE gp.user_id = $1 ${statusCondition}
+        WHERE gp.user_id = $1 AND g.status IN ('COMPLETED', 'FINISHED', 'CANCELLED')
         ORDER BY g.match_date DESC, g.start_time DESC;
+      `;
+    } else if (tab === "ONGOING") {
+      query = `
+        SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
+               g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
+               (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
+        FROM public.game_players gp
+        JOIN public.games g ON g.id = gp.game_id
+        LEFT JOIN public.courts crt ON crt.id = g.court_id
+        LEFT JOIN public.clubs c ON c.id = crt.club_id
+        WHERE gp.user_id = $1 AND g.status = 'ONGOING'
+        ORDER BY g.match_date DESC, g.start_time DESC;
+      `;
+    } else {
+      // UPCOMING / Active matches
+      query = `
+        SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
+               g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
+               (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
+        FROM public.game_players gp
+        JOIN public.games g ON g.id = gp.game_id
+        LEFT JOIN public.courts crt ON crt.id = g.court_id
+        LEFT JOIN public.clubs c ON c.id = crt.club_id
+        WHERE gp.user_id = $1 AND g.status NOT IN ('COMPLETED', 'CANCELLED')
+        ORDER BY g.match_date ASC, g.start_time ASC;
       `;
     }
 

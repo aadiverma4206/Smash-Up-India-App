@@ -71,7 +71,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Obx(() {
-        final currentIndex = controller.selectedNavIndex.value.clamp(0, 3);
+        final currentIndex = controller.selectedNavIndex.value.clamp(0, 2);
 
         return IndexedStack(
           index: currentIndex,
@@ -81,7 +81,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             currentIndex == 2
                 ? const MediaServerCctvScreen()
                 : const SizedBox.shrink(),
-            const AdminProfileView(),
           ],
         );
       }),
@@ -105,7 +104,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   ],
                 ),
                 child: BottomNavigationBar(
-                  currentIndex: controller.selectedNavIndex.value.clamp(0, 3),
+                  currentIndex: controller.selectedNavIndex.value.clamp(0, 2),
                   onTap: (index) {
                     controller.changeNavIndex(index);
                     if (index == 0) controller.loadDashboard();
@@ -147,10 +146,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     const BottomNavigationBarItem(
                       icon: Icon(Icons.videocam_rounded, size: 22),
                       label: 'CCTV',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.person_rounded, size: 22),
-                      label: 'Profile',
                     ),
                   ],
                 ),
@@ -301,13 +296,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           Obx(
             () => NavigationRail(
               backgroundColor: Theme.of(context).cardColor,
-              selectedIndex: controller.selectedNavIndex.value.clamp(0, 3),
+              selectedIndex: controller.selectedNavIndex.value.clamp(0, 2),
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
                 if (index == 0) controller.loadDashboard();
                 if (index == 1) Get.toNamed(Routes.adminCctv);
-                if (index == 2) Get.toNamed(Routes.adminProfile);
-                if (index == 3) _confirmLogout(context);
+                if (index == 2) _confirmLogout(context);
               },
               labelType: NavigationRailLabelType.all,
               selectedIconTheme: const IconThemeData(color: Color(0xFF00C853)),
@@ -329,8 +323,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     icon: Icon(Icons.apps_rounded), label: Text('Dashboard')),
                 NavigationRailDestination(
                     icon: Icon(Icons.videocam_rounded), label: Text('CCTV')),
-                NavigationRailDestination(
-                    icon: Icon(Icons.person_rounded), label: Text('Profile')),
                 NavigationRailDestination(
                     icon: Icon(Icons.logout_rounded), label: Text('Logout')),
               ],
@@ -617,7 +609,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   Widget _buildProfileButton(BuildContext context) {
     return Obx(() {
       final user = AuthService.to.currentUser.value;
-      final avatarUrl = user?.profileImageUrl ?? '';
+      final rawAvatar = user?.profileImageUrl ?? '';
+      final avatarUrl = rawAvatar.resolvedImageUrl ?? '';
 
       return InkWell(
         onTap: () => Get.toNamed(Routes.adminProfile),

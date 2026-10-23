@@ -18,11 +18,17 @@ export class WalletService {
       throw new ApiError(404, "Player wallet not found", "WALLET_NOT_FOUND");
     }
 
+    const isPinSetBool =
+      details.is_pin_set === true ||
+      details.is_pin_set === "true" ||
+      details.is_pin_set === "t" ||
+      details.is_pin_set === 1;
+
     return {
       walletBalance: Number(details.wallet_balance || 0),
       maxWalletBalance: 200000,
       maxSingleTopup: 50000,
-      isPinSet: Boolean(details.is_pin_set),
+      isPinSet: isPinSetBool,
       isLocked: Boolean(
         details.wallet_pin_locked_until &&
         new Date(details.wallet_pin_locked_until) > new Date(),
@@ -110,6 +116,14 @@ export class WalletService {
     }
 
     const currentWallet = await this.getWallet(userId);
+    if (!currentWallet.isPinSet) {
+      throw new ApiError(
+        400,
+        "Please set up a 6-digit Wallet PIN first before adding money.",
+        "WALLET_PIN_REQUIRED",
+      );
+    }
+
     if (currentWallet.walletBalance + amountRupees > 200000) {
       throw new ApiError(
         400,

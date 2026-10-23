@@ -23,8 +23,14 @@ export const initDbTables = async () => {
     await dbPool.query(`
       ALTER TABLE public.users ADD COLUMN IF NOT EXISTS latest_otp VARCHAR(10);
       ALTER TABLE public.users ADD COLUMN IF NOT EXISTS date_of_birth DATE;
-      ALTER TABLE public.player_wallets ADD COLUMN IF NOT EXISTS secondary_position VARCHAR(16);
-      ALTER TABLE public.player_wallets ADD COLUMN IF NOT EXISTS elo_rating INT DEFAULT 1200;
+      ALTER TABLE public.player_wallets DROP COLUMN IF EXISTS "position" CASCADE;
+      ALTER TABLE public.player_wallets DROP COLUMN IF EXISTS preferred_foot CASCADE;
+      ALTER TABLE public.player_wallets DROP COLUMN IF EXISTS skill_level CASCADE;
+      ALTER TABLE public.player_wallets DROP COLUMN IF EXISTS elo_rating CASCADE;
+      ALTER TABLE public.player_wallets DROP COLUMN IF EXISTS ovr_rating CASCADE;
+      ALTER TABLE public.player_wallets DROP COLUMN IF EXISTS badges CASCADE;
+      ALTER TABLE public.player_wallets DROP COLUMN IF EXISTS secondary_position CASCADE;
+      CREATE OR REPLACE VIEW public.player_details AS SELECT * FROM public.player_wallets;
       ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS payment_status VARCHAR(32) DEFAULT 'PAID';
       ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
       ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;

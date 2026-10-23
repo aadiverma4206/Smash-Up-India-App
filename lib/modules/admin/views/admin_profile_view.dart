@@ -12,6 +12,7 @@ import '../../../core/utils/image_utils.dart';
 import '../../../core/services/theme_service.dart';
 import '../../../core/storage/database_service.dart';
 import '../../../core/widgets/app_loader.dart';
+import '../../../core/widgets/profile_image_viewer_page.dart';
 import '../../../data/models/user_model.dart';
 import '../../support/widgets/support_legal_cards.dart';
 import '../controllers/admin_controller.dart';
@@ -216,13 +217,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh Profile',
-            onPressed: fetchAdminProfile,
-          ),
-        ],
       ),
       body: SafeArea(
         child: Obx(() {
@@ -240,9 +234,11 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           final String phone =
               (profileData['phone'] ?? user?.phone ?? '+91 9999999999')
                   .toString();
-          final String avatarUrl =
+          final String rawAvatarUrl =
               (profileData['profile_image_url'] ?? user?.profileImageUrl ?? '')
                   .toString();
+          final String resolvedAvatarUrl =
+              rawAvatarUrl.resolvedImageUrl ?? '';
           final String role = (profileData['role_name'] ??
                   profileData['role'] ??
                   user?.roleName ??
@@ -269,39 +265,46 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: const Color(0xFF7E57C2), width: 3),
-                              boxShadow: const [
-                                BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 10,
-                                    offset: Offset(0, 4)),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 52,
-                              backgroundColor: const Color(0xFF7E57C2)
-                                  .withValues(alpha: 0.15),
-                              backgroundImage:
-                                  ImageUtils.isValidNetworkUrl(avatarUrl)
-                                      ? CachedNetworkImageProvider(avatarUrl)
-                                      : null,
-                              child: !ImageUtils.isValidNetworkUrl(avatarUrl)
-                                  ? Text(
-                                      name.isNotEmpty
-                                          ? name[0].toUpperCase()
-                                          : 'A',
-                                      style: const TextStyle(
-                                        fontSize: 38,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF7E57C2),
-                                      ),
-                                    )
-                                  : null,
+                          GestureDetector(
+                            onTap: () => _openProfileImageViewer(
+                                context, name, resolvedAvatarUrl),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: const Color(0xFF7E57C2), width: 3),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4)),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(52),
+                                child: resolvedAvatarUrl.isValidNetworkUrl
+                                    ? CachedNetworkImage(
+                                        imageUrl: resolvedAvatarUrl,
+                                        width: 104,
+                                        height: 104,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, __) => Container(
+                                          width: 104,
+                                          height: 104,
+                                          color: Colors.grey.shade300,
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFF7E57C2),
+                                            ),
+                                          ),
+                                        ),
+                                        errorWidget: (_, __, ___) =>
+                                            _buildDefaultAvatar(name),
+                                      )
+                                    : _buildDefaultAvatar(name),
+                              ),
                             ),
                           ),
                           Positioned(
@@ -838,6 +841,41 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDefaultAvatar(String name) {
+    final initial =
+        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'A';
+    return Container(
+      width: 104,
+      height: 104,
+      color: const Color(0xFF7E57C2).withValues(alpha: 0.15),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 38,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF7E57C2),
+        ),
+      ),
+    );
+  }
+
+  void _openProfileImageViewer(
+      BuildContext context, String name, String? imageUrl) {
+    Get.to(
+      () => ProfileImageViewerPage(
+        name: name,
+        imageUrl: imageUrl,
+        onEditTap: () {
+          Get.back();
+          _showImagePickerSheet(context);
+        },
+      ),
+      transition: Transition.fadeIn,
+      fullscreenDialog: true,
     );
   }
 }
