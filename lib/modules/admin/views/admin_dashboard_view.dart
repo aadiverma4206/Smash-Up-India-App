@@ -4,11 +4,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
 import '../../manager/views/manager_history_view.dart';
 import '../../cctv/views/media_server_cctv_view.dart';
-import 'admin_profile_view.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/theme_service.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
 
@@ -267,6 +267,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              _buildThemeToggleButton(context),
+                              const SizedBox(width: 4),
                               _buildNotificationButton(context),
                               const SizedBox(width: 8),
                               _buildProfileButton(context),
@@ -604,6 +606,31 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         ),
       ),
     );
+  }
+
+  Widget _buildThemeToggleButton(BuildContext context) {
+    return Obx(() {
+      final currentMode = Get.isRegistered<ThemeService>()
+          ? ThemeService.to.themeMode.value
+          : ThemeMode.light;
+      final isDark = currentMode == ThemeMode.dark;
+
+      return IconButton(
+        icon: Icon(
+          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          color: isDark ? Colors.amber : Colors.black87,
+          size: 22,
+        ),
+        tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+        onPressed: () {
+          if (Get.isRegistered<ThemeService>()) {
+            ThemeService.to.switchThemeMode(
+              isDark ? ThemeMode.light : ThemeMode.dark,
+            );
+          }
+        },
+      );
+    });
   }
 
   Widget _buildProfileButton(BuildContext context) {

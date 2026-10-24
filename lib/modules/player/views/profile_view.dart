@@ -25,6 +25,27 @@ class ProfileView extends GetView<PlayerController> {
           style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
         actions: [
+          Obx(() {
+            final currentMode = Get.isRegistered<ThemeService>()
+                ? ThemeService.to.themeMode.value
+                : ThemeMode.light;
+            final isDark = currentMode == ThemeMode.dark;
+
+            return IconButton(
+              icon: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                color: isDark ? Colors.amber : null,
+              ),
+              tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+              onPressed: () {
+                if (Get.isRegistered<ThemeService>()) {
+                  ThemeService.to.switchThemeMode(
+                    isDark ? ThemeMode.light : ThemeMode.dark,
+                  );
+                }
+              },
+            );
+          }),
           IconButton(
             icon: const Icon(Icons.edit_note_rounded, size: 28),
             tooltip: 'Edit Profile',
@@ -80,11 +101,6 @@ class ProfileView extends GetView<PlayerController> {
                     context, 'Profile Information', Icons.person_pin_rounded),
                 const SizedBox(height: 10),
                 _buildAttributesCard(context, p),
-                const SizedBox(height: 20),
-                _buildSectionHeader(
-                    context, 'Preferences & Theme', Icons.tune_rounded),
-                const SizedBox(height: 10),
-                _buildPreferencesAndStorageCard(context),
                 const SizedBox(height: 20),
                 const SupportAndLegalSection(),
                 const SizedBox(height: 24),
@@ -546,41 +562,6 @@ class ProfileView extends GetView<PlayerController> {
               softWrap: true,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreferencesAndStorageCard(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          Obx(() {
-            final currentMode = Get.isRegistered<ThemeService>()
-                ? ThemeService.to.themeMode.value
-                : ThemeMode.dark;
-            final isDarkMode = currentMode == ThemeMode.dark;
-
-            return ListTile(
-              leading: Icon(
-                isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                color: isDarkMode ? Colors.amber : Colors.orangeAccent,
-              ),
-              title: const Text('App Visual Theme'),
-              subtitle:
-                  Text(isDarkMode ? 'Dark Arena Theme' : 'Light Arena Theme'),
-              trailing: Switch(
-                value: isDarkMode,
-                activeThumbColor: AppColors.primary,
-                onChanged: (val) {
-                  if (Get.isRegistered<ThemeService>()) {
-                    ThemeService.to.switchThemeMode(
-                        val ? ThemeMode.dark : ThemeMode.light);
-                  }
-                },
-              ),
-            );
-          }),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart' as dio;
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/theme_service.dart';
 import '../../../data/models/user_model.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/utils/image_utils.dart';
@@ -190,6 +191,29 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
         title: const Text('Manager Profile',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         elevation: 0,
+        actions: [
+          Obx(() {
+            final currentMode = Get.isRegistered<ThemeService>()
+                ? ThemeService.to.themeMode.value
+                : ThemeMode.light;
+            final isDark = currentMode == ThemeMode.dark;
+
+            return IconButton(
+              icon: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                color: isDark ? Colors.amber : null,
+              ),
+              tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+              onPressed: () {
+                if (Get.isRegistered<ThemeService>()) {
+                  ThemeService.to.switchThemeMode(
+                    isDark ? ThemeMode.light : ThemeMode.dark,
+                  );
+                }
+              },
+            );
+          }),
+        ],
       ),
       body: SafeArea(
         child: Obx(() {

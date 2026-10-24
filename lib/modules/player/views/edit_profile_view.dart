@@ -188,9 +188,222 @@ class EditProfileView extends GetView<PlayerController> {
     );
   }
 
+  Widget _buildAvatarHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Obx(() {
+      final p = controller.profile.value;
+      final name = p?.name ?? nameController.text.trim();
+      final rawAvatar = p?.avatarUrl ?? '';
+      final resolvedAvatar = rawAvatar.resolvedImageUrl;
+
+      return Center(
+        child: Column(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () =>
+                      _openProfileImageViewer(context, name, resolvedAvatar),
+                  child: Container(
+                    width: 110,
+                    height: 110,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primary,
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: resolvedAvatar.isValidNetworkUrl
+                          ? CachedNetworkImage(
+                              imageUrl: resolvedAvatar!,
+                              width: 104,
+                              height: 104,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(
+                                color: isDark
+                                    ? const Color(0xFF1E293B)
+                                    : Colors.grey.shade200,
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) =>
+                                  _buildDefaultAvatar(name, size: 104),
+                            )
+                          : _buildDefaultAvatar(name, size: 104),
+                    ),
+                  ),
+                ),
+
+                // Uploading progress overlay
+                Obx(() {
+                  if (!controller.isUploadingAvatar.value) {
+                    return const SizedBox.shrink();
+                  }
+                  return Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.8,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+
+                // Camera Edit Badge Icon
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () => _showImageSourceModal(context),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Theme.of(context).cardColor,
+                          width: 2.5,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        size: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Tap camera icon to change photo',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildDobField(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final hintTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final fieldFillColor = isDark ? AppColors.darkCard : AppColors.lightCard;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Date of Birth',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: primaryTextColor,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: selectedDob.value ?? DateTime(2000, 1, 1),
+              firstDate: DateTime(1950),
+              lastDate: DateTime.now(),
+            );
+            if (picked != null) selectedDob.value = picked;
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: fieldFillColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor, width: 1.2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.cake_outlined,
+                    color: AppColors.primary, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Obx(
+                    () => Text(
+                      selectedDob.value != null
+                          ? AppDateUtils.formatIsoDate(selectedDob.value!)
+                          : 'Select Date of Birth',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: selectedDob.value != null
+                            ? primaryTextColor
+                            : hintTextColor,
+                      ),
+                    ),
+                  ),
+                ),
+                Icon(Icons.calendar_today_rounded,
+                    size: 18, color: hintTextColor),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     _initProfileData();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -212,160 +425,31 @@ class EditProfileView extends GetView<PlayerController> {
               constraints: BoxConstraints(maxWidth: maxContainerWidth),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0, vertical: 16.0),
+                    horizontal: 20.0, vertical: 12.0),
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Top Centered Profile Avatar Section
-                    Obx(() {
-                      final p = controller.profile.value;
-                      final name = p?.name ?? nameController.text.trim();
-                      final rawAvatar = p?.avatarUrl ?? '';
-                      final resolvedAvatar = rawAvatar.resolvedImageUrl;
+                    _buildAvatarHeader(context),
 
-                      return Center(
-                        child: Column(
-                          children: [
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                GestureDetector(
-                                  onTap: () => _openProfileImageViewer(
-                                      context, name, resolvedAvatar),
-                                  child: Container(
-                                    width: 86,
-                                    height: 86,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.primary,
-                                        width: 2.8,
-                                      ),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Colors.black12,
-                                          blurRadius: 8,
-                                          offset: Offset(0, 3),
-                                        ),
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(43),
-                                      child: resolvedAvatar.isValidNetworkUrl
-                                          ? CachedNetworkImage(
-                                              imageUrl: resolvedAvatar!,
-                                              width: 86,
-                                              height: 86,
-                                              fit: BoxFit.cover,
-                                              placeholder: (_, __) => Container(
-                                                color: Colors.grey.shade300,
-                                                child: const Center(
-                                                  child: SizedBox(
-                                                    width: 22,
-                                                    height: 22,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: AppColors.primary,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              errorWidget: (_, __, ___) =>
-                                                  _buildDefaultAvatar(name,
-                                                      size: 86),
-                                            )
-                                          : _buildDefaultAvatar(name, size: 86),
-                                    ),
-                                  ),
-                                ),
-
-                                // Uploading Circular Progress Overlay
-                                Obx(() {
-                                  if (!controller.isUploadingAvatar.value) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Container(
-                                    width: 86,
-                                    height: 86,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.6),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: SizedBox(
-                                        width: 26,
-                                        height: 26,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.8,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-
-                                // Camera Edit Icon Overlay
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: GestureDetector(
-                                    onTap: () => _showImageSourceModal(context),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(7),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.secondary,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Theme.of(context).cardColor,
-                                          width: 2,
-                                        ),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Colors.black26,
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(
-                                        Icons.camera_alt_rounded,
-                                        size: 15,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tap camera icon to change photo',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: context.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
                     // Personal Information Form Card
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: context.cardColor,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: context.borderColor),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0),
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
+                            color: Colors.black
+                                .withValues(alpha: isDark ? 0.15 : 0.03),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -376,15 +460,25 @@ class EditProfileView extends GetView<PlayerController> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.person_pin_rounded,
-                                  size: 20, color: AppColors.primary),
+                              Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.person_pin_rounded,
+                                    size: 18, color: AppColors.primary),
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Personal Information',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: context.textPrimary,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimaryLight,
                                 ),
                               ),
                             ],
@@ -393,64 +487,39 @@ class EditProfileView extends GetView<PlayerController> {
                           AppTextField(
                             label: 'Full Name',
                             controller: nameController,
-                            prefixIcon: const Icon(Icons.person_outline_rounded,
-                                color: AppColors.primary),
+                            prefixIcon: const Icon(
+                              Icons.person_outline_rounded,
+                              color: AppColors.primary,
+                            ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           AppTextField(
                             label: 'City',
                             controller: cityController,
                             prefixIcon: const Icon(
-                                Icons.location_city_outlined,
-                                color: AppColors.primary),
+                              Icons.location_city_outlined,
+                              color: AppColors.primary,
+                            ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           AppTextField(
                             label: 'Player Bio',
                             hint: 'Write a short bio...',
                             controller: bioController,
-                            prefixIcon: const Icon(Icons.notes_outlined,
-                                color: AppColors.primary),
-                          ),
-                          const SizedBox(height: 14),
-                          ListTile(
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 4),
-                            leading: const Icon(Icons.cake_outlined,
-                                color: AppColors.primary),
-                            title: Text('Date of Birth',
-                                style: TextStyle(
-                                    color: context.textSecondary,
-                                    fontSize: 12)),
-                            subtitle: Obx(
-                              () => Text(
-                                selectedDob.value != null
-                                    ? AppDateUtils.formatIsoDate(
-                                        selectedDob.value!)
-                                    : 'Select Date of Birth',
-                                style: TextStyle(
-                                    color: context.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14),
-                              ),
+                            maxLines: 2,
+                            prefixIcon: const Icon(
+                              Icons.notes_rounded,
+                              color: AppColors.primary,
                             ),
-                            trailing: Icon(Icons.calendar_today_rounded,
-                                size: 18, color: context.textSecondary),
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate:
-                                    selectedDob.value ?? DateTime(2000, 1, 1),
-                                firstDate: DateTime(1950),
-                                lastDate: DateTime.now(),
-                              );
-                              if (picked != null) selectedDob.value = picked;
-                            },
                           ),
+                          const SizedBox(height: 12),
+                          _buildDobField(context),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
+
+                    // Save Changes Button
                     Obx(
                       () => AppButton(
                         text: 'Save Changes',
@@ -462,12 +531,14 @@ class EditProfileView extends GetView<PlayerController> {
                             bio: bioController.text.trim(),
                             city: cityController.text.trim(),
                             dateOfBirth: selectedDob.value != null
-                                ? AppDateUtils.formatIsoDate(selectedDob.value!)
+                                ? AppDateUtils.formatIsoDate(
+                                    selectedDob.value!)
                                 : null,
                           );
                         },
                       ),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),

@@ -217,6 +217,29 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
+        actions: [
+          Obx(() {
+            final currentMode = Get.isRegistered<ThemeService>()
+                ? ThemeService.to.themeMode.value
+                : ThemeMode.light;
+            final isDark = currentMode == ThemeMode.dark;
+
+            return IconButton(
+              icon: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                color: isDark ? Colors.amber : null,
+              ),
+              tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+              onPressed: () {
+                if (Get.isRegistered<ThemeService>()) {
+                  ThemeService.to.switchThemeMode(
+                    isDark ? ThemeMode.light : ThemeMode.dark,
+                  );
+                }
+              },
+            );
+          }),
+        ],
       ),
       body: SafeArea(
         child: Obx(() {
@@ -619,41 +642,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                               ),
                             ],
                           ),
-                          Divider(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : Colors.grey.shade200,
-                              height: 16),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF7E57C2)
-                                    .withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                isDark
-                                    ? Icons.dark_mode_rounded
-                                    : Icons.light_mode_rounded,
-                                color: const Color(0xFF7E57C2),
-                                size: 20,
-                              ),
-                            ),
-                            title: const Text('App Theme Mode',
-                                style: TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w600)),
-                            subtitle: Text(isDark ? 'Dark Mode' : 'Light Mode',
-                                style: const TextStyle(fontSize: 11)),
-                            trailing: Switch(
-                              value: isDark,
-                              activeThumbColor: const Color(0xFF7E57C2),
-                              onChanged: (_) => ThemeService.to.switchThemeMode(
-                                isDark ? ThemeMode.light : ThemeMode.dark,
-                              ),
-                            ),
-                          ),
+
                           const Divider(height: 12),
                           ListTile(
                             contentPadding: EdgeInsets.zero,
