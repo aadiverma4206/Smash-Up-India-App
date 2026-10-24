@@ -39,6 +39,13 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     );
   }
 
+  if (isFinal) {
+    await dbPool.query(
+      `DELETE FROM public.live_score_logs WHERE game_id = $1 AND is_final = true;`,
+      [gameId],
+    );
+  }
+
   const logRes = await dbPool.query(
     `INSERT INTO public.live_score_logs
      (game_id, team_a_score, team_b_score, updated_by_user_id, is_final)
@@ -46,12 +53,30 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     [gameId, teamAScore, teamBScore, updatedByUserId || null, isFinal],
   );
 
-  if (!isFinal) {
+  let winnerTeam: string | null = null;
+  if (teamAScore > teamBScore) {
+    winnerTeam = "TEAM_A";
+  } else if (teamBScore > teamAScore) {
+    winnerTeam = "TEAM_B";
+  } else {
+    winnerTeam = "DRAW";
+  }
+
+  if (isFinal) {
     await dbPool.query(
       `UPDATE public.games
-       SET team_a_score = $1, team_b_score = $2, status = 'ONGOING'
-       WHERE id = $3;`,
-      [teamAScore, teamBScore, gameId],
+       SET team_a_score = $1, team_b_score = $2, winner_team = $3, status = 'COMPLETED'::match_status, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4;`,
+      [teamAScore, teamBScore, winnerTeam, gameId],
+    );
+  } else {
+    await dbPool.query(
+      `UPDATE public.games
+       SET team_a_score = $1, team_b_score = $2, winner_team = $3,
+           status = CASE WHEN status = 'COMPLETED'::match_status THEN 'COMPLETED'::match_status ELSE 'ONGOING'::match_status END,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4;`,
+      [teamAScore, teamBScore, winnerTeam, gameId],
     );
   }
 
@@ -63,6 +88,7 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     gameId,
     teamAScore,
     teamBScore,
+    winnerTeam,
     isFinal,
     matchStatus: updatedGame.status,
     eventText: eventText || (isFinal ? "🏁 MATCH COMPLETED" : "⚽ GOAL!"),

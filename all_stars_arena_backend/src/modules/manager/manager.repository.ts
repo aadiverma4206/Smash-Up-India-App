@@ -453,10 +453,16 @@ export class ManagerRepository {
     const query = `
       SELECT g.*,
              to_char(g.match_date::date, 'YYYY-MM-DD') as match_date,
-             COALESCE(
-               (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
-               g.video_playback_url
-             ) as video_playback_url,
+             CASE
+               WHEN g.status = 'COMPLETED' AND (
+                 (g.match_date + g.end_time + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+                 OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+               ) THEN COALESCE(
+                 (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
+                 g.video_playback_url
+               )
+               ELSE NULL
+             END as video_playback_url,
              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
@@ -679,8 +685,16 @@ export class ManagerRepository {
              rec.id as recording_id, rec.recording_status
       FROM public.games g
       LEFT JOIN public.users u ON u.id = g.creator_id
-      LEFT JOIN public.cctv_cameras cam ON cam.court_id = g.court_id AND cam.is_enabled = true
-      LEFT JOIN public.cctv_recordings rec ON rec.game_id = g.id AND rec.recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING')
+      LEFT JOIN LATERAL (
+        SELECT id, status FROM public.cctv_cameras
+        WHERE court_id = g.court_id AND is_enabled = true
+        ORDER BY created_at DESC LIMIT 1
+      ) cam ON true
+      LEFT JOIN LATERAL (
+        SELECT id, recording_status FROM public.cctv_recordings
+        WHERE game_id = g.id AND recording_status IN ('RECORDING', 'POST_MATCH', 'STARTING')
+        ORDER BY created_at DESC LIMIT 1
+      ) rec ON true
       WHERE ${conditions.join(" AND ")}
       ORDER BY g.match_date ASC, g.start_time ASC
       LIMIT 20;
@@ -769,7 +783,7 @@ export class ManagerRepository {
   static async getPlayerDetailHistory(playerId: string) {
     const userRes = await dbPool.query(
       `SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.status, u.created_at,
-              u.city, u.bio,
+              u.city, u.bio
        FROM public.users u
        WHERE u.id = $1 AND u.role_id = 3;`,
       [playerId],

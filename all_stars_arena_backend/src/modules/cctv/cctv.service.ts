@@ -430,7 +430,7 @@ export class CctvService {
     }
 
     const now = new Date();
-    const postMatchMins = env.RECORDING_POST_MATCH_MINUTES || 15;
+    const postMatchMins = env.RECORDING_POST_MATCH_MINUTES || 5;
     let matchEndMs = now.getTime() + 90 * 60 * 1000;
     if (game.end_time) {
       let datePart = "";

@@ -68,7 +68,7 @@ const envSchema = z.object({
   RECORDING_OUTPUT_DIR: z.string().default("./recordings"),
   RECORDING_TEMP_DIR: z.string().default("temp_recordings"),
   RECORDING_DURATION_MINUTES: z.coerce.number().default(120),
-  RECORDING_POST_MATCH_MINUTES: z.coerce.number().default(15),
+  RECORDING_POST_MATCH_MINUTES: z.coerce.number().default(5),
   RECORDING_SEGMENT_SECONDS: z.coerce.number().default(300),
   RECORDING_MAX_RETRIES: z.coerce.number().default(3),
   RECORDING_MAX_CONCURRENT: z.coerce.number().default(5),

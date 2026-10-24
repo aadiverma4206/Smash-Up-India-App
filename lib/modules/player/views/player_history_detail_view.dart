@@ -7,11 +7,27 @@ import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../core/utils/image_utils.dart';
 
-class PlayerHistoryDetailView extends GetView<MatchHistoryController> {
+class PlayerHistoryDetailView extends StatelessWidget {
   const PlayerHistoryDetailView({super.key});
+
+  MatchHistoryController get controller {
+    if (Get.isRegistered<MatchHistoryController>()) {
+      return Get.find<MatchHistoryController>();
+    }
+    return Get.put(MatchHistoryController());
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (Get.arguments is GameModel) {
+      final argGame = Get.arguments as GameModel;
+      if (controller.selectedGame.value == null ||
+          controller.selectedGame.value!.id != argGame.id) {
+        controller.selectedGame.value = argGame;
+        controller.fetchMatchRecording(argGame.id);
+      }
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(

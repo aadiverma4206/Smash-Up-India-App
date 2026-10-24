@@ -272,7 +272,7 @@ export const runLifecycleCycle = async () => {
        FOR UPDATE OF g SKIP LOCKED;`,
     );
 
-    const postMatchMinutes = env.RECORDING_POST_MATCH_MINUTES || 15;
+    const postMatchMinutes = env.RECORDING_POST_MATCH_MINUTES || 5;
 
     for (const game of endingGames.rows) {
       await client.query(
@@ -330,7 +330,7 @@ export const runLifecycleCycle = async () => {
 
     for (const rec of recsToStop) {
       logger.info(
-        `🛑 [LifecycleWorker] CCTV Auto-stopping recording ${rec.id} for Game ${rec.game_id} (15-min post-match window expired)`,
+        `🛑 [LifecycleWorker] CCTV Auto-stopping recording ${rec.id} for Game ${rec.game_id} (5-min post-match window expired)`,
       );
       try {
         await CctvRecordingService.stopRecording(rec.id, {

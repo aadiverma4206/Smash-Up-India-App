@@ -126,10 +126,16 @@ export class GamesRepository {
               'PUBLIC' as privacy,
               'INTERMEDIATE' as skill_requirement,
               (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
-              COALESCE(
-                (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
-                g.video_playback_url
-              ) as video_playback_url,
+              CASE
+                WHEN g.status = 'COMPLETED' AND (
+                  (g.match_date + g.end_time + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+                  OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+                ) THEN COALESCE(
+                  (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
+                  g.video_playback_url
+                )
+                ELSE NULL
+              END as video_playback_url,
               (
                 SELECT COALESCE(json_agg(
                   json_build_object(
@@ -427,11 +433,17 @@ export class GamesRepository {
               COALESCE(rec.actual_stopped_at, rec.actual_stop_time, gv.created_at) as actual_stopped_at,
               COALESCE(rec.duration_seconds, 5400) as duration_seconds
        FROM public.game_videos gv
+       JOIN public.games g ON g.id = gv.game_id
        LEFT JOIN public.cctv_cameras cam ON cam.id = gv.cctv_id
        LEFT JOIN public.courts crt ON crt.id = COALESCE(gv.court_id, cam.court_id)
        LEFT JOIN public.clubs clb ON clb.id = gv.club_id
        LEFT JOIN public.cctv_recordings rec ON (rec.game_id = gv.game_id AND (rec.camera_id = gv.cctv_id OR gv.cctv_id IS NULL))
        WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'
+         AND g.status = 'COMPLETED'
+         AND (
+           (g.match_date + g.end_time + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+           OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+         )
        ORDER BY gv.created_at ASC;`,
       [gameId],
     );

@@ -13,6 +13,8 @@ import {
 } from "../../services/storage.service.js";
 import { CctvService } from "../cctv/cctv.service.js";
 import { CctvRepository } from "../cctv/cctv.repository.js";
+import { dbPool } from "../../config/db.config.js";
+import { getSocketIO } from "../../config/socket.config.js";
 
 export const getDashboardController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -557,28 +559,52 @@ export const extendMatchRecordingController = asyncHandler(
     const managerName = req.user?.email || "Manager";
     const { id: gameId } = req.params;
     const { additionalMinutes } = req.body || {};
+    const mins = Number(additionalMinutes || 15);
 
+    // 1. Extend match end_time in games table so LifecycleWorker does not auto-complete the match prematurely
+    await dbPool.query(
+      `UPDATE public.games
+       SET end_time = (end_time::time + ($1 || ' minutes')::interval)::time,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2;`,
+      [mins, gameId],
+    );
+
+    // 2. Extend CCTV recording deadline
     const rec = await CctvRepository.getRecordingByGame(gameId);
-    if (!rec) {
-      throw new ApiError(
-        404,
-        "No active recording found for this game",
-        "RECORDING_NOT_FOUND",
+    let recResult = null;
+    if (rec) {
+      recResult = await CctvService.extendRecording(
+        managerId,
+        managerName,
+        req.user?.roleId || 2,
+        rec.id,
+        mins,
       );
     }
 
-    const result = await CctvService.extendRecording(
-      managerId,
-      managerName,
-      req.user?.roleId || 2,
-      rec.id,
-      Number(additionalMinutes || 15),
+    // 3. Emit live socket event
+    try {
+      const io = getSocketIO();
+      io.to(`game:${gameId}`).emit("match:extended", {
+        gameId,
+        additionalMinutes: mins,
+        message: `Match time extended by ${mins} minutes by manager`,
+      });
+      io.emit("match:live_feed", {
+        gameId,
+        status: "ONGOING",
+        eventText: `⏱️ EXTRA TIME: Match extended by ${mins} minutes`,
+      });
+    } catch (_) {}
+
+    res.status(200).json(
+      ApiResponse.success(`Match time extended by ${mins} minutes successfully`, {
+        gameId,
+        additionalMinutes: mins,
+        recording: recResult,
+      }),
     );
-    res
-      .status(200)
-      .json(
-        ApiResponse.success("Match recording extended successfully", result),
-      );
   },
 );
 

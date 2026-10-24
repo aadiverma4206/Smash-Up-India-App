@@ -170,8 +170,7 @@ class EditProfileView extends GetView<PlayerController> {
   }
 
   Widget _buildDefaultAvatar(String name, {required double size}) {
-    final initial =
-        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'P';
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'P';
     return Container(
       width: size,
       height: size,
@@ -531,8 +530,7 @@ class EditProfileView extends GetView<PlayerController> {
                             bio: bioController.text.trim(),
                             city: cityController.text.trim(),
                             dateOfBirth: selectedDob.value != null
-                                ? AppDateUtils.formatIsoDate(
-                                    selectedDob.value!)
+                                ? AppDateUtils.formatIsoDate(selectedDob.value!)
                                 : null,
                           );
                         },

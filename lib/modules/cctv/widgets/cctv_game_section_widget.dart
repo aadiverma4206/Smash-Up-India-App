@@ -101,13 +101,17 @@ class _CctvGameSectionWidgetState extends State<CctvGameSectionWidget> {
                     isDense: true,
                     items: const [
                       DropdownMenuItem(
-                          value: 1, child: Text('Camera 1 (Main Pitch)')),
+                          value: 1,
+                          child: Text('Camera 1 (Court 1 - Main)')),
                       DropdownMenuItem(
-                          value: 2, child: Text('Camera 2 (Sideline)')),
+                          value: 2,
+                          child: Text('Camera 2 (Court 1 - Sideline)')),
                       DropdownMenuItem(
-                          value: 3, child: Text('Camera 3 (Court 2 Main)')),
+                          value: 3,
+                          child: Text('Camera 3 (Court 2 - Main)')),
                       DropdownMenuItem(
-                          value: 4, child: Text('Camera 4 (Court 2 Goal)')),
+                          value: 4,
+                          child: Text('Camera 4 (Court 2 - Goalpost)')),
                     ],
                     onChanged: (val) {
                       if (val != null) setState(() => _selectedChannel = val);

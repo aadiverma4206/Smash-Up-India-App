@@ -1524,17 +1524,61 @@ export class ManagerService {
       }
     }
 
-    const effectivePlaybackUrl =
-      videoList[0]?.playbackUrl ||
-      singleRecordingPlaybackUrl ||
-      game.video_playback_url;
+    // Condition: Video is only released and shown in the UI 10 minutes after match completion
+    const isCompleted = game.status === "COMPLETED";
+    let isVideoReleased = false;
+
+    if (isCompleted) {
+      const nowMs = Date.now();
+      const tenMinsMs = 10 * 60 * 1000;
+
+      let scheduledEndPast10 = false;
+      if (game.match_date && game.end_time) {
+        let datePart = "";
+        if (game.match_date instanceof Date) {
+          const year = game.match_date.getFullYear();
+          const month = String(game.match_date.getMonth() + 1).padStart(2, "0");
+          const day = String(game.match_date.getDate()).padStart(2, "0");
+          datePart = `${year}-${month}-${day}`;
+        } else {
+          datePart = String(game.match_date).slice(0, 10);
+        }
+        const timeStr =
+          String(game.end_time).length === 5
+            ? `${game.end_time}:00`
+            : String(game.end_time);
+        const parsed = new Date(`${datePart}T${timeStr}`).getTime();
+        if (!isNaN(parsed) && nowMs >= parsed + tenMinsMs) {
+          scheduledEndPast10 = true;
+        }
+      }
+
+      const completedAtMs = game.updated_at
+        ? new Date(game.updated_at).getTime()
+        : game.created_at
+        ? new Date(game.created_at).getTime()
+        : 0;
+      const completedPast10 =
+        completedAtMs > 0 && nowMs >= completedAtMs + tenMinsMs;
+
+      isVideoReleased = scheduledEndPast10 || completedPast10;
+    }
+
+    const effectivePlaybackUrl = isVideoReleased
+      ? videoList[0]?.playbackUrl ||
+        singleRecordingPlaybackUrl ||
+        game.video_playback_url
+      : null;
 
     if (!recording && videoList.length === 0 && !effectivePlaybackUrl) {
       return {
         gameId,
-        status: "NOT_RECORDED",
-        message: "No recording exists for this match",
+        status: isCompleted ? "PROCESSING" : "NOT_RECORDED",
+        message: isCompleted
+          ? "Match video is processing and will be available 10 minutes after match completion."
+          : "No recording exists for this match",
         videos: [],
+        isVideoReleased: false,
       };
     }
 
@@ -1556,7 +1600,8 @@ export class ManagerService {
       stopDeadline: recording?.stop_deadline,
       actualStopTime: recording?.actual_stop_time,
       playbackUrl: effectivePlaybackUrl,
-      videos: videoList,
+      videos: isVideoReleased ? videoList : [],
+      isVideoReleased,
     };
   }
 

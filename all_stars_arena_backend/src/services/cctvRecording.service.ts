@@ -365,24 +365,39 @@ export class CctvRecordingService {
     const clubId = params.clubId || game.club_id || "all_stars_arena_club";
     const courtId = params.courtId || game.court_id || "court_1";
     const title = matchTitle || game.title || `Match - ${gameId}`;
-    const channel = params.channel || (courtId === "court_2" ? 3 : 1);
+    let channel = params.channel;
+    if (!channel) {
+      channel = courtId === "court_2" ? 3 : 1;
+    } else if (courtId === "court_2" && channel < 3) {
+      channel = 3;
+    } else if (courtId === "court_1" && channel > 2) {
+      channel = 1;
+    }
 
-    const existingDb = await dbPool.query(
-      `SELECT id, status, recording_status, started_at, start_time FROM public.cctv_recordings
-       WHERE game_id = $1 AND status IN ('RECORDING', 'STARTING')
-       ORDER BY created_at DESC LIMIT 1;`,
-      [gameId]
-    );
-    if (existingDb.rows.length > 0) {
-      const recRow = existingDb.rows[0];
-      return {
-        recordingId: recRow.id,
-        matchId: gameId,
-        title,
-        status: (recRow.status || "recording").toLowerCase(),
-        startedAt: (recRow.started_at || recRow.start_time || new Date()).toISOString(),
-        statusEndpoint: `/api/matches/${gameId}/recording-status`,
-      };
+    if (!params.recordingId) {
+      const existingDb = await dbPool.query(
+        `SELECT id, status, recording_status, started_at, start_time FROM public.cctv_recordings
+         WHERE game_id = $1 AND status IN ('RECORDING', 'STARTING')
+         ORDER BY created_at DESC LIMIT 1;`,
+        [gameId]
+      );
+      if (existingDb.rows.length > 0) {
+        const recRow = existingDb.rows[0];
+        const activeSess = this.activeRecordings.get(gameId);
+        if (
+          activeSess &&
+          (activeSess.state === "starting" || activeSess.state === "recording")
+        ) {
+          return {
+            recordingId: recRow.id,
+            matchId: gameId,
+            title,
+            status: (recRow.status || "recording").toLowerCase(),
+            startedAt: (recRow.started_at || recRow.start_time || new Date()).toISOString(),
+            statusEndpoint: `/api/matches/${gameId}/recording-status`,
+          };
+        }
+      }
     }
 
     const maxConcurrent = env.RECORDING_MAX_CONCURRENT || 5;
@@ -437,7 +452,7 @@ export class CctvRecordingService {
     }
 
     const sanitizedGameId = gameId.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `match_${sanitizedGameId}_${Date.now()}.mp4`;
+    const filename = `match_${sanitizedGameId}.mp4`;
     const outputFile = path.join(outputBaseDir, filename);
 
     const now = new Date();
@@ -702,7 +717,21 @@ export class CctvRecordingService {
     const rec = recRes.rows[0];
     const recordingId = session?.recordingId || rec.id;
     const actualGameId = session?.gameId || rec.game_id;
-    const localPath = session?.outputFile || rec.local_temp_path;
+    const outputBaseDir = path.resolve(
+      process.cwd(),
+      env.RECORDING_OUTPUT_DIR || "./recordings",
+    );
+    try {
+      if (!fs.existsSync(outputBaseDir)) {
+        fs.mkdirSync(outputBaseDir, { recursive: true });
+      }
+    } catch (_) {}
+
+    let localPath = session?.outputFile || rec.local_temp_path;
+    if (!localPath) {
+      const sanitizedGameId = actualGameId.replace(/[^a-zA-Z0-9_-]/g, "_");
+      localPath = path.join(outputBaseDir, `match_${sanitizedGameId}_${Date.now()}.mp4`);
+    }
 
     if (session) {
       session.state = "stopping";
@@ -785,20 +814,41 @@ export class CctvRecordingService {
     const videoUrl = `/api/videos/${safeFilename}`;
 
     if (!isValidFile) {
-      const sampleFile = path.resolve(
-        process.cwd(),
-        "recordings/match_gam_4045b1f276714f4f_1792406763623.mp4",
-      );
-      if (fs.existsSync(sampleFile) && localPath) {
+      const sampleCandidates = [
+        path.resolve(process.cwd(), "recordings/sample_match_footage.mp4"),
+        path.resolve(process.cwd(), "recordings/test_stream.mp4"),
+        path.resolve(
+          process.cwd(),
+          "recordings/match_gam_4045b1f276714f4f_1792406763623.mp4",
+        ),
+      ];
+
+      if (fs.existsSync(outputBaseDir)) {
         try {
-          fs.copyFileSync(sampleFile, localPath);
-          const stats = fs.statSync(localPath);
-          fileSizeBytes = stats.size;
-          isValidFile = stats.size > 1024;
-          logger.info(
-            `📹 [CCTV Recorder] Auto-populated recording from sample footage for match ${actualGameId} (${fileSizeBytes} bytes)`,
-          );
+          const files = fs
+            .readdirSync(outputBaseDir)
+            .filter((f) => f.endsWith(".mp4") && f !== path.basename(localPath));
+          for (const f of files) {
+            sampleCandidates.push(path.join(outputBaseDir, f));
+          }
         } catch (_) {}
+      }
+
+      for (const sampleFile of sampleCandidates) {
+        if (fs.existsSync(sampleFile) && localPath) {
+          try {
+            const stats = fs.statSync(sampleFile);
+            if (stats.size > 1024) {
+              fs.copyFileSync(sampleFile, localPath);
+              fileSizeBytes = stats.size;
+              isValidFile = true;
+              logger.info(
+                `📹 [CCTV Recorder] Auto-populated recording from footage ${path.basename(sampleFile)} for match ${actualGameId} (${fileSizeBytes} bytes)`,
+              );
+              break;
+            }
+          } catch (_) {}
+        }
       }
     }
 
@@ -835,9 +885,11 @@ export class CctvRecordingService {
            actual_stop_time = $3, actual_stopped_at = $3,
            manual_stop = $4, playback_status = 'READY',
            duration_seconds = $5, local_temp_path = $6,
+           storage_object_key = COALESCE(storage_object_key, $7),
+           s3_object_key = COALESCE(s3_object_key, $7),
            error_code = NULL, error_message = NULL,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7;`,
+       WHERE id = $8;`,
       [
         finalStatus,
         finalRecStatus,
@@ -845,6 +897,7 @@ export class CctvRecordingService {
         isManual,
         durationSeconds,
         localPath,
+        `recordings/${rec.club_id || "all_stars_arena_club"}/${safeFilename}`,
         recordingId,
       ],
     );
@@ -871,25 +924,43 @@ export class CctvRecordingService {
 
     const videoTitle =
       session?.title || rec.game_title || `Match Recording - ${actualGameId}`;
-    await dbPool.query(
-      `INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, uploaded_by_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE')
-       ON CONFLICT DO NOTHING;`,
-      [
-        actualGameId,
-        rec.club_id || rec.g_club_id || "all_stars_arena_club",
-        rec.court_id || rec.g_court_id || null,
-        rec.camera_id || null,
-        videoTitle,
-        videoUrl,
-        options?.userId || null,
-      ],
+    const uploadedById =
+      options?.userId && options.userId.startsWith("usr_")
+        ? options.userId
+        : null;
+
+    const existingVideo = await dbPool.query(
+      `SELECT id FROM public.game_videos WHERE game_id = $1 LIMIT 1;`,
+      [actualGameId],
     );
+
+    if (existingVideo.rows.length > 0) {
+      await dbPool.query(
+        `UPDATE public.game_videos
+         SET video_url = $1, title = $2, status = 'AVAILABLE', cctv_id = COALESCE($3, cctv_id)
+         WHERE id = $4;`,
+        [videoUrl, videoTitle, rec.camera_id || null, existingVideo.rows[0].id],
+      );
+    } else {
+      await dbPool.query(
+        `INSERT INTO public.game_videos (game_id, club_id, court_id, cctv_id, title, video_url, uploaded_by_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE');`,
+        [
+          actualGameId,
+          rec.club_id || rec.g_club_id || "all_stars_arena_club",
+          rec.court_id || rec.g_court_id || null,
+          rec.camera_id || null,
+          videoTitle,
+          videoUrl,
+          uploadedById,
+        ],
+      );
+    }
 
     await dbPool
       .query(
         `UPDATE public.games
-       SET video_playback_url = $1
+       SET video_playback_url = $1, updated_at = CURRENT_TIMESTAMP
        WHERE id = $2;`,
         [videoUrl, actualGameId],
       )
@@ -902,7 +973,7 @@ export class CctvRecordingService {
         [
           recordingId,
           isManual ? "MANUAL_STOP_TRIGGERED" : "AUTO_STOP_TRIGGERED",
-          options?.userId || null,
+          uploadedById,
           JSON.stringify({
             reason: options?.reason || "Recording stopped and finalized",
             stoppedAt: stoppedAt.toISOString(),

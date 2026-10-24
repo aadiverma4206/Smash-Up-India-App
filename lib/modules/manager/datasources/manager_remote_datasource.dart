@@ -435,4 +435,16 @@ class ManagerRemoteDataSource {
       (json) => json as Map<String, dynamic>,
     );
   }
+
+  Future<ApiResponseModel<Map<String, dynamic>>> extendMatchTime(
+      String gameId, {int additionalMinutes = 15}) async {
+    final response = await dioClient.dio.post(
+      '/manager/games/$gameId/recording/extend',
+      data: {'additionalMinutes': additionalMinutes},
+    );
+    return ApiResponseParser.parse<Map<String, dynamic>>(
+      response.data,
+      (json) => json as Map<String, dynamic>,
+    );
+  }
 }

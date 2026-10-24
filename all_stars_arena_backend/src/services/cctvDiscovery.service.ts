@@ -45,16 +45,24 @@ export class CctvDiscoveryService {
     const isHostOnline = hostTest.status === "ONLINE";
 
     const configuredChannels = [
-      { channel: 1, name: "Court Camera 1 (Main Pitch)", courtName: "Court 1" },
       {
-        channel: 2,
-        name: "Court Camera 2 (Sideline View)",
+        channel: 1,
+        name: "Camera 1 (Court 1 - Main Pitch)",
         courtName: "Court 1",
       },
-      { channel: 3, name: "Court Camera 3 (Side Pitch)", courtName: "Court 2" },
+      {
+        channel: 2,
+        name: "Camera 2 (Court 1 - Sideline)",
+        courtName: "Court 1",
+      },
+      {
+        channel: 3,
+        name: "Camera 3 (Court 2 - Main Pitch)",
+        courtName: "Court 2",
+      },
       {
         channel: 4,
-        name: "Court Camera 4 (Goalpost View)",
+        name: "Camera 4 (Court 2 - Goalpost)",
         courtName: "Court 2",
       },
     ];

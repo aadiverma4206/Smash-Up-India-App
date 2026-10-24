@@ -107,9 +107,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
   Widget _buildPitchSummaryCard(BuildContext context) {
     final court = controller.selectedCourt.value;
     final courtName = court?.name ?? 'Court 1';
-    final clubName = controller.selectedClub.value.name.isNotEmpty
-        ? controller.selectedClub.value.name
-        : 'All Stars Turf Raipur';
+    final sportTitle = controller.selectedGameTitle.value;
     final surface = court?.surfaceType ?? '3G Turf';
 
     final dateFormatted = controller.selectedDate.value != null
@@ -141,8 +139,13 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.stadium_rounded,
-                    color: AppColors.primary, size: 24),
+                child: Icon(
+                  sportTitle == 'Basketball'
+                      ? Icons.sports_basketball_rounded
+                      : Icons.sports_soccer_rounded,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -150,7 +153,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$clubName • $courtName',
+                      '$sportTitle • $courtName',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -159,7 +162,7 @@ class GameCheckoutView extends GetView<CreateGameController> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$surface • Professional Turf Pitch',
+                      '$surface • ${sportTitle == 'Basketball' ? 'Basketball Court' : 'Turf Pitch'}',
                       style: TextStyle(
                         fontSize: 12,
                         color: context.textSecondary,

@@ -139,7 +139,11 @@ class ManagerGamesController extends GetxController {
   }
 
   List<GameModel> get filteredGames {
+    final seen = <String>{};
     return games.where((g) {
+      if (seen.contains(g.id)) return false;
+      seen.add(g.id);
+
       if (searchQuery.value.trim().isNotEmpty) {
         final q = searchQuery.value.trim().toLowerCase();
         final titleMatches = g.title.toLowerCase().contains(q);
@@ -460,5 +464,28 @@ class ManagerGamesController extends GetxController {
       isCurrentlyPaused ? 'Match Resumed' : 'Match Paused',
       isCurrentlyPaused ? 'Match gameplay active.' : 'Match gameplay paused.',
     );
+  }
+
+  final RxBool isExtendingTime = false.obs;
+
+  Future<void> extendMatchTime(String gameId, {int additionalMinutes = 15}) async {
+    if (isExtendingTime.value || gameId.isEmpty) return;
+    try {
+      isExtendingTime.value = true;
+      await repository.extendMatchTime(gameId, additionalMinutes: additionalMinutes);
+
+      fetchClubGames();
+      await fetchMatchRecording(gameId);
+
+      ErrorHandler.showSuccessSnackBar(
+        'Match Extended',
+        'Match time & recording extended by $additionalMinutes minutes.',
+      );
+    } catch (e) {
+      AppLogger.warning('Failed to extend match time: $e');
+      ErrorHandler.showErrorSnackBar('Error', e);
+    } finally {
+      isExtendingTime.value = false;
+    }
   }
 }

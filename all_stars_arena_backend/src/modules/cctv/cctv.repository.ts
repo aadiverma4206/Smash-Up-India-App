@@ -307,11 +307,15 @@ export class CctvRepository {
     target: string;
     details: string;
   }) {
+    // Foreign key public.audit_logs(admin_id) references public.users(id).
+    // System actors (like SYSTEM_WORKER) must store NULL in admin_id to satisfy the foreign key constraint.
+    const adminId =
+      data.adminId && data.adminId.startsWith("usr_") ? data.adminId : null;
     await dbPool.query(
       `INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)
        VALUES ($1, $2, $3, $4, $5);`,
       [
-        data.adminId || null,
+        adminId,
         data.adminName,
         data.action,
         data.target,

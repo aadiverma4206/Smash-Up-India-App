@@ -171,8 +171,8 @@ class CreateGameView extends StatelessWidget {
                       children: [
                         _buildSectionHeader(
                           context,
-                          title: 'Club & Pitch Info',
-                          icon: Icons.stadium_rounded,
+                          title: 'Sport & Pitch Info',
+                          icon: Icons.sports_soccer_rounded,
                         ),
                         const SizedBox(height: 10),
                         _buildVenueSelectionCard(context, controller),
@@ -187,7 +187,7 @@ class CreateGameView extends StatelessWidget {
                         const SizedBox(height: 20),
                         _buildSectionHeader(
                           context,
-                          title: 'Pitch Notes & Special Requests',
+                          title: 'Notes',
                           icon: Icons.description_rounded,
                         ),
                         const SizedBox(height: 10),
@@ -237,37 +237,114 @@ class CreateGameView extends StatelessWidget {
       child: Obx(() {
         final courts = controller.availableCourts;
         final selectedCourt = controller.selectedCourt.value;
+        final selectedTitle = controller.selectedGameTitle.value;
+
+        final sports = [
+          {
+            'name': 'Football',
+            'subtitle': 'Turf Pitch',
+          },
+          {
+            'name': 'Basketball',
+            'subtitle': 'Standard Court',
+          },
+        ];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Club Name *',
-                prefixIcon: const Icon(Icons.business_rounded,
-                    color: AppColors.primary),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: context.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      BorderSide(color: context.borderColor, width: 1.2),
-                ),
+            Text(
+              'Select Sport / Game Title *',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: context.textSecondary,
               ),
-              child: Text(
-                controller.selectedClub.value.name.isNotEmpty
-                    ? controller.selectedClub.value.name
-                    : 'All Stars Turf Raipur',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: context.textPrimary,
-                ),
-              ),
+            ),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - 10) / 2;
+
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: sports.map((sport) {
+                    final sportName = sport['name']!;
+                    final sportSubtitle = sport['subtitle']!;
+                    final isSelected = selectedTitle.toLowerCase() ==
+                        sportName.toLowerCase();
+
+                    return SizedBox(
+                      width: itemWidth,
+                      child: InkWell(
+                        onTap: () {
+                          controller.selectedGameTitle.value = sportName;
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.12)
+                                : context.backgroundColor,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : context.borderColor,
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected
+                                    ? Icons.radio_button_checked_rounded
+                                    : Icons.radio_button_unchecked_rounded,
+                                size: 18,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : context.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      sportName,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : context.textPrimary,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      sportSubtitle,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : context.textSecondary,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
             ),
             const SizedBox(height: 14),
             Text(
@@ -649,7 +726,7 @@ class CreateGameView extends StatelessWidget {
         decoration: InputDecoration(
           labelText: 'Pitch Booking Notes & Special Requests (Optional)',
           hintText:
-              'e.g. Need warm-up bibs, extra footballs, or floodlights turned on early.',
+              'e.g. Need warm-up bibs, extra footballs or basketballs, etc.',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -696,7 +773,9 @@ class CreateGameView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          courtName,
+                          court != null
+                              ? '${controller.selectedGameTitle.value} • $courtName'
+                              : controller.selectedGameTitle.value,
                           style: TextStyle(
                             color: context.textPrimary,
                             fontWeight: FontWeight.bold,
@@ -732,7 +811,7 @@ class CreateGameView extends StatelessWidget {
             height: 52,
             child: AppButton(
               text: court != null
-                  ? 'Book ${court.name} Pitch • ₹${totalAmount.toStringAsFixed(0)}'
+                  ? 'Book ${controller.selectedGameTitle.value} (${court.name}) • ₹${totalAmount.toStringAsFixed(0)}'
                   : 'Select Pitch / Court to Book',
               isLoading: controller.isLoading.value,
               onPressed: controller.proceedToCheckout,

@@ -299,4 +299,11 @@ class ManagerRepository {
     final response = await remoteDataSource.stopMatchRecording(gameId);
     return response.data ?? {};
   }
+
+  Future<Map<String, dynamic>> extendMatchTime(String gameId,
+      {int additionalMinutes = 15}) async {
+    final response = await remoteDataSource.extendMatchTime(gameId,
+        additionalMinutes: additionalMinutes);
+    return response.data ?? {};
+  }
 }

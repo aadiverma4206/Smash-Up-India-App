@@ -52,22 +52,22 @@ class CctvController extends GetxController {
       CctvLiveCameraOptionModel(
           id: 'live_cam_1',
           channel: 1,
-          name: 'Camera 1 (Main Pitch)',
+          name: 'Camera 1 (Court 1 - Main Pitch)',
           courtName: 'Court 1'),
       CctvLiveCameraOptionModel(
           id: 'live_cam_2',
           channel: 2,
-          name: 'Camera 2 (Side Pitch)',
-          courtName: 'Court 2'),
+          name: 'Camera 2 (Court 1 - Sideline)',
+          courtName: 'Court 1'),
       CctvLiveCameraOptionModel(
           id: 'live_cam_3',
           channel: 3,
-          name: 'Camera 3 (Goal View A)',
-          courtName: 'Court 1'),
+          name: 'Camera 3 (Court 2 - Main Pitch)',
+          courtName: 'Court 2'),
       CctvLiveCameraOptionModel(
           id: 'live_cam_4',
           channel: 4,
-          name: 'Camera 4 (Goal View B)',
+          name: 'Camera 4 (Court 2 - Goalpost)',
           courtName: 'Court 2'),
     ]);
   }

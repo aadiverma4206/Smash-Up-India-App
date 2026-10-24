@@ -52,6 +52,20 @@ class ManagerDashboardController extends GetxController
           approvalStatus != 'REJECTED';
     }).toList();
 
+    // Deduplicate court slots by unique game / slot ID
+    final seen = <String>{};
+    final deduplicated = <Map<String, dynamic>>[];
+    for (final slot in list) {
+      final id = (slot['gameId'] ?? slot['id'] ?? slot['_id'] ?? '').toString();
+      final key = id.isNotEmpty
+          ? id
+          : '${slot['title']}_${slot['startTime']}_${slot['start_time']}';
+      if (seen.contains(key)) continue;
+      seen.add(key);
+      deduplicated.add(slot);
+    }
+    list = deduplicated;
+
     if (searchQuery.value.trim().isNotEmpty) {
       final q = searchQuery.value.trim().toLowerCase();
       list = list.where((slot) {

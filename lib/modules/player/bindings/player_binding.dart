@@ -3,6 +3,7 @@ import '../datasources/player_remote_datasource.dart';
 import '../repositories/player_repository.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/notifications_controller.dart';
+import '../controllers/match_history_controller.dart';
 import '../../games/datasources/games_remote_datasource.dart';
 import '../../games/repositories/games_repository.dart';
 import '../../../core/network/dio_client.dart';
@@ -42,6 +43,10 @@ class PlayerBinding extends Bindings {
     );
     Get.lazyPut<NotificationsController>(
       () => NotificationsController(),
+      fenix: true,
+    );
+    Get.lazyPut<MatchHistoryController>(
+      () => MatchHistoryController(),
       fenix: true,
     );
   }

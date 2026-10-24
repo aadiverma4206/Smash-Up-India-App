@@ -303,8 +303,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _buildThemeToggleButton(context),
-                              const SizedBox(width: 4),
                               _buildNotificationBell(context),
                               const SizedBox(width: 8),
                               _buildProfileAvatar(context),
@@ -684,30 +682,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     });
   }
 
-  Widget _buildThemeToggleButton(BuildContext context) {
-    return Obx(() {
-      final currentMode = Get.isRegistered<ThemeService>()
-          ? ThemeService.to.themeMode.value
-          : ThemeMode.light;
-      final isDark = currentMode == ThemeMode.dark;
 
-      return IconButton(
-        icon: Icon(
-          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-          color: isDark ? Colors.amber : Colors.white,
-          size: 22,
-        ),
-        tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-        onPressed: () {
-          if (Get.isRegistered<ThemeService>()) {
-            ThemeService.to.switchThemeMode(
-              isDark ? ThemeMode.light : ThemeMode.dark,
-            );
-          }
-        },
-      );
-    });
-  }
 
   Widget _buildProfileAvatar(BuildContext context) {
     return Obx(() {

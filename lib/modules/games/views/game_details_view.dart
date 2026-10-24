@@ -45,6 +45,7 @@ class GameDetailsView extends StatelessWidget {
             children: [
               _buildBookingInfoCard(context, game),
               const SizedBox(height: 16),
+              _buildScoreboardCard(context, game),
               _buildHostCancelCard(context, controller, game),
               const SizedBox(height: 20),
               _buildVideoSection(context, controller, game),
@@ -265,12 +266,48 @@ class GameDetailsView extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const EmptyStateWidget(
-                title: 'No CCTV Footage Available',
-                subtitle:
-                    'Footage will be automatically recorded and displayed here once available.',
-                imageSize: 130,
-              ),
+              if (game.status.toUpperCase() == 'COMPLETED')
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.timer_outlined,
+                          color: AppColors.primary, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Match Video Processing',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Full match recording will be available in the app 10 minutes after match completion.',
+                              style: TextStyle(
+                                  color: context.textSecondary, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                const EmptyStateWidget(
+                  title: 'No CCTV Footage Available',
+                  subtitle:
+                      'Footage will be automatically recorded and displayed here once available.',
+                  imageSize: 130,
+                ),
             ],
           ),
         );
@@ -454,5 +491,223 @@ class GameDetailsView extends StatelessWidget {
         ],
       );
     });
+  }
+
+  Widget _buildScoreboardCard(BuildContext context, GameModel game) {
+    final isOngoing = game.status == 'ONGOING';
+    final isCompleted = game.status == 'COMPLETED';
+    final hasScore = isOngoing || isCompleted || game.teamAScore > 0 || game.teamBScore > 0;
+    if (!hasScore) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final winner = game.winnerTeam;
+
+    String winnerText = '';
+    Color winnerColor = AppColors.primary;
+    if (isCompleted) {
+      if (winner == 'TEAM_A' || game.teamAScore > game.teamBScore) {
+        winnerText = '🏆 Team A Won the Match';
+        winnerColor = const Color(0xFF10B981);
+      } else if (winner == 'TEAM_B' || game.teamBScore > game.teamAScore) {
+        winnerText = '🏆 Team B Won the Match';
+        winnerColor = const Color(0xFF10B981);
+      } else {
+        winnerText = '🤝 Match Ended in a Draw';
+        winnerColor = Colors.amber.shade700;
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF17231B), const Color(0xFF0F1713)]
+              : [const Color(0xFFF0FDF4), const Color(0xFFE8F5E9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isOngoing
+              ? Colors.redAccent.withValues(alpha: 0.5)
+              : AppColors.primary.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isOngoing ? Colors.redAccent : AppColors.primary)
+                .withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  if (isOngoing) ...[
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'LIVE SCORE',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ] else ...[
+                    const Icon(Icons.emoji_events_rounded,
+                        color: Colors.amber, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      'FINAL SCORE',
+                      style: TextStyle(
+                        color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (isOngoing ? Colors.redAccent : Colors.green)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isOngoing ? 'MATCH IN PROGRESS' : 'MATCH COMPLETED',
+                  style: TextStyle(
+                    color: isOngoing ? Colors.redAccent : Colors.green,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'TEAM A',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${game.teamAScore}',
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white10 : Colors.black12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'VS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: context.textSecondary,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'TEAM B',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${game.teamBScore}',
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (winnerText.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: winnerColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                winnerText,
+                style: TextStyle(
+                  color: winnerColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

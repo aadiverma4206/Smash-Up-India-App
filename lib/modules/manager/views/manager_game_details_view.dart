@@ -340,21 +340,46 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  const Text(
-                    'Match Completed',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
-                        color: Colors.green),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Match Completed',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                              color: Colors.green),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Final Score: Team A ${game.teamAScore} - ${game.teamBScore} Team B',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: context.textPrimary),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Final Score: Team A ${game.teamAScore} - ${game.teamBScore} Team B\nNote: To add or edit final scores, please go to Match History.',
-                    style:
-                        TextStyle(fontSize: 11.5, color: context.textSecondary),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.green),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                    ),
+                    onPressed: () => _showScoreEntryDialog(context, game),
+                    icon: const Icon(Icons.edit_note_rounded,
+                        color: Colors.green, size: 16),
+                    label: const Text('Edit Score',
+                        style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -468,7 +493,55 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
+                  elevation: 2,
+                ),
+                onPressed: () => _showScoreEntryDialog(context, game),
+                icon: const Icon(Icons.sports_score_rounded,
+                    color: Colors.white, size: 20),
+                label: Text(
+                  'Update Live Match Score (${game.teamAScore} - ${game.teamBScore})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
+                  elevation: 2,
+                ),
+                onPressed: () => _showExtendTimeDialog(context, game),
+                icon: const Icon(Icons.more_time_rounded,
+                    color: Colors.white, size: 20),
+                label: const Text(
+                  'Extend Match Time (+ Extra Mins)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               height: 46,
@@ -569,6 +642,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
 
   Widget _buildCctvVideoSection(BuildContext context, GameModel game) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCompleted = game.status.toUpperCase() == 'COMPLETED';
 
     return Container(
       width: double.infinity,
@@ -806,6 +880,49 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     ),
                   ),
                 ],
+              );
+            }
+
+            if (isCompleted) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.timer_outlined,
+                        color: AppColors.primary, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Match Video Processing',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Final footage will be released & visible in the UI 10 minutes after match completion.',
+                            style: TextStyle(
+                              color: context.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               );
             }
 
@@ -1180,16 +1297,309 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     });
   }
 
+  void _showExtendTimeDialog(BuildContext context, GameModel game) {
+    int selectedMinutes = 15;
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: context.cardColor,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.more_time_rounded,
+                    color: AppColors.primary, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Extend Match Time',
+                    style: TextStyle(
+                      color: context.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select extra minutes to extend for match "${game.title}" and its live CCTV recording:',
+                  style: TextStyle(color: context.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  children: [10, 15, 30].map((mins) {
+                    final isSel = selectedMinutes == mins;
+                    return ChoiceChip(
+                      label: Text('+$mins Mins'),
+                      selected: isSel,
+                      selectedColor: AppColors.primary,
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : context.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      onSelected: (val) {
+                        if (val) {
+                          setState(() => selectedMinutes = mins);
+                        }
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Cancel'),
+              ),
+              Obx(() => ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                    onPressed: controller.isExtendingTime.value
+                        ? null
+                        : () {
+                            Get.back();
+                            controller.extendMatchTime(game.id,
+                                additionalMinutes: selectedMinutes);
+                          },
+                    child: controller.isExtendingTime.value
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text(
+                            'Extend +$selectedMinutes Min',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                  )),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showScoreEntryDialog(BuildContext context, GameModel game) {
+    final scoreAController =
+        TextEditingController(text: game.teamAScore.toString());
+    final scoreBController =
+        TextEditingController(text: game.teamBScore.toString());
+    final isFinalRx = (game.status == 'COMPLETED').obs;
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: context.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          game.status == 'COMPLETED' ? 'Edit Match Score' : 'Update Live Score',
+          style: TextStyle(color: context.textPrimary, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter scores for "${game.title}". Players will immediately see this updated on their match scoreboard.',
+              style: TextStyle(fontSize: 12, color: context.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Team A',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: scoreAController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 8),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('VS',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Team B',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: scoreBController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 8),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Obx(() => Row(
+                  children: [
+                    Checkbox(
+                      value: isFinalRx.value,
+                      activeColor: AppColors.primary,
+                      onChanged: (val) => isFinalRx.value = val ?? false,
+                    ),
+                    const Text('Mark as Final Score',
+                        style: TextStyle(fontSize: 12)),
+                  ],
+                )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () {
+              final a = int.tryParse(scoreAController.text.trim()) ?? 0;
+              final b = int.tryParse(scoreBController.text.trim()) ?? 0;
+              Get.back();
+              controller.submitMatchScore(game.id, a, b,
+                  isFinal: isFinalRx.value);
+            },
+            child: const Text('Save Score',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmStopMatch(BuildContext context, GameModel game) {
+    final scoreAController =
+        TextEditingController(text: game.teamAScore.toString());
+    final scoreBController =
+        TextEditingController(text: game.teamBScore.toString());
+
     Get.dialog(
       AlertDialog(
         backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Stop & Complete Match: ${game.title}',
-            style: TextStyle(color: context.textPrimary)),
-        content: const Text(
-            'Are you sure you want to stop this match? The match will be marked as COMPLETED and moved to Match History, where you can record the final score.',
-            style: TextStyle(fontSize: 12.5)),
+            style: TextStyle(color: context.textPrimary, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the final score before completing this match:',
+              style: TextStyle(fontSize: 12.5),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Team A',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: scoreAController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 8),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: Text('-',
+                      style:
+                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Team B',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: scoreBController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 8),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
@@ -1198,9 +1608,10 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
+              final a = int.tryParse(scoreAController.text.trim()) ?? 0;
+              final b = int.tryParse(scoreBController.text.trim()) ?? 0;
               Get.back();
-              controller.completeGame(
-                  game.id, game.teamAScore, game.teamBScore);
+              controller.completeGame(game.id, a, b);
             },
             child: const Text('Stop & Complete',
                 style: TextStyle(color: Colors.white)),

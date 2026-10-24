@@ -31,6 +31,11 @@ class MatchHistoryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (Get.arguments is GameModel) {
+      final argGame = Get.arguments as GameModel;
+      selectedGame.value = argGame;
+      fetchMatchRecording(argGame.id);
+    }
     fetchHistory(isRefresh: true);
     scrollController.addListener(_onScroll);
   }

@@ -47,6 +47,7 @@ class CreateGameController extends GetxController {
 
   final availableCourts = <CourtModel>[].obs;
   final Rxn<CourtModel> selectedCourt = Rxn<CourtModel>();
+  final RxString selectedGameTitle = 'Football'.obs;
 
   final Rxn<DateTime> selectedDate = Rxn<DateTime>();
   final Rxn<TimeOfDay> startTime = Rxn<TimeOfDay>();
@@ -83,6 +84,7 @@ class CreateGameController extends GetxController {
     loadVenues();
     fetchWalletBalance();
 
+    selectedGameTitle.value = 'Football';
     descriptionController.clear();
     selectedDate.value = null;
     startTime.value = null;
@@ -245,6 +247,12 @@ class CreateGameController extends GetxController {
   }
 
   bool validateForm() {
+    if (selectedGameTitle.value.trim().isEmpty) {
+      ErrorHandler.showErrorSnackBar(
+          'Validation Error', 'Please select a sport (Football or Basketball)');
+      return false;
+    }
+
     if (selectedCourt.value == null) {
       ErrorHandler.showErrorSnackBar(
           'Validation Error', 'Please select Court 1 or Court 2');
@@ -331,12 +339,15 @@ class CreateGameController extends GetxController {
             order.keyId.isNotEmpty ? order.keyId : ApiConstants.razorpayKey;
 
         final courtTitle = selectedCourt.value?.name ?? 'Court';
+        final sportTitle = selectedGameTitle.value.trim().isNotEmpty
+            ? selectedGameTitle.value.trim()
+            : 'Pitch Reservation';
         final options = {
           'key': key,
           'amount':
               order.amountPaisa > 0 ? order.amountPaisa : (fee * 100).toInt(),
           'name': 'ALL STARS ARENA',
-          'description': 'Pitch Reservation - $courtTitle',
+          'description': '$sportTitle Booking - $courtTitle',
           if (order.orderId.isNotEmpty &&
               !order.orderId.startsWith('rzp_order_mock_'))
             'order_id': order.orderId,
@@ -549,13 +560,21 @@ class CreateGameController extends GetxController {
         : '19:30';
 
     final fee = pitchBookingAmount;
+    final sportTitle = selectedGameTitle.value.trim().isNotEmpty
+        ? selectedGameTitle.value.trim()
+        : 'Football';
+    final formatKey =
+        sportTitle.toLowerCase() == 'basketball' ? '5v5' : '11v11';
 
     try {
       final newGame = await repository.createGame({
-        'title': 'Pitch Booking - $courtName',
+        'title': sportTitle,
+        'clubId': selectedClub.value.id.isNotEmpty
+            ? selectedClub.value.id
+            : 'all_stars_arena_club',
         'courtId': courtId,
         'courtName': courtName,
-        'format': '11v11',
+        'format': formatKey,
         'entryFee': fee,
         'matchDate': dateStr,
         'startTime': startStr,
