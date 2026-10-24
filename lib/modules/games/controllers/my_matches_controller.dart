@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../../player/repositories/player_repository.dart';
 import '../../../data/models/game_model.dart';
+import '../../notifications/services/socket_notification_service.dart';
+import '../../../core/utils/app_logger.dart';
 
 class MyMatchesController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
@@ -15,6 +17,28 @@ class MyMatchesController extends GetxController {
   void onInit() {
     super.onInit();
     fetchMyMatches(selectedTab.value);
+    _initSocketListeners();
+  }
+
+  void _initSocketListeners() {
+    try {
+      if (Get.isRegistered<SocketNotificationService>()) {
+        SocketNotificationService.to.onEvent('notification', (data) {
+          AppLogger.info('⚡ [Socket.IO] Match notification event received in MyMatchesController');
+          fetchMyMatches(selectedTab.value);
+        });
+        SocketNotificationService.to.onEvent('match:live_feed', (data) {
+          AppLogger.info('⚡ [Socket.IO] Match live feed event received in MyMatchesController');
+          fetchMyMatches(selectedTab.value);
+        });
+        SocketNotificationService.to.onEvent('match:score_update', (data) {
+          AppLogger.info('⚡ [Socket.IO] Match score update event received in MyMatchesController');
+          fetchMyMatches(selectedTab.value);
+        });
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to initialize socket listeners in MyMatchesController: $e');
+    }
   }
 
   Future<void> fetchMyMatches(String tab) async {

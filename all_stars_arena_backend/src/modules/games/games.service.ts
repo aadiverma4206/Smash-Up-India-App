@@ -224,23 +224,40 @@ export class GamesService {
       throw new ApiError(400, "Entry fee cannot be negative");
     }
 
-    const matchStart = new Date(`${data.matchDate}T${data.startTime}`);
-    const matchEnd = new Date(`${data.matchDate}T${data.endTime}`);
+    const cleanDate = (data.matchDate || "").includes("T")
+      ? data.matchDate.split("T")[0].trim()
+      : (data.matchDate || "").trim();
+    const padTime = (t: string) => {
+      const parts = (t || "").trim().split(":");
+      const hh = (parts[0] || "0").padStart(2, "0");
+      const mm = (parts[1] || "0").padStart(2, "0");
+      const ss = (parts[2] || "00").slice(0, 2).padStart(2, "0");
+      return `${hh}:${mm}:${ss}`;
+    };
+    const cleanStart = padTime(data.startTime);
+    const cleanEnd = padTime(data.endTime);
+
+    const matchStart = new Date(`${cleanDate}T${cleanStart}+05:30`);
+    const matchEnd = new Date(`${cleanDate}T${cleanEnd}+05:30`);
     const now = new Date();
 
     if (isNaN(matchStart.getTime()) || isNaN(matchEnd.getTime())) {
       throw new ApiError(400, "Invalid match date or time format");
     }
 
-    if (matchStart < now) {
+    if (matchStart.getTime() < now.getTime() - 2 * 60 * 1000) {
       throw new ApiError(
         400,
-        "Match date and start time cannot be in the past",
+        "Cannot book a court slot in the past. Match date and start time must be in the future.",
+        "PAST_SLOT_NOT_ALLOWED",
       );
     }
 
     if (matchEnd <= matchStart) {
-      throw new ApiError(400, "Match end time must be after start time");
+      throw new ApiError(
+        400,
+        "Match end time must be strictly after start time",
+      );
     }
 
     const hasOverlap = await GamesRepository.checkCourtOverlap(
@@ -268,18 +285,32 @@ export class GamesService {
       await client.query("BEGIN");
 
       const overlapLock = await client.query(
-        `SELECT id FROM public.games
-         WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED'
-           AND ((start_time <= $3 AND end_time > $3)
-             OR (start_time < $4 AND end_time >= $4)
-             OR (start_time >= $3 AND end_time <= $4))
+        `SELECT id, title, start_time, end_time FROM public.games
+         WHERE court_id = $1 AND match_date = $2 
+           AND status <> 'CANCELLED' AND approval_status <> 'REJECTED'
+           AND (start_time < $4::time AND end_time > $3::time)
          FOR UPDATE;`,
         [data.courtId, data.matchDate, data.startTime, data.endTime],
       );
       if (overlapLock.rows.length > 0) {
         throw new ApiError(
           409,
-          "This court was just booked by another player for the selected time slot",
+          `Court ${data.courtId === "court_2" ? "2" : "1"} was just booked by another player for the selected time slot (${data.startTime} - ${data.endTime})`,
+          "COURT_OCCUPIED",
+        );
+      }
+
+      const bookingOverlapLock = await client.query(
+        `SELECT id, start_time, end_time FROM public.court_bookings
+         WHERE court_id = $1 AND booking_date = $2 AND status = 'CONFIRMED'
+           AND (start_time < $4::time AND end_time > $3::time)
+         FOR UPDATE;`,
+        [data.courtId, data.matchDate, data.startTime, data.endTime],
+      );
+      if (bookingOverlapLock.rows.length > 0) {
+        throw new ApiError(
+          409,
+          `Court ${data.courtId === "court_2" ? "2" : "1"} was just booked for the selected time slot (${data.startTime} - ${data.endTime})`,
           "COURT_OCCUPIED",
         );
       }
@@ -449,20 +480,6 @@ export class GamesService {
         );
       }
 
-      await client.query(
-        `INSERT INTO public.court_bookings (court_id, club_id, user_id, booking_date, start_time, end_time, amount_paid, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED')
-         ON CONFLICT DO NOTHING;`,
-        [
-          data.courtId,
-          data.clubId || "all_stars_arena_club",
-          creatorUserId,
-          data.matchDate,
-          data.startTime,
-          data.endTime,
-          entryFee,
-        ],
-      );
 
       await GamesRepository.addActivityLog(
         {
@@ -476,8 +493,20 @@ export class GamesService {
       );
 
       await client.query("COMMIT");
-    } catch (err) {
+    } catch (err: any) {
       await client.query("ROLLBACK");
+      if (
+        err.code === "23505" ||
+        err.message?.includes("already booked") ||
+        err.message?.includes("Overlapping time slots")
+      ) {
+        throw new ApiError(
+          409,
+          err.message ||
+            "This court pitch is already booked or occupied for the selected time slot. Please choose another slot or court.",
+          "COURT_SLOT_CONFLICT",
+        );
+      }
       throw err;
     } finally {
       client.release();

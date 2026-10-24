@@ -58,6 +58,11 @@ class CreateGameController extends GetxController {
   final paymentStatus = ''.obs;
   final errorMessage = ''.obs;
 
+  final occupiedCourtSlots = <CourtSlotModel>[].obs;
+  final isFetchingSlots = false.obs;
+  final slotConflictWarning = RxnString();
+  final conflictingSlot = Rxn<CourtSlotModel>();
+
   final selectedPaymentMethod = 'RAZORPAY'.obs;
   final walletBalance = 0.0.obs;
 
@@ -89,6 +94,23 @@ class CreateGameController extends GetxController {
     selectedDate.value = null;
     startTime.value = null;
     endTime.value = null;
+
+    if (Get.arguments is Map) {
+      final args = Get.arguments as Map;
+      if (args['courtId'] != null) {
+        final target = args['courtId'].toString().toLowerCase();
+        final match = availableCourts.firstWhereOrNull(
+          (c) =>
+              c.id.toLowerCase() == target ||
+              c.name
+                  .toLowerCase()
+                  .contains(target.contains('2') ? '2' : '1'),
+        );
+        if (match != null) {
+          selectedCourt.value = match;
+        }
+      }
+    }
   }
 
   @override
@@ -181,6 +203,7 @@ class CreateGameController extends GetxController {
         );
         selectedCourt.value = match ?? availableCourts.first;
       }
+      fetchCourtAvailability();
     }
   }
 
@@ -197,23 +220,148 @@ class CreateGameController extends GetxController {
     }
   }
 
+  void selectCourt(CourtModel court) {
+    selectedCourt.value = court;
+    fetchCourtAvailability();
+  }
+
+  void switchToAlternateCourt() {
+    final current = selectedCourt.value;
+    final alt = availableCourts.firstWhereOrNull(
+      (c) =>
+          c.id != current?.id &&
+          c.name.toLowerCase() != current?.name.toLowerCase(),
+    );
+    if (alt != null) {
+      selectCourt(alt);
+    }
+  }
+
+  Future<void> fetchCourtAvailability() async {
+    final court = selectedCourt.value;
+    final date = selectedDate.value;
+    if (court == null || date == null) {
+      occupiedCourtSlots.clear();
+      slotConflictWarning.value = null;
+      conflictingSlot.value = null;
+      return;
+    }
+
+    final courtId = (court.name.toLowerCase().contains('2') ||
+            court.id.toLowerCase().contains('2'))
+        ? 'court_2'
+        : 'court_1';
+    final dateStr = AppDateUtils.formatIsoDate(date);
+
+    isFetchingSlots.value = true;
+    try {
+      final slots = await repository.getCourtAvailability(courtId, dateStr);
+      occupiedCourtSlots.assignAll(slots);
+      recheckSlotCollision();
+    } catch (e) {
+      AppLogger.warning('Error fetching court slots: $e');
+    } finally {
+      isFetchingSlots.value = false;
+    }
+  }
+
+  void recheckSlotCollision() {
+    if (startTime.value == null || endTime.value == null || selectedDate.value == null) {
+      slotConflictWarning.value = null;
+      conflictingSlot.value = null;
+      return;
+    }
+
+    final dateStr = AppDateUtils.formatIsoDate(selectedDate.value!);
+    final startM = startTime.value!.hour * 60 + startTime.value!.minute;
+    var endM = endTime.value!.hour * 60 + endTime.value!.minute;
+    if (endM <= startM) {
+      endM += 24 * 60;
+    }
+
+    CourtSlotModel? conflict;
+    for (final slot in occupiedCourtSlots) {
+      // Ignore slots from other dates or cancelled/rejected status
+      if (slot.bookingDate.isNotEmpty && slot.bookingDate != dateStr) {
+        continue;
+      }
+      final statusUpper = slot.status.toUpperCase();
+      if (statusUpper == 'CANCELLED' || statusUpper == 'REJECTED' || statusUpper == 'EXPIRED') {
+        continue;
+      }
+
+      final sStart = slot.startMinutes;
+      final sEnd = slot.endMinutes;
+
+      // Strict interval overlap test: start < sEnd && end > sStart
+      // Back-to-back (start == sEnd or end == sStart) is allowed!
+      if (startM < sEnd && endM > sStart) {
+        conflict = slot;
+        break;
+      }
+    }
+
+    if (conflict != null) {
+      conflictingSlot.value = conflict;
+      final courtName = selectedCourt.value?.name ?? 'Court';
+      final alt = availableCourts.firstWhereOrNull(
+        (c) =>
+            c.id != selectedCourt.value?.id &&
+            c.name.toLowerCase() != selectedCourt.value?.name.toLowerCase(),
+      );
+      final altName = alt?.name ?? 'Court 2';
+
+      slotConflictWarning.value =
+          '$courtName is already booked (${conflict.startTime} - ${conflict.endTime}). '
+          'Overlapping times cannot be booked on the same court. You can switch to $altName (separate court) or select a non-overlapping time slot (e.g. from ${conflict.endTime}).';
+    } else {
+      conflictingSlot.value = null;
+      slotConflictWarning.value = null;
+    }
+  }
+
+  bool get isSelectedTimeInPast {
+    if (selectedDate.value == null || startTime.value == null) return false;
+    final now = DateTime.now();
+    final d = selectedDate.value!;
+    final s = startTime.value!;
+    final slotStart = DateTime(d.year, d.month, d.day, s.hour, s.minute);
+    return slotStart.isBefore(now.subtract(const Duration(minutes: 1)));
+  }
+
+  void setToNextAvailableHour() {
+    final now = DateTime.now();
+    final nextStartHour = (now.hour + 1) % 24;
+    startTime.value = TimeOfDay(hour: nextStartHour, minute: 0);
+    final autoEndMinutes = (nextStartHour * 60 + 90) % (24 * 60);
+    endTime.value =
+        TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
+    recheckSlotCollision();
+  }
+
   void updateDate(DateTime pickedDate) {
     selectedDate.value = pickedDate;
     final now = DateTime.now();
 
-    if (pickedDate.year == now.year &&
+    final isToday = pickedDate.year == now.year &&
         pickedDate.month == now.month &&
-        pickedDate.day == now.day) {
+        pickedDate.day == now.day;
+
+    if (isToday) {
       final currentStart = startTime.value != null
           ? DateTime(now.year, now.month, now.day, startTime.value!.hour,
               startTime.value!.minute)
           : null;
-      if (currentStart != null && currentStart.isBefore(now)) {
+      if (currentStart == null ||
+          currentStart.isBefore(now.add(const Duration(minutes: 5)))) {
         final nextStartHour = (now.hour + 1) % 24;
         startTime.value = TimeOfDay(hour: nextStartHour, minute: 0);
-        endTime.value = TimeOfDay(hour: (nextStartHour + 1) % 24, minute: 30);
+        final autoEndMinutes = (nextStartHour * 60 + 90) % (24 * 60);
+        endTime.value =
+            TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
       }
     }
+    fetchCourtAvailability();
   }
 
   void updateStartTime(TimeOfDay newStart) {
@@ -222,11 +370,13 @@ class CreateGameController extends GetxController {
     final autoEndMinutes = (startMinutes + 90) % (24 * 60);
     endTime.value =
         TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
+    recheckSlotCollision();
   }
 
   void updateEndTime(TimeOfDay newEnd) {
     if (startTime.value == null) {
       endTime.value = newEnd;
+      recheckSlotCollision();
       return;
     }
 
@@ -241,9 +391,11 @@ class CreateGameController extends GetxController {
       final autoEndMinutes = (startMinutes + 90) % (24 * 60);
       endTime.value =
           TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
+      recheckSlotCollision();
       return;
     }
     endTime.value = newEnd;
+    recheckSlotCollision();
   }
 
   bool validateForm() {
@@ -282,12 +434,35 @@ class CreateGameController extends GetxController {
       return false;
     }
 
+    if (isSelectedTimeInPast) {
+      ErrorHandler.showErrorSnackBar(
+        'Past Time Selected',
+        'Cannot book a court slot in the past. Match date and start time must be in the future.',
+      );
+      return false;
+    }
+
+    recheckSlotCollision();
+    if (slotConflictWarning.value != null) {
+      ErrorHandler.showErrorSnackBar(
+        'Court Slot Conflict',
+        slotConflictWarning.value!,
+      );
+      return false;
+    }
+
     return true;
   }
 
-  void proceedToCheckout() {
-    if (!validateForm()) return;
-    Get.toNamed('/games/checkout');
+  Future<void> proceedToCheckout() async {
+    isProcessing.value = true;
+    try {
+      await fetchCourtAvailability();
+      if (!validateForm()) return;
+      Get.toNamed('/games/checkout');
+    } finally {
+      isProcessing.value = false;
+    }
   }
 
   Future<void> executePaymentAndCreateGame() async {
@@ -600,8 +775,78 @@ class CreateGameController extends GetxController {
       });
     } catch (e) {
       isProcessing.value = false;
-      errorMessage.value = ErrorHandler.getErrorMessage(e);
-      ErrorHandler.showErrorSnackBar('Pitch Booking Error', e);
+      final msg = ErrorHandler.getErrorMessage(e);
+      errorMessage.value = msg;
+      if (msg.contains('already booked') ||
+          msg.contains('Overlapping time slots') ||
+          msg.contains('time slot')) {
+        _showConflictDialogOnCheckout(msg);
+      } else {
+        ErrorHandler.showErrorSnackBar('Pitch Booking Error', e);
+      }
     }
+  }
+
+  void _showConflictDialogOnCheckout(String errorMsg) {
+    final courtName = selectedCourt.value?.name ?? 'Court';
+    final alt = availableCourts.firstWhereOrNull(
+      (c) =>
+          c.id != selectedCourt.value?.id &&
+          c.name.toLowerCase() != selectedCourt.value?.name.toLowerCase(),
+    );
+    final altName = alt?.name ?? 'Court 1';
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Pitch Already Booked',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          '$courtName is already booked for a match at your selected time slot.\n\nWould you like to switch to $altName or choose a different time?',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back(); // Close dialog
+              Get.back(); // Return to CreateGameView
+            },
+            child: const Text('Change Booking Time'),
+          ),
+          if (alt != null)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () async {
+                Get.back(); // Close dialog
+                switchToAlternateCourt();
+                await fetchCourtAvailability();
+                Get.back(); // Return to CreateGameView
+                ErrorHandler.showSuccessSnackBar(
+                  'Court Updated to ${alt.name}',
+                  'Switched to ${alt.name}. Please select an available time or proceed to checkout.',
+                );
+              },
+              child: Text('Switch to ${alt.name}'),
+            ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 }

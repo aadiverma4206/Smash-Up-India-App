@@ -411,7 +411,7 @@ class EditProfileView extends GetView<PlayerController> {
           'Edit Profile',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
       ),
       body: ResponsiveBuilder(

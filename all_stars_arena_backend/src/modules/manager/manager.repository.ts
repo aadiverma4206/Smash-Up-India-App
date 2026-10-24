@@ -1,4 +1,5 @@
 import { dbPool } from "../../config/db.config.js";
+import { ApiError } from "../../utils/apiResponse.js";
 
 export class ManagerRepository {
   static async getManagerClub(userId?: string) {
@@ -188,24 +189,93 @@ export class ManagerRepository {
     const normalizedCourtId = (data.courtId || "").toLowerCase().includes("2")
       ? "court_2"
       : "court_1";
+
+    const cleanDate = (data.matchDate || "").includes("T")
+      ? data.matchDate.split("T")[0]
+      : data.matchDate;
+    const cleanStart =
+      (data.startTime || "").length === 5
+        ? `${data.startTime}:00`
+        : data.startTime;
+    const cleanEnd =
+      (data.endTime || "").length === 5 ? `${data.endTime}:00` : data.endTime;
+
+    const matchStart = new Date(`${cleanDate}T${cleanStart}+05:30`);
+    const matchEnd = new Date(`${cleanDate}T${cleanEnd}+05:30`);
+    const now = new Date();
+
+    if (isNaN(matchStart.getTime()) || isNaN(matchEnd.getTime())) {
+      throw new ApiError(400, "Invalid match date or time format");
+    }
+
+    if (matchStart.getTime() < now.getTime() - 2 * 60 * 1000) {
+      throw new ApiError(
+        400,
+        "Cannot book or schedule a game in the past. Match date and start time must be in the future.",
+        "PAST_SLOT_NOT_ALLOWED",
+      );
+    }
+
+    if (matchEnd <= matchStart) {
+      throw new ApiError(
+        400,
+        "Match end time must be strictly after start time",
+      );
+    }
+
+    const overlapRes = await dbPool.query(
+      `SELECT (
+        (SELECT COUNT(*) FROM public.games 
+         WHERE court_id = $1 AND match_date = $2 
+           AND status <> 'CANCELLED' AND approval_status <> 'REJECTED'
+           AND (start_time < $4::time AND end_time > $3::time))
+        +
+        (SELECT COUNT(*) FROM public.court_bookings 
+         WHERE court_id = $1 AND booking_date = $2 
+           AND status = 'CONFIRMED'
+           AND (start_time < $4::time AND end_time > $3::time))
+      ) as total_overlap_count;`,
+      [normalizedCourtId, data.matchDate, data.startTime, data.endTime],
+    );
+
+    if (parseInt(overlapRes.rows[0]?.total_overlap_count || "0", 10) > 0) {
+      throw new ApiError(
+        409,
+        `Court ${normalizedCourtId === "court_2" ? "2" : "1"} is already booked or occupied for the selected time slot (${data.startTime} - ${data.endTime})`,
+        "COURT_SLOT_CONFLICT",
+      );
+    }
+
     const query = `
       INSERT INTO public.games
       (title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, manager_id, description)
       VALUES ($1, $2, $3, 'MANAGER', false, $4, $5, $6, $7, $8, 'OPEN_FOR_JOINING', 'APPROVED', $3, $9)
       RETURNING *;
     `;
-    const res = await dbPool.query(query, [
-      data.title,
-      normalizedCourtId,
-      data.creatorId,
-      data.format,
-      data.entryFee,
-      data.matchDate,
-      data.startTime,
-      data.endTime,
-      data.description || null,
-    ]);
-    return res.rows[0];
+    try {
+      const res = await dbPool.query(query, [
+        data.title,
+        normalizedCourtId,
+        data.creatorId,
+        data.format,
+        data.entryFee,
+        data.matchDate,
+        data.startTime,
+        data.endTime,
+        data.description || null,
+      ]);
+      return res.rows[0];
+    } catch (err: any) {
+      if (err.code === "23505" || err.message?.includes("already booked")) {
+        throw new ApiError(
+          409,
+          err.message ||
+            "This court is already booked or occupied for the selected time slot.",
+          "COURT_SLOT_CONFLICT",
+        );
+      }
+      throw err;
+    }
   }
 
   static async updateGame(

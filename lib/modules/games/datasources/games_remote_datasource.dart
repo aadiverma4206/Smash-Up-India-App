@@ -225,4 +225,68 @@ class GamesRemoteDataSource {
           .toList(),
     );
   }
+
+  Future<List<CourtSlotModel>> getCourtAvailability(
+      String courtId, String date) async {
+    final List<CourtSlotModel> slots = [];
+    try {
+      final response = await dioClient.dio.get(
+        '${ApiConstants.courts}/$courtId/availability',
+        queryParameters: {'date': date},
+      );
+      if (response.data is Map<String, dynamic> &&
+          response.data['data'] is List) {
+        final list = (response.data['data'] as List)
+            .map((e) => CourtSlotModel.fromJson(e as Map<String, dynamic>))
+            .where((s) => s.bookingDate.isEmpty || s.bookingDate == date)
+            .where((s) =>
+                s.status.toUpperCase() != 'CANCELLED' &&
+                s.status.toUpperCase() != 'REJECTED')
+            .toList();
+        slots.addAll(list);
+      }
+    } catch (_) {}
+
+    if (slots.isEmpty) {
+      try {
+        final response = await dioClient.dio.get(
+          '/manager/courts/$courtId/slots',
+          queryParameters: {'date': date},
+        );
+        final raw = response.data is Map
+            ? response.data['data'] ?? response.data['slots']
+            : response.data;
+        if (raw is List) {
+          final list = raw.map((e) {
+            final map = e as Map<String, dynamic>;
+            final matchDate = (map['matchDate'] ??
+                    map['match_date'] ??
+                    map['bookingDate'] ??
+                    map['booking_date'] ??
+                    date)
+                .toString();
+            return CourtSlotModel(
+              id: (map['id'] ?? map['gameId'] ?? '').toString(),
+              courtId: courtId,
+              bookingDate: matchDate,
+              startTime:
+                  (map['startTime'] ?? map['start_time'] ?? '').toString(),
+              endTime: (map['endTime'] ?? map['end_time'] ?? '').toString(),
+              status: (map['status'] ?? 'CONFIRMED').toString(),
+              title:
+                  (map['title'] ?? map['gameTitle'] ?? 'Booked Match').toString(),
+              source: 'GAME',
+            );
+          }).where((s) => s.bookingDate == date)
+            .where((s) =>
+                s.status.toUpperCase() != 'CANCELLED' &&
+                s.status.toUpperCase() != 'REJECTED')
+            .toList();
+          slots.addAll(list);
+        }
+      } catch (_) {}
+    }
+
+    return slots;
+  }
 }

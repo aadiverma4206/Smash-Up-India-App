@@ -373,7 +373,7 @@ class CreateGameView extends StatelessWidget {
                       width: itemWidth,
                       child: InkWell(
                         onTap: () {
-                          controller.selectedCourt.value = court;
+                          controller.selectCourt(court);
                         },
                         borderRadius: BorderRadius.circular(10),
                         child: AnimatedContainer(
@@ -703,6 +703,204 @@ class CreateGameView extends StatelessWidget {
                 ],
               ),
             ),
+
+            // Past Time Warning Card
+            if (controller.isSelectedTimeInPast) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                    width: 1.2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.history_toggle_off_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Past Time Slot Selected',
+                                style: TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'You cannot book a game in the past. The selected start time (${controller.startTime.value != null ? AppDateUtils.formatTime(controller.startTime.value!) : ""}) has already passed today.',
+                                style: TextStyle(
+                                  color: context.textPrimary,
+                                  fontSize: 11.5,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => controller.setToNextAvailableHour(),
+                        icon: const Icon(Icons.bolt_rounded, size: 16),
+                        label: const Text(
+                          'Set To Next Available Upcoming Hour',
+                          style: TextStyle(
+                              fontSize: 11.5, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Slot Collision Warning & Resolution Card
+            if (controller.slotConflictWarning.value != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                    width: 1.2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Court Slot Collision Detected',
+                                style: TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                controller.slotConflictWarning.value!,
+                                style: TextStyle(
+                                  color: context.textPrimary,
+                                  fontSize: 11.5,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                controller.switchToAlternateCourt(),
+                            icon: const Icon(Icons.swap_horiz_rounded,
+                                size: 14),
+                            label: Text(
+                              controller.selectedCourt.value?.name
+                                          .contains('2') ==
+                                      true
+                                  ? 'Switch to Court 1'
+                                  : 'Switch to Court 2',
+                              style: const TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side:
+                                  const BorderSide(color: AppColors.primary),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        if (controller.conflictingSlot.value != null) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final parts = controller
+                                    .conflictingSlot.value!.endTime
+                                    .split(':');
+                                if (parts.length >= 2) {
+                                  final h = int.tryParse(parts[0]) ?? 0;
+                                  final m = int.tryParse(parts[1]) ?? 0;
+                                  controller.updateStartTime(
+                                      TimeOfDay(hour: h, minute: m));
+                                }
+                              },
+                              icon: const Icon(Icons.arrow_forward_rounded,
+                                  size: 14),
+                              label: Text(
+                                'Start at ${controller.conflictingSlot.value!.endTime}',
+                                style: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       );

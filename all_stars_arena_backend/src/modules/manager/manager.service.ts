@@ -167,11 +167,15 @@ export class ManagerService {
       }
 
       const conflictRes = await client.query(
-        `SELECT id FROM public.games
-         WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED' AND approval_status = 'APPROVED' AND id <> $3
-           AND ((start_time <= $4 AND end_time > $4)
-             OR (start_time < $5 AND end_time >= $5)
-             OR (start_time >= $4 AND end_time <= $5));`,
+        `SELECT (
+          (SELECT COUNT(*) FROM public.games
+           WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED' AND approval_status = 'APPROVED' AND id <> $3
+             AND (start_time < $5::time AND end_time > $4::time))
+          +
+          (SELECT COUNT(*) FROM public.court_bookings
+           WHERE court_id = $1 AND booking_date = $2 AND status = 'CONFIRMED'
+             AND (start_time < $5::time AND end_time > $4::time))
+        ) as total_conflict;`,
         [
           game.court_id,
           game.match_date,
@@ -180,10 +184,10 @@ export class ManagerService {
           game.end_time,
         ],
       );
-      if (conflictRes.rows.length > 0) {
+      if (parseInt(conflictRes.rows[0]?.total_conflict || "0", 10) > 0) {
         throw new ApiError(
           409,
-          "Another approved game is already scheduled in this time slot on this court",
+          "Another approved game or confirmed booking is already scheduled in this time slot on this court",
           "COURT_SLOT_CONFLICT",
         );
       }
@@ -1133,18 +1137,83 @@ export class ManagerService {
       );
     }
 
-    const updateRes = await dbPool.query(
-      `UPDATE public.games
-       SET match_date = $1,
-           start_time = $2,
-           end_time = $3,
-           court_id = COALESCE($4, court_id),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
-       RETURNING *;`,
-      [matchDate, startTime, endTime, courtId || null, gameId],
+    const cleanDate = matchDate.includes("T")
+      ? matchDate.split("T")[0]
+      : matchDate;
+    const cleanStart =
+      startTime.length === 5 ? `${startTime}:00` : startTime;
+    const cleanEnd = endTime.length === 5 ? `${endTime}:00` : endTime;
+
+    const newStart = new Date(`${cleanDate}T${cleanStart}+05:30`);
+    const newEnd = new Date(`${cleanDate}T${cleanEnd}+05:30`);
+    const now = new Date();
+
+    if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) {
+      throw new ApiError(400, "Invalid match date or time format");
+    }
+
+    if (newStart.getTime() < now.getTime() - 2 * 60 * 1000) {
+      throw new ApiError(
+        400,
+        "Cannot reschedule match to a past date or time. Please select a future time slot.",
+        "PAST_SLOT_NOT_ALLOWED",
+      );
+    }
+
+    if (newEnd <= newStart) {
+      throw new ApiError(
+        400,
+        "Match end time must be strictly after start time",
+      );
+    }
+
+    const targetCourtId = (courtId || game.court_id || "court_1")
+      .toString()
+      .toLowerCase()
+      .includes("2")
+      ? "court_2"
+      : "court_1";
+
+    const hasOverlap = await GamesRepository.checkCourtOverlap(
+      targetCourtId,
+      matchDate,
+      startTime,
+      endTime,
+      gameId,
     );
-    const updatedGame = updateRes.rows[0];
+    if (hasOverlap) {
+      throw new ApiError(
+        409,
+        `Cannot reschedule match: Court ${targetCourtId === "court_2" ? "2" : "1"} is already booked or occupied for slot ${startTime} - ${endTime} on ${matchDate}`,
+        "COURT_SLOT_CONFLICT",
+      );
+    }
+
+    let updatedGame: any;
+    try {
+      const updateRes = await dbPool.query(
+        `UPDATE public.games
+         SET match_date = $1,
+             start_time = $2,
+             end_time = $3,
+             court_id = $4,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $5
+         RETURNING *;`,
+        [matchDate, startTime, endTime, targetCourtId, gameId],
+      );
+      updatedGame = updateRes.rows[0];
+    } catch (err: any) {
+      if (err.code === "23505" || err.message?.includes("already booked")) {
+        throw new ApiError(
+          409,
+          err.message ||
+            "This court is already booked or occupied for the selected time slot.",
+          "COURT_SLOT_CONFLICT",
+        );
+      }
+      throw err;
+    }
 
     await GamesRepository.addActivityLog({
       gameId,

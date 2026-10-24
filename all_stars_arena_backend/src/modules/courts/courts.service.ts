@@ -86,14 +86,149 @@ export class CourtsService {
     return res.rows[0];
   }
 
+  static normalizeCourtId(courtId?: string): string {
+    if (!courtId) return "court_1";
+    const lower = courtId.toString().toLowerCase().trim();
+    return lower.includes("2") ? "court_2" : "court_1";
+  }
+
   static async checkAvailability(courtId: string, bookingDate: string) {
-    const bookingsRes = await dbPool.query(
-      `SELECT id, start_time, end_time, status
-       FROM public.court_bookings
-       WHERE court_id = $1 AND booking_date = $2 AND status = 'CONFIRMED';`,
-      [courtId, bookingDate],
-    );
-    return bookingsRes.rows;
+    const normalizedCourtId = this.normalizeCourtId(courtId);
+
+    const query = `
+      SELECT 
+        id, 
+        start_time, 
+        end_time, 
+        'CONFIRMED' as status, 
+        'Turf Booking' as title,
+        'BOOKING' as source
+      FROM public.court_bookings
+      WHERE court_id = $1 AND booking_date = $2 AND status = 'CONFIRMED'
+      
+      UNION ALL
+      
+      SELECT 
+        id, 
+        start_time, 
+        end_time, 
+        status::text, 
+        title,
+        'GAME' as source
+      FROM public.games
+      WHERE court_id = $1 AND match_date = $2 
+        AND status <> 'CANCELLED' 
+        AND approval_status <> 'REJECTED'
+        
+      ORDER BY start_time ASC;
+    `;
+
+    const res = await dbPool.query(query, [normalizedCourtId, bookingDate]);
+    return res.rows.map((row) => ({
+      id: row.id,
+      courtId: normalizedCourtId,
+      bookingDate,
+      startTime:
+        typeof row.start_time === "string"
+          ? row.start_time.slice(0, 5)
+          : row.start_time,
+      endTime:
+        typeof row.end_time === "string"
+          ? row.end_time.slice(0, 5)
+          : row.end_time,
+      status: row.status,
+      title: row.title,
+      source: row.source,
+    }));
+  }
+
+  static async checkCourtOverlap(
+    courtId: string,
+    date: string,
+    startTime: string,
+    endTime: string,
+    excludeGameId?: string,
+    excludeBookingId?: string,
+  ): Promise<{ hasOverlap: boolean; conflict?: any }> {
+    const normalizedCourtId = this.normalizeCourtId(courtId);
+
+    // 1. Check in games
+    const gameQuery = `
+      SELECT id, title, start_time, end_time, 'GAME' as source
+      FROM public.games
+      WHERE court_id = $1 AND match_date = $2 
+        AND status <> 'CANCELLED' AND approval_status <> 'REJECTED'
+        AND ($5::text IS NULL OR id <> $5)
+        AND (start_time < $4::time AND end_time > $3::time)
+      LIMIT 1;
+    `;
+    const gameRes = await dbPool.query(gameQuery, [
+      normalizedCourtId,
+      date,
+      startTime,
+      endTime,
+      excludeGameId || null,
+    ]);
+
+    if (gameRes.rows.length > 0) {
+      const c = gameRes.rows[0];
+      return {
+        hasOverlap: true,
+        conflict: {
+          id: c.id,
+          title: c.title,
+          startTime:
+            typeof c.start_time === "string"
+              ? c.start_time.slice(0, 5)
+              : c.start_time,
+          endTime:
+            typeof c.end_time === "string"
+              ? c.end_time.slice(0, 5)
+              : c.end_time,
+          source: c.source,
+        },
+      };
+    }
+
+    // 2. Check in court_bookings
+    const bookingQuery = `
+      SELECT id, 'Turf Booking' as title, start_time, end_time, 'BOOKING' as source
+      FROM public.court_bookings
+      WHERE court_id = $1 AND booking_date = $2 
+        AND status = 'CONFIRMED'
+        AND ($5::text IS NULL OR id <> $5)
+        AND (start_time < $4::time AND end_time > $3::time)
+      LIMIT 1;
+    `;
+    const bookingRes = await dbPool.query(bookingQuery, [
+      normalizedCourtId,
+      date,
+      startTime,
+      endTime,
+      excludeBookingId || null,
+    ]);
+
+    if (bookingRes.rows.length > 0) {
+      const c = bookingRes.rows[0];
+      return {
+        hasOverlap: true,
+        conflict: {
+          id: c.id,
+          title: c.title,
+          startTime:
+            typeof c.start_time === "string"
+              ? c.start_time.slice(0, 5)
+              : c.start_time,
+          endTime:
+            typeof c.end_time === "string"
+              ? c.end_time.slice(0, 5)
+              : c.end_time,
+          source: c.source,
+        },
+      };
+    }
+
+    return { hasOverlap: false };
   }
 
   static async calculateQuote(

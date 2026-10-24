@@ -125,4 +125,9 @@ class GamesRepository {
     final response = await remoteDataSource.getGameVideos(gameId);
     return response.data ?? [];
   }
+
+  Future<List<CourtSlotModel>> getCourtAvailability(
+      String courtId, String date) async {
+    return await remoteDataSource.getCourtAvailability(courtId, date);
+  }
 }

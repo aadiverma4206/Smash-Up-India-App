@@ -109,3 +109,71 @@ class CourtModel {
 
   Map<String, dynamic> toJson() => _$CourtModelToJson(this);
 }
+
+class CourtSlotModel {
+  final String id;
+  final String courtId;
+  final String bookingDate;
+  final String startTime;
+  final String endTime;
+  final String status;
+  final String title;
+  final String source;
+
+  CourtSlotModel({
+    required this.id,
+    required this.courtId,
+    required this.bookingDate,
+    required this.startTime,
+    required this.endTime,
+    required this.status,
+    required this.title,
+    required this.source,
+  });
+
+  factory CourtSlotModel.fromJson(Map<String, dynamic> json) {
+    return CourtSlotModel(
+      id: (json['id'] ?? '').toString(),
+      courtId: (json['courtId'] ?? json['court_id'] ?? '').toString(),
+      bookingDate:
+          (json['bookingDate'] ?? json['booking_date'] ?? '').toString(),
+      startTime: (json['startTime'] ?? json['start_time'] ?? '').toString(),
+      endTime: (json['endTime'] ?? json['end_time'] ?? '').toString(),
+      status: (json['status'] ?? 'CONFIRMED').toString(),
+      title: (json['title'] ?? 'Turf Booking').toString(),
+      source: (json['source'] ?? 'BOOKING').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'courtId': courtId,
+        'bookingDate': bookingDate,
+        'startTime': startTime,
+        'endTime': endTime,
+        'status': status,
+        'title': title,
+        'source': source,
+      };
+
+  int get startMinutes {
+    final parts = startTime.split(':');
+    if (parts.length >= 2) {
+      final h = int.tryParse(parts[0]) ?? 0;
+      final m = int.tryParse(parts[1]) ?? 0;
+      return h * 60 + m;
+    }
+    return 0;
+  }
+
+  int get endMinutes {
+    final parts = endTime.split(':');
+    if (parts.length >= 2) {
+      final h = int.tryParse(parts[0]) ?? 0;
+      final m = int.tryParse(parts[1]) ?? 0;
+      return h * 60 + m;
+    }
+    return 0;
+  }
+}
+

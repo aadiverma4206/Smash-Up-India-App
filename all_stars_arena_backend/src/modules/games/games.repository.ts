@@ -170,17 +170,28 @@ export class GamesRepository {
     matchDate: string,
     startTime: string,
     endTime: string,
+    excludeGameId?: string,
   ): Promise<boolean> {
+    const normalizedCourtId = (courtId || "").toLowerCase().includes("2")
+      ? "court_2"
+      : "court_1";
+
     const res = await dbPool.query(
-      `SELECT COUNT(*) as overlap_count
-       FROM public.games
-       WHERE court_id = $1 AND match_date = $2 AND status <> 'CANCELLED'
-         AND ((start_time <= $3 AND end_time > $3)
-           OR (start_time < $4 AND end_time >= $4)
-           OR (start_time >= $3 AND end_time <= $4));`,
-      [courtId, matchDate, startTime, endTime],
+      `SELECT (
+        (SELECT COUNT(*) FROM public.games 
+         WHERE court_id = $1 AND match_date = $2 
+           AND status <> 'CANCELLED' AND approval_status <> 'REJECTED'
+           AND ($5::text IS NULL OR id <> $5)
+           AND (start_time < $4::time AND end_time > $3::time))
+        +
+        (SELECT COUNT(*) FROM public.court_bookings 
+         WHERE court_id = $1 AND booking_date = $2 
+           AND status = 'CONFIRMED'
+           AND (start_time < $4::time AND end_time > $3::time))
+      ) as total_overlap_count;`,
+      [normalizedCourtId, matchDate, startTime, endTime, excludeGameId || null],
     );
-    return parseInt(res.rows[0]?.overlap_count || "0", 10) > 0;
+    return parseInt(res.rows[0]?.total_overlap_count || "0", 10) > 0;
   }
 
   static async createGame(

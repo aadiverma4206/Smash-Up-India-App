@@ -16,7 +16,49 @@ export class BookingsService {
       bookingDate,
       startTime,
     );
+    const cleanDate = bookingDate.includes("T")
+      ? bookingDate.split("T")[0]
+      : bookingDate;
+    const cleanStart = startTime.length === 5 ? `${startTime}:00` : startTime;
+    const cleanEnd = endTime.length === 5 ? `${endTime}:00` : endTime;
+
+    const bookingStart = new Date(`${cleanDate}T${cleanStart}+05:30`);
+    const bookingEnd = new Date(`${cleanDate}T${cleanEnd}+05:30`);
+    const now = new Date();
+
+    if (isNaN(bookingStart.getTime()) || isNaN(bookingEnd.getTime())) {
+      throw new ApiError(400, "Invalid booking date or time format");
+    }
+
+    if (bookingStart.getTime() < now.getTime() - 2 * 60 * 1000) {
+      throw new ApiError(
+        400,
+        "Cannot book a court pitch in the past. Selected booking date and time have already passed.",
+        "PAST_SLOT_NOT_ALLOWED",
+      );
+    }
+
+    if (bookingEnd <= bookingStart) {
+      throw new ApiError(
+        400,
+        "Booking end time must be strictly after start time",
+      );
+    }
+
     const court = await CourtsService.getCourtById(courtId);
+    const overlapCheck = await CourtsService.checkCourtOverlap(
+      courtId,
+      bookingDate,
+      startTime,
+      endTime,
+    );
+    if (overlapCheck.hasOverlap) {
+      throw new ApiError(
+        409,
+        `Court ${court.name} is already booked from ${overlapCheck.conflict?.startTime} to ${overlapCheck.conflict?.endTime} on ${bookingDate}. Overlapping time slots are not permitted on the same court. Please choose another time or switch to another court.`,
+        "SLOT_ALREADY_BOOKED",
+      );
+    }
 
     try {
       const res = await dbPool.query(
@@ -47,11 +89,14 @@ export class BookingsService {
     } catch (err: any) {
       if (
         err.code === "23505" ||
+        err.message?.includes("already booked") ||
+        err.message?.includes("Overlapping time slots") ||
         err.message?.includes("no_overlapping_confirmed_bookings")
       ) {
         throw new ApiError(
-          400,
-          "Selected slot is already booked for this court pitch. Please select another slot.",
+          409,
+          err.message ||
+            "Selected slot is already booked for this court pitch. Please select another slot or another court.",
           "SLOT_ALREADY_BOOKED",
         );
       }

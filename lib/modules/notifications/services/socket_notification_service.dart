@@ -101,6 +101,22 @@ class SocketNotificationService extends GetxService {
     }
   }
 
+  void onEvent(String eventName, Function(dynamic) handler) {
+    try {
+      _socket?.on(eventName, (data) => handler(data));
+    } catch (e) {
+      AppLogger.warning('Error registering socket event $eventName: $e');
+    }
+  }
+
+  void offEvent(String eventName) {
+    try {
+      _socket?.off(eventName);
+    } catch (e) {
+      AppLogger.warning('Error unregistering socket event $eventName: $e');
+    }
+  }
+
   void disconnectSocket() {
     try {
       _socket?.disconnect();
