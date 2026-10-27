@@ -8,7 +8,6 @@ import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/theme_service.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
 
@@ -77,10 +76,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
-            const ManagerHistoryView(),
-            currentIndex == 2
+            currentIndex == 1
                 ? const MediaServerCctvScreen()
                 : const SizedBox.shrink(),
+            const ManagerHistoryView(),
           ],
         );
       }),
@@ -140,12 +139,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       label: 'Dashboard',
                     ),
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.history_rounded, size: 22),
-                      label: 'History',
-                    ),
-                    const BottomNavigationBarItem(
                       icon: Icon(Icons.videocam_rounded, size: 22),
                       label: 'CCTV',
+                    ),
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.history_rounded, size: 22),
+                      label: 'History',
                     ),
                   ],
                 ),
@@ -300,8 +299,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
                 if (index == 0) controller.loadDashboard();
-                if (index == 1) Get.toNamed(Routes.adminCctv);
-                if (index == 2) _confirmLogout(context);
               },
               labelType: NavigationRailLabelType.all,
               selectedIconTheme: const IconThemeData(color: Color(0xFF00C853)),
@@ -324,7 +321,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.videocam_rounded), label: Text('CCTV')),
                 NavigationRailDestination(
-                    icon: Icon(Icons.logout_rounded), label: Text('Logout')),
+                    icon: Icon(Icons.history_rounded), label: Text('History')),
               ],
             ),
           ),
@@ -736,22 +733,17 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final actions = [
       {
         'icon': Icons.sports_soccer_rounded,
-        'title': 'Player Mgmt',
+        'title': 'Player',
         'route': Routes.adminPlayers,
       },
       {
         'icon': Icons.badge_rounded,
-        'title': 'Manager Mgmt',
+        'title': 'Manager',
         'route': Routes.adminManagers,
       },
       {
-        'icon': Icons.history_rounded,
-        'title': 'Match History',
-        'route': Routes.managerHistoryStandalone,
-      },
-      {
         'icon': Icons.videocam_rounded,
-        'title': 'CCTV Network',
+        'title': 'CCTV',
         'route': Routes.adminCctv,
       },
     ];
@@ -841,121 +833,201 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final d = controller.dashboard.value;
 
+    final statItems = [
+      {
+        'label': 'Revenue',
+        'value': '₹${d?.totalRevenue.toStringAsFixed(0) ?? "0"}',
+        'icon': Icons.payments_outlined,
+      },
+      {
+        'label': 'Total Users',
+        'value': '${d?.totalUsers ?? 0}',
+        'icon': Icons.people_outline,
+      },
+      {
+        'label': 'Managers',
+        'value': '${d?.totalManagers ?? 0}',
+        'icon': Icons.admin_panel_settings_outlined,
+      },
+      {
+        'label': 'Turf Clubs',
+        'value': '${d?.totalClubs ?? 0}',
+        'icon': Icons.stadium_outlined,
+      },
+      {
+        'label': 'Active Games',
+        'value': '${d?.activeRecordings ?? 0}',
+        'icon': Icons.videocam_outlined,
+      },
+      {
+        'label': 'Refunds',
+        'value': '₹${d?.totalRefunds.toStringAsFixed(0) ?? "0"}',
+        'icon': Icons.replay_outlined,
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
               child: Text(
                 'System Overview',
                 style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 8),
             TextButton(
               onPressed: () => Get.toNamed('/admin/users'),
-              child: const Text('Manage Users →',
-                  style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Manage Users →',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Column(
-          children: [
-            Row(
+        const SizedBox(height: 8),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 600;
+            if (isWide) {
+              return Row(
+                children: statItems.map((item) {
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: _buildSmallStatCard(
+                        context,
+                        item['label'] as String,
+                        item['value'] as String,
+                        item['icon'] as IconData,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            }
+
+            final row1 = statItems.sublist(0, 3);
+            final row2 = statItems.sublist(3, 6);
+
+            return Column(
               children: [
-                _buildSmallStatCard(
-                    context,
-                    'Revenue',
-                    '₹${d?.totalRevenue.toStringAsFixed(0) ?? "0"}',
-                    Icons.payments_outlined),
-                _buildSmallStatCard(context, 'Total Users',
-                    '${d?.totalUsers ?? 0}', Icons.people_outline),
-                _buildSmallStatCard(context, 'Managers',
-                    '${d?.totalManagers ?? 0}', Icons.admin_panel_settings),
+                Row(
+                  children: row1.map((item) {
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: _buildSmallStatCard(
+                          context,
+                          item['label'] as String,
+                          item['value'] as String,
+                          item['icon'] as IconData,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: row2.map((item) {
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: _buildSmallStatCard(
+                          context,
+                          item['label'] as String,
+                          item['value'] as String,
+                          item['icon'] as IconData,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                _buildSmallStatCard(context, 'Turf Clubs',
-                    '${d?.totalClubs ?? 0}', Icons.stadium_outlined),
-                _buildSmallStatCard(context, 'Active Games',
-                    '${d?.activeRecordings ?? 0}', Icons.videocam_outlined),
-                _buildSmallStatCard(
-                    context,
-                    'Refunds',
-                    '₹${d?.totalRefunds.toStringAsFixed(0) ?? "0"}',
-                    Icons.replay_outlined),
-              ],
-            ),
-          ],
+            );
+          },
         ),
       ],
     );
   }
 
   Widget _buildSmallStatCard(
-      BuildContext context, String label, String value, IconData icon) {
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
-              width: 1),
-          boxShadow: const [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-          ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+          width: 1,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 20, color: AppColors.primary),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
               ),
             ),
-            const SizedBox(height: 3),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : Colors.grey.shade600),
+          ),
+          const SizedBox(height: 3),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : Colors.grey.shade600,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -964,85 +1036,90 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [
       {
-        'icon': Icons.sports_soccer_rounded,
-        'title': 'Players',
-        'route': Routes.adminPlayers,
-        'color': AppColors.primary
-      },
-      {
-        'icon': Icons.admin_panel_settings_rounded,
-        'title': 'Managers',
-        'route': Routes.adminManagers,
-        'color': const Color(0xFF0288D1)
-      },
-      {
         'icon': Icons.person_add_rounded,
-        'title': 'Create Mgr',
+        'title': 'Create Manager',
         'route': '/admin/managers/create',
-        'color': const Color(0xFF7B1FA2)
+        'color': const Color(0xFF7B1FA2),
       },
       {
         'icon': Icons.security_rounded,
         'title': 'Audit Logs',
         'route': Routes.adminAuditLogs,
-        'color': const Color(0xFF2E7D32)
+        'color': const Color(0xFF2E7D32),
       },
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Management Modules',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : Colors.black87)),
+        Text(
+          'Management Modules',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+          ),
+        ),
         const SizedBox(height: 10),
         Row(
           children: modules.map((item) {
             final Color color = item['color'] as Color;
             return Expanded(
-              child: InkWell(
-                onTap: () {
-                  if (item.containsKey('action')) {
-                    (item['action'] as VoidCallback)();
-                  } else {
-                    Get.toNamed(item['route'] as String);
-                  }
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      if (item.containsKey('action')) {
+                        (item['action'] as VoidCallback)();
+                      } else {
+                        Get.toNamed(item['route'] as String);
+                      }
+                    },
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: isDark
-                            ? AppColors.darkBorder
-                            : color.withValues(alpha: 0.3)),
-                    boxShadow: const [
-                      BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 3,
-                          offset: Offset(0, 1)),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(item['icon'] as IconData, color: color, size: 20),
-                      const SizedBox(height: 6),
-                      Text(
-                        item['title'] as String,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : Colors.black87,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 8,
                       ),
-                    ],
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : color.withValues(alpha: 0.3),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.2 : 0.04,
+                            ),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(item['icon'] as IconData, color: color, size: 22),
+                          const SizedBox(height: 6),
+                          Text(
+                            item['title'] as String,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : Colors.black87,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

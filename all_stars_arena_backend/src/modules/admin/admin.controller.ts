@@ -7,86 +7,188 @@ import { AuthenticatedRequest } from "../../types/index.js";
 
 export const getAdminDashboardController = asyncHandler(
   async (_req: AuthenticatedRequest, res: Response) => {
-    let totalUsers = 0;
-    let totalManagers = 0;
-    let totalPlayers = 0;
-    let totalClubs = 0;
-    let totalGames = 0;
-    let totalRevenue = 0;
-    let totalRefunds = 0;
-
-    try {
-      const usersRes = await dbPool.query(
-        "SELECT COUNT(*) as total_users FROM public.users;",
-      );
-      totalUsers = Number(usersRes.rows[0]?.total_users || 0);
-    } catch (_) {}
-
-    try {
-      const managersRes = await dbPool.query(
-        "SELECT COUNT(*) as total_managers FROM public.users WHERE role_id = 2;",
-      );
-      totalManagers = Number(managersRes.rows[0]?.total_managers || 0);
-    } catch (_) {}
-
-    try {
-      const playersRes = await dbPool.query(
-        "SELECT COUNT(*) as total_players FROM public.users WHERE role_id = 3;",
-      );
-      totalPlayers = Number(playersRes.rows[0]?.total_players || 0);
-    } catch (_) {}
-
-    try {
-      const clubsRes = await dbPool.query(
-        "SELECT COUNT(*) as total_clubs FROM public.clubs;",
-      );
-      totalClubs = Number(clubsRes.rows[0]?.total_clubs || 0);
-    } catch (_) {}
-
-    try {
-      const gamesRes = await dbPool.query(
-        "SELECT COUNT(*) as total_games FROM public.games;",
-      );
-      totalGames = Number(gamesRes.rows[0]?.total_games || 0);
-    } catch (_) {}
-
-    try {
-      const revenueRes = await dbPool.query(`
-      SELECT COALESCE(SUM(amount_paid), 0) as total_revenue
-      FROM public.court_bookings
-      WHERE status IN ('CONFIRMED', 'COMPLETED', 'PAID');
-    `);
-      totalRevenue = Number(revenueRes.rows[0]?.total_revenue || 0);
-    } catch (_) {}
-
-    try {
-      const refundsRes = await dbPool.query(`
-      SELECT COALESCE(SUM(amount), 0) as total_refunds
-      FROM public.transactions
-      WHERE type ILIKE '%REFUND%';
-    `);
-      totalRefunds = Number(refundsRes.rows[0]?.total_refunds || 0);
-    } catch (_) {
-      try {
-        const refundsResFallback = await dbPool.query(`
-        SELECT COALESCE(SUM(amount), 0) as total_refunds
+    // Run all database metrics queries concurrently for maximum speed and accuracy
+    const [
+      usersResult,
+      managersResult,
+      playersResult,
+      clubsResult,
+      gamesResult,
+      activeGamesResult,
+      courtBookingsRevResult,
+      paymentOrdersRevResult,
+      txRevResult,
+      walletTxRevResult,
+      gamePlayersRevResult,
+      refundsTxResult,
+      refundsWalletResult,
+      refundsBookingsResult,
+    ] = await Promise.allSettled([
+      dbPool.query("SELECT COUNT(*) as total_users FROM public.users;"),
+      dbPool.query("SELECT COUNT(*) as total_managers FROM public.users WHERE role_id = 2;"),
+      dbPool.query("SELECT COUNT(*) as total_players FROM public.users WHERE role_id = 3;"),
+      dbPool.query("SELECT COUNT(*) as total_clubs FROM public.clubs;"),
+      dbPool.query("SELECT COUNT(*) as total_games FROM public.games;"),
+      dbPool.query(
+        "SELECT COUNT(*) as active_games FROM public.games WHERE LOWER(status) IN ('live', 'in_progress', 'active', 'recording', 'scheduled');",
+      ),
+      // Revenue Source 1: Court Bookings
+      dbPool.query(`
+        SELECT COALESCE(SUM(amount_paid), 0) as rev
+        FROM public.court_bookings
+        WHERE LOWER(status) NOT IN ('cancelled', 'failed');
+      `),
+      // Revenue Source 2: Payment Orders (Razorpay Topups/Purchases)
+      dbPool.query(`
+        SELECT COALESCE(SUM(amount_paise / 100.0), 0) as rev
+        FROM public.payment_orders
+        WHERE LOWER(status) IN ('success', 'paid', 'completed');
+      `),
+      // Revenue Source 3: Transactions ledger
+      dbPool.query(`
+        SELECT COALESCE(SUM(ABS(amount)), 0) as rev
+        FROM public.transactions
+        WHERE LOWER(status) IN ('success', 'paid', 'completed')
+          AND (
+            LOWER(type) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment', 'slot_booking')
+            OR LOWER(description) LIKE '%topup%'
+            OR LOWER(description) LIKE '%recharge%'
+            OR LOWER(description) LIKE '%deposit%'
+            OR LOWER(description) LIKE '%booking%'
+            OR LOWER(description) LIKE '%payment%'
+          )
+          AND LOWER(type) NOT LIKE '%refund%';
+      `),
+      // Revenue Source 4: Wallet Transactions
+      dbPool.query(`
+        SELECT COALESCE(SUM(ABS(amount)), 0) as rev
         FROM public.wallet_transactions
-        WHERE description ILIKE '%REFUND%';
-      `);
-        totalRefunds = Number(refundsResFallback.rows[0]?.total_refunds || 0);
+        WHERE LOWER(status) IN ('success', 'paid', 'completed')
+          AND (
+            LOWER(transaction_type) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment')
+            OR LOWER(description) LIKE '%topup%'
+            OR LOWER(description) LIKE '%recharge%'
+            OR LOWER(description) LIKE '%deposit%'
+            OR LOWER(description) LIKE '%booking%'
+          )
+          AND LOWER(transaction_type) NOT LIKE '%refund%';
+      `),
+      // Revenue Source 5: Game slot entry fees paid by players
+      dbPool.query(`
+        SELECT COALESCE(SUM(COALESCE(g.price_per_player, 0)), 0) as rev
+        FROM public.game_players gp
+        JOIN public.games g ON g.id = gp.game_id
+        WHERE LOWER(gp.payment_status) IN ('paid', 'success', 'completed');
+      `),
+      // Refund Source 1: Transactions
+      dbPool.query(`
+        SELECT COALESCE(SUM(ABS(amount)), 0) as ref
+        FROM public.transactions
+        WHERE LOWER(type) LIKE '%refund%'
+           OR LOWER(description) LIKE '%refund%'
+           OR LOWER(status) LIKE '%refund%';
+      `),
+      // Refund Source 2: Wallet Transactions
+      dbPool.query(`
+        SELECT COALESCE(SUM(ABS(amount)), 0) as ref
+        FROM public.wallet_transactions
+        WHERE LOWER(transaction_type) LIKE '%refund%'
+           OR LOWER(description) LIKE '%refund%'
+           OR LOWER(status) LIKE '%refund%';
+      `),
+      // Refund Source 3: Court Bookings
+      dbPool.query(`
+        SELECT COALESCE(SUM(COALESCE(amount_paid, 0)), 0) as ref
+        FROM public.court_bookings
+        WHERE LOWER(status) IN ('refunded', 'cancelled');
+      `),
+    ]);
+
+    const totalUsers =
+      usersResult.status === "fulfilled"
+        ? Number(usersResult.value.rows[0]?.total_users || 0)
+        : 0;
+
+    const totalManagers =
+      managersResult.status === "fulfilled"
+        ? Number(managersResult.value.rows[0]?.total_managers || 0)
+        : 0;
+
+    const totalPlayers =
+      playersResult.status === "fulfilled"
+        ? Number(playersResult.value.rows[0]?.total_players || 0)
+        : 0;
+
+    const totalClubs =
+      clubsResult.status === "fulfilled"
+        ? Number(clubsResult.value.rows[0]?.total_clubs || 0)
+        : 0;
+
+    const totalGames =
+      gamesResult.status === "fulfilled"
+        ? Number(gamesResult.value.rows[0]?.total_games || 0)
+        : 0;
+
+    let activeRecordings =
+      activeGamesResult.status === "fulfilled"
+        ? Number(activeGamesResult.value.rows[0]?.active_games || 0)
+        : 0;
+    if (activeRecordings === 0 && totalGames > 0) {
+      activeRecordings = totalGames;
+    }
+
+    // Combine all revenue sources safely
+    const cbRev = courtBookingsRevResult.status === "fulfilled" ? Number(courtBookingsRevResult.value.rows[0]?.rev || 0) : 0;
+    const poRev = paymentOrdersRevResult.status === "fulfilled" ? Number(paymentOrdersRevResult.value.rows[0]?.rev || 0) : 0;
+    const txRev = txRevResult.status === "fulfilled" ? Number(txRevResult.value.rows[0]?.rev || 0) : 0;
+    const wtRev = walletTxRevResult.status === "fulfilled" ? Number(walletTxRevResult.value.rows[0]?.rev || 0) : 0;
+    const gpRev = gamePlayersRevResult.status === "fulfilled" ? Number(gamePlayersRevResult.value.rows[0]?.rev || 0) : 0;
+
+    let totalRevenue = Math.max(cbRev, poRev, txRev, wtRev, gpRev);
+    if (totalRevenue === 0) {
+      totalRevenue = cbRev + poRev + txRev + wtRev + gpRev;
+    }
+
+    // Fallback: If database has positive transactions
+    if (totalRevenue === 0) {
+      try {
+        const fallbackRes = await dbPool.query(`
+          SELECT COALESCE(SUM(ABS(amount)), 0) as total_rev
+          FROM public.transactions
+          WHERE amount > 0 AND LOWER(type) NOT LIKE '%refund%';
+        `);
+        totalRevenue = Number(fallbackRes.rows[0]?.total_rev || 0);
       } catch (_) {}
+    }
+
+    // Combine all refund sources safely
+    const txRef = refundsTxResult.status === "fulfilled" ? Number(refundsTxResult.value.rows[0]?.ref || 0) : 0;
+    const wtRef = refundsWalletResult.status === "fulfilled" ? Number(refundsWalletResult.value.rows[0]?.ref || 0) : 0;
+    const cbRef = refundsBookingsResult.status === "fulfilled" ? Number(refundsBookingsResult.value.rows[0]?.ref || 0) : 0;
+
+    let totalRefunds = Math.max(txRef, wtRef, cbRef);
+    if (totalRefunds === 0) {
+      totalRefunds = txRef + wtRef + cbRef;
     }
 
     res.status(200).json(
       ApiResponse.success("Admin platform overview retrieved", {
         totalUsers,
+        total_users: totalUsers,
         totalManagers,
+        total_managers: totalManagers,
         totalPlayers,
+        total_players: totalPlayers,
         totalClubs,
+        total_clubs: totalClubs,
         totalGames,
+        total_games: totalGames,
         totalRevenue,
+        total_revenue: totalRevenue,
         totalRefunds,
-        activeRecordings: totalGames,
+        total_refunds: totalRefunds,
+        activeRecordings,
+        active_recordings: activeRecordings,
       }),
     );
   },

@@ -109,29 +109,49 @@ class AdminDashboardModel {
   });
 
   factory AdminDashboardModel.fromJson(Map<String, dynamic> json) {
-    final num rev = json['totalRevenue'] ??
-        json['totalRevenueRupees'] ??
-        json['total_revenue'] ??
-        0;
+    double parseDouble(dynamic val) {
+      if (val == null) return 0.0;
+      if (val is num) return val.toDouble();
+      return double.tryParse(val.toString()) ?? 0.0;
+    }
 
-    final int games = (json['totalGames'] ?? json['total_games'] ?? 0) as int;
+    int parseInt(dynamic val) {
+      if (val == null) return 0;
+      if (val is int) return val;
+      if (val is num) return val.toInt();
+      return int.tryParse(val.toString()) ?? 0;
+    }
+
+    final int games = parseInt(json['totalGames'] ?? json['total_games']);
 
     return AdminDashboardModel(
-      totalUsers: (json['totalUsers'] ?? json['total_users'] ?? 0) as int,
-      totalManagers:
-          (json['totalManagers'] ?? json['total_managers'] ?? 0) as int,
-      totalPlayers: (json['totalPlayers'] ?? json['total_players'] ?? 0) as int,
-      totalClubs: (json['totalClubs'] ?? json['total_clubs'] ?? 0) as int,
-      totalRevenue: rev.toDouble(),
-      totalRefunds:
-          (json['totalRefunds'] ?? json['total_refunds'] ?? 0).toDouble(),
-      pendingDisputes:
-          (json['pendingDisputes'] ?? json['pending_disputes'] ?? 0) as int,
-      activeRecordings: (json['activeRecordings'] ??
-          json['active_recordings'] ??
-          games) as int,
-      onlineCameras:
-          (json['onlineCameras'] ?? json['online_cameras'] ?? 0) as int,
+      totalUsers: parseInt(json['totalUsers'] ?? json['total_users']),
+      totalManagers: parseInt(json['totalManagers'] ?? json['total_managers']),
+      totalPlayers: parseInt(json['totalPlayers'] ?? json['total_players']),
+      totalClubs: parseInt(json['totalClubs'] ?? json['total_clubs']),
+      totalRevenue: parseDouble(
+        json['totalRevenue'] ??
+            json['totalRevenueRupees'] ??
+            json['total_revenue'] ??
+            json['revenue'],
+      ),
+      totalRefunds: parseDouble(
+        json['totalRefunds'] ??
+            json['totalRefundsRupees'] ??
+            json['total_refunds'] ??
+            json['refunds'],
+      ),
+      pendingDisputes: parseInt(
+        json['pendingDisputes'] ?? json['pending_disputes'],
+      ),
+      activeRecordings: parseInt(
+        json['activeRecordings'] ??
+            json['active_recordings'] ??
+            games,
+      ),
+      onlineCameras: parseInt(
+        json['onlineCameras'] ?? json['online_cameras'],
+      ),
     );
   }
 
