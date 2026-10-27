@@ -15,12 +15,15 @@ export interface ScoreUpdatePayload {
 export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
   const {
     gameId,
-    teamAScore,
-    teamBScore,
+    teamAScore: rawTeamAScore,
+    teamBScore: rawTeamBScore,
     isFinal = false,
     eventText,
     updatedByUserId,
   } = payload;
+
+  const teamAScore = Math.max(0, Math.min(99, Math.floor(Number(rawTeamAScore) || 0)));
+  const teamBScore = Math.max(0, Math.min(99, Math.floor(Number(rawTeamBScore) || 0)));
 
   const gameRes = await dbPool.query(
     "SELECT * FROM public.games WHERE id = $1;",

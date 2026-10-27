@@ -87,6 +87,7 @@ export class AuthService {
   static async verifyRegisterOtp(data: {
     email: string;
     phone: string;
+    name?: string;
     emailOtp: string;
   }) {
     const normalizedEmail = data.email.trim().toLowerCase();
@@ -97,6 +98,7 @@ export class AuthService {
     const signOptions: SignOptions = { expiresIn: "15m" };
     const verificationToken = jwt.sign(
       {
+        name: data.name ? data.name.trim() : undefined,
         email: normalizedEmail,
         phone: normalizedPhone,
         purpose: "REGISTER_VERIFICATION",
@@ -169,8 +171,9 @@ export class AuthService {
     city?: string;
     verificationToken: string;
   }) {
+    let decoded: any;
     try {
-      const decoded = jwt.verify(data.verificationToken, env.JWT_SECRET) as any;
+      decoded = jwt.verify(data.verificationToken, env.JWT_SECRET) as any;
       if (
         decoded.purpose !== "REGISTER_VERIFICATION" ||
         decoded.email !== data.email.trim().toLowerCase()
@@ -204,13 +207,16 @@ export class AuthService {
       );
     }
 
-    // Determine unique username from email prefix (or alternative if already exists)
-    const uniqueUsername = await this.generateUniqueUsername(normalizedEmail);
+    // Use the actual Full Name entered by the user during registration
+    const userFullName =
+      (data.name || "").trim() ||
+      (decoded.name || "").trim() ||
+      "Player";
 
     const passwordHash = await bcrypt.hash(data.password, 12);
 
     const userId = await AuthRepository.registerPlayer({
-      name: uniqueUsername,
+      name: userFullName,
       email: normalizedEmail,
       phone: normalizedPhone,
       passwordHash,

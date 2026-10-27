@@ -289,4 +289,41 @@ class GamesRemoteDataSource {
 
     return slots;
   }
+
+  Future<List<Map<String, dynamic>>> searchPlayersForRoster(
+      String gameId, String query) async {
+    final response = await dioClient.dio.get(
+      '${ApiConstants.games}/$gameId/players/search',
+      queryParameters: {'query': query},
+    );
+    if (response.data is Map<String, dynamic> &&
+        response.data['data'] is List) {
+      return (response.data['data'] as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<void> addPlayerToRosterByHost(
+      String gameId, String targetUserId, String team, String position) async {
+    await dioClient.dio.post(
+      '${ApiConstants.games}/$gameId/roster/add',
+      data: {
+        'targetUserId': targetUserId,
+        'team': team,
+        'position': position,
+      },
+    );
+  }
+
+  Future<void> removePlayerFromRosterByHost(
+      String gameId, String targetUserId) async {
+    await dioClient.dio.post(
+      '${ApiConstants.games}/$gameId/roster/remove',
+      data: {
+        'targetUserId': targetUserId,
+      },
+    );
+  }
 }

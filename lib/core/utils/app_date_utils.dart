@@ -22,11 +22,17 @@ class AppDateUtils {
       final trimmed = input.trim();
       if (trimmed.isEmpty) return null;
 
-      final cleanDateStr =
-          trimmed.contains('T') ? trimmed.split('T')[0].trim() : trimmed;
+      // Handle ISO-8601 string with 'T' (e.g. "2026-10-24T18:30:00.000Z")
+      if (trimmed.contains('T')) {
+        final isoDt = DateTime.tryParse(trimmed);
+        if (isoDt != null) {
+          final local = isoDt.toLocal();
+          return DateTime(local.year, local.month, local.day);
+        }
+      }
 
       final dateRegex = RegExp(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$');
-      final match = dateRegex.firstMatch(cleanDateStr);
+      final match = dateRegex.firstMatch(trimmed);
       if (match != null) {
         final year = int.parse(match.group(1)!);
         final month = int.parse(match.group(2)!);
@@ -34,7 +40,7 @@ class AppDateUtils {
         return DateTime(year, month, day);
       }
 
-      final direct = DateTime.tryParse(cleanDateStr);
+      final direct = DateTime.tryParse(trimmed);
       if (direct != null) {
         return DateTime(direct.year, direct.month, direct.day);
       }
@@ -58,7 +64,7 @@ class AppDateUtils {
 
       for (final fmt in formats) {
         try {
-          final dt = DateFormat(fmt).parseStrict(cleanDateStr);
+          final dt = DateFormat(fmt).parseStrict(trimmed);
           return DateTime(dt.year, dt.month, dt.day);
         } catch (_) {}
       }

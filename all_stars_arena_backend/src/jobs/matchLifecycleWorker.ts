@@ -267,7 +267,7 @@ export const runLifecycleCycle = async () => {
       `SELECT g.id, c.club_id, g.court_id, g.title, g.match_date, g.end_time
        FROM public.games g
        LEFT JOIN public.courts c ON c.id = g.court_id
-       WHERE g.status = 'ONGOING'
+       WHERE g.status NOT IN ('COMPLETED', 'CANCELLED')
          AND (g.match_date + g.end_time) <= CURRENT_TIMESTAMP
        FOR UPDATE OF g SKIP LOCKED;`,
     );

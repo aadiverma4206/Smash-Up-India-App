@@ -511,3 +511,60 @@ export const extendGameRecordingController = asyncHandler(
       );
   },
 );
+
+export const searchPlayersForRosterController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const gameId = req.params.id || (req.query.gameId as string) || "";
+    const query = (req.query.query || req.query.search || "").toString().trim();
+    const players = await GamesService.searchPlayersForRoster(gameId, query);
+    res.status(200).json(ApiResponse.success("Players retrieved", players));
+  },
+);
+
+export const addPlayerToRosterByHostController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const hostUserId = req.user?.id || "";
+    const gameId = req.params.id;
+    const { targetUserId, team, position } = req.body || {};
+
+    if (!targetUserId) {
+      throw new ApiError(400, "Target player user ID is required");
+    }
+
+    const result = await GamesService.addPlayerToRosterByHost({
+      hostUserId,
+      gameId,
+      targetUserId,
+      team: (team || "TEAM_A").toUpperCase(),
+      position: (position || "ST").toUpperCase(),
+    });
+
+    res
+      .status(200)
+      .json(ApiResponse.success("Player added to roster successfully", result));
+  },
+);
+
+export const removePlayerFromRosterByHostController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const hostUserId = req.user?.id || "";
+    const gameId = req.params.id;
+    const { targetUserId } = req.body || {};
+
+    if (!targetUserId) {
+      throw new ApiError(400, "Target player user ID is required");
+    }
+
+    const result = await GamesService.removePlayerFromRosterByHost({
+      hostUserId,
+      gameId,
+      targetUserId,
+    });
+
+    res
+      .status(200)
+      .json(
+        ApiResponse.success("Player removed from roster successfully", result),
+      );
+  },
+);

@@ -87,6 +87,9 @@ export class GamesRepository {
     values.push(limit, offset);
     const query = `
       SELECT g.*, 
+             TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+             TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+             TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
              COALESCE(crt.club_id, 'all_stars_arena_club') as club_id,
              COALESCE(c.name, 'All Stars Turf Raipur') as club_name, 
              c.address as club_address, 
@@ -114,7 +117,13 @@ export class GamesRepository {
 
   static async getGameById(gameId: string) {
     const res = await dbPool.query(
-      `SELECT g.*, 
+      `SELECT g.id, g.title, g.court_id, g.creator_id, g.creator_role_name, g.created_by_player,
+              g.format, g.entry_fee, COALESCE(g.per_player_fee, 0.00) as per_player_fee, g.status, g.approval_status,
+              g.team_a_score, g.team_b_score, g.winner_team, g.description,
+              g.created_at, g.updated_at,
+              TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+              TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+              TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
               COALESCE(crt.club_id, 'all_stars_arena_club') as club_id,
               COALESCE(c.name, 'All Stars Turf Raipur') as club_name, 
               COALESCE(crt.name, CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
@@ -449,11 +458,11 @@ export class GamesRepository {
        LEFT JOIN public.courts crt ON crt.id = COALESCE(gv.court_id, cam.court_id)
        LEFT JOIN public.clubs clb ON clb.id = gv.club_id
        LEFT JOIN public.cctv_recordings rec ON (rec.game_id = gv.game_id AND (rec.camera_id = gv.cctv_id OR gv.cctv_id IS NULL))
-       WHERE gv.game_id = $1 AND gv.status = 'AVAILABLE'
-         AND g.status = 'COMPLETED'
+       WHERE gv.game_id = $1
+         AND UPPER(COALESCE(gv.status, 'AVAILABLE')) = 'AVAILABLE'
          AND (
-           (g.match_date + g.end_time + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
-           OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+           UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED')
+           OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP
          )
        ORDER BY gv.created_at ASC;`,
       [gameId],

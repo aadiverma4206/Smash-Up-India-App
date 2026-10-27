@@ -21,6 +21,9 @@ class RegisterView extends GetView<AuthController> {
   final TextEditingController confirmPasswordController =
       TextEditingController();
 
+  final RxBool isPasswordVisible = false.obs;
+  final RxBool isConfirmPasswordVisible = false.obs;
+
   final GlobalKey<FormState> step1Key = GlobalKey<FormState>();
   final GlobalKey<FormState> step2Key = GlobalKey<FormState>();
   final GlobalKey<FormState> step3Key = GlobalKey<FormState>();
@@ -412,35 +415,61 @@ class RegisterView extends GetView<AuthController> {
           ),
           _buildProgressBar(currentStep: 3, totalSteps: 3),
           const SizedBox(height: 24),
-          AppTextField(
-            hint: 'Password',
-            controller: passwordController,
-            obscureText: true,
-            prefixIcon: Icon(Icons.lock_outline_rounded,
-                color: secondaryTextColor, size: 22),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Enter Password';
-              if (v.length < 8) return 'Password must be at least 8 characters';
-              final hasUpper = v.contains(RegExp(r'[A-Z]'));
-              final hasLower = v.contains(RegExp(r'[a-z]'));
-              final hasDigit = v.contains(RegExp(r'\d'));
-              final hasSpecial = v.contains(RegExp(r'[@$!%*?&#]'));
-              if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
-                return 'Include uppercase, lowercase, number, and special character (@\$!%*?&#)';
-              }
-              return null;
-            },
+          Obx(
+            () => AppTextField(
+              hint: 'Password',
+              controller: passwordController,
+              obscureText: !isPasswordVisible.value,
+              prefixIcon: Icon(Icons.lock_outline_rounded,
+                  color: secondaryTextColor, size: 22),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  isPasswordVisible.value
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: secondaryTextColor,
+                  size: 20,
+                ),
+                onPressed: () =>
+                    isPasswordVisible.value = !isPasswordVisible.value,
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Enter Password';
+                if (v.length < 8) return 'Password must be at least 8 characters';
+                final hasUpper = v.contains(RegExp(r'[A-Z]'));
+                final hasLower = v.contains(RegExp(r'[a-z]'));
+                final hasDigit = v.contains(RegExp(r'\d'));
+                final hasSpecial = v.contains(RegExp(r'[@$!%*?&#]'));
+                if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+                  return 'Include uppercase, lowercase, number, and special character (@\$!%*?&#)';
+                }
+                return null;
+              },
+            ),
           ),
           const SizedBox(height: 16),
-          AppTextField(
-            hint: 'Confirm Password',
-            controller: confirmPasswordController,
-            obscureText: true,
-            prefixIcon: Icon(Icons.lock_outline_rounded,
-                color: secondaryTextColor, size: 22),
-            validator: (v) => (v != passwordController.text)
-                ? 'Passwords do not match'
-                : null,
+          Obx(
+            () => AppTextField(
+              hint: 'Confirm Password',
+              controller: confirmPasswordController,
+              obscureText: !isConfirmPasswordVisible.value,
+              prefixIcon: Icon(Icons.lock_outline_rounded,
+                  color: secondaryTextColor, size: 22),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  isConfirmPasswordVisible.value
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: secondaryTextColor,
+                  size: 20,
+                ),
+                onPressed: () => isConfirmPasswordVisible.value =
+                    !isConfirmPasswordVisible.value,
+              ),
+              validator: (v) => (v != passwordController.text)
+                  ? 'Passwords do not match'
+                  : null,
+            ),
           ),
           const SizedBox(height: 28),
           Obx(

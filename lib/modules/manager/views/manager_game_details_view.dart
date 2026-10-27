@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../../data/models/game_model.dart';
@@ -1433,6 +1434,10 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                         controller: scoreAController,
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(2),
+                        ],
                         style: const TextStyle(
                             fontSize: 20, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
@@ -1465,6 +1470,10 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                         controller: scoreBController,
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(2),
+                        ],
                         style: const TextStyle(
                             fontSize: 20, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
@@ -1501,8 +1510,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () {
-              final a = int.tryParse(scoreAController.text.trim()) ?? 0;
-              final b = int.tryParse(scoreBController.text.trim()) ?? 0;
+              final a = (int.tryParse(scoreAController.text.trim()) ?? 0).clamp(0, 99);
+              final b = (int.tryParse(scoreBController.text.trim()) ?? 0).clamp(0, 99);
               Get.back();
               controller.submitMatchScore(game.id, a, b,
                   isFinal: isFinalRx.value);

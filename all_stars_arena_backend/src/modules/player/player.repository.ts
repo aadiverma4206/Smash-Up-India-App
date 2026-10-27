@@ -182,10 +182,18 @@ export class PlayerRepository {
     offset = 0,
     statusFilter?: string,
   ) {
+    try {
+      await dbPool.query(
+        `UPDATE public.games
+         SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+         WHERE status NOT IN ('COMPLETED', 'CANCELLED')
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`
+      );
+    } catch (_) {}
+
     const conditions: string[] = [
       "gp.user_id = $1",
-      "UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED', 'FINISHED')",
-      "(UPPER(g.status::text) = 'CANCELLED' OR g.match_date::date <= CURRENT_DATE)",
+      "(UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED') OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)",
     ];
     const values: any[] = [userId];
     let idx = 2;
@@ -193,7 +201,7 @@ export class PlayerRepository {
     if (statusFilter && statusFilter.toUpperCase() !== "ALL") {
       const upperStatus = statusFilter.toUpperCase();
       if (upperStatus === "COMPLETED") {
-        conditions.push(`UPPER(g.status::text) IN ('COMPLETED', 'FINISHED')`);
+        conditions.push(`UPPER(g.status::text) = 'COMPLETED'`);
       } else {
         conditions.push(`UPPER(g.status::text) = $${idx++}`);
         values.push(upperStatus);
@@ -215,7 +223,7 @@ export class PlayerRepository {
               c.name as club_name,
               gp.team as my_team, gp.position as my_position,
               CASE
-                WHEN UPPER(g.status::text) NOT IN ('COMPLETED', 'FINISHED') THEN 'PENDING'
+                WHEN UPPER(g.status::text) <> 'COMPLETED' THEN 'PENDING'
                 WHEN g.winner_team = 'DRAW' THEN 'DRAW'
                 WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
                 ELSE 'LOSS'
@@ -254,33 +262,60 @@ export class PlayerRepository {
   }
 
   static async getDashboardSummary(userId: string) {
+    try {
+      await dbPool.query(
+        `UPDATE public.games
+         SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+         WHERE status NOT IN ('COMPLETED', 'CANCELLED')
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`
+      );
+    } catch (_) {}
+
     const profile = await this.getProfile(userId);
     const stats = await this.getStats(userId);
 
     const activeRes = await dbPool.query(
-      `SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position
+      `SELECT g.*,
+              TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+              TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+              TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+              COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position
        FROM public.game_players gp
        JOIN public.games g ON g.id = gp.game_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        LEFT JOIN public.clubs c ON c.id = crt.club_id
-       WHERE gp.user_id = $1 AND g.status = 'ONGOING'
+       WHERE gp.user_id = $1
+         AND (
+           g.status = 'ONGOING'
+           OR (g.status NOT IN ('COMPLETED', 'CANCELLED') AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP AND (g.match_date + g.end_time) > CURRENT_TIMESTAMP)
+         )
        ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
       [userId],
     );
 
     const upcomingRes = await dbPool.query(
-      `SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position
+      `SELECT g.*,
+              TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+              TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+              TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+              COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position
        FROM public.game_players gp
        JOIN public.games g ON g.id = gp.game_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        LEFT JOIN public.clubs c ON c.id = crt.club_id
-       WHERE gp.user_id = $1 AND g.status IN ('OPEN_FOR_JOINING', 'FULL') AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.start_time >= CURRENT_TIME))
+       WHERE gp.user_id = $1
+         AND g.status NOT IN ('COMPLETED', 'CANCELLED')
+         AND (g.match_date + g.start_time) > CURRENT_TIMESTAMP
        ORDER BY g.match_date ASC, g.start_time ASC LIMIT 1;`,
       [userId],
     );
 
     const recentRes = await dbPool.query(
-      `SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position,
+      `SELECT g.*,
+              TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+              TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+              TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+              COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gp.team as user_team, gp.position as user_position,
               CASE
                 WHEN g.winner_team = 'DRAW' THEN 'DRAW'
                 WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
@@ -290,7 +325,8 @@ export class PlayerRepository {
        JOIN public.games g ON g.id = gp.game_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        LEFT JOIN public.clubs c ON c.id = crt.club_id
-       WHERE gp.user_id = $1 AND g.status = 'COMPLETED'
+       WHERE gp.user_id = $1
+         AND (g.status::text IN ('COMPLETED', 'CANCELLED') OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)
        ORDER BY g.match_date DESC, g.start_time DESC LIMIT 1;`,
       [userId],
     );
@@ -306,12 +342,25 @@ export class PlayerRepository {
   }
 
   static async getMyMatches(userId: string, tab: string) {
+    try {
+      await dbPool.query(
+        `UPDATE public.games
+         SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+         WHERE status NOT IN ('COMPLETED', 'CANCELLED')
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`
+      );
+    } catch (_) {}
+
     let query = "";
     let params: any[] = [userId];
 
     if (tab === "WAITLISTED") {
       query = `
-        SELECT g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gw.position as waitlist_position, gw.status as waitlist_status, gw.joined_at as waitlist_joined_at
+        SELECT g.*,
+               TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+               TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+               TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+               COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name, gw.position as waitlist_position, gw.status as waitlist_status, gw.joined_at as waitlist_joined_at
         FROM public.game_waitlist gw
         JOIN public.games g ON g.id = gw.game_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
@@ -322,38 +371,57 @@ export class PlayerRepository {
     } else if (tab === "PAST" || tab === "COMPLETED" || tab === "HISTORY") {
       query = `
         SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
-               g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
+               g.*,
+               TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+               TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+               TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+               COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
                (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
         FROM public.game_players gp
         JOIN public.games g ON g.id = gp.game_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = crt.club_id
-        WHERE gp.user_id = $1 AND g.status IN ('COMPLETED', 'FINISHED', 'CANCELLED')
+        WHERE gp.user_id = $1
+          AND (g.status::text IN ('COMPLETED', 'CANCELLED') OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)
         ORDER BY g.match_date DESC, g.start_time DESC;
       `;
     } else if (tab === "ONGOING") {
       query = `
         SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
-               g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
+               g.*,
+               TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+               TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+               TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+               COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
                (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
         FROM public.game_players gp
         JOIN public.games g ON g.id = gp.game_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = crt.club_id
-        WHERE gp.user_id = $1 AND g.status = 'ONGOING'
+        WHERE gp.user_id = $1
+          AND (
+            g.status = 'ONGOING'
+            OR (g.status NOT IN ('COMPLETED', 'CANCELLED') AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP AND (g.match_date + g.end_time) > CURRENT_TIMESTAMP)
+          )
         ORDER BY g.match_date DESC, g.start_time DESC;
       `;
     } else {
       // UPCOMING / Active matches
       query = `
         SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
-               g.*, COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
+               g.*,
+               TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+               TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+               TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+               COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
                (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
         FROM public.game_players gp
         JOIN public.games g ON g.id = gp.game_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = crt.club_id
-        WHERE gp.user_id = $1 AND g.status NOT IN ('COMPLETED', 'CANCELLED')
+        WHERE gp.user_id = $1
+          AND g.status NOT IN ('COMPLETED', 'CANCELLED')
+          AND (g.match_date + g.start_time) > CURRENT_TIMESTAMP
         ORDER BY g.match_date ASC, g.start_time ASC;
       `;
     }

@@ -130,4 +130,20 @@ class GamesRepository {
       String courtId, String date) async {
     return await remoteDataSource.getCourtAvailability(courtId, date);
   }
+
+  Future<List<Map<String, dynamic>>> searchPlayersForRoster(
+      String gameId, String query) async {
+    return await remoteDataSource.searchPlayersForRoster(gameId, query);
+  }
+
+  Future<void> addPlayerToRosterByHost(
+      String gameId, String targetUserId, String team, String position) async {
+    await remoteDataSource.addPlayerToRosterByHost(
+        gameId, targetUserId, team, position);
+  }
+
+  Future<void> removePlayerFromRosterByHost(
+      String gameId, String targetUserId) async {
+    await remoteDataSource.removePlayerFromRosterByHost(gameId, targetUserId);
+  }
 }

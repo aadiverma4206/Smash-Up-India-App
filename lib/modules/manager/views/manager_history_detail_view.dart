@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../core/services/auth_service.dart';
 
 class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
@@ -763,105 +766,43 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                         ),
                         const SizedBox(height: 12),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            Column(
-                              children: [
-                                const Text('TEAM A',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                          Icons.remove_circle_outline,
-                                          color: AppColors.primary),
-                                      onPressed: () {
-                                        int val = int.tryParse(
-                                                teamAController.text) ??
-                                            0;
-                                        if (val > 0) {
-                                          teamAController.text =
-                                              (val - 1).toString();
-                                        }
-                                      },
-                                    ),
-                                    SizedBox(
-                                      width: 42,
-                                      child: TextField(
-                                        controller: teamAController,
-                                        textAlign: TextAlign.center,
-                                        keyboardType: TextInputType.number,
-                                        style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.add_circle_outline,
-                                          color: AppColors.primary),
-                                      onPressed: () {
-                                        int val = int.tryParse(
-                                                teamAController.text) ??
-                                            0;
-                                        teamAController.text =
-                                            (val + 1).toString();
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
+                            Expanded(
+                              child: _buildScoreCounterInput(
+                                context,
+                                label: 'TEAM A',
+                                controller: teamAController,
+                                accentColor: Colors.green.shade600,
+                              ),
                             ),
-                            Column(
-                              children: [
-                                const Text('TEAM B',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                          Icons.remove_circle_outline,
-                                          color: AppColors.primary),
-                                      onPressed: () {
-                                        int val = int.tryParse(
-                                                teamBController.text) ??
-                                            0;
-                                        if (val > 0) {
-                                          teamBController.text =
-                                              (val - 1).toString();
-                                        }
-                                      },
-                                    ),
-                                    SizedBox(
-                                      width: 42,
-                                      child: TextField(
-                                        controller: teamBController,
-                                        textAlign: TextAlign.center,
-                                        keyboardType: TextInputType.number,
-                                        style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.add_circle_outline,
-                                          color: AppColors.primary),
-                                      onPressed: () {
-                                        int val = int.tryParse(
-                                                teamBController.text) ??
-                                            0;
-                                        teamBController.text =
-                                            (val + 1).toString();
-                                      },
-                                    ),
-                                  ],
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                              ],
+                                child: const Text(
+                                  'VS',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildScoreCounterInput(
+                                context,
+                                label: 'TEAM B',
+                                controller: teamBController,
+                                accentColor: Colors.orange.shade700,
+                              ),
                             ),
                           ],
                         ),
@@ -1000,182 +941,30 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      'TEAM A',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : Colors.grey.shade700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : const Color(0xFFCBD5E1),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              int val =
-                                  int.tryParse(teamAController.text.trim()) ??
-                                      0;
-                              if (val > 0) {
-                                teamAController.text = (val - 1).toString();
-                              }
-                            },
-                            icon: const Icon(
-                                Icons.remove_circle_outline_rounded,
-                                color: Colors.grey,
-                                size: 22),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                                minWidth: 32, minHeight: 32),
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: teamAController,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding:
-                                    EdgeInsets.symmetric(vertical: 6),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              int val =
-                                  int.tryParse(teamAController.text.trim()) ??
-                                      0;
-                              teamAController.text = (val + 1).toString();
-                            },
-                            icon: const Icon(Icons.add_circle_outline_rounded,
-                                color: AppColors.primary, size: 22),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                                minWidth: 32, minHeight: 32),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: _buildScoreCounterInput(
+                  context,
+                  label: 'TEAM A',
+                  controller: teamAController,
+                  accentColor: Colors.green.shade600,
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   'VS',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w900,
                     color: isDark ? Colors.white54 : Colors.grey.shade500,
                   ),
                 ),
               ),
               Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      'TEAM B',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : Colors.grey.shade700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : const Color(0xFFCBD5E1),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              int val =
-                                  int.tryParse(teamBController.text.trim()) ??
-                                      0;
-                              if (val > 0) {
-                                teamBController.text = (val - 1).toString();
-                              }
-                            },
-                            icon: const Icon(
-                                Icons.remove_circle_outline_rounded,
-                                color: Colors.grey,
-                                size: 22),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                                minWidth: 32, minHeight: 32),
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: teamBController,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding:
-                                    EdgeInsets.symmetric(vertical: 6),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              int val =
-                                  int.tryParse(teamBController.text.trim()) ??
-                                      0;
-                              teamBController.text = (val + 1).toString();
-                            },
-                            icon: const Icon(Icons.add_circle_outline_rounded,
-                                color: AppColors.primary, size: 22),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                                minWidth: 32, minHeight: 32),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: _buildScoreCounterInput(
+                  context,
+                  label: 'TEAM B',
+                  controller: teamBController,
+                  accentColor: Colors.orange.shade700,
                 ),
               ),
             ],
@@ -1192,8 +981,10 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                 elevation: 2,
               ),
               onPressed: () {
-                final a = int.tryParse(teamAController.text.trim()) ?? 0;
-                final b = int.tryParse(teamBController.text.trim()) ?? 0;
+                var a = int.tryParse(teamAController.text.trim()) ?? 0;
+                var b = int.tryParse(teamBController.text.trim()) ?? 0;
+                a = a.clamp(0, 99);
+                b = b.clamp(0, 99);
                 FocusScope.of(context).unfocus();
                 controller.submitMatchScore(game.id, a, b, isFinal: true);
               },
@@ -1405,6 +1196,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
               itemBuilder: (context, index) {
                 final player = filteredRoster[index];
                 final isTeamA = player.isTeamA;
+                final resolvedAvatar = player.profileImageUrl.resolvedImageUrl;
 
                 return Container(
                   padding:
@@ -1423,20 +1215,86 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: (isTeamA ? Colors.green : Colors.blue)
-                            .withValues(alpha: 0.18),
-                        child: Text(
-                          player.name.isNotEmpty
-                              ? player.name[0].toUpperCase()
-                              : 'P',
-                          style: TextStyle(
-                            color:
-                                isTeamA ? Colors.green : Colors.blue.shade700,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: (isTeamA ? Colors.green : Colors.blue.shade600)
+                                .withValues(alpha: 0.6),
+                            width: 1.5,
                           ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: resolvedAvatar.isValidNetworkUrl
+                              ? CachedNetworkImage(
+                                  imageUrl: resolvedAvatar!,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(
+                                    color: (isTeamA ? Colors.green : Colors.blue)
+                                        .withValues(alpha: 0.18),
+                                    child: Center(
+                                      child: Text(
+                                        player.name.isNotEmpty
+                                            ? player.name[0].toUpperCase()
+                                            : 'P',
+                                        style: TextStyle(
+                                          color: isTeamA
+                                              ? Colors.green
+                                              : Colors.blue.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (_, __, ___) => Container(
+                                    color: (isTeamA ? Colors.green : Colors.blue)
+                                        .withValues(alpha: 0.18),
+                                    child: Center(
+                                      child: Text(
+                                        player.name.isNotEmpty
+                                            ? player.name[0].toUpperCase()
+                                            : 'P',
+                                        style: TextStyle(
+                                          color: isTeamA
+                                              ? Colors.green
+                                              : Colors.blue.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  color: (isTeamA ? Colors.green : Colors.blue)
+                                      .withValues(alpha: 0.18),
+                                  child: Center(
+                                    child: Text(
+                                      player.name.isNotEmpty
+                                          ? player.name[0].toUpperCase()
+                                          : 'P',
+                                      style: TextStyle(
+                                        color: isTeamA
+                                            ? Colors.green
+                                            : Colors.blue.shade700,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1938,6 +1796,130 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
           }),
         ],
       ),
+    );
+  }
+
+  Widget _buildScoreCounterInput(
+    BuildContext context, {
+    required String label,
+    required TextEditingController controller,
+    required Color accentColor,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InkWell(
+                onTap: () {
+                  int val = int.tryParse(controller.text.trim()) ?? 0;
+                  if (val > 0) {
+                    controller.text = (val - 1).toString();
+                  }
+                },
+                borderRadius: BorderRadius.circular(15),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFE2E8F0),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.remove_rounded,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                width: 38,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.5),
+                    width: 1.2,
+                  ),
+                ),
+                child: TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  textAlignVertical: TextAlignVertical.center,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(2),
+                  ],
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                    height: 1.1,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: () {
+                  int val = int.tryParse(controller.text.trim()) ?? 0;
+                  if (val < 99) {
+                    controller.text = (val + 1).toString();
+                  }
+                },
+                borderRadius: BorderRadius.circular(15),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 16,
+                    color: accentColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

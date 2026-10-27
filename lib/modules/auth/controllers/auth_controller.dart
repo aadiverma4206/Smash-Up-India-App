@@ -176,6 +176,7 @@ class AuthController extends GetxController {
 
     try {
       final request = RegisterVerifyOtpRequestModel(
+        name: regName.value,
         email: regEmail.value,
         phone: regPhone.value,
         emailOtp: emailOtp,

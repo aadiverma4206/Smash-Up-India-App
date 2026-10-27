@@ -27,7 +27,7 @@ export class WalletService {
     return {
       walletBalance: Number(details.wallet_balance || 0),
       maxWalletBalance: 200000,
-      maxSingleTopup: 50000,
+      maxSingleTopup: 200000,
       isPinSet: isPinSetBool,
       isLocked: Boolean(
         details.wallet_pin_locked_until &&
@@ -107,10 +107,10 @@ export class WalletService {
     idempotencyKey: string,
     walletPin?: string,
   ) {
-    if (amountRupees < 1 || amountRupees > 50000) {
+    if (amountRupees < 1 || amountRupees > 200000) {
       throw new ApiError(
         400,
-        "Top-up amount must be between ₹1 and ₹50,000",
+        "Top-up amount must be between ₹1 and ₹2,00,000",
         "INVALID_TOPUP_AMOUNT",
       );
     }

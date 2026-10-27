@@ -521,8 +521,13 @@ export class ManagerRepository {
     values.push(limit, offset);
 
     const query = `
-      SELECT g.*,
-             to_char(g.match_date::date, 'YYYY-MM-DD') as match_date,
+      SELECT g.id, g.title, g.court_id, g.creator_id, g.creator_role_name, g.created_by_player,
+             g.format, g.entry_fee, COALESCE(g.per_player_fee, 0.00) as per_player_fee, g.status, g.approval_status,
+             g.team_a_score, g.team_b_score, g.winner_team, g.description,
+             g.created_at, g.updated_at,
+             TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+             TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+             TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
              CASE
                WHEN g.status = 'COMPLETED' AND (
                  (g.match_date + g.end_time + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
@@ -744,7 +749,10 @@ export class ManagerRepository {
       SELECT g.id, g.title, g.format, 
              CASE WHEN g.format = '5v5' THEN 10 WHEN g.format = '7v7' THEN 14 ELSE 22 END as max_players, 
              g.entry_fee, 'PUBLIC' as privacy,
-             g.match_date, g.start_time, g.end_time, g.status, g.approval_status,
+             TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
+             TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
+             TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
+             g.status, g.approval_status,
              g.created_by_player, g.creator_role_name, g.rejection_reason,
              g.team_a_score, g.team_b_score, g.winner_team,
              u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,

@@ -14,6 +14,7 @@ import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../notifications/services/socket_notification_service.dart';
 
 class GameDetailsController extends GetxController {
   final GamesRepository repository = Get.find<GamesRepository>();
@@ -106,6 +107,7 @@ class GameDetailsController extends GetxController {
       loadGameDetails();
     }
     fetchWalletBalance();
+    _initSocketListeners();
   }
 
   @override
@@ -571,6 +573,93 @@ class GameDetailsController extends GetxController {
       ErrorHandler.showErrorSnackBar('Cancellation Error', e);
     } finally {
       isJoining.value = false;
+    }
+  }
+
+  final RxString activeRosterTab = 'TEAM_A'.obs;
+  final RxList<Map<String, dynamic>> searchPlayerResults =
+      <Map<String, dynamic>>[].obs;
+  final RxBool isSearchingPlayers = false.obs;
+  final RxBool isRosterActionLoading = false.obs;
+
+  void _initSocketListeners() {
+    try {
+      if (Get.isRegistered<SocketNotificationService>()) {
+        SocketNotificationService.to.onEvent('match:live_feed', (data) {
+          AppLogger.info('⚡ [Socket.IO] Match live feed event in GameDetailsController');
+          loadGameDetails();
+        });
+        SocketNotificationService.to.onEvent('notification', (data) {
+          AppLogger.info('⚡ [Socket.IO] Notification event in GameDetailsController');
+          loadGameDetails();
+        });
+      }
+    } catch (e) {
+      AppLogger.warning('Error setting up socket listeners in GameDetailsController: $e');
+    }
+  }
+
+  bool get canHostManageRoster {
+    final g = game.value;
+    if (g == null || !isHost) return false;
+    final statusUpper = g.status.toUpperCase();
+    return statusUpper != 'COMPLETED' &&
+        statusUpper != 'CANCELLED' &&
+        statusUpper != 'ONGOING' &&
+        statusUpper != 'STARTED';
+  }
+
+  Future<void> searchPlayersForHost(String query) async {
+    final targetId = gameId;
+    if (targetId.isEmpty) return;
+    isSearchingPlayers.value = true;
+    try {
+      final list = await repository.searchPlayersForRoster(targetId, query);
+      AppLogger.info('🔍 [Roster Search] Found ${list.length} players for game $targetId: $list');
+      searchPlayerResults.assignAll(list);
+    } catch (e) {
+      AppLogger.error('❌ [Roster Search] Error searching players: $e');
+      searchPlayerResults.clear();
+    } finally {
+      isSearchingPlayers.value = false;
+    }
+  }
+
+  Future<void> addPlayerToTeamByHost(
+      String targetUserId, String team, String position) async {
+    final targetId = gameId;
+    if (targetId.isEmpty) return;
+    isRosterActionLoading.value = true;
+    try {
+      await repository.addPlayerToRosterByHost(
+          targetId, targetUserId, team, position);
+      await loadGameDetails();
+      ErrorHandler.showSuccessSnackBar(
+        'Player Added!',
+        'Player successfully added to ${team == 'TEAM_A' ? 'Team A' : 'Team B'}!',
+      );
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar('Add Player Error', e);
+    } finally {
+      isRosterActionLoading.value = false;
+    }
+  }
+
+  Future<void> removePlayerFromRosterByHost(String targetUserId) async {
+    final targetId = gameId;
+    if (targetId.isEmpty) return;
+    isRosterActionLoading.value = true;
+    try {
+      await repository.removePlayerFromRosterByHost(targetId, targetUserId);
+      await loadGameDetails();
+      ErrorHandler.showSuccessSnackBar(
+        'Player Removed',
+        'Player successfully removed from match roster.',
+      );
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar('Remove Player Error', e);
+    } finally {
+      isRosterActionLoading.value = false;
     }
   }
 }

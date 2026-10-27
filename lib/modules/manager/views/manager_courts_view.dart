@@ -271,16 +271,7 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
 
     final String matchDateRaw =
         (slot['matchDate'] ?? slot['match_date'] ?? '').toString();
-    String formattedDate = 'Thu, 08 Oct';
-    if (matchDateRaw.isNotEmpty) {
-      try {
-        final parsedDate = DateTime.parse(matchDateRaw);
-        formattedDate =
-            AppDateUtils.formatDate(parsedDate, format: 'EEE, dd MMM');
-      } catch (_) {
-        formattedDate = matchDateRaw.split('T')[0];
-      }
-    }
+    final String formattedDate = AppDateUtils.formatDate(matchDateRaw, format: 'EEE, dd MMM');
 
     Color statusColor;
     String displayStatusBadge = approvalStatus;

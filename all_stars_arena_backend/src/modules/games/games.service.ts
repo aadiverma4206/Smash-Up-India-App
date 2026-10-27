@@ -10,6 +10,8 @@ import {
   sendUserNotification,
   sendWalletUpdate,
 } from "../../services/realtime.service.js";
+import { NotificationService } from "../notifications/notifications.service.js";
+import { getSocketIO, SOCKET_EVENTS } from "../../config/socket.config.js";
 import { ApiError } from "../../utils/apiResponse.js";
 import { logger } from "../../utils/logger.js";
 import { razorpayClient } from "../../services/razorpay.service.js";
@@ -48,7 +50,7 @@ export class GamesService {
   ) {
     if (gameId) {
       const gameRes = await dbPool.query(
-        `SELECT id, entry_fee, format, status FROM public.games WHERE id = $1;`,
+        `SELECT id, entry_fee, COALESCE(per_player_fee, 0.00) as per_player_fee, format, status FROM public.games WHERE id = $1;`,
         [gameId],
       );
       if (gameRes.rows.length === 0) {
@@ -62,7 +64,7 @@ export class GamesService {
           "INVALID_MATCH_STATUS",
         );
       }
-      amountRupees = parseFloat(game.entry_fee || "0.00");
+      amountRupees = parseFloat(game.per_player_fee || "0.00");
     }
 
     if (amountRupees <= 0) {
@@ -518,51 +520,68 @@ export class GamesService {
       type: "SUCCESS",
     });
 
-    if (isPlayerCreator) {
-      try {
-        const mgrRes = await dbPool.query(
-          `SELECT DISTINCT u.id as user_id
-           FROM public.users u
-           LEFT JOIN public.club_managers cm ON cm.user_id = u.id
-           WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
-              OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
-          [newGame.club_id || "all_stars_arena_club"],
-        );
-        for (const mgr of mgrRes.rows) {
-          sendUserNotification(mgr.user_id, {
-            title: "⚽ New Player Match Hosted",
-            message: `A player hosted match "${newGame.title}" on turf for ${newGame.match_date} (${newGame.start_time}).`,
-            type: "INFO",
-            data: { gameId: newGame.id, route: "/manager/notifications" },
-          });
-        }
-      } catch (mgrErr: any) {
-        logger.warn(
-          `Failed to notify managers for player match ${newGame.id}: ${mgrErr.message}`,
-        );
+    // Notify all active managers with player name, court name, match date/time and amount paid
+    try {
+      const playerRes = await dbPool.query(
+        `SELECT name, phone FROM public.users WHERE id = $1;`,
+        [creatorUserId],
+      );
+      const playerName = playerRes.rows[0]?.name || "Player";
+      const formattedAmount = `₹${entryFee.toFixed(0)}`;
+      const courtDisplayName =
+          newGame.court_name || (data.courtId === "court_2" ? "Court 2" : "Court 1");
+
+      const mgrRes = await dbPool.query(
+        `SELECT DISTINCT u.id as user_id
+         FROM public.users u
+         LEFT JOIN public.club_managers cm ON cm.user_id = u.id
+         WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
+            OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
+        [newGame.club_id || "all_stars_arena_club"],
+      );
+
+      const notifTitle = "⚽ New Pitch Booking";
+      const notifBody = `Player "${playerName}" booked & created match "${newGame.title}" on ${courtDisplayName} (${cleanDate} ${cleanStart}). Amount Paid: ${formattedAmount} via ${data.paymentMethod || "WALLET"}.`;
+
+      for (const mgr of mgrRes.rows) {
+        await NotificationService.createNotification({
+          userId: mgr.user_id,
+          title: notifTitle,
+          body: notifBody,
+          message: notifBody,
+          type: "MATCH_BOOKING",
+          clubId: newGame.club_id || "all_stars_arena_club",
+          gameId: newGame.id,
+          data: {
+            gameId: newGame.id,
+            playerName,
+            creatorUserId,
+            amountPaid: entryFee,
+            formattedAmount,
+            courtName: courtDisplayName,
+            matchDate: cleanDate,
+            startTime: cleanStart,
+            paymentMethod: data.paymentMethod || "WALLET",
+            route: "/manager/notifications",
+          },
+        });
       }
-    } else if (
-      newGame.approval_status === "PENDING_APPROVAL" &&
-      newGame.club_id
-    ) {
-      try {
-        const mgrRes = await dbPool.query(
-          `SELECT user_id FROM public.club_managers WHERE club_id = $1;`,
-          [newGame.club_id],
-        );
-        for (const mgr of mgrRes.rows) {
-          sendUserNotification(mgr.user_id, {
-            title: "📋 New Match Awaiting Approval",
-            message: `Match "${newGame.title}" created on turf requires manager approval.`,
-            type: "WARNING",
-            data: { gameId: newGame.id, route: "/manager/notifications" },
-          });
-        }
-      } catch (mgrErr: any) {
-        logger.warn(
-          `Failed to notify managers for pending match ${newGame.id}: ${mgrErr.message}`,
-        );
+
+      const io = getSocketIO();
+      if (io) {
+        io.emit(SOCKET_EVENTS.MATCH_LIVE_FEED, {
+          gameId: newGame.id,
+          action: "MATCH_BOOKED",
+          playerName,
+          amountPaid: entryFee,
+          formattedAmount,
+          courtName: courtDisplayName,
+        });
       }
+    } catch (mgrErr: any) {
+      logger.warn(
+        `Failed to notify managers for match booking ${newGame.id}: ${mgrErr.message}`,
+      );
     }
 
     return newGame;
@@ -583,6 +602,7 @@ export class GamesService {
     const client = await dbPool.connect();
     let newBalance: number | null = null;
     let rosterId: string | null = null;
+    let game: any = null;
 
     try {
       await client.query("BEGIN");
@@ -594,7 +614,7 @@ export class GamesService {
       if (gameRes.rows.length === 0) {
         throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
       }
-      const game = gameRes.rows[0];
+      game = gameRes.rows[0];
 
       if (game.status === "CANCELLED" || game.status === "COMPLETED") {
         throw new ApiError(
@@ -660,9 +680,9 @@ export class GamesService {
         );
       }
 
-      const entryFee = parseFloat(game.entry_fee || "0.00");
-      const paymentMethod = paymentDetails?.paymentMethod || "WALLET";
-      let paymentMethodRecorded = entryFee > 0 ? "WALLET" : "FREE";
+      const entryFee = parseFloat(game.per_player_fee || "0.00");
+      const paymentMethod = paymentDetails?.paymentMethod || (entryFee > 0 ? "WALLET" : "FREE");
+      let paymentMethodRecorded = entryFee > 0 ? (paymentMethod === "RAZORPAY" ? "RAZORPAY" : "WALLET") : "FREE";
       let paymentRefRecorded: string | null = null;
 
       if (entryFee > 0) {
@@ -864,6 +884,69 @@ export class GamesService {
       type: "SUCCESS",
     });
 
+    // Notify managers when player joins & pays entry fee
+    try {
+      const playerRes = await dbPool.query(
+        `SELECT name, phone FROM public.users WHERE id = $1;`,
+        [userId],
+      );
+      const playerName = playerRes.rows[0]?.name || "Player";
+      const entryFee = Number(game.entry_fee || 0);
+      const formattedAmount = `₹${entryFee.toFixed(0)}`;
+      const courtDisplayName =
+          game.court_name || (game.court_id === "court_2" ? "Court 2" : "Court 1");
+
+      const mgrRes = await dbPool.query(
+        `SELECT DISTINCT u.id as user_id
+         FROM public.users u
+         LEFT JOIN public.club_managers cm ON cm.user_id = u.id
+         WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
+            OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
+        [game.club_id || "all_stars_arena_club"],
+      );
+
+      const notifTitle = "⚽ Player Joined Match";
+      const notifBody = `Player "${playerName}" joined match "${game.title}" on ${courtDisplayName} (${game.match_date} ${game.start_time}). Paid Amount: ${formattedAmount}.`;
+
+      for (const mgr of mgrRes.rows) {
+        await NotificationService.createNotification({
+          userId: mgr.user_id,
+          title: notifTitle,
+          body: notifBody,
+          message: notifBody,
+          type: "MATCH_JOINED",
+          clubId: game.club_id || "all_stars_arena_club",
+          gameId,
+          data: {
+            gameId,
+            playerName,
+            userId,
+            amountPaid: entryFee,
+            formattedAmount,
+            courtName: courtDisplayName,
+            matchDate: game.match_date,
+            startTime: game.start_time,
+            route: "/manager/notifications",
+          },
+        });
+      }
+
+      const io = getSocketIO();
+      if (io) {
+        io.emit(SOCKET_EVENTS.MATCH_LIVE_FEED, {
+          gameId,
+          action: "PLAYER_JOINED",
+          playerName,
+          amountPaid: entryFee,
+          formattedAmount,
+        });
+      }
+    } catch (mgrErr: any) {
+      logger.warn(
+        `Failed to notify managers for player joining game ${gameId}: ${mgrErr.message}`,
+      );
+    }
+
     return {
       success: true,
       gameId,
@@ -918,7 +1001,7 @@ export class GamesService {
       }
       const playerRecord = playerRes.rows[0];
 
-      entryFee = parseFloat(game.entry_fee || "0.00");
+      entryFee = parseFloat(game.per_player_fee || "0.00");
 
       if (entryFee > 0 && playerRecord.payment_status === "PAID") {
         const refundRef = `LEAVE_REFUND:${gameId}:${userId}`;
@@ -1023,12 +1106,24 @@ export class GamesService {
     gameId: string,
     userRole = 3,
   ) {
+    try {
+      await dbPool.query(
+        `UPDATE public.games
+         SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND status NOT IN ('COMPLETED', 'CANCELLED')
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`,
+        [gameId],
+      );
+    } catch (_) {}
+
     const game = await GamesRepository.getGameById(gameId);
     if (!game) throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
 
     if (userRole === 3) {
       const isParticipant = await dbPool.query(
-        `SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2;`,
+        `SELECT 1 FROM public.game_players WHERE game_id = $1 AND user_id = $2
+         UNION
+         SELECT 1 FROM public.games WHERE id = $1 AND creator_id = $2;`,
         [gameId, userId],
       );
       if (isParticipant.rows.length === 0) {
@@ -1057,24 +1152,28 @@ export class GamesService {
 
     for (let i = 0; i < videos.length; i++) {
       const vid = videos[i];
-      const signedPlaybackUrl = await getSignedPlaybackUrl(vid.video_url, 3600);
-      videoResults.push({
-        videoId: vid.id,
-        id: vid.id,
-        cctvId: vid.cctv_id || null,
-        cameraName: vid.camera_name || `Camera ${i + 1}`,
-        cameraType: vid.camera_type || "RTSP_DOME",
-        cameraStatus: vid.camera_status || "ONLINE",
-        courtId: vid.court_id || null,
-        courtName: vid.court_name || "Court 1",
-        clubName: vid.club_name || "All Stars Turf",
-        title: vid.title,
-        status: vid.status,
-        durationSeconds: vid.duration_seconds || 5400,
-        startedAt: vid.started_at || vid.created_at,
-        endedAt: vid.actual_stopped_at || vid.created_at,
-        playbackUrl: signedPlaybackUrl,
-      });
+      try {
+        const signedPlaybackUrl = await getSignedPlaybackUrl(vid.video_url, 3600);
+        videoResults.push({
+          videoId: vid.id,
+          id: vid.id,
+          cctvId: vid.cctv_id || null,
+          cameraName: vid.camera_name || `Camera ${i + 1}`,
+          cameraType: vid.camera_type || "RTSP_DOME",
+          cameraStatus: vid.camera_status || "ONLINE",
+          courtId: vid.court_id || null,
+          courtName: vid.court_name || "Court 1",
+          clubName: vid.club_name || "All Stars Turf",
+          title: vid.title,
+          status: vid.status,
+          durationSeconds: vid.duration_seconds || 5400,
+          startedAt: vid.started_at || vid.created_at,
+          endedAt: vid.actual_stopped_at || vid.created_at,
+          playbackUrl: signedPlaybackUrl || vid.video_url || "",
+        });
+      } catch (err: any) {
+        logger.warn(`Failed to sign playback URL for video ${vid.id}: ${err.message}`);
+      }
     }
 
     return videoResults;
@@ -1161,18 +1260,64 @@ export class GamesService {
         );
       } catch (_) {}
 
-      const entryFee = parseFloat(game.entry_fee || "0.00");
-      const playersRes = await client.query(
-        `SELECT user_id FROM public.game_players WHERE game_id = $1 AND payment_status = 'PAID' AND user_id != $2;`,
-        [gameId, game.creator_id],
-      );
+      const hostFee = parseFloat(game.entry_fee || "0.00");
+      const perPlayerFee = parseFloat(game.per_player_fee || "0.00");
+      const refundNotifications: Array<{ userId: string; newBalance: number; refundAmount: number }> = [];
 
-      const refundNotifications: Array<{ userId: string; newBalance: number }> =
-        [];
+      // 1. Refund Host (who booked the pitch and paid full pitch payment)
+      if (hostFee > 0 && game.creator_id) {
+        const hostRefundRef = `MATCH_HOST_REFUND:${gameId}:${game.creator_id}`;
+        const existingHostRefund = await client.query(
+          `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+          [game.creator_id, hostRefundRef],
+        );
 
-      for (const pRow of playersRes.rows) {
-        const pUserId = pRow.user_id;
-        if (entryFee > 0) {
+        if (existingHostRefund.rows.length === 0) {
+          const txRes = await client.query(
+            `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+             VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+             RETURNING id, balance_after;`,
+            [
+              game.creator_id,
+              hostFee,
+              `Pitch booking refund for cancelled match: ${game.title || "Football Match"}`,
+              hostRefundRef,
+            ],
+          );
+          const newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
+
+          await client.query(
+            `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+             VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+             ON CONFLICT (id) DO NOTHING;`,
+            [
+              txRes.rows[0]?.id,
+              game.creator_id,
+              hostFee,
+              newBal,
+              `Pitch booking refund for cancelled match: ${game.title || "Football Match"}`,
+              hostRefundRef,
+            ],
+          );
+
+          await client.query(
+            `UPDATE public.game_players SET payment_status = 'REFUNDED' WHERE game_id = $1 AND user_id = $2;`,
+            [gameId, game.creator_id],
+          );
+
+          refundNotifications.push({ userId: game.creator_id, newBalance: newBal, refundAmount: hostFee });
+        }
+      }
+
+      // 2. Refund any non-host players who paid per_player_fee (if any)
+      if (perPlayerFee > 0) {
+        const playersRes = await client.query(
+          `SELECT user_id FROM public.game_players WHERE game_id = $1 AND payment_status = 'PAID' AND user_id != $2;`,
+          [gameId, game.creator_id],
+        );
+
+        for (const pRow of playersRes.rows) {
+          const pUserId = pRow.user_id;
           const refundRef = `MATCH_REFUND:${gameId}:${pUserId}`;
 
           const existingRefund = await client.query(
@@ -1188,7 +1333,7 @@ export class GamesService {
                RETURNING id, balance_after;`,
               [
                 pUserId,
-                entryFee,
+                perPlayerFee,
                 `Refund for cancelled match: ${game.title || "Football Match"}`,
                 refundRef,
               ],
@@ -1202,7 +1347,7 @@ export class GamesService {
               [
                 txRes.rows[0]?.id,
                 pUserId,
-                entryFee,
+                perPlayerFee,
                 newBal,
                 `Refund for cancelled match: ${game.title || "Football Match"}`,
                 refundRef,
@@ -1221,7 +1366,7 @@ export class GamesService {
             newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
           }
 
-          refundNotifications.push({ userId: pUserId, newBalance: newBal });
+          refundNotifications.push({ userId: pUserId, newBalance: newBal, refundAmount: perPlayerFee });
         }
       }
 
@@ -1249,7 +1394,7 @@ export class GamesService {
         sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
         sendUserNotification(item.userId, {
           title: "⚠️ Match Cancelled by Host",
-          message: `Host cancelled "${game.title}". ${entryFee > 0 ? `₹${entryFee.toFixed(2)} refunded to your wallet.` : ""}`,
+          message: `Host cancelled "${game.title}". ${item.refundAmount > 0 ? `₹${item.refundAmount.toFixed(2)} refunded to your wallet.` : ""}`,
           type: "WARNING",
         });
       }
@@ -1261,5 +1406,301 @@ export class GamesService {
     } finally {
       client.release();
     }
+  }
+
+  static async searchPlayersForRoster(
+    gameIdOrQuery: string = "",
+    queryStr?: string,
+  ) {
+    let effectiveGameId = "";
+    let effectiveQuery = "";
+
+    if (queryStr !== undefined) {
+      effectiveGameId = (gameIdOrQuery || "").trim();
+      effectiveQuery = (queryStr || "").trim();
+    } else {
+      effectiveQuery = (gameIdOrQuery || "").trim();
+    }
+
+    const conditions: string[] = [
+      "(u.role_id = 3 OR u.role_id IS NULL OR u.role_id::text = '3')",
+      "COALESCE(u.role_id, 3) NOT IN (1, 2)",
+      "COALESCE(u.status::text, 'ACTIVE') = 'ACTIVE'",
+      "u.status::text <> 'SUSPENDED'",
+    ];
+    const values: any[] = [];
+    let idx = 1;
+
+    // Exclude players who are ALREADY in the roster (Team A or Team B) or are the host for this match!
+    if (effectiveGameId && effectiveGameId.length > 0) {
+      conditions.push(
+        `NOT EXISTS (
+           SELECT 1 FROM public.game_players gp 
+           WHERE gp.game_id = $${idx} AND gp.user_id = u.id
+         )`,
+      );
+      conditions.push(
+        `NOT EXISTS (
+           SELECT 1 FROM public.games g 
+           WHERE g.id = $${idx} AND g.creator_id = u.id
+         )`,
+      );
+      values.push(effectiveGameId);
+      idx++;
+    }
+
+    if (effectiveQuery && effectiveQuery.length > 0) {
+      conditions.push(
+        `(u.name ILIKE $${idx} OR u.phone ILIKE $${idx} OR u.email ILIKE $${idx})`,
+      );
+      values.push(`%${effectiveQuery}%`);
+      idx++;
+    }
+
+    const query = `
+      SELECT u.id, u.name, u.email, u.phone, u.profile_image_url, u.role_id
+      FROM public.users u
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY LOWER(u.name) ASC
+      LIMIT 50;
+    `;
+
+    const res = await dbPool.query(query, values);
+    return res.rows.map((row) => ({
+      id: row.id,
+      userId: row.id,
+      name: row.name || row.email || "Player",
+      email: row.email || "",
+      phone: row.phone || "",
+      profileImageUrl: row.profile_image_url || null,
+      roleId: Number(row.role_id || 3),
+    }));
+  }
+
+  static async addPlayerToRosterByHost(params: {
+    hostUserId: string;
+    gameId: string;
+    targetUserId: string;
+    team: string;
+    position: string;
+  }) {
+    const { hostUserId, gameId, targetUserId, team, position } = params;
+
+    const gameRes = await dbPool.query(
+      `SELECT * FROM public.games WHERE id = $1;`,
+      [gameId],
+    );
+    if (gameRes.rows.length === 0) {
+      throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
+    }
+    const game = gameRes.rows[0];
+
+    // Verify requesting user is host/creator
+    if (game.creator_id !== hostUserId) {
+      throw new ApiError(
+        403,
+        "Only the match host can add players to the roster",
+        "NOT_HOST",
+      );
+    }
+
+    // Verify match status
+    const statusUpper = (game.status || "").toUpperCase();
+    if (
+      statusUpper === "COMPLETED" ||
+      statusUpper === "CANCELLED" ||
+      statusUpper === "ONGOING" ||
+      statusUpper === "STARTED"
+    ) {
+      throw new ApiError(
+        400,
+        `Cannot add players to a match that is ${statusUpper}`,
+        "MATCH_LOCKED",
+      );
+    }
+
+    // Check team count limit (max 11 players per team side)
+    const targetTeam = team === "TEAM_B" ? "TEAM_B" : "TEAM_A";
+    const countRes = await dbPool.query(
+      `SELECT COUNT(*) as team_count FROM public.game_players WHERE game_id = $1 AND team = $2 AND user_id <> $3;`,
+      [gameId, targetTeam, targetUserId],
+    );
+    const currentTeamCount = parseInt(countRes.rows[0]?.team_count || "0", 10);
+    if (currentTeamCount >= 11) {
+      throw new ApiError(
+        400,
+        `${targetTeam === "TEAM_A" ? "Team A" : "Team B"} has already reached the maximum 11 player limit`,
+        "TEAM_FULL",
+      );
+    }
+
+    // Get target player details & role
+    const targetUserRes = await dbPool.query(
+      `SELECT name, phone, role_id FROM public.users WHERE id = $1;`,
+      [targetUserId],
+    );
+    if (targetUserRes.rows.length === 0) {
+      throw new ApiError(404, "Target player not found");
+    }
+    const targetUser = targetUserRes.rows[0];
+    const targetRoleId = Number(targetUser.role_id || 3);
+
+    // Strictly block Admins (role_id = 1) and Managers (role_id = 2)
+    if (targetRoleId === 1 || targetRoleId === 2) {
+      throw new ApiError(
+        400,
+        "Admins and Managers cannot be added to the match player roster",
+        "INVALID_PLAYER_ROLE",
+      );
+    }
+    const targetName = targetUser.name || "Player";
+
+    // Insert or update in game_players
+    await dbPool.query(
+      `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status, payment_method)
+       VALUES ($1, $2, $3, $4, 'PAID', 'HOST_ADDED')
+       ON CONFLICT (game_id, user_id) DO UPDATE
+       SET team = EXCLUDED.team, position = EXCLUDED.position, payment_status = 'PAID';`,
+      [gameId, targetUserId, targetTeam, position || "ST"],
+    );
+
+    // Notify target player
+    sendUserNotification(targetUserId, {
+      title: "⚽ Added to Match Roster",
+      message: `Host added you to ${targetTeam === "TEAM_A" ? "Team A" : "Team B"} for match "${game.title}"!`,
+      type: "SUCCESS",
+    });
+
+    // Notify managers
+    try {
+      const courtDisplayName =
+        game.court_name || (game.court_id === "court_2" ? "Court 2" : "Court 1");
+      const mgrRes = await dbPool.query(
+        `SELECT DISTINCT u.id as user_id
+         FROM public.users u
+         LEFT JOIN public.club_managers cm ON cm.user_id = u.id
+         WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
+            OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
+        [game.club_id || "all_stars_arena_club"],
+      );
+
+      const notifTitle = "⚽ Player Added to Roster";
+      const notifBody = `Player "${targetName}" was added to ${targetTeam === "TEAM_A" ? "Team A" : "Team B"} by host for match "${game.title}" on ${courtDisplayName}.`;
+
+      for (const mgr of mgrRes.rows) {
+        await NotificationService.createNotification({
+          userId: mgr.user_id,
+          title: notifTitle,
+          body: notifBody,
+          message: notifBody,
+          type: "MATCH_JOINED",
+          clubId: game.club_id || "all_stars_arena_club",
+          gameId,
+          data: {
+            gameId,
+            playerName: targetName,
+            userId: targetUserId,
+            courtName: courtDisplayName,
+            matchDate: game.match_date,
+            startTime: game.start_time,
+            team: targetTeam,
+            route: "/manager/notifications",
+          },
+        });
+      }
+    } catch (mgrErr: any) {
+      logger.warn(
+        `Failed to notify managers for adding player ${targetUserId} to game ${gameId}: ${mgrErr.message}`,
+      );
+    }
+
+    // Broadcast Socket.IO live feed
+    const io = getSocketIO();
+    if (io) {
+      io.emit(SOCKET_EVENTS.MATCH_LIVE_FEED, {
+        gameId,
+        action: "ROSTER_UPDATED",
+        targetUserId,
+        playerName: targetName,
+        team: targetTeam,
+      });
+    }
+
+    return { success: true, gameId, targetUserId, team: targetTeam };
+  }
+
+  static async removePlayerFromRosterByHost(params: {
+    hostUserId: string;
+    gameId: string;
+    targetUserId: string;
+  }) {
+    const { hostUserId, gameId, targetUserId } = params;
+
+    const gameRes = await dbPool.query(
+      `SELECT * FROM public.games WHERE id = $1;`,
+      [gameId],
+    );
+    if (gameRes.rows.length === 0) {
+      throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
+    }
+    const game = gameRes.rows[0];
+
+    // Verify requesting user is host/creator
+    if (game.creator_id !== hostUserId) {
+      throw new ApiError(
+        403,
+        "Only the match host can remove players from the roster",
+        "NOT_HOST",
+      );
+    }
+
+    // PREVENT REMOVING THE MATCH HOST/CREATOR
+    if (targetUserId === game.creator_id) {
+      throw new ApiError(
+        400,
+        "The match creator/host cannot be removed from the roster",
+        "CANNOT_REMOVE_HOST",
+      );
+    }
+
+    // Verify match status
+    const statusUpper = (game.status || "").toUpperCase();
+    if (
+      statusUpper === "COMPLETED" ||
+      statusUpper === "CANCELLED" ||
+      statusUpper === "ONGOING" ||
+      statusUpper === "STARTED"
+    ) {
+      throw new ApiError(
+        400,
+        `Cannot remove players from a match that is ${statusUpper}`,
+        "MATCH_LOCKED",
+      );
+    }
+
+    // Delete from game_players
+    await dbPool.query(
+      `DELETE FROM public.game_players WHERE game_id = $1 AND user_id = $2;`,
+      [gameId, targetUserId],
+    );
+
+    // Notify target player
+    sendUserNotification(targetUserId, {
+      title: "⚽ Removed from Match Roster",
+      message: `Host removed you from match "${game.title}".`,
+      type: "INFO",
+    });
+
+    // Broadcast Socket.IO live feed
+    const io = getSocketIO();
+    if (io) {
+      io.emit(SOCKET_EVENTS.MATCH_LIVE_FEED, {
+        gameId,
+        action: "ROSTER_UPDATED",
+        targetUserId,
+      });
+    }
+
+    return { success: true, gameId, targetUserId };
   }
 }

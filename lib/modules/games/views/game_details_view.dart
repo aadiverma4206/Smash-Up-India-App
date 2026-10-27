@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'add_roster_player_view.dart';
 import '../controllers/game_details_controller.dart';
 import '../../../data/models/game_model.dart';
-import '../../../core/services/auth_service.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/utils/image_utils.dart';
 
 class GameDetailsView extends StatelessWidget {
   const GameDetailsView({super.key});
@@ -16,6 +18,7 @@ class GameDetailsView extends StatelessWidget {
     final controller = Get.put(GameDetailsController());
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Booking Details',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -44,8 +47,8 @@ class GameDetailsView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildBookingInfoCard(context, game),
+              _buildRosterSection(context, controller, game),
               const SizedBox(height: 16),
-              _buildScoreboardCard(context, game),
               _buildHostCancelCard(context, controller, game),
               const SizedBox(height: 20),
               _buildVideoSection(context, controller, game),
@@ -58,8 +61,7 @@ class GameDetailsView extends StatelessWidget {
   }
 
   Widget _buildBookingInfoCard(BuildContext context, GameModel game) {
-    final totalFee =
-        game.entryFee > 0 ? game.entryFee : game.perPlayerFee;
+    final totalFee = game.entryFee > 0 ? game.entryFee : game.perPlayerFee;
 
     return Card(
       color: context.cardColor,
@@ -127,7 +129,8 @@ class GameDetailsView extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '${AppDateUtils.formatDate(game.matchDate)} • ${AppDateUtils.formatTimeRange(game.startTime, game.endTime)}',
-                    style: TextStyle(color: context.textSecondary, fontSize: 13),
+                    style:
+                        TextStyle(color: context.textSecondary, fontSize: 13),
                   ),
                 ),
               ],
@@ -158,6 +161,387 @@ class GameDetailsView extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRosterSection(
+      BuildContext context, GameDetailsController controller, GameModel game) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Obx(() {
+      final teamARoster = controller.teamARoster;
+      final teamBRoster = controller.teamBRoster;
+      final totalJoined = teamARoster.length + teamBRoster.length;
+      final activeTab = controller.activeRosterTab.value;
+      final currentList = activeTab == 'TEAM_A' ? teamARoster : teamBRoster;
+      final canManage = controller.canHostManageRoster;
+
+      return Container(
+        margin: const EdgeInsets.only(top: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: context.borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Roster Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.groups_rounded,
+                        color: AppColors.primary, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Joined Players Roster',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: context.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$totalJoined / ${game.maxPlayers} Players',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Team A / Team B Segment Filter Bar
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: context.backgroundColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: context.borderColor),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildRosterTeamTab(
+                      context,
+                      controller,
+                      teamKey: 'TEAM_A',
+                      label: 'TEAM A (${teamARoster.length})',
+                      activeColor: const Color(0xFF0284C7),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _buildRosterTeamTab(
+                      context,
+                      controller,
+                      teamKey: 'TEAM_B',
+                      label: 'TEAM B (${teamBRoster.length})',
+                      activeColor: const Color(0xFFEF4444),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Host Add Player Action Button
+            if (canManage) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: activeTab == 'TEAM_A'
+                        ? const Color(0xFF0284C7)
+                        : const Color(0xFFEF4444),
+                    side: BorderSide(
+                      color: activeTab == 'TEAM_A'
+                          ? const Color(0xFF0284C7)
+                          : const Color(0xFFEF4444),
+                      width: 1.2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  onPressed: () => Get.to(
+                    () => AddRosterPlayerView(targetTeam: activeTab),
+                    transition: Transition.cupertino,
+                  ),
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                  label: Text(
+                    '+ Add Player to ${activeTab == 'TEAM_A' ? 'Team A' : 'Team B'}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Player Cards List
+            if (currentList.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Text(
+                    'No players assigned to ${activeTab == 'TEAM_A' ? 'Team A' : 'Team B'} yet.',
+                    style: TextStyle(
+                      color: context.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: currentList.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final player = currentList[index];
+                  final isTeamA = activeTab == 'TEAM_A';
+                  final teamColor = isTeamA
+                      ? const Color(0xFF0284C7)
+                      : const Color(0xFFEF4444);
+                  final resolvedAvatar =
+                      player.profileImageUrl.resolvedImageUrl;
+
+                  return TweenAnimationBuilder<double>(
+                    key: ValueKey(player.userId),
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    duration: Duration(milliseconds: 250 + (index * 50)),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: 0.95 + (0.05 * value),
+                        child: Opacity(
+                          opacity: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: context.backgroundColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: teamColor.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          // Player Profile Photo / Avatar
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: teamColor.withValues(alpha: 0.6),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: resolvedAvatar.isValidNetworkUrl
+                                  ? CachedNetworkImage(
+                                      imageUrl: resolvedAvatar!,
+                                      width: 40,
+                                      height: 40,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(
+                                        color: teamColor.withValues(alpha: 0.15),
+                                        child: Center(
+                                          child: Text(
+                                            player.name.isNotEmpty
+                                                ? player.name[0].toUpperCase()
+                                                : 'P',
+                                            style: TextStyle(
+                                              color: teamColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      errorWidget: (_, __, ___) => Container(
+                                        color: teamColor.withValues(alpha: 0.15),
+                                        child: Center(
+                                          child: Text(
+                                            player.name.isNotEmpty
+                                                ? player.name[0].toUpperCase()
+                                                : 'P',
+                                            style: TextStyle(
+                                              color: teamColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      color: teamColor.withValues(alpha: 0.15),
+                                      child: Center(
+                                        child: Text(
+                                          player.name.isNotEmpty
+                                              ? player.name[0].toUpperCase()
+                                              : 'P',
+                                          style: TextStyle(
+                                            color: teamColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Player Name & Mobile Number
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  player.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: context.textPrimary,
+                                  ),
+                                ),
+                                if (player.phone != null &&
+                                    player.phone!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '📞 ${player.phone}',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: context.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+
+                          // Position Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: teamColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              player.position,
+                              style: TextStyle(
+                                color: teamColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+
+                          // Host Remove Icon Button (Host cannot remove themselves)
+                          if (canManage && player.userId != game.creatorId) ...[
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(
+                                  Icons.remove_circle_outline_rounded,
+                                  color: Colors.redAccent,
+                                  size: 20),
+                              tooltip: 'Remove from Roster',
+                              onPressed: () {
+                                Get.defaultDialog(
+                                  title: 'Remove Player',
+                                  middleText:
+                                    'Remove ${player.name} from ${isTeamA ? 'Team A' : 'Team B'} roster?',
+                                  textConfirm: 'Yes, Remove',
+                                  textCancel: 'Cancel',
+                                  confirmTextColor: Colors.white,
+                                  buttonColor: Colors.redAccent,
+                                  onConfirm: () {
+                                    Get.back();
+                                    controller.removePlayerFromRosterByHost(
+                                        player.userId);
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildRosterTeamTab(
+    BuildContext context,
+    GameDetailsController controller, {
+    required String teamKey,
+    required String label,
+    required Color activeColor,
+  }) {
+    final isSelected = controller.activeRosterTab.value == teamKey;
+
+    return InkWell(
+      onTap: () => controller.activeRosterTab.value = teamKey,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : context.textSecondary,
+          ),
         ),
       ),
     );
@@ -278,436 +662,155 @@ class GameDetailsView extends StatelessWidget {
                   child: Row(
                     children: [
                       const Icon(Icons.timer_outlined,
-                          color: AppColors.primary, size: 24),
-                      const SizedBox(width: 10),
+                          size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Match Video Processing',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Full match recording will be available in the app 10 minutes after match completion.',
-                              style: TextStyle(
-                                  color: context.textSecondary, fontSize: 11),
-                            ),
-                          ],
+                        child: Text(
+                          'Match completed! CCTV recording is being processed and will be available shortly.',
+                          style: TextStyle(
+                              fontSize: 12, color: context.textPrimary),
                         ),
                       ),
                     ],
                   ),
                 )
               else
-                const EmptyStateWidget(
-                  title: 'No CCTV Footage Available',
-                  subtitle:
-                      'Footage will be automatically recorded and displayed here once available.',
-                  imageSize: 130,
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: EmptyStateWidget(
+                    title: 'No CCTV Footage Available',
+                    subtitle:
+                        'Footage will be automatically recorded and displayed here once available.',
+                    icon: Icons.videocam_off_outlined,
+                  ),
                 ),
             ],
           ),
         );
       }
 
-      final videoUrl = rawVideoUrl;
-      final cameraName = selectedVid?.cameraName ?? 'Camera 1';
-      final isManagerOrAdmin =
-          AuthService.to.isManager || AuthService.to.isAdmin;
-      final showMultiCam = isManagerOrAdmin && videos.length > 1;
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.videocam_rounded,
-                      color: AppColors.primary, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    'CCTV Recorded Footage',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: context.textPrimary,
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.videocam_rounded,
+                        color: AppColors.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'CCTV Recorded Match Footage',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: context.textPrimary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              if (showMultiCam)
+                  ],
+                ),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
+                    color: Colors.green.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    '${videos.length} CAMERAS',
-                    style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (showMultiCam) ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                children: List.generate(videos.length, (index) {
-                  final vid = videos[index];
-                  final isSelected = selectedVid?.id == vid.id ||
-                      (selectedVid == null && index == 0);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8, bottom: 8),
-                    child: InkWell(
-                      onTap: () => controller.selectCamera(vid),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : context.cardColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : context.borderColor,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.videocam_rounded,
-                                size: 14,
-                                color: isSelected ? Colors.white : Colors.grey),
-                            const SizedBox(width: 4),
-                            Text(
-                              vid.cameraName,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : context.textPrimary,
-                                fontSize: 11,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                            color: Colors.green, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${videos.isNotEmpty ? videos.length : 1} CAMERA',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(height: 6),
-          ],
-          Container(
-            width: double.infinity,
-            height: 190,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.play_circle_fill_rounded,
-                      size: 60, color: AppColors.primary),
-                  onPressed: () {
-                    Get.toNamed('/videos/player', arguments: {
-                      'videoUrl': videoUrl,
-                      'title': '${game.title} - $cameraName',
-                      'cameras': videos.map((v) => v.toJson()).toList(),
-                      'initialIndex':
-                          videos.indexWhere((v) => v.id == selectedVid?.id),
-                    });
-                  },
-                ),
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  right: 12,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '${game.courtName} • $cameraName • Auto-recorded CCTV Video',
-                      style: const TextStyle(color: Colors.white, fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                Get.toNamed('/videos/player', arguments: {
-                  'videoUrl': videoUrl,
-                  'title': '${game.title} - $cameraName',
-                  'cameras': videos.map((v) => v.toJson()).toList(),
-                  'initialIndex':
-                      videos.indexWhere((v) => v.id == selectedVid?.id),
-                });
-              },
-              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
-              label: Text(
-                isManagerOrAdmin
-                    ? 'Watch Recorded Match Video ($cameraName)'
-                    : 'Watch Recorded Match Video',
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      );
-    });
-  }
-
-  Widget _buildScoreboardCard(BuildContext context, GameModel game) {
-    final isOngoing = game.status == 'ONGOING';
-    final isCompleted = game.status == 'COMPLETED';
-    final hasScore = isOngoing || isCompleted || game.teamAScore > 0 || game.teamBScore > 0;
-    if (!hasScore) return const SizedBox.shrink();
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final winner = game.winnerTeam;
-
-    String winnerText = '';
-    Color winnerColor = AppColors.primary;
-    if (isCompleted) {
-      if (winner == 'TEAM_A' || game.teamAScore > game.teamBScore) {
-        winnerText = '🏆 Team A Won the Match';
-        winnerColor = const Color(0xFF10B981);
-      } else if (winner == 'TEAM_B' || game.teamBScore > game.teamAScore) {
-        winnerText = '🏆 Team B Won the Match';
-        winnerColor = const Color(0xFF10B981);
-      } else {
-        winnerText = '🤝 Match Ended in a Draw';
-        winnerColor = Colors.amber.shade700;
-      }
-    }
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF17231B), const Color(0xFF0F1713)]
-              : [const Color(0xFFF0FDF4), const Color(0xFFE8F5E9)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isOngoing
-              ? Colors.redAccent.withValues(alpha: 0.5)
-              : AppColors.primary.withValues(alpha: 0.35),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isOngoing ? Colors.redAccent : AppColors.primary)
-                .withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  if (isOngoing) ...[
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'LIVE SCORE',
-                      style: TextStyle(
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ] else ...[
-                    const Icon(Icons.emoji_events_rounded,
-                        color: Colors.amber, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      'FINAL SCORE',
-                      style: TextStyle(
-                        color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: (isOngoing ? Colors.redAccent : Colors.green)
-                      .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  isOngoing ? 'MATCH IN PROGRESS' : 'MATCH COMPLETED',
-                  style: TextStyle(
-                    color: isOngoing ? Colors.redAccent : Colors.green,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'TEAM A',
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+            const SizedBox(height: 14),
+            if (videos.length > 1) ...[
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: videos.map((vid) {
+                    final isSel = selectedVid?.id == vid.id;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(vid.cameraName),
+                        selected: isSel,
+                        selectedColor: AppColors.primary,
+                        backgroundColor: context.backgroundColor,
+                        labelStyle: TextStyle(
+                          color: isSel ? Colors.white : context.textPrimary,
+                          fontWeight:
+                              isSel ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 11,
                         ),
+                        onSelected: (sel) {
+                          if (sel) controller.selectCamera(vid);
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${game.teamAScore}',
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                  ],
+                    );
+                  }).toList(),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: (isDark ? Colors.white10 : Colors.black12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'VS',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: context.textSecondary,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'TEAM B',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${game.teamBScore}',
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 12),
             ],
-          ),
-          if (winnerText.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
+            SizedBox(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: winnerColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                winnerText,
-                style: TextStyle(
-                  color: winnerColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
+              height: 48,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Get.toNamed('/videos/player', arguments: {
+                    'videoUrl': rawVideoUrl,
+                    'playbackUrl': rawVideoUrl,
+                    'title':
+                        '${game.title} - ${selectedVid?.cameraName ?? "CCTV Footage"}',
+                    'cameras': videos.map((v) => v.toJson()).toList(),
+                    'initialIndex':
+                        videos.indexWhere((v) => v.id == selectedVid?.id),
+                  });
+                },
+                icon: const Icon(Icons.play_arrow_rounded,
+                    color: Colors.white, size: 22),
+                label: Text(
+                  'Watch Recorded Match Video (${selectedVid?.cameraName ?? "Main Camera"})',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
                 ),
               ),
             ),
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 }

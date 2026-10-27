@@ -17,6 +17,9 @@ import {
   getGameRecordingController,
   stopGameRecordingController,
   extendGameRecordingController,
+  searchPlayersForRosterController,
+  addPlayerToRosterByHostController,
+  removePlayerFromRosterByHostController,
 } from "./games.controller.js";
 import {
   authenticateToken,
@@ -46,6 +49,21 @@ router.delete("/:id/waitlist", requireRole([3]), leaveWaitlistController);
 router.post("/:id/score", requireRole([1, 2, 3]), updateGameScoreController);
 
 router.get("/:id/videos", requireRole([1, 2, 3]), getGameVideosController);
+router.get(
+  "/:id/players/search",
+  requireRole([1, 2, 3]),
+  searchPlayersForRosterController,
+);
+router.post(
+  "/:id/roster/add",
+  requireRole([3]),
+  addPlayerToRosterByHostController,
+);
+router.post(
+  "/:id/roster/remove",
+  requireRole([3]),
+  removePlayerFromRosterByHostController,
+);
 router.get(
   "/:id/recording",
   requireRole([1, 2, 3]),

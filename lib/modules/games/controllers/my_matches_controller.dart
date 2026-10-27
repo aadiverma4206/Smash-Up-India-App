@@ -3,6 +3,7 @@ import '../../player/repositories/player_repository.dart';
 import '../../../data/models/game_model.dart';
 import '../../notifications/services/socket_notification_service.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/utils/app_date_utils.dart';
 
 class MyMatchesController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
@@ -39,6 +40,34 @@ class MyMatchesController extends GetxController {
     } catch (e) {
       AppLogger.warning('Failed to initialize socket listeners in MyMatchesController: $e');
     }
+  }
+
+  List<GameModel> get filteredMatches {
+    final now = DateTime.now();
+    if (selectedTab.value == 'UPCOMING') {
+      return matchesList.where((m) {
+        final startDt =
+            AppDateUtils.parseMatchDateTime(m.matchDate, m.startTime);
+        final endDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.endTime);
+        if (endDt != null && endDt.isBefore(now)) return false; // Past match!
+        if (startDt != null && startDt.isAfter(now)) return true; // Future match!
+        return m.status.toUpperCase() != 'COMPLETED' &&
+            m.status.toUpperCase() != 'CANCELLED';
+      }).toList();
+    } else if (selectedTab.value == 'ONGOING') {
+      return matchesList.where((m) {
+        final startDt =
+            AppDateUtils.parseMatchDateTime(m.matchDate, m.startTime);
+        final endDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.endTime);
+        if (endDt != null && endDt.isBefore(now)) return false; // Past match!
+        if (startDt != null &&
+            startDt.isBefore(now) &&
+            endDt != null &&
+            endDt.isAfter(now)) return true;
+        return m.status.toUpperCase() == 'ONGOING';
+      }).toList();
+    }
+    return matchesList;
   }
 
   Future<void> fetchMyMatches(String tab) async {

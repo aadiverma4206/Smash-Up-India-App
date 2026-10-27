@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/match_history_controller.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
@@ -80,14 +81,8 @@ class PlayerHistoryDetailView extends StatelessWidget {
     String startTime =
         AppDateUtils.formatTime(game.startTime, format: 'h:mm a');
     String endTime = AppDateUtils.formatTime(game.endTime, format: 'h:mm a');
-    String formattedDate = 'Today';
-    try {
-      final parsed = DateTime.parse(game.matchDate);
-      formattedDate =
-          AppDateUtils.formatDate(parsed, format: 'EEE, dd MMM yyyy');
-    } catch (_) {
-      formattedDate = game.matchDate.split('T')[0];
-    }
+    final String formattedDate =
+        AppDateUtils.formatDate(game.matchDate, format: 'EEE, dd MMM yyyy');
 
     return Container(
       width: double.infinity,
@@ -811,7 +806,7 @@ class PlayerHistoryDetailView extends StatelessWidget {
               itemBuilder: (context, index) {
                 final player = filteredRoster[index];
                 final isTeamA = player.isTeamA;
-                final hasImage = player.profileImageUrl.isValidNetworkUrl;
+                final resolvedAvatar = player.profileImageUrl.resolvedImageUrl;
 
                 return Container(
                   padding:
@@ -829,26 +824,87 @@ class PlayerHistoryDetailView extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: (isTeamA ? Colors.green : Colors.blue)
-                            .withValues(alpha: 0.18),
-                        backgroundImage: hasImage
-                            ? NetworkImage(player.profileImageUrl!)
-                            : null,
-                        child: !hasImage
-                            ? Text(
-                                player.name.isNotEmpty
-                                    ? player.name[0].toUpperCase()
-                                    : 'P',
-                                style: TextStyle(
-                                    color: isTeamA
-                                        ? Colors.green
-                                        : Colors.blue.shade700,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14),
-                              )
-                            : null,
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: (isTeamA ? Colors.green : Colors.blue.shade600)
+                                .withValues(alpha: 0.6),
+                            width: 1.5,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: resolvedAvatar.isValidNetworkUrl
+                              ? CachedNetworkImage(
+                                  imageUrl: resolvedAvatar!,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(
+                                    color: (isTeamA ? Colors.green : Colors.blue)
+                                        .withValues(alpha: 0.18),
+                                    child: Center(
+                                      child: Text(
+                                        player.name.isNotEmpty
+                                            ? player.name[0].toUpperCase()
+                                            : 'P',
+                                        style: TextStyle(
+                                          color: isTeamA
+                                              ? Colors.green
+                                              : Colors.blue.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (_, __, ___) => Container(
+                                    color: (isTeamA ? Colors.green : Colors.blue)
+                                        .withValues(alpha: 0.18),
+                                    child: Center(
+                                      child: Text(
+                                        player.name.isNotEmpty
+                                            ? player.name[0].toUpperCase()
+                                            : 'P',
+                                        style: TextStyle(
+                                          color: isTeamA
+                                              ? Colors.green
+                                              : Colors.blue.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  color: (isTeamA ? Colors.green : Colors.blue)
+                                      .withValues(alpha: 0.18),
+                                  child: Center(
+                                    child: Text(
+                                      player.name.isNotEmpty
+                                          ? player.name[0].toUpperCase()
+                                          : 'P',
+                                      style: TextStyle(
+                                        color: isTeamA
+                                            ? Colors.green
+                                            : Colors.blue.shade700,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

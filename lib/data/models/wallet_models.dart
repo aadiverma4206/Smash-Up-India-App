@@ -15,7 +15,7 @@ class WalletBalanceModel {
     required this.hasPin,
     this.status = 'ACTIVE',
     this.maxBalanceLimit = 200000.0,
-    this.maxSingleTopup = 50000.0,
+    this.maxSingleTopup = 200000.0,
   });
 
   factory WalletBalanceModel.fromJson(Map<String, dynamic> json) {
@@ -34,7 +34,7 @@ class WalletBalanceModel {
           (json['maxWalletBalance'] ?? json['maxBalanceLimit'] as num?)
                   ?.toDouble() ??
               200000.0,
-      maxSingleTopup: (json['maxSingleTopup'] as num?)?.toDouble() ?? 50000.0,
+      maxSingleTopup: (json['maxSingleTopup'] as num?)?.toDouble() ?? 200000.0,
     );
   }
 

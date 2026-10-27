@@ -47,8 +47,8 @@ export const initiatePaymentOrder = async (
   amountRupees: number,
   walletPin?: string,
 ) => {
-  if (amountRupees <= 0 || amountRupees > 50000) {
-    throw new ApiError(400, "Top-up amount must be between ₹1 and ₹50,000");
+  if (amountRupees < 1 || amountRupees > 200000) {
+    throw new ApiError(400, "Top-up amount must be between ₹1 and ₹2,00,000");
   }
 
   const amountPaise = Math.round(amountRupees * 100);

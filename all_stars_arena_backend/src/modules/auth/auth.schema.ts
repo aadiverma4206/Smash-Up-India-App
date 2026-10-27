@@ -19,6 +19,7 @@ export const registerSendOtpSchema = z.object({
 
 export const registerVerifyOtpSchema = z.object({
   body: z.object({
+    name: z.string().optional(),
     email: z.string().email("Invalid email address"),
     phone: z.string().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number"),
     emailOtp: z.string().length(6, "Email OTP must be 6 digits"),

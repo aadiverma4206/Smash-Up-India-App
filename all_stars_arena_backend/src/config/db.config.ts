@@ -42,6 +42,7 @@ export const initDbTables = async () => {
       ALTER TABLE public.games ADD CONSTRAINT games_entry_fee_check CHECK (entry_fee >= 0);
 
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS approval_status VARCHAR(32) DEFAULT 'APPROVED';
+      ALTER TABLE public.games ADD COLUMN IF NOT EXISTS per_player_fee NUMERIC(10,2) DEFAULT 0.00;
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS manager_id VARCHAR(64) REFERENCES public.users(id) ON DELETE SET NULL;

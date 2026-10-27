@@ -32,7 +32,7 @@ export const topupOrderSchema = z.object({
     amountRupees: z
       .number()
       .min(1, "Minimum top-up is ₹1")
-      .max(50000, "Maximum single top-up is ₹50,000"),
+      .max(200000, "Maximum single top-up is ₹2,00,000"),
     idempotencyKey: z.string().optional(),
     walletPin: z.string().optional(),
   }),

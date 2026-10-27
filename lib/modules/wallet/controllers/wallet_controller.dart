@@ -81,9 +81,9 @@ class WalletController extends GetxController {
       return;
     }
 
-    if (amountRupees <= 0 || amountRupees > 50000) {
+    if (amountRupees < 1 || amountRupees > 200000) {
       ErrorHandler.showErrorSnackBar(
-          'Invalid Amount', 'Top-up amount must be between ₹1 and ₹50,000');
+          'Invalid Amount', 'Top-up amount must be between ₹1 and ₹2,00,000');
       return;
     }
 

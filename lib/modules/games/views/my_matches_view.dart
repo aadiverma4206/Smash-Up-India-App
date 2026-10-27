@@ -42,7 +42,8 @@ class MyMatchesView extends StatelessWidget {
                 );
               }
 
-              if (controller.matchesList.isEmpty) {
+              final filteredList = controller.filteredMatches;
+              if (filteredList.isEmpty) {
                 return _buildEmptyState(context);
               }
 
@@ -54,9 +55,9 @@ class MyMatchesView extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics()),
-                  itemCount: controller.matchesList.length,
+                  itemCount: filteredList.length,
                   itemBuilder: (context, index) {
-                    final game = controller.matchesList[index];
+                    final game = filteredList[index];
                     return _buildMyMatchCard(context, game);
                   },
                 ),

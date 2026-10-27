@@ -23,11 +23,13 @@ class RegisterSendOtpRequestModel {
 
 @JsonSerializable()
 class RegisterVerifyOtpRequestModel {
+  final String? name;
   final String email;
   final String phone;
   final String emailOtp;
 
   RegisterVerifyOtpRequestModel({
+    this.name,
     required this.email,
     required this.phone,
     required this.emailOtp,
