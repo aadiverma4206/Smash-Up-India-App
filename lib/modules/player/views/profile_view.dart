@@ -292,7 +292,9 @@ class ProfileView extends GetView<PlayerController> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : const Color(0xFF0F172A),
                           letterSpacing: -0.3,
                         ),
                         maxLines: 1,
@@ -310,14 +312,18 @@ class ProfileView extends GetView<PlayerController> {
                     children: [
                       Icon(Icons.mail_outline_rounded,
                           size: 13,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600),
                       const SizedBox(width: 5),
                       Expanded(
                         child: Text(
                           p.email,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 1,
@@ -340,7 +346,9 @@ class ProfileView extends GetView<PlayerController> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF0F172A),
                           ),
                         ),
                       ],
@@ -349,20 +357,26 @@ class ProfileView extends GetView<PlayerController> {
                           ' • ',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                           ),
                         ),
                       ],
                       if (p.city.isNotEmpty) ...[
                         Icon(Icons.location_on_outlined,
                             size: 13,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600),
                         const SizedBox(width: 3),
                         Text(
                           p.city,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -408,7 +422,9 @@ class ProfileView extends GetView<PlayerController> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
               ),
             ),
             const SizedBox(height: 6),
@@ -424,7 +440,8 @@ class ProfileView extends GetView<PlayerController> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              tileColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+              tileColor:
+                  isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -448,7 +465,8 @@ class ProfileView extends GetView<PlayerController> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              tileColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+              tileColor:
+                  isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -521,8 +539,8 @@ class ProfileView extends GetView<PlayerController> {
               Icons.notes_rounded),
           if (p.dateOfBirth != null && p.dateOfBirth!.isNotEmpty) ...[
             const Divider(height: 1, indent: 16, endIndent: 16),
-            _buildInfoRow(context, 'Date of Birth', p.dateOfBirth!,
-                Icons.cake_rounded),
+            _buildInfoRow(
+                context, 'Date of Birth', p.dateOfBirth!, Icons.cake_rounded),
           ],
         ],
       ),
@@ -682,7 +700,9 @@ class ProfileView extends GetView<PlayerController> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -693,7 +713,8 @@ class ProfileView extends GetView<PlayerController> {
                 'Are you sure you want to log out? You will need to sign in again to access your account.',
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
+                  color:
+                      isDark ? Colors.grey.shade400 : const Color(0xFF64748B),
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,

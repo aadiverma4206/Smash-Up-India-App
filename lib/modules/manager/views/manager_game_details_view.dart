@@ -196,44 +196,20 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       ],
                     ),
                     Divider(color: context.borderColor, height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Roster Slots Filled',
-                                style: TextStyle(
-                                    color: context.textSecondary,
-                                    fontSize: 12)),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${game.currentPlayers} / ${game.maxPlayers} Players',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: context.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('Per Player Fee',
-                                style: TextStyle(
-                                    color: context.textSecondary,
-                                    fontSize: 12)),
-                            const SizedBox(height: 2),
-                            Text(
-                              '₹${game.perPlayerFee.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber,
-                              ),
-                            ),
-                          ],
+                        Text('Roster Slots Filled',
+                            style: TextStyle(
+                                color: context.textSecondary, fontSize: 12)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${game.currentPlayers} / ${game.maxPlayers} Players',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: context.textPrimary,
+                          ),
                         ),
                       ],
                     ),
@@ -1510,14 +1486,16 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () {
-              final a = (int.tryParse(scoreAController.text.trim()) ?? 0).clamp(0, 99);
-              final b = (int.tryParse(scoreBController.text.trim()) ?? 0).clamp(0, 99);
+              final a = (int.tryParse(scoreAController.text.trim()) ?? 0)
+                  .clamp(0, 99);
+              final b = (int.tryParse(scoreBController.text.trim()) ?? 0)
+                  .clamp(0, 99);
               Get.back();
               controller.submitMatchScore(game.id, a, b,
                   isFinal: isFinalRx.value);
             },
-            child: const Text('Save Score',
-                style: TextStyle(color: Colors.white)),
+            child:
+                const Text('Save Score', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

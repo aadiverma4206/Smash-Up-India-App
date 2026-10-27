@@ -830,8 +830,9 @@ class PlayerHistoryDetailView extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: (isTeamA ? Colors.green : Colors.blue.shade600)
-                                .withValues(alpha: 0.6),
+                            color:
+                                (isTeamA ? Colors.green : Colors.blue.shade600)
+                                    .withValues(alpha: 0.6),
                             width: 1.5,
                           ),
                           boxShadow: const [
@@ -850,8 +851,9 @@ class PlayerHistoryDetailView extends StatelessWidget {
                                   height: 40,
                                   fit: BoxFit.cover,
                                   placeholder: (_, __) => Container(
-                                    color: (isTeamA ? Colors.green : Colors.blue)
-                                        .withValues(alpha: 0.18),
+                                    color:
+                                        (isTeamA ? Colors.green : Colors.blue)
+                                            .withValues(alpha: 0.18),
                                     child: Center(
                                       child: Text(
                                         player.name.isNotEmpty
@@ -868,8 +870,9 @@ class PlayerHistoryDetailView extends StatelessWidget {
                                     ),
                                   ),
                                   errorWidget: (_, __, ___) => Container(
-                                    color: (isTeamA ? Colors.green : Colors.blue)
-                                        .withValues(alpha: 0.18),
+                                    color:
+                                        (isTeamA ? Colors.green : Colors.blue)
+                                            .withValues(alpha: 0.18),
                                     child: Center(
                                       child: Text(
                                         player.name.isNotEmpty

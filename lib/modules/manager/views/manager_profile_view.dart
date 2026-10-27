@@ -234,8 +234,7 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
           final String rawAvatarUrl =
               (profileData['profile_image_url'] ?? user?.profileImageUrl ?? '')
                   .toString();
-          final String resolvedAvatarUrl =
-              rawAvatarUrl.resolvedImageUrl ?? '';
+          final String resolvedAvatarUrl = rawAvatarUrl.resolvedImageUrl ?? '';
           final String clubName =
               (profileData['club_name'] ?? 'All Stars Arena Turf').toString();
           final String clubAddress =
@@ -543,8 +542,7 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
   }
 
   Widget _buildDefaultAvatar(String name) {
-    final initial =
-        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'M';
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'M';
     return Container(
       width: 100,
       height: 100,

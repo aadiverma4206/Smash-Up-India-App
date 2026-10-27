@@ -272,8 +272,8 @@ class CreateGameView extends StatelessWidget {
                   children: sports.map((sport) {
                     final sportName = sport['name']!;
                     final sportSubtitle = sport['subtitle']!;
-                    final isSelected = selectedTitle.toLowerCase() ==
-                        sportName.toLowerCase();
+                    final isSelected =
+                        selectedTitle.toLowerCase() == sportName.toLowerCase();
 
                     return SizedBox(
                       width: itemWidth,
@@ -840,8 +840,8 @@ class CreateGameView extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: () =>
                                 controller.switchToAlternateCourt(),
-                            icon: const Icon(Icons.swap_horiz_rounded,
-                                size: 14),
+                            icon:
+                                const Icon(Icons.swap_horiz_rounded, size: 14),
                             label: Text(
                               controller.selectedCourt.value?.name
                                           .contains('2') ==
@@ -853,10 +853,8 @@ class CreateGameView extends StatelessWidget {
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
-                              side:
-                                  const BorderSide(color: AppColors.primary),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 8),
+                              side: const BorderSide(color: AppColors.primary),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8)),
                             ),

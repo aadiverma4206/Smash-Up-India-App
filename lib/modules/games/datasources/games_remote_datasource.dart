@@ -257,31 +257,33 @@ class GamesRemoteDataSource {
             ? response.data['data'] ?? response.data['slots']
             : response.data;
         if (raw is List) {
-          final list = raw.map((e) {
-            final map = e as Map<String, dynamic>;
-            final matchDate = (map['matchDate'] ??
-                    map['match_date'] ??
-                    map['bookingDate'] ??
-                    map['booking_date'] ??
-                    date)
-                .toString();
-            return CourtSlotModel(
-              id: (map['id'] ?? map['gameId'] ?? '').toString(),
-              courtId: courtId,
-              bookingDate: matchDate,
-              startTime:
-                  (map['startTime'] ?? map['start_time'] ?? '').toString(),
-              endTime: (map['endTime'] ?? map['end_time'] ?? '').toString(),
-              status: (map['status'] ?? 'CONFIRMED').toString(),
-              title:
-                  (map['title'] ?? map['gameTitle'] ?? 'Booked Match').toString(),
-              source: 'GAME',
-            );
-          }).where((s) => s.bookingDate == date)
-            .where((s) =>
-                s.status.toUpperCase() != 'CANCELLED' &&
-                s.status.toUpperCase() != 'REJECTED')
-            .toList();
+          final list = raw
+              .map((e) {
+                final map = e as Map<String, dynamic>;
+                final matchDate = (map['matchDate'] ??
+                        map['match_date'] ??
+                        map['bookingDate'] ??
+                        map['booking_date'] ??
+                        date)
+                    .toString();
+                return CourtSlotModel(
+                  id: (map['id'] ?? map['gameId'] ?? '').toString(),
+                  courtId: courtId,
+                  bookingDate: matchDate,
+                  startTime:
+                      (map['startTime'] ?? map['start_time'] ?? '').toString(),
+                  endTime: (map['endTime'] ?? map['end_time'] ?? '').toString(),
+                  status: (map['status'] ?? 'CONFIRMED').toString(),
+                  title: (map['title'] ?? map['gameTitle'] ?? 'Booked Match')
+                      .toString(),
+                  source: 'GAME',
+                );
+              })
+              .where((s) => s.bookingDate == date)
+              .where((s) =>
+                  s.status.toUpperCase() != 'CANCELLED' &&
+                  s.status.toUpperCase() != 'REJECTED')
+              .toList();
           slots.addAll(list);
         }
       } catch (_) {}

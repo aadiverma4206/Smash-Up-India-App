@@ -14,14 +14,16 @@ class CourtsController extends GetxController {
   final RxBool isLoading = false.obs;
 
   // Filter state
-  final RxString selectedStatusFilter = 'ALL'.obs; // ALL, AVAILABLE, MAINTENANCE, BLOCKED
+  final RxString selectedStatusFilter =
+      'ALL'.obs; // ALL, AVAILABLE, MAINTENANCE, BLOCKED
   final RxString searchQuery = ''.obs;
 
   // Chart & Hourly Availability State
   final Rx<DateTime> chartSelectedDate = DateTime.now().obs;
   final RxString chartDateFilter = 'TODAY'.obs; // 'TODAY', 'TOMORROW', 'CUSTOM'
   final RxString chartCourtId = 'court_1'.obs; // 'court_1', 'court_2'
-  final RxList<Map<String, dynamic>> scheduledGames = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> scheduledGames =
+      <Map<String, dynamic>>[].obs;
   final RxBool isScheduleLoading = false.obs;
 
   @override
@@ -82,8 +84,8 @@ class CourtsController extends GetxController {
     final dateStr =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     try {
-      final response = await dioClient.dio
-          .get('/games', queryParameters: {'date': dateStr});
+      final response =
+          await dioClient.dio.get('/games', queryParameters: {'date': dateStr});
       final raw = response.data is Map ? response.data['data'] : response.data;
       if (raw is List) {
         scheduledGames.assignAll(
@@ -153,10 +155,9 @@ class CourtsController extends GetxController {
       }
 
       final status = (game['status'] ?? '').toString().toUpperCase();
-      final approval =
-          (game['approvalStatus'] ?? game['approval_status'] ?? '')
-              .toString()
-              .toUpperCase();
+      final approval = (game['approvalStatus'] ?? game['approval_status'] ?? '')
+          .toString()
+          .toUpperCase();
       if (status == 'CANCELLED' || approval == 'REJECTED') continue;
 
       final startTimeStr =

@@ -78,7 +78,9 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : Colors.black87,
                         ),
                       ),
                     ],
@@ -87,10 +89,14 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFE2E8F0),
                       ),
                     ),
                     child: Row(
@@ -99,7 +105,9 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                         Icon(
                           Icons.schedule_rounded,
                           size: 13,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade700,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -107,7 +115,9 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                            color: isDark
+                                ? Colors.grey.shade300
+                                : Colors.grey.shade800,
                           ),
                         ),
                       ],
@@ -240,7 +250,8 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                                         color: statusBgColor,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: statusColor.withValues(alpha: 0.3),
+                                          color: statusColor.withValues(
+                                              alpha: 0.3),
                                         ),
                                       ),
                                       child: Row(
@@ -279,7 +290,8 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
 
                       // Pricing & Action Banner
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
                           color: isDark
                               ? const Color(0xFF1E293B)
@@ -309,7 +321,8 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                                 ),
                                 const SizedBox(height: 1),
                                 Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
                                   textBaseline: TextBaseline.alphabetic,
                                   children: [
                                     Text(
@@ -338,7 +351,8 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                               ],
                             ),
                             ElevatedButton.icon(
-                              onPressed: () => _showEditCourtSheet(context, court),
+                              onPressed: () =>
+                                  _showEditCourtSheet(context, court),
                               icon: const Icon(Icons.tune_rounded, size: 15),
                               label: const Text(
                                 'Set Price & Status',
@@ -594,7 +608,8 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                                   color: const Color(0xFF10B981),
                                   icon: Icons.check_circle_rounded,
                                   current: selectedStatus.value,
-                                  onTap: () => selectedStatus.value = 'AVAILABLE',
+                                  onTap: () =>
+                                      selectedStatus.value = 'AVAILABLE',
                                 ),
                                 const SizedBox(height: 10),
                                 _buildStatusOption(
@@ -605,7 +620,8 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                                   color: const Color(0xFFF59E0B),
                                   icon: Icons.build_rounded,
                                   current: selectedStatus.value,
-                                  onTap: () => selectedStatus.value = 'MAINTENANCE',
+                                  onTap: () =>
+                                      selectedStatus.value = 'MAINTENANCE',
                                 ),
                                 const SizedBox(height: 10),
                                 _buildStatusOption(
@@ -637,8 +653,8 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                         onPressed: saving
                             ? null
                             : () async {
-                                final newPrice =
-                                    double.tryParse(priceController.text.trim());
+                                final newPrice = double.tryParse(
+                                    priceController.text.trim());
                                 if (newPrice == null || newPrice < 0) {
                                   Get.snackbar(
                                     'Invalid Price',
@@ -748,7 +764,9 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
             border: Border.all(
               color: isSelected
                   ? color
-                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                  : (isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFE2E8F0)),
               width: isSelected ? 1.5 : 1,
             ),
           ),

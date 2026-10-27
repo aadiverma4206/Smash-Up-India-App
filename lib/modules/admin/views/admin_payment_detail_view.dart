@@ -60,7 +60,8 @@ class AdminPaymentDetailView extends GetView<AdminController> {
             if (isCancelled || isRefunded) ...[
               const SizedBox(height: 16),
               // Cancelled & Refund Information Card
-              _buildRefundSectionCard(context, payment, isCancelled, isRefunded),
+              _buildRefundSectionCard(
+                  context, payment, isCancelled, isRefunded),
             ],
 
             const SizedBox(height: 24),
@@ -79,21 +80,16 @@ class AdminPaymentDetailView extends GetView<AdminController> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isNegative = isCancelled || isRefunded;
 
-    Color statusBg =
-        isDark ? const Color(0xFF1B382B) : const Color(0xFFE8F5E9);
+    Color statusBg = isDark ? const Color(0xFF1B382B) : const Color(0xFFE8F5E9);
     Color statusText =
         isDark ? const Color(0xFF4ADE80) : const Color(0xFF2E7D32);
 
     if (isCancelled) {
-      statusBg =
-          isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFFEBEE);
-      statusText =
-          isDark ? const Color(0xFFF87171) : const Color(0xFFC62828);
+      statusBg = isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFFEBEE);
+      statusText = isDark ? const Color(0xFFF87171) : const Color(0xFFC62828);
     } else if (isRefunded) {
-      statusBg =
-          isDark ? const Color(0xFF3A2814) : const Color(0xFFFFF3E0);
-      statusText =
-          isDark ? const Color(0xFFFBBF24) : const Color(0xFFEF6C00);
+      statusBg = isDark ? const Color(0xFF3A2814) : const Color(0xFFFFF3E0);
+      statusText = isDark ? const Color(0xFFFBBF24) : const Color(0xFFEF6C00);
     }
 
     return Container(
@@ -119,9 +115,8 @@ class AdminPaymentDetailView extends GetView<AdminController> {
             'Payment Amount',
             style: TextStyle(
               fontSize: 13,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : Colors.grey.shade600,
+              color:
+                  isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 6),
@@ -130,7 +125,9 @@ class AdminPaymentDetailView extends GetView<AdminController> {
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
-              color: isNegative ? const Color(0xFFFF5252) : const Color(0xFF00C853),
+              color: isNegative
+                  ? const Color(0xFFFF5252)
+                  : const Color(0xFF00C853),
             ),
           ),
           const SizedBox(height: 10),
@@ -155,9 +152,8 @@ class AdminPaymentDetailView extends GetView<AdminController> {
             style: TextStyle(
               fontSize: 11,
               fontFamily: 'Monospace',
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : Colors.grey.shade500,
+              color:
+                  isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
             ),
           ),
         ],
@@ -418,9 +414,7 @@ class AdminPaymentDetailView extends GetView<AdminController> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkInputBg
-                    : const Color(0xFFF9FAFB),
+                color: isDark ? AppColors.darkInputBg : const Color(0xFFF9FAFB),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -588,15 +582,13 @@ class AdminPaymentDetailView extends GetView<AdminController> {
       children: [
         Icon(icon,
             size: 18,
-            color:
-                isDark ? AppColors.textSecondaryDark : Colors.grey.shade600),
+            color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600),
         const SizedBox(width: 10),
         Text(
           '$label: ',
           style: TextStyle(
             fontSize: 13,
-            color:
-                isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+            color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
           ),
         ),
         Expanded(

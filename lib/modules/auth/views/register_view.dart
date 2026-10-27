@@ -435,7 +435,8 @@ class RegisterView extends GetView<AuthController> {
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Enter Password';
-                if (v.length < 8) return 'Password must be at least 8 characters';
+                if (v.length < 8)
+                  return 'Password must be at least 8 characters';
                 final hasUpper = v.contains(RegExp(r'[A-Z]'));
                 final hasLower = v.contains(RegExp(r'[a-z]'));
                 final hasDigit = v.contains(RegExp(r'\d'));

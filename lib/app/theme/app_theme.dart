@@ -198,7 +198,7 @@ class AppTheme {
         ),
         textTheme: AppTypography.textTheme(AppColors.textPrimaryLight),
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.lightBackground,
+          backgroundColor: AppColors.sageGreenAppBar,
           elevation: 0,
           scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,

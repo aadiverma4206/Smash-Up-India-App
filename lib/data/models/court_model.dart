@@ -176,4 +176,3 @@ class CourtSlotModel {
     return 0;
   }
 }
-

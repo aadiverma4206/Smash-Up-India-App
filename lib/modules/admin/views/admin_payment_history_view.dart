@@ -94,8 +94,8 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     physics: const AlwaysScrollableScrollPhysics(),
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
@@ -300,17 +300,15 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
             decoration: InputDecoration(
               hintText: 'Search player name, phone or match title...',
               hintStyle: TextStyle(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade500,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
                 fontSize: 13,
               ),
               prefixIcon: Icon(
                 Icons.search,
                 size: 20,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
               ),
               filled: true,
               fillColor: Theme.of(context).cardColor,
@@ -318,13 +316,15 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB),
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB),
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -452,7 +452,8 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.12),
                       backgroundImage: avatarUrl != null
                           ? CachedNetworkImageProvider(avatarUrl)
                           : null,
@@ -540,7 +541,8 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                 const SizedBox(height: 12),
                 Divider(
                   height: 1,
-                  color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
                 ),
                 const SizedBox(height: 10),
 
@@ -575,7 +577,8 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: isDark ? 0.2 : 0.1),
+                          color:
+                              Colors.red.withValues(alpha: isDark ? 0.2 : 0.1),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
                               color: Colors.red.withValues(alpha: 0.3)),

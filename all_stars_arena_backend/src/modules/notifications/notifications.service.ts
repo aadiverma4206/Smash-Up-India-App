@@ -162,6 +162,32 @@ export class NotificationService {
     };
   }
 
+  static async notifyAdmins(params: {
+    title: string;
+    body: string;
+    type: "USER_CREATED" | "MATCH_CREATED" | "MATCH_CANCELLED" | "MATCH_COMPLETED";
+    data?: Record<string, any>;
+    gameId?: string;
+  }): Promise<void> {
+    try {
+      const adminRes = await dbPool.query(
+        `SELECT id FROM public.users WHERE role_id = 1;`
+      );
+      for (const row of adminRes.rows) {
+        await this.createNotification({
+          userId: row.id,
+          title: params.title,
+          body: params.body,
+          type: params.type,
+          data: params.data,
+          gameId: params.gameId,
+        });
+      }
+    } catch (err: any) {
+      logger.error(`Failed to notify admins: ${err.message}`);
+    }
+  }
+
   static async markNotificationRead(
     notificationId: string,
     userId: string,

@@ -210,50 +210,25 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                             ? AppColors.darkBorder
                             : Colors.grey.shade300,
                         height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Roster Slots Filled',
-                                style: TextStyle(
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : Colors.grey.shade600,
-                                    fontSize: 12)),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${game.currentPlayers} / ${game.maxPlayers} Players',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                        Text('Roster Slots Filled',
+                            style: TextStyle(
                                 color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('Per Player Fee',
-                                style: TextStyle(
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : Colors.grey.shade600,
-                                    fontSize: 12)),
-                            const SizedBox(height: 2),
-                            Text(
-                              '₹${game.perPlayerFee.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber,
-                              ),
-                            ),
-                          ],
+                                    ? AppColors.textSecondaryDark
+                                    : Colors.grey.shade600,
+                                fontSize: 12)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${game.currentPlayers} / ${game.maxPlayers} Players',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : Colors.black87,
+                          ),
                         ),
                       ],
                     ),
@@ -1221,8 +1196,9 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: (isTeamA ? Colors.green : Colors.blue.shade600)
-                                .withValues(alpha: 0.6),
+                            color:
+                                (isTeamA ? Colors.green : Colors.blue.shade600)
+                                    .withValues(alpha: 0.6),
                             width: 1.5,
                           ),
                           boxShadow: const [
@@ -1241,8 +1217,9 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                                   height: 40,
                                   fit: BoxFit.cover,
                                   placeholder: (_, __) => Container(
-                                    color: (isTeamA ? Colors.green : Colors.blue)
-                                        .withValues(alpha: 0.18),
+                                    color:
+                                        (isTeamA ? Colors.green : Colors.blue)
+                                            .withValues(alpha: 0.18),
                                     child: Center(
                                       child: Text(
                                         player.name.isNotEmpty
@@ -1259,8 +1236,9 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                                     ),
                                   ),
                                   errorWidget: (_, __, ___) => Container(
-                                    color: (isTeamA ? Colors.green : Colors.blue)
-                                        .withValues(alpha: 0.18),
+                                    color:
+                                        (isTeamA ? Colors.green : Colors.blue)
+                                            .withValues(alpha: 0.18),
                                     child: Center(
                                       child: Text(
                                         player.name.isNotEmpty

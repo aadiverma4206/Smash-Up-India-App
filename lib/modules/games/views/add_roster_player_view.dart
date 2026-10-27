@@ -67,9 +67,8 @@ class _AddRosterPlayerViewState extends State<AddRosterPlayerView> {
                 color: Theme.of(context).cardColor,
                 border: Border(
                   bottom: BorderSide(
-                    color: isDark
-                        ? AppColors.darkBorder
-                        : const Color(0xFFE2E8F0),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                     width: 1,
                   ),
                 ),
@@ -82,9 +81,8 @@ class _AddRosterPlayerViewState extends State<AddRosterPlayerView> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -106,9 +104,8 @@ class _AddRosterPlayerViewState extends State<AddRosterPlayerView> {
                     onChanged: (val) => controller.searchPlayersForHost(val),
                     style: TextStyle(
                       fontSize: 15,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search player name or phone...',
@@ -126,7 +123,8 @@ class _AddRosterPlayerViewState extends State<AddRosterPlayerView> {
                       suffixIcon: ValueListenableBuilder<TextEditingValue>(
                         valueListenable: searchController,
                         builder: (context, value, child) {
-                          if (value.text.isEmpty) return const SizedBox.shrink();
+                          if (value.text.isEmpty)
+                            return const SizedBox.shrink();
                           return IconButton(
                             icon: const Icon(Icons.clear_rounded, size: 20),
                             onPressed: () {
@@ -186,8 +184,7 @@ class _AddRosterPlayerViewState extends State<AddRosterPlayerView> {
                         SizedBox(height: 12),
                         Text(
                           'Searching registered players...',
-                          style: TextStyle(
-                              fontSize: 13, color: Colors.grey),
+                          style: TextStyle(fontSize: 13, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -261,11 +258,10 @@ class _AddRosterPlayerViewState extends State<AddRosterPlayerView> {
                     final pName = (p['name'] ?? 'Player').toString();
                     final pPhone = (p['phone'] ?? '').toString();
                     final pEmail = (p['email'] ?? '').toString();
-                    final pAvatar = (p['profileImageUrl'] ??
-                            p['profile_image_url'] ??
-                            '')
-                        .toString()
-                        .resolvedImageUrl;
+                    final pAvatar =
+                        (p['profileImageUrl'] ?? p['profile_image_url'] ?? '')
+                            .toString()
+                            .resolvedImageUrl;
 
                     return Container(
                       padding: const EdgeInsets.all(12),

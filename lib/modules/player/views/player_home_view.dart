@@ -682,8 +682,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     });
   }
 
-
-
   Widget _buildProfileAvatar(BuildContext context) {
     return Obx(() {
       final p = controller.profile.value;

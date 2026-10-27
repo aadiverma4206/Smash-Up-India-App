@@ -47,7 +47,8 @@ class CourtsListView extends GetView<CourtsController> {
         return RefreshIndicator(
           onRefresh: () async {
             await controller.fetchCourts();
-            await controller.fetchScheduleForDate(controller.chartSelectedDate.value);
+            await controller
+                .fetchScheduleForDate(controller.chartSelectedDate.value);
           },
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -66,7 +67,8 @@ class CourtsListView extends GetView<CourtsController> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+                      color:
+                          Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -94,12 +96,15 @@ class CourtsListView extends GetView<CourtsController> {
                         ),
                         prefixIcon: const Icon(Icons.search_rounded,
                             size: 20, color: AppColors.primary),
-                        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear_rounded, size: 18),
-                                onPressed: () => controller.setSearchQuery(''),
-                              )
-                            : const SizedBox.shrink()),
+                        suffixIcon:
+                            Obx(() => controller.searchQuery.value.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded,
+                                        size: 18),
+                                    onPressed: () =>
+                                        controller.setSearchQuery(''),
+                                  )
+                                : const SizedBox.shrink()),
                         filled: true,
                         fillColor: isDark
                             ? const Color(0xFF1E293B)
@@ -168,7 +173,8 @@ class CourtsListView extends GetView<CourtsController> {
                           const SizedBox(width: 6),
                           _buildFilterChip(
                             context,
-                            label: 'Maintenance (${controller.maintenanceCount})',
+                            label:
+                                'Maintenance (${controller.maintenanceCount})',
                             statusKey: 'MAINTENANCE',
                             activeColor: const Color(0xFFF59E0B),
                           ),
@@ -392,7 +398,8 @@ class CourtsListView extends GetView<CourtsController> {
                                         color: statusBgColor,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: statusColor.withValues(alpha: 0.3),
+                                          color: statusColor.withValues(
+                                              alpha: 0.3),
                                         ),
                                       ),
                                       child: Row(
@@ -474,7 +481,8 @@ class CourtsListView extends GetView<CourtsController> {
                                 ),
                                 const SizedBox(height: 1),
                                 Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
                                   textBaseline: TextBaseline.alphabetic,
                                   children: [
                                     Text(
@@ -569,7 +577,9 @@ class CourtsListView extends GetView<CourtsController> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
               ),
             ),
           ],
@@ -914,8 +924,18 @@ class CourtsListView extends GetView<CourtsController> {
 
   String _getMonthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return months[month - 1];
   }
@@ -965,8 +985,8 @@ class CourtsListView extends GetView<CourtsController> {
     );
   }
 
-  Widget _buildChartDateChip(BuildContext context, String filterKey,
-      String label, IconData icon) {
+  Widget _buildChartDateChip(
+      BuildContext context, String filterKey, String label, IconData icon) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = controller.chartDateFilter.value == filterKey;
 

@@ -27,7 +27,13 @@ class PlayerPaymentHistoryController extends GetxController {
   final RxString searchQuery = ''.obs;
   final RxString selectedFilter = 'ALL'.obs;
 
-  final List<String> typeFilters = ['ALL', 'TOPUP', 'DEBIT'];
+  final List<String> typeFilters = [
+    'ALL',
+    'TOPUP',
+    'PITCH BOOKING',
+    'DEBIT',
+    'REFUND'
+  ];
 
   @override
   void onInit() {
@@ -89,18 +95,30 @@ class PlayerPaymentHistoryController extends GetxController {
       final isTopup = txType == 'TOPUP' ||
           txType == 'CREDIT' ||
           txType == 'DEPOSIT' ||
-          txType == 'WALLET_TOPUP';
+          txType == 'WALLET_TOPUP' ||
+          descLower.contains('topup') ||
+          descLower.contains('top-up') ||
+          descLower.contains('add money');
+
+      final isPitchBooking = txType == 'RAZORPAY_BOOKING' ||
+          txType == 'DIRECT_BOOKING' ||
+          txType == 'PITCH_BOOKING' ||
+          txType == 'MATCH_JOIN' ||
+          descLower.contains('pitch') ||
+          descLower.contains('turf') ||
+          descLower.contains('match') ||
+          descLower.contains('slot');
 
       final isDebit = txType == 'DEBIT' ||
           txType == 'PAYMENT' ||
           txType == 'WITHDRAWAL' ||
-          txType == 'MATCH_JOIN';
+          isPitchBooking;
 
-      final matchesFilter = (filter == 'ALL') ||
-          (filter == 'REFUND' && isRefund) ||
-          (filter == 'TOPUP' && isTopup) ||
-          (filter == 'DEBIT' && isDebit) ||
-          (filter == 'COMPLETED' && tx.status.toUpperCase() == 'SUCCESS');
+      bool matchesFilter = (filter == 'ALL');
+      if (filter == 'REFUND') matchesFilter = isRefund;
+      if (filter == 'TOPUP') matchesFilter = isTopup;
+      if (filter == 'PITCH BOOKING') matchesFilter = isPitchBooking;
+      if (filter == 'DEBIT') matchesFilter = isDebit;
 
       final matchesQuery = query.isEmpty ||
           descLower.contains(query) ||

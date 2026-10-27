@@ -217,8 +217,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
     final cardBg = Theme.of(context).cardColor;
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A);
-    final textSecondary =
-        isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final textSecondary = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
 
     return Container(
       decoration: BoxDecoration(
@@ -246,26 +245,21 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
             top: 0,
             right: 0,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: isBlocked
                     ? Colors.redAccent.withValues(alpha: 0.12)
                     : const Color(0xFF10B981).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isBlocked
-                      ? Colors.redAccent
-                      : const Color(0xFF10B981),
+                  color: isBlocked ? Colors.redAccent : const Color(0xFF10B981),
                   width: 1.2,
                 ),
               ),
               child: Text(
                 isBlocked ? 'BLOCKED' : 'ACTIVE',
                 style: TextStyle(
-                  color: isBlocked
-                      ? Colors.redAccent
-                      : const Color(0xFF10B981),
+                  color: isBlocked ? Colors.redAccent : const Color(0xFF10B981),
                   fontWeight: FontWeight.w800,
                   fontSize: 10,
                   letterSpacing: 0.3,
@@ -696,8 +690,7 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
   }) {
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A);
-    final textSecondary =
-        isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final textSecondary = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

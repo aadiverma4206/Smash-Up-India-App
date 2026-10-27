@@ -381,7 +381,8 @@ class GameDetailsView extends StatelessWidget {
                                       height: 40,
                                       fit: BoxFit.cover,
                                       placeholder: (_, __) => Container(
-                                        color: teamColor.withValues(alpha: 0.15),
+                                        color:
+                                            teamColor.withValues(alpha: 0.15),
                                         child: Center(
                                           child: Text(
                                             player.name.isNotEmpty
@@ -396,7 +397,8 @@ class GameDetailsView extends StatelessWidget {
                                         ),
                                       ),
                                       errorWidget: (_, __, ___) => Container(
-                                        color: teamColor.withValues(alpha: 0.15),
+                                        color:
+                                            teamColor.withValues(alpha: 0.15),
                                         child: Center(
                                           child: Text(
                                             player.name.isNotEmpty
@@ -489,7 +491,7 @@ class GameDetailsView extends StatelessWidget {
                                 Get.defaultDialog(
                                   title: 'Remove Player',
                                   middleText:
-                                    'Remove ${player.name} from ${isTeamA ? 'Team A' : 'Team B'} roster?',
+                                      'Remove ${player.name} from ${isTeamA ? 'Team A' : 'Team B'} roster?',
                                   textConfirm: 'Yes, Remove',
                                   textCancel: 'Cancel',
                                   confirmTextColor: Colors.white,

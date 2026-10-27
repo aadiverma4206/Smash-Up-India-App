@@ -603,8 +603,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-
-
   Widget _buildProfileButton(BuildContext context) {
     return Obx(() {
       final user = AuthService.to.currentUser.value;
@@ -1021,9 +1019,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
               ),
             ),
           ),
@@ -1104,7 +1101,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(item['icon'] as IconData, color: color, size: 22),
+                          Icon(item['icon'] as IconData,
+                              color: color, size: 22),
                           const SizedBox(height: 6),
                           Text(
                             item['title'] as String,

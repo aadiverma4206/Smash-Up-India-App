@@ -25,20 +25,24 @@ class MyMatchesController extends GetxController {
     try {
       if (Get.isRegistered<SocketNotificationService>()) {
         SocketNotificationService.to.onEvent('notification', (data) {
-          AppLogger.info('⚡ [Socket.IO] Match notification event received in MyMatchesController');
+          AppLogger.info(
+              '⚡ [Socket.IO] Match notification event received in MyMatchesController');
           fetchMyMatches(selectedTab.value);
         });
         SocketNotificationService.to.onEvent('match:live_feed', (data) {
-          AppLogger.info('⚡ [Socket.IO] Match live feed event received in MyMatchesController');
+          AppLogger.info(
+              '⚡ [Socket.IO] Match live feed event received in MyMatchesController');
           fetchMyMatches(selectedTab.value);
         });
         SocketNotificationService.to.onEvent('match:score_update', (data) {
-          AppLogger.info('⚡ [Socket.IO] Match score update event received in MyMatchesController');
+          AppLogger.info(
+              '⚡ [Socket.IO] Match score update event received in MyMatchesController');
           fetchMyMatches(selectedTab.value);
         });
       }
     } catch (e) {
-      AppLogger.warning('Failed to initialize socket listeners in MyMatchesController: $e');
+      AppLogger.warning(
+          'Failed to initialize socket listeners in MyMatchesController: $e');
     }
   }
 
@@ -50,7 +54,8 @@ class MyMatchesController extends GetxController {
             AppDateUtils.parseMatchDateTime(m.matchDate, m.startTime);
         final endDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.endTime);
         if (endDt != null && endDt.isBefore(now)) return false; // Past match!
-        if (startDt != null && startDt.isAfter(now)) return true; // Future match!
+        if (startDt != null && startDt.isAfter(now))
+          return true; // Future match!
         return m.status.toUpperCase() != 'COMPLETED' &&
             m.status.toUpperCase() != 'CANCELLED';
       }).toList();

@@ -35,7 +35,8 @@ class MyMatchesView extends StatelessWidget {
           const SizedBox(height: 12),
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value && controller.matchesList.isEmpty) {
+              if (controller.isLoading.value &&
+                  controller.matchesList.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: SkeletonListLoader(count: 4),
@@ -79,9 +80,7 @@ class MyMatchesView extends StatelessWidget {
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark
-              ? AppColors.darkBorder
-              : const Color(0xFFE2E8F0),
+          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
           width: 1,
         ),
         boxShadow: [
@@ -112,9 +111,7 @@ class MyMatchesView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary
-                        : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: isSelected
                         ? [
@@ -324,7 +321,8 @@ class MyMatchesView extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF7E57C2).withValues(alpha: 0.12),
+                            color:
+                                const Color(0xFF7E57C2).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -425,13 +423,17 @@ class MyMatchesView extends StatelessWidget {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: game.userTeam == 'TEAM_A'
-                                  ? const Color(0xFF0284C7).withValues(alpha: 0.15)
-                                  : const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                  ? const Color(0xFF0284C7)
+                                      .withValues(alpha: 0.15)
+                                  : const Color(0xFFEF4444)
+                                      .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: game.userTeam == 'TEAM_A'
-                                    ? const Color(0xFF0284C7).withValues(alpha: 0.4)
-                                    : const Color(0xFFEF4444).withValues(alpha: 0.4),
+                                    ? const Color(0xFF0284C7)
+                                        .withValues(alpha: 0.4)
+                                    : const Color(0xFFEF4444)
+                                        .withValues(alpha: 0.4),
                               ),
                             ),
                             child: Text(

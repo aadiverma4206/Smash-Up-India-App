@@ -3,15 +3,12 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart' as dio;
-
 import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../core/errors/error_handler.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/services/theme_service.dart';
-import '../../../core/storage/database_service.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/profile_image_viewer_page.dart';
 import '../../../data/models/user_model.dart';
@@ -213,7 +210,9 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: isDark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : AppColors.sageGreenAppBar,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -222,11 +221,11 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
         ),
         iconTheme: IconThemeData(
-          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
         ),
         actions: [
           Obx(() {
@@ -238,7 +237,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
             return IconButton(
               icon: Icon(
                 isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                color: isDark ? Colors.amber : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                color: isDark ? Colors.amber : const Color(0xFF0F172A),
               ),
               tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
               onPressed: () {
@@ -253,7 +252,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           IconButton(
             icon: Icon(
               Icons.edit_rounded,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
             tooltip: 'Edit Admin Profile',
             onPressed: () async {
@@ -285,8 +285,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
           final String rawAvatarUrl =
               (profileData['profile_image_url'] ?? user?.profileImageUrl ?? '')
                   .toString();
-          final String resolvedAvatarUrl =
-              rawAvatarUrl.resolvedImageUrl ?? '';
+          final String resolvedAvatarUrl = rawAvatarUrl.resolvedImageUrl ?? '';
           final String role = (profileData['role_name'] ??
                   profileData['role'] ??
                   user?.roleName ??
@@ -573,138 +572,6 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: isDark
-                                ? AppColors.darkBorder
-                                : const Color(0xFFE2E8F0)),
-                        boxShadow: const [
-                          BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: Offset(0, 2)),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.shield_outlined,
-                                  color: Color(0xFF7E57C2), size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Administrative Privileges',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark
-                                      ? AppColors.textPrimaryDark
-                                      : Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Divider(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : Colors.grey.shade200,
-                              height: 20),
-                          _buildPrivilegeBullet(context,
-                              'Full User Access Control & Account Suspension'),
-                          const SizedBox(height: 8),
-                          _buildPrivilegeBullet(context,
-                              'Create & Manage Turf Club Manager Accounts'),
-                          const SizedBox(height: 8),
-                          _buildPrivilegeBullet(context,
-                              'Live CCTV Stream Monitoring & Recording Control'),
-                          const SizedBox(height: 8),
-                          _buildPrivilegeBullet(context,
-                              'Security Audit Log Surveillance & System Diagnostics'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: isDark
-                                ? AppColors.darkBorder
-                                : const Color(0xFFE2E8F0)),
-                        boxShadow: const [
-                          BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: Offset(0, 2)),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.settings_suggest_rounded,
-                                  color: Color(0xFF7E57C2), size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Preferences & Cache',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark
-                                      ? AppColors.textPrimaryDark
-                                      : Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const Divider(height: 12),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.cleaning_services_rounded,
-                                  color: Colors.amber, size: 20),
-                            ),
-                            title: const Text('Clear Local App Cache',
-                                style: TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w600)),
-                            subtitle: const Text(
-                                'Purges temporary database entries',
-                                style: TextStyle(fontSize: 11)),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_sweep_rounded,
-                                  color: Colors.amber),
-                              onPressed: () async {
-                                if (Get.isRegistered<DatabaseService>()) {
-                                  await Get.find<DatabaseService>()
-                                      .clearAllData();
-                                  ErrorHandler.showSuccessSnackBar(
-                                    'Cache Cleared',
-                                    'Local application cache purged successfully.',
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     const SupportAndLegalSection(),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -835,32 +702,8 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     );
   }
 
-  Widget _buildPrivilegeBullet(BuildContext context, String text) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(Icons.check_circle_rounded,
-            size: 16, color: Color(0xFF7E57C2)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildDefaultAvatar(String name) {
-    final initial =
-        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'A';
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'A';
     return Container(
       width: 104,
       height: 104,

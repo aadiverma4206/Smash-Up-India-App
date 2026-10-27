@@ -189,7 +189,9 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          backgroundColor: isDark
+              ? Theme.of(context).scaffoldBackgroundColor
+              : AppColors.sageGreenAppBar,
           elevation: 0,
           scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,
@@ -198,11 +200,12 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
           ),
           iconTheme: IconThemeData(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
         ),
         body: SingleChildScrollView(
@@ -347,14 +350,11 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
                           hintText: 'Enter full name',
                           icon: Icons.person_outline_rounded,
                         ),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty)
-                                ? 'Full Name is required'
-                                : null,
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Full Name is required'
+                            : null,
                       ),
-
                       const SizedBox(height: 16),
-
                       _buildFieldLabel('Phone Number'),
                       const SizedBox(height: 6),
                       TextFormField(
@@ -371,14 +371,11 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
                           hintText: 'Enter phone number',
                           icon: Icons.phone_outlined,
                         ),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty)
-                                ? 'Phone Number is required'
-                                : null,
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Phone Number is required'
+                            : null,
                       ),
-
                       const SizedBox(height: 16),
-
                       _buildFieldLabel('City / Region'),
                       const SizedBox(height: 6),
                       TextFormField(
@@ -395,9 +392,7 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
                           icon: Icons.location_city_outlined,
                         ),
                       ),
-
                       const SizedBox(height: 16),
-
                       _buildFieldLabel('Email Address (Read-only)'),
                       const SizedBox(height: 6),
                       TextFormField(
@@ -498,7 +493,8 @@ class _AdminEditProfileViewState extends State<AdminEditProfileView> {
           ? Icon(
               Icons.lock_outline_rounded,
               size: 18,
-              color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
+              color:
+                  isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
             )
           : null,
       filled: true,

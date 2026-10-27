@@ -145,9 +145,7 @@ class AdminDashboardModel {
         json['pendingDisputes'] ?? json['pending_disputes'],
       ),
       activeRecordings: parseInt(
-        json['activeRecordings'] ??
-            json['active_recordings'] ??
-            games,
+        json['activeRecordings'] ?? json['active_recordings'] ?? games,
       ),
       onlineCameras: parseInt(
         json['onlineCameras'] ?? json['online_cameras'],
@@ -292,8 +290,7 @@ class AdminPaymentModel {
     return AdminPaymentModel(
       id: (json['id'] ?? '').toString(),
       userId: (json['userId'] ?? json['user_id'] ?? '').toString(),
-      userName:
-          (json['userName'] ?? json['user_name'] ?? 'Player').toString(),
+      userName: (json['userName'] ?? json['user_name'] ?? 'Player').toString(),
       userEmail: (json['userEmail'] ?? json['user_email'] ?? '').toString(),
       userPhone: (json['userPhone'] ?? json['user_phone'] ?? '').toString(),
       userAvatar: json['userAvatar'] ?? json['user_avatar'],
@@ -301,18 +298,18 @@ class AdminPaymentModel {
       status: (json['status'] ?? 'CONFIRMED').toString().toUpperCase(),
       type: (json['type'] ?? 'MATCH_BOOKING').toString(),
       matchId: json['matchId'] ?? json['match_id'],
-      matchTitle: (json['matchTitle'] ?? json['match_title'] ?? 'Turf Slot Match')
-          .toString(),
+      matchTitle:
+          (json['matchTitle'] ?? json['match_title'] ?? 'Turf Slot Match')
+              .toString(),
       matchTime: (json['matchTime'] ?? json['match_time'])?.toString(),
-      clubName:
-          (json['clubName'] ?? json['club_name'] ?? 'All Stars Arena').toString(),
-      courtName: (json['courtName'] ?? json['court_name'] ?? 'Main Arena')
+      clubName: (json['clubName'] ?? json['club_name'] ?? 'All Stars Arena')
           .toString(),
+      courtName:
+          (json['courtName'] ?? json['court_name'] ?? 'Main Arena').toString(),
       score: (json['score'] ?? '0 - 0').toString(),
       videoUrl: json['videoUrl'] ?? json['video_url'],
       hasVideo: json['hasVideo'] == true || json['has_video'] == true,
-      refundAmount:
-          parseDouble(json['refundAmount'] ?? json['refund_amount']),
+      refundAmount: parseDouble(json['refundAmount'] ?? json['refund_amount']),
       refundReason: json['refundReason'] ?? json['refund_reason'],
       createdAt: (json['createdAt'] ??
               json['created_at'] ??

@@ -59,7 +59,8 @@ class AddMoneyView extends GetView<WalletController> {
                     const SizedBox(height: 8),
                     Text(
                       'Minimum top-up is ₹1 • Maximum single top-up is ₹2,00,000',
-                      style: TextStyle(color: context.textSecondary, fontSize: 13),
+                      style:
+                          TextStyle(color: context.textSecondary, fontSize: 13),
                     ),
                     const SizedBox(height: 20),
                     AppTextField(

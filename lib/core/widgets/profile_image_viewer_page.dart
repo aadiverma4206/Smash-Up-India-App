@@ -115,8 +115,9 @@ class _ProfileImageViewerPageState extends State<ProfileImageViewerPage> {
   }
 
   Widget _buildFallbackAvatar() {
-    final initial =
-        widget.name.trim().isNotEmpty ? widget.name.trim()[0].toUpperCase() : 'P';
+    final initial = widget.name.trim().isNotEmpty
+        ? widget.name.trim()[0].toUpperCase()
+        : 'P';
 
     return Container(
       width: 260,

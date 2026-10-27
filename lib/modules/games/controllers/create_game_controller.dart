@@ -102,9 +102,7 @@ class CreateGameController extends GetxController {
         final match = availableCourts.firstWhereOrNull(
           (c) =>
               c.id.toLowerCase() == target ||
-              c.name
-                  .toLowerCase()
-                  .contains(target.contains('2') ? '2' : '1'),
+              c.name.toLowerCase().contains(target.contains('2') ? '2' : '1'),
         );
         if (match != null) {
           selectedCourt.value = match;
@@ -266,7 +264,9 @@ class CreateGameController extends GetxController {
   }
 
   void recheckSlotCollision() {
-    if (startTime.value == null || endTime.value == null || selectedDate.value == null) {
+    if (startTime.value == null ||
+        endTime.value == null ||
+        selectedDate.value == null) {
       slotConflictWarning.value = null;
       conflictingSlot.value = null;
       return;
@@ -286,7 +286,9 @@ class CreateGameController extends GetxController {
         continue;
       }
       final statusUpper = slot.status.toUpperCase();
-      if (statusUpper == 'CANCELLED' || statusUpper == 'REJECTED' || statusUpper == 'EXPIRED') {
+      if (statusUpper == 'CANCELLED' ||
+          statusUpper == 'REJECTED' ||
+          statusUpper == 'EXPIRED') {
         continue;
       }
 

@@ -505,10 +505,16 @@ export const initDbTables = async () => {
               SELECT
                   po.id::VARCHAR(64) as id,
                   po.user_id::VARCHAR(64) as user_id,
-                  'TOPUP'::VARCHAR(32) as transaction_type,
+                  CASE
+                      WHEN po.purpose = 'WALLET_TOPUP' THEN 'TOPUP'::VARCHAR(32)
+                      ELSE 'RAZORPAY_BOOKING'::VARCHAR(32)
+                  END as transaction_type,
                   (po.amount_paise / 100.0)::NUMERIC(10,2) as amount,
                   v_current_wallet_balance::NUMERIC(10,2) as balance_after,
-                  'Wallet Top-up Order' as description,
+                  CASE
+                      WHEN po.purpose = 'WALLET_TOPUP' THEN 'Wallet Top-Up via Razorpay'
+                      ELSE 'Turf Pitch Booking via Razorpay'
+                  END as description,
                   po.status::VARCHAR(32) as status,
                   po.id::VARCHAR(64) as reference_id,
                   po.provider_payment_id::VARCHAR(128) as provider_payment_id,

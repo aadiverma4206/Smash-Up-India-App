@@ -586,16 +586,19 @@ class GameDetailsController extends GetxController {
     try {
       if (Get.isRegistered<SocketNotificationService>()) {
         SocketNotificationService.to.onEvent('match:live_feed', (data) {
-          AppLogger.info('⚡ [Socket.IO] Match live feed event in GameDetailsController');
+          AppLogger.info(
+              '⚡ [Socket.IO] Match live feed event in GameDetailsController');
           loadGameDetails();
         });
         SocketNotificationService.to.onEvent('notification', (data) {
-          AppLogger.info('⚡ [Socket.IO] Notification event in GameDetailsController');
+          AppLogger.info(
+              '⚡ [Socket.IO] Notification event in GameDetailsController');
           loadGameDetails();
         });
       }
     } catch (e) {
-      AppLogger.warning('Error setting up socket listeners in GameDetailsController: $e');
+      AppLogger.warning(
+          'Error setting up socket listeners in GameDetailsController: $e');
     }
   }
 
@@ -615,7 +618,8 @@ class GameDetailsController extends GetxController {
     isSearchingPlayers.value = true;
     try {
       final list = await repository.searchPlayersForRoster(targetId, query);
-      AppLogger.info('🔍 [Roster Search] Found ${list.length} players for game $targetId: $list');
+      AppLogger.info(
+          '🔍 [Roster Search] Found ${list.length} players for game $targetId: $list');
       searchPlayerResults.assignAll(list);
     } catch (e) {
       AppLogger.error('❌ [Roster Search] Error searching players: $e');

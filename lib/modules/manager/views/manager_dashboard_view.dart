@@ -642,8 +642,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     });
   }
 
-
-
   Widget _buildProfileAvatar(BuildContext context) {
     return Obx(() {
       final user = AuthService.to.currentUser.value;

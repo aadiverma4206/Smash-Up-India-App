@@ -468,11 +468,13 @@ class ManagerGamesController extends GetxController {
 
   final RxBool isExtendingTime = false.obs;
 
-  Future<void> extendMatchTime(String gameId, {int additionalMinutes = 15}) async {
+  Future<void> extendMatchTime(String gameId,
+      {int additionalMinutes = 15}) async {
     if (isExtendingTime.value || gameId.isEmpty) return;
     try {
       isExtendingTime.value = true;
-      await repository.extendMatchTime(gameId, additionalMinutes: additionalMinutes);
+      await repository.extendMatchTime(gameId,
+          additionalMinutes: additionalMinutes);
 
       fetchClubGames();
       await fetchMatchRecording(gameId);

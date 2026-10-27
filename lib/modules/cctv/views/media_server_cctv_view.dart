@@ -270,7 +270,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           if (!mounted) return;
           try {
             if (activeController.value.hasError && !_hasError) {
-              _handleStreamRuntimeError(activeController.value.errorDescription);
+              _handleStreamRuntimeError(
+                  activeController.value.errorDescription);
             }
           } catch (_) {}
         });
