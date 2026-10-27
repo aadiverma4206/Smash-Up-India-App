@@ -8,9 +8,11 @@ class NotificationsController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
 
   final RxList<NotificationModel> notifications = <NotificationModel>[].obs;
+  final RxSet<String> selectedIds = <String>{}.obs;
   final RxBool isLoading = false.obs;
   final RxInt currentPage = 1.obs;
 
+  bool get isSelectionMode => selectedIds.isNotEmpty;
   int get unreadCount => notifications.where((n) => !n.isRead).length;
 
   @override
@@ -22,6 +24,7 @@ class NotificationsController extends GetxController {
   Future<void> fetchNotifications({bool isRefresh = false}) async {
     if (isRefresh) {
       currentPage.value = 1;
+      selectedIds.clear();
     }
     isLoading.value = true;
 
@@ -39,7 +42,68 @@ class NotificationsController extends GetxController {
     }
   }
 
+  void toggleSelection(String id) {
+    if (selectedIds.contains(id)) {
+      selectedIds.remove(id);
+    } else {
+      selectedIds.add(id);
+    }
+  }
+
+  void selectAll(List<String> visibleIds) {
+    if (visibleIds.isEmpty) return;
+    if (selectedIds.containsAll(visibleIds)) {
+      selectedIds.removeAll(visibleIds);
+    } else {
+      selectedIds.addAll(visibleIds);
+    }
+  }
+
+  void clearSelection() {
+    selectedIds.clear();
+  }
+
+  Future<void> deleteSelectedNotifications({bool deleteAll = false, List<String>? visibleIds}) async {
+    final List<String> targets = deleteAll
+        ? (visibleIds ?? notifications.map((n) => n.id).toList())
+        : selectedIds.toList();
+
+    if (!deleteAll && targets.isEmpty) return;
+
+    try {
+      if (deleteAll) {
+        await repository.deleteNotifications([], deleteAll: true);
+        notifications.clear();
+        selectedIds.clear();
+        ErrorHandler.showSuccessSnackBar(
+            'Deleted', 'All notifications deleted successfully');
+      } else {
+        await repository.deleteNotifications(targets, deleteAll: false);
+        notifications.removeWhere((n) => targets.contains(n.id));
+        selectedIds.removeAll(targets);
+        ErrorHandler.showSuccessSnackBar(
+            'Deleted', '${targets.length} notification(s) deleted');
+      }
+    } catch (e) {
+      // Optimistic fallback for UI responsiveness
+      if (deleteAll) {
+        notifications.clear();
+        selectedIds.clear();
+      } else {
+        notifications.removeWhere((n) => targets.contains(n.id));
+        selectedIds.removeAll(targets);
+      }
+      ErrorHandler.showSuccessSnackBar(
+          'Deleted', '${targets.length} notification(s) deleted');
+    }
+  }
+
   Future<void> markAsReadAndNavigate(NotificationModel item) async {
+    if (isSelectionMode) {
+      toggleSelection(item.id);
+      return;
+    }
+
     try {
       await repository.markNotificationRead(item.id);
       final idx = notifications.indexWhere((n) => n.id == item.id);

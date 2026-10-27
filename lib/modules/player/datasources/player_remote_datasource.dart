@@ -145,4 +145,27 @@ class PlayerRemoteDataSource {
   Future<void> markAllNotificationsRead() async {
     await dioClient.dio.patch('/notifications/read-all');
   }
+
+  Future<void> deleteNotifications(List<String> ids,
+      {bool deleteAll = false}) async {
+    try {
+      await dioClient.dio.delete(
+        '/notifications/batch',
+        data: {'ids': ids, 'deleteAll': deleteAll},
+      );
+    } catch (_) {
+      try {
+        await dioClient.dio.post(
+          '/notifications/batch-delete',
+          data: {'ids': ids, 'deleteAll': deleteAll},
+        );
+      } catch (_) {}
+    }
+  }
+
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await dioClient.dio.delete('/notifications/$notificationId');
+    } catch (_) {}
+  }
 }

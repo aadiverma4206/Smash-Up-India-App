@@ -3,6 +3,8 @@ import {
   getNotificationsController,
   markNotificationReadController,
   markAllReadController,
+  deleteNotificationController,
+  deleteMultipleNotificationsController,
 } from "./notifications.controller.js";
 import { validateRequest } from "../../middlewares/validate.middleware.js";
 import { markNotificationReadSchema } from "./notifications.schema.js";
@@ -19,5 +21,8 @@ router.patch(
   markNotificationReadController,
 );
 router.patch("/read-all", markAllReadController);
+router.delete("/batch", deleteMultipleNotificationsController);
+router.post("/batch-delete", deleteMultipleNotificationsController);
+router.delete("/:id", deleteNotificationController);
 
 export default router;

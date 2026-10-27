@@ -217,4 +217,26 @@ export class NotificationService {
     );
     return (res.rowCount ?? 0) > 0;
   }
+
+  static async deleteMultipleNotifications(
+    notificationIds: string[],
+    userId: string,
+    deleteAll: boolean = false,
+  ): Promise<number> {
+    if (deleteAll) {
+      const res = await dbPool.query(
+        `DELETE FROM public.notifications WHERE user_id = $1;`,
+        [userId],
+      );
+      return res.rowCount ?? 0;
+    }
+
+    if (!notificationIds || notificationIds.length === 0) return 0;
+
+    const res = await dbPool.query(
+      `DELETE FROM public.notifications WHERE user_id = $1 AND id = ANY($2::text[]);`,
+      [userId, notificationIds],
+    );
+    return res.rowCount ?? 0;
+  }
 }

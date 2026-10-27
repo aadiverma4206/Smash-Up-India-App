@@ -419,65 +419,170 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void _showDeleteConfirmation(BuildContext context, List<String> visibleIds) {
+    final count = _controller.selectedIds.length;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_rounded,
-            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
-          ),
-          onPressed: () => Get.back(),
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 24),
+            SizedBox(width: 8),
+            Text('Delete Notifications?',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
         ),
-        title: Text(
-          'Notifications',
+        content: Text(
+          'Are you sure you want to delete $count selected notification(s)? This action cannot be undone.',
           style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            fontSize: 13.5,
+            color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
           ),
         ),
         actions: [
-          Obx(() {
-            final unreadCount = _localItems.where((i) => !i.isRead).length;
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.notifications_none_rounded,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : const Color(0xFF0F172A),
-                    size: 24,
-                  ),
-                  tooltip: 'Notification Options',
-                  onPressed: _showNotificationOptionsMenu,
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Get.back();
+              _controller.deleteSelectedNotifications();
+            },
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildSelectionAppBar(
+      BuildContext context, List<String> visibleIds) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: Obx(() {
+        if (_controller.isSelectionMode) {
+          final selectedCount = _controller.selectedIds.length;
+          final isAllSelected =
+              _controller.selectedIds.containsAll(visibleIds) && visibleIds.isNotEmpty;
+
+          return AppBar(
+            backgroundColor:
+                isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+            elevation: 2,
+            leading: IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => _controller.clearSelection(),
+              tooltip: 'Cancel Selection',
+            ),
+            title: Text(
+              '$selectedCount Selected',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+              ),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  isAllSelected
+                      ? Icons.deselect_rounded
+                      : Icons.select_all_rounded,
+                  color: AppColors.primary,
                 ),
-                if (unreadCount > 0)
-                  Positioned(
-                    top: 13,
-                    right: 13,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF10B981),
-                        shape: BoxShape.circle,
+                onPressed: () => _controller.selectAll(visibleIds),
+                tooltip: isAllSelected ? 'Deselect All' : 'Select All',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
+                onPressed: () => _showDeleteConfirmation(context, visibleIds),
+                tooltip: 'Delete Selected',
+              ),
+              const SizedBox(width: 4),
+            ],
+          );
+        }
+
+        return AppBar(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            ),
+            onPressed: () => Get.back(),
+          ),
+          title: Text(
+            'Notifications',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            ),
+          ),
+          actions: [
+            Obx(() {
+              final unreadCount = _localItems.where((i) => !i.isRead).length;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.notifications_none_rounded,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF0F172A),
+                      size: 24,
+                    ),
+                    tooltip: 'Notification Options',
+                    onPressed: _showNotificationOptionsMenu,
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 13,
+                      right: 13,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            );
-          }),
-        ],
+                ],
+              );
+            }),
+          ],
+        );
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final visibleIds = _filteredList.map((i) => i.id).toList();
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: _buildSelectionAppBar(context, visibleIds),
       ),
       body: SafeArea(
         child: Column(
@@ -718,149 +823,40 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-  Widget _buildNotificationCard(
-    BuildContext context,
-    PlayerNotificationItem item,
-    bool isDark,
-  ) {
-    final timeStr = _formatItemTime(item.dateTime);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFFF1F5F9),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            _markItemAsRead(item);
-            _showNotificationDetailModal(item);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isDark ? item.iconBgDark : item.iconBgLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      item.icon,
-                      color: item.iconColor,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : const Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        item.subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : const Color(0xFF64748B),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (item.badgeText != null) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? (item.badgeBgColor?.withValues(alpha: 0.2) ??
-                                    Colors.grey)
-                                : (item.badgeBgColor ??
-                                    const Color(0xFFFEF3C7)),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item.badgeText!,
-                            style: TextStyle(
-                              color: item.badgeTextColor ??
-                                  const Color(0xFFD97706),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      timeStr,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppColors.textMutedDark
-                            : const Color(0xFF94A3B8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                     const SizedBox(height: 8),
-                    if (!item.isRead)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
+                    Obx(() {
+                      final isSelected = _controller.selectedIds.contains(item.id);
+                      final isSelectionMode = _controller.isSelectionMode;
+
+                      if (isSelectionMode) {
+                        return Icon(
+                          isSelected
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: isSelected ? AppColors.primary : Colors.grey,
+                          size: 20,
+                        );
+                      }
+                      if (!item.isRead) {
+                        return Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }),
                   ],
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   String _formatItemTime(DateTime dt) {

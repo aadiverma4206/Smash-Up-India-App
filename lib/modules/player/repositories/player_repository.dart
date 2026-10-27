@@ -126,4 +126,13 @@ class PlayerRepository {
   Future<void> markAllNotificationsRead() async {
     await remoteDataSource.markAllNotificationsRead();
   }
+
+  Future<void> deleteNotifications(List<String> ids,
+      {bool deleteAll = false}) async {
+    await remoteDataSource.deleteNotifications(ids, deleteAll: deleteAll);
+  }
+
+  Future<void> deleteNotification(String notificationId) async {
+    await remoteDataSource.deleteNotification(notificationId);
+  }
 }
