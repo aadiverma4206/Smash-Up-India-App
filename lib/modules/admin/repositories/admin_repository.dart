@@ -161,4 +161,29 @@ class AdminRepository {
         await remoteDataSource.getAuditLogs(page: page, limit: limit);
     return response.data ?? [];
   }
+
+  Future<Map<String, dynamic>> getPayments({
+    String? search,
+    String? status,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final response = await remoteDataSource.getPayments(
+      search: search,
+      status: status,
+      page: page,
+      limit: limit,
+    );
+    return response.data ?? {};
+  }
+
+  Future<void> processRefund({
+    required String paymentId,
+    required String reason,
+  }) async {
+    await remoteDataSource.processRefund(
+      paymentId: paymentId,
+      reason: reason,
+    );
+  }
 }

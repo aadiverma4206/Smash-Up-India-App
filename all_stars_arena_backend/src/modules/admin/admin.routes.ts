@@ -10,6 +10,8 @@ import {
   assignManagerController,
   resolveDisputeController,
   getAuditLogsController,
+  getAdminPaymentHistoryController,
+  processAdminRefundController,
 } from "./admin.controller.js";
 import {
   cancelGameController,
@@ -44,5 +46,7 @@ router.post("/disputes/:id/resolve", resolveDisputeController);
 router.post("/games/:id/cancel", cancelGameController);
 router.post("/games/:id/score", submitMatchScoreController);
 router.get("/audit-logs", getAuditLogsController);
+router.get("/payments", getAdminPaymentHistoryController);
+router.post("/payments/:id/refund", processAdminRefundController);
 
 export default router;

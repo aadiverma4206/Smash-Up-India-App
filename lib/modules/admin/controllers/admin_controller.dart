@@ -33,8 +33,16 @@ class AdminController extends GetxController {
 
   final RxInt selectedNavIndex = 0.obs;
 
+  final RxList<AdminPaymentModel> payments = <AdminPaymentModel>[].obs;
+  final Rxn<AdminPaymentSummaryModel> paymentSummary =
+      Rxn<AdminPaymentSummaryModel>();
+  final RxBool isLoadingPayments = false.obs;
+  final RxString paymentSearchQuery = ''.obs;
+  final RxString selectedPaymentFilter = 'ALL'.obs;
+
   Timer? _playerSearchTimer;
   Timer? _managerSearchTimer;
+  Timer? _paymentSearchTimer;
 
   void changeNavIndex(int index) {
     selectedNavIndex.value = index;
@@ -47,12 +55,14 @@ class AdminController extends GetxController {
     fetchUsers();
     fetchPlayers();
     fetchManagers();
+    fetchPaymentHistory();
   }
 
   @override
   void onClose() {
     _playerSearchTimer?.cancel();
     _managerSearchTimer?.cancel();
+    _paymentSearchTimer?.cancel();
     super.onClose();
   }
 
@@ -299,6 +309,63 @@ class AdminController extends GetxController {
           'Manager Created', 'Turf Manager account created successfully.');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Creation Error', e);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  void onPaymentSearchChanged(String query) {
+    paymentSearchQuery.value = query;
+    _paymentSearchTimer?.cancel();
+    _paymentSearchTimer = Timer(const Duration(milliseconds: 250), () {
+      fetchPaymentHistory();
+    });
+  }
+
+  void setPaymentFilter(String status) {
+    selectedPaymentFilter.value = status;
+    fetchPaymentHistory();
+  }
+
+  Future<void> fetchPaymentHistory() async {
+    isLoadingPayments.value = true;
+    try {
+      final res = await repository.getPayments(
+        search: paymentSearchQuery.value,
+        status: selectedPaymentFilter.value == 'ALL'
+            ? null
+            : selectedPaymentFilter.value,
+        limit: 50,
+      );
+
+      if (res['summary'] != null) {
+        paymentSummary.value = AdminPaymentSummaryModel.fromJson(
+            res['summary'] as Map<String, dynamic>);
+      }
+
+      if (res['payments'] != null && res['payments'] is List) {
+        final list = (res['payments'] as List)
+            .map((e) => AdminPaymentModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        payments.assignAll(list);
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to fetch payment history: $e');
+    } finally {
+      isLoadingPayments.value = false;
+    }
+  }
+
+  Future<void> processRefund(String paymentId, String reason) async {
+    isLoading.value = true;
+    try {
+      await repository.processRefund(paymentId: paymentId, reason: reason);
+      await fetchPaymentHistory();
+      await loadDashboard();
+      ErrorHandler.showSuccessSnackBar(
+          'Refund Issued', 'Payment refund processed successfully.');
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar('Refund Error', e);
     } finally {
       isLoading.value = false;
     }

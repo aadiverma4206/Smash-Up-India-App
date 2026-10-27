@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { ApiResponse, ApiError } from "../../utils/apiResponse.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { AuthenticatedRequest } from "../../types/index.js";
+import { AdminService } from "./admin.service.js";
 
 export const getAdminDashboardController = asyncHandler(
   async (_req: AuthenticatedRequest, res: Response) => {
@@ -30,77 +31,77 @@ export const getAdminDashboardController = asyncHandler(
       dbPool.query("SELECT COUNT(*) as total_clubs FROM public.clubs;"),
       dbPool.query("SELECT COUNT(*) as total_games FROM public.games;"),
       dbPool.query(
-        "SELECT COUNT(*) as active_games FROM public.games WHERE LOWER(status) IN ('live', 'in_progress', 'active', 'recording', 'scheduled');",
+        "SELECT COUNT(*) as active_games FROM public.games WHERE LOWER(status::text) IN ('live', 'in_progress', 'active', 'recording', 'scheduled');",
       ),
       // Revenue Source 1: Court Bookings
       dbPool.query(`
         SELECT COALESCE(SUM(amount_paid), 0) as rev
         FROM public.court_bookings
-        WHERE LOWER(status) NOT IN ('cancelled', 'failed');
+        WHERE LOWER(status::text) NOT IN ('cancelled', 'failed');
       `),
       // Revenue Source 2: Payment Orders (Razorpay Topups/Purchases)
       dbPool.query(`
         SELECT COALESCE(SUM(amount_paise / 100.0), 0) as rev
         FROM public.payment_orders
-        WHERE LOWER(status) IN ('success', 'paid', 'completed');
+        WHERE LOWER(status::text) IN ('success', 'paid', 'completed');
       `),
       // Revenue Source 3: Transactions ledger
       dbPool.query(`
         SELECT COALESCE(SUM(ABS(amount)), 0) as rev
         FROM public.transactions
-        WHERE LOWER(status) IN ('success', 'paid', 'completed')
+        WHERE LOWER(status::text) IN ('success', 'paid', 'completed')
           AND (
-            LOWER(type) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment', 'slot_booking')
+            LOWER(type::text) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment', 'slot_booking')
             OR LOWER(description) LIKE '%topup%'
             OR LOWER(description) LIKE '%recharge%'
             OR LOWER(description) LIKE '%deposit%'
             OR LOWER(description) LIKE '%booking%'
             OR LOWER(description) LIKE '%payment%'
           )
-          AND LOWER(type) NOT LIKE '%refund%';
+          AND LOWER(type::text) NOT LIKE '%refund%';
       `),
       // Revenue Source 4: Wallet Transactions
       dbPool.query(`
         SELECT COALESCE(SUM(ABS(amount)), 0) as rev
         FROM public.wallet_transactions
-        WHERE LOWER(status) IN ('success', 'paid', 'completed')
+        WHERE LOWER(status::text) IN ('success', 'paid', 'completed')
           AND (
-            LOWER(transaction_type) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment')
+            LOWER(transaction_type::text) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment')
             OR LOWER(description) LIKE '%topup%'
             OR LOWER(description) LIKE '%recharge%'
             OR LOWER(description) LIKE '%deposit%'
             OR LOWER(description) LIKE '%booking%'
           )
-          AND LOWER(transaction_type) NOT LIKE '%refund%';
+          AND LOWER(transaction_type::text) NOT LIKE '%refund%';
       `),
       // Revenue Source 5: Game slot entry fees paid by players
       dbPool.query(`
-        SELECT COALESCE(SUM(COALESCE(g.price_per_player, 0)), 0) as rev
+        SELECT COALESCE(SUM(COALESCE(g.entry_fee, 0)), 0) as rev
         FROM public.game_players gp
         JOIN public.games g ON g.id = gp.game_id
-        WHERE LOWER(gp.payment_status) IN ('paid', 'success', 'completed');
+        WHERE LOWER(gp.payment_status::text) IN ('paid', 'success', 'completed');
       `),
       // Refund Source 1: Transactions
       dbPool.query(`
         SELECT COALESCE(SUM(ABS(amount)), 0) as ref
         FROM public.transactions
-        WHERE LOWER(type) LIKE '%refund%'
+        WHERE LOWER(type::text) LIKE '%refund%'
            OR LOWER(description) LIKE '%refund%'
-           OR LOWER(status) LIKE '%refund%';
+           OR LOWER(status::text) LIKE '%refund%';
       `),
       // Refund Source 2: Wallet Transactions
       dbPool.query(`
         SELECT COALESCE(SUM(ABS(amount)), 0) as ref
         FROM public.wallet_transactions
-        WHERE LOWER(transaction_type) LIKE '%refund%'
+        WHERE LOWER(transaction_type::text) LIKE '%refund%'
            OR LOWER(description) LIKE '%refund%'
-           OR LOWER(status) LIKE '%refund%';
+           OR LOWER(status::text) LIKE '%refund%';
       `),
       // Refund Source 3: Court Bookings
       dbPool.query(`
         SELECT COALESCE(SUM(COALESCE(amount_paid, 0)), 0) as ref
         FROM public.court_bookings
-        WHERE LOWER(status) IN ('refunded', 'cancelled');
+        WHERE LOWER(status::text) IN ('refunded', 'cancelled');
       `),
     ]);
 
@@ -531,3 +532,51 @@ export const getAuditLogsController = asyncHandler(
     );
   },
 );
+
+export const getAdminPaymentHistoryController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { search, status, page = 1, limit = 50 } = req.query;
+
+    const summary = await AdminService.calculateRevenueAndRefundStats();
+    const payments = await AdminService.fetchPaymentRecords({
+      search: search ? String(search) : undefined,
+      status: status ? String(status) : undefined,
+      page: Number(page) || 1,
+      limit: Number(limit) || 50,
+    });
+
+    res.status(200).json(
+      ApiResponse.success("Admin payment history retrieved", {
+        summary: {
+          ...summary,
+          totalTransactions: payments.length,
+        },
+        payments,
+      }),
+    );
+  },
+);
+
+export const processAdminRefundController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const adminId = req.user?.id;
+    const adminName = req.user?.name || "Admin";
+    const { id: paymentId } = req.params;
+    const { reason = "Refund issued by Admin" } = req.body;
+
+    if (!adminId) throw new ApiError(401, "Unauthorized");
+
+    const result = await AdminService.processRefund(
+      paymentId,
+      reason,
+      adminId,
+      adminName,
+      req.ip || "127.0.0.1",
+    );
+
+    res.status(200).json(
+      ApiResponse.success("Payment refund processed successfully", result),
+    );
+  },
+);
+

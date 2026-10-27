@@ -742,9 +742,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         'route': Routes.adminManagers,
       },
       {
-        'icon': Icons.videocam_rounded,
-        'title': 'CCTV',
-        'route': Routes.adminCctv,
+        'icon': Icons.receipt_long_rounded,
+        'title': 'Payments',
+        'route': Routes.adminPayments,
       },
     ];
 

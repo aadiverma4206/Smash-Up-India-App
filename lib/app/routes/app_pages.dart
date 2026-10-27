@@ -63,6 +63,8 @@ import '../../modules/admin/views/admin_managers_view.dart';
 import '../../modules/admin/views/admin_user_detail_view.dart';
 import '../../modules/admin/views/admin_audit_logs_view.dart';
 import '../../modules/admin/views/admin_create_manager_view.dart';
+import '../../modules/admin/views/admin_payment_history_view.dart';
+import '../../modules/admin/views/admin_payment_detail_view.dart';
 import '../../modules/admin/views/admin_profile_view.dart';
 import '../../modules/notifications/views/notification_detail_view.dart';
 import '../../modules/notifications/views/admin_notifications_view.dart';
@@ -399,6 +401,16 @@ class AppPages {
     GetPage(
       name: Routes.adminAuditLogs,
       page: () => const AdminAuditLogsView(),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminPayments,
+      page: () => const AdminPaymentHistoryView(),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminPaymentDetail,
+      page: () => const AdminPaymentDetailView(),
       binding: AdminBinding(),
     ),
     GetPage(

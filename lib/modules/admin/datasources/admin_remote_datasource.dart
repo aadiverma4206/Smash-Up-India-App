@@ -103,4 +103,39 @@ class AdminRemoteDataSource {
           .toList(),
     );
   }
+
+  Future<ApiResponseModel<Map<String, dynamic>>> getPayments({
+    String? search,
+    String? status,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final response = await dioClient.dio.get(
+      '/admin/payments',
+      queryParameters: {
+        if (search != null && search.isNotEmpty) 'search': search,
+        if (status != null && status.isNotEmpty) 'status': status,
+        'page': page,
+        'limit': limit,
+      },
+    );
+    return ApiResponseParser.parse<Map<String, dynamic>>(
+      response.data,
+      (json) => json as Map<String, dynamic>,
+    );
+  }
+
+  Future<ApiResponseModel<Map<String, dynamic>>> processRefund({
+    required String paymentId,
+    required String reason,
+  }) async {
+    final response = await dioClient.dio.post(
+      '/admin/payments/$paymentId/refund',
+      data: {'reason': reason},
+    );
+    return ApiResponseParser.parse<Map<String, dynamic>>(
+      response.data,
+      (json) => json as Map<String, dynamic>,
+    );
+  }
 }
