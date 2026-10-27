@@ -14,6 +14,7 @@ import {
   forgotVerifyOtpController,
   resetPasswordController,
   getMeController,
+  updateProfileController,
   registerFcmTokenController,
   deleteFcmTokenController,
 } from "../modules/auth/auth.controller.js";
@@ -82,6 +83,8 @@ router.post(
 router.use(authenticateToken);
 
 router.get("/me", getMeController);
+router.put("/profile", updateProfileController);
+router.patch("/profile", updateProfileController);
 router.post("/logout", logoutController);
 router.post("/logout-all", logoutAllController);
 router.get("/sessions", getSessionsController);

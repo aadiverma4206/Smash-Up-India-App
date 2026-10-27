@@ -180,3 +180,22 @@ export const deleteFcmTokenController = asyncHandler(
       .json(ApiResponse.success("FCM Device token removed successfully"));
   },
 );
+
+export const updateProfileController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) throw new ApiError(401, "Unauthorized");
+
+    const { name, phone, city, profileImageUrl } = req.body;
+    const updatedProfile = await AuthService.updateProfile(userId, {
+      name,
+      phone,
+      city,
+      profileImageUrl,
+    });
+
+    res
+      .status(200)
+      .json(ApiResponse.success("Profile updated successfully", updatedProfile));
+  },
+);

@@ -547,4 +547,40 @@ export class AuthService {
       ...roleSpecificData,
     };
   }
+
+  static async updateProfile(
+    userId: string,
+    data: { name?: string; phone?: string; city?: string; profileImageUrl?: string },
+  ) {
+    const { name, phone, city, profileImageUrl } = data;
+    const updates: string[] = [];
+    const params: any[] = [userId];
+
+    if (name !== undefined && name.trim().length > 0) {
+      params.push(name.trim());
+      updates.push(`name = $${params.length}`);
+    }
+    if (phone !== undefined && phone.trim().length > 0) {
+      params.push(phone.trim());
+      updates.push(`phone = $${params.length}`);
+    }
+    if (city !== undefined && city.trim().length > 0) {
+      params.push(city.trim());
+      updates.push(`city = $${params.length}`);
+    }
+    if (profileImageUrl !== undefined) {
+      params.push(profileImageUrl.trim());
+      updates.push(`profile_image_url = $${params.length}`);
+    }
+
+    if (updates.length > 0) {
+      updates.push(`updated_at = CURRENT_TIMESTAMP`);
+      await dbPool.query(
+        `UPDATE public.users SET ${updates.join(", ")} WHERE id = $1;`,
+        params,
+      );
+    }
+
+    return await this.getMe(userId);
+  }
 }

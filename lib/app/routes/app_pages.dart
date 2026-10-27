@@ -66,6 +66,7 @@ import '../../modules/admin/views/admin_create_manager_view.dart';
 import '../../modules/admin/views/admin_payment_history_view.dart';
 import '../../modules/admin/views/admin_payment_detail_view.dart';
 import '../../modules/admin/views/admin_profile_view.dart';
+import '../../modules/admin/views/admin_edit_profile_view.dart';
 import '../../modules/notifications/views/notification_detail_view.dart';
 import '../../modules/notifications/views/admin_notifications_view.dart';
 import '../../modules/notifications/views/player_notifications_view.dart';
@@ -421,6 +422,11 @@ class AppPages {
     GetPage(
       name: Routes.adminProfile,
       page: () => const AdminProfileView(),
+      binding: AdminBinding(),
+    ),
+    GetPage(
+      name: Routes.adminEditProfile,
+      page: () => const AdminEditProfileView(),
       binding: AdminBinding(),
     ),
     GetPage(

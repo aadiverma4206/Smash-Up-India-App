@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart' as dio;
 
+import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/network/dio_client.dart';
@@ -212,11 +213,21 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'System Admin Profile',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'System Admin Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          ),
+        ),
+        iconTheme: IconThemeData(
+          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+        ),
         actions: [
           Obx(() {
             final currentMode = Get.isRegistered<ThemeService>()
@@ -227,7 +238,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
             return IconButton(
               icon: Icon(
                 isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                color: isDark ? Colors.amber : null,
+                color: isDark ? Colors.amber : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
               ),
               tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
               onPressed: () {
@@ -239,6 +250,20 @@ class _AdminProfileViewState extends State<AdminProfileView> {
               },
             );
           }),
+          IconButton(
+            icon: Icon(
+              Icons.edit_rounded,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
+            tooltip: 'Edit Admin Profile',
+            onPressed: () async {
+              final result = await Get.toNamed(Routes.adminEditProfile);
+              if (result == true) {
+                fetchAdminProfile();
+              }
+            },
+          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: SafeArea(

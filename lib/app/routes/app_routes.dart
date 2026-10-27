@@ -31,6 +31,7 @@ abstract class Routes {
   static const mediaServerCctv = '/manager/cctv/media-server';
   static const adminDashboard = '/admin/dashboard';
   static const adminProfile = '/admin/profile';
+  static const adminEditProfile = '/admin/profile/edit';
   static const adminPlayers = '/admin/players';
   static const adminManagers = '/admin/managers';
   static const adminUserDetail = '/admin/user-detail';

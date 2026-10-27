@@ -21,9 +21,10 @@ class AppTheme {
         ),
         textTheme: AppTypography.textTheme(AppColors.textPrimaryDark),
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.darkAppBar,
+          backgroundColor: AppColors.darkBackground,
           elevation: 0,
           scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
           centerTitle: false,
           iconTheme: IconThemeData(color: AppColors.textPrimaryDark),
           actionsIconTheme: IconThemeData(color: AppColors.textPrimaryDark),
@@ -197,9 +198,10 @@ class AppTheme {
         ),
         textTheme: AppTypography.textTheme(AppColors.textPrimaryLight),
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.sageGreenAppBar,
+          backgroundColor: AppColors.lightBackground,
           elevation: 0,
           scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
           centerTitle: false,
           iconTheme: IconThemeData(color: Color(0xFF0F172A)),
           actionsIconTheme: IconThemeData(color: Color(0xFF0F172A)),
