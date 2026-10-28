@@ -317,6 +317,17 @@ class CreateGameController extends GetxController {
   }
 
   void recheckSlotCollision() {
+    final court = selectedCourt.value;
+    if (court != null) {
+      final cStatus = court.status.toUpperCase();
+      if (cStatus == 'MAINTENANCE' || cStatus == 'BLOCKED') {
+        conflictingSlot.value = null;
+        slotConflictWarning.value =
+            '${court.name} is currently in $cStatus status and cannot be booked. Please select an active available court.';
+        return;
+      }
+    }
+
     if (startTime.value == null ||
         endTime.value == null ||
         selectedDate.value == null) {
@@ -466,6 +477,16 @@ class CreateGameController extends GetxController {
       return false;
     }
 
+    final court = selectedCourt.value!;
+    final cStatus = court.status.toUpperCase();
+    if (cStatus == 'MAINTENANCE' || cStatus == 'BLOCKED') {
+      ErrorHandler.showErrorSnackBar(
+        'Court Unavailable',
+        '${court.name} is currently in $cStatus status and cannot be booked. Please select an active available court pitch.',
+      );
+      return false;
+    }
+
     if (selectedDate.value == null) {
       ErrorHandler.showErrorSnackBar(
           'Validation Error', 'Please select a booking date');
@@ -524,6 +545,19 @@ class CreateGameController extends GetxController {
   Future<void> executePaymentAndCreateGame() async {
     if (!checkInternetConnection(actionName: 'Pitch booking payment')) return;
     isProcessing.value = true;
+
+    final court = selectedCourt.value;
+    if (court != null) {
+      final cStatus = court.status.toUpperCase();
+      if (cStatus == 'MAINTENANCE' || cStatus == 'BLOCKED') {
+        isProcessing.value = false;
+        ErrorHandler.showErrorSnackBar(
+          'Court Unavailable',
+          '${court.name} is currently in $cStatus status and cannot be booked. Please select an active available court pitch.',
+        );
+        return;
+      }
+    }
     final userRole =
         AuthService.to.currentUser.value?.roleName?.toUpperCase() ?? '';
     final isManagerOrAdmin = userRole == 'MANAGER' || userRole == 'ADMIN';

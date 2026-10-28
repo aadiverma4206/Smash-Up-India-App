@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/courts_controller.dart';
 import '../../../data/models/court_model.dart';
-import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/skeleton_loader.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../../app/routes/app_routes.dart';
-import '../../../core/services/connectivity_service.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../../core/errors/error_handler.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../core/utils/app_date_utils.dart';
 
 class CourtsListView extends GetView<CourtsController> {
   const CourtsListView({super.key});
@@ -19,234 +18,217 @@ class CourtsListView extends GetView<CourtsController> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Get.back(),
-        ),
-        title: const Text(
-          'Available Courts',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
+        title: const Text('Available Courts',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        centerTitle: true,
       ),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.courts.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                SkeletonContainer(
-                    width: double.infinity, height: 120, borderRadius: 20),
-                SizedBox(height: 16),
-                Expanded(child: SkeletonListLoader(count: 3)),
-              ],
-            ),
-          );
-        }
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Filter Bar Section
+            _buildFilterBarSection(context),
 
-        final filteredList = controller.filteredCourts;
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            await controller.fetchCourts();
-            await controller
-                .fetchScheduleForDate(controller.chartSelectedDate.value);
-          },
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            children: [
-              // Centered Search & Filter Card
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF334155)
-                        : const Color(0xFFE2E8F0),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
+            // Main List & Chart Body
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value && controller.courts.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primary,
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Search Bar Inside Card
-                    TextField(
-                      onChanged: (val) => controller.setSearchQuery(val),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : const Color(0xFF0F172A),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search court name, turf or city...',
-                        hintStyle: TextStyle(
-                          fontSize: 13,
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade500,
-                        ),
-                        prefixIcon: const Icon(Icons.search_rounded,
-                            size: 20, color: AppColors.primary),
-                        suffixIcon:
-                            Obx(() => controller.searchQuery.value.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear_rounded,
-                                        size: 18),
-                                    onPressed: () =>
-                                        controller.setSearchQuery(''),
-                                  )
-                                : const SizedBox.shrink()),
-                        filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? const Color(0xFF334155)
-                                : const Color(0xFFE2E8F0),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? const Color(0xFF334155)
-                                : const Color(0xFFE2E8F0),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
+                  );
+                }
 
-                    const SizedBox(height: 12),
+                final filtered = controller.filteredCourts;
 
-                    // Filter Status Label
-                    Text(
-                      'Filter By Status',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await controller.fetchCourts();
+                    await controller.fetchScheduleForDate(
+                        controller.chartSelectedDate.value);
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Section Title: Court Pitches
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.stadium_rounded,
+                                    size: 20, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Court Pitches (${filtered.length})',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
 
-                    // Filter Chips Row
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildFilterChip(
-                            context,
-                            label: 'All (${controller.totalCount})',
-                            statusKey: 'ALL',
-                            activeColor: AppColors.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          _buildFilterChip(
-                            context,
-                            label: 'Available (${controller.availableCount})',
-                            statusKey: 'AVAILABLE',
-                            activeColor: const Color(0xFF10B981),
-                          ),
-                          const SizedBox(width: 6),
-                          _buildFilterChip(
-                            context,
-                            label:
-                                'Maintenance (${controller.maintenanceCount})',
-                            statusKey: 'MAINTENANCE',
-                            activeColor: const Color(0xFFF59E0B),
-                          ),
-                          const SizedBox(width: 6),
-                          _buildFilterChip(
-                            context,
-                            label: 'Blocked (${controller.blockedCount})',
-                            statusKey: 'BLOCKED',
-                            activeColor: const Color(0xFFEF4444),
-                          ),
+                        if (filtered.isEmpty) ...[
+                          _buildEmptyCourtsView(context),
+                        ] else ...[
+                          ...filtered.map((court) =>
+                              _buildCourtCard(context, court, isDark)),
                         ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 16),
+                        // Court Hourly Availability Chart
+                        _buildAvailabilityChartSection(context),
 
-              // Courts List Header
-              Row(
-                children: [
-                  const Icon(Icons.stadium_rounded,
-                      size: 18, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Court Pitches (${filteredList.length})',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : const Color(0xFF0F172A),
+                        const SizedBox(height: 30),
+                      ],
                     ),
                   ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Courts Cards List
-              if (filteredList.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 40),
-                  child: EmptyStateWidget(
-                    title: 'No Courts Found',
-                    subtitle:
-                        'No courts match your selected status filter or search query.',
-                    icon: Icons.stadium_outlined,
-                  ),
-                )
-              else
-                ...filteredList.map((court) => _buildCourtCard(context, court)),
-
-              // Court Hourly Availability Chart & Schedule Timeline Section
-              _buildAvailabilityChartSection(context),
-
-              const SizedBox(height: 32),
-            ],
-          ),
-        );
-      }),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildFilterChip(
-    BuildContext context, {
+  Widget _buildFilterBarSection(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Search TextField
+          TextField(
+            onChanged: (val) => controller.setSearchQuery(val),
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Search court name, turf or city...',
+              hintStyle: TextStyle(
+                fontSize: 13,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : Colors.grey.shade500,
+              ),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              filled: true,
+              fillColor: isDark
+                  ? const Color(0xFF0F172A)
+                  : const Color(0xFFF8FAFC),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFE2E8F0),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFE2E8F0),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Filter Status Label
+          Text(
+            'Filter By Status',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Status Filter Chips Row
+          Obx(() => SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip(
+                      context: context,
+                      label: 'All',
+                      count: controller.totalCount,
+                      statusKey: 'ALL',
+                    ),
+                    const SizedBox(width: 6),
+                    _buildFilterChip(
+                      context: context,
+                      label: 'Available',
+                      count: controller.availableCount,
+                      statusKey: 'AVAILABLE',
+                    ),
+                    const SizedBox(width: 6),
+                    _buildFilterChip(
+                      context: context,
+                      label: 'Maintenance',
+                      count: controller.maintenanceCount,
+                      statusKey: 'MAINTENANCE',
+                    ),
+                    const SizedBox(width: 6),
+                    _buildFilterChip(
+                      context: context,
+                      label: 'Blocked',
+                      count: controller.blockedCount,
+                      statusKey: 'BLOCKED',
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required BuildContext context,
     required String label,
+    required int count,
     required String statusKey,
-    required Color activeColor,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = controller.selectedStatusFilter.value == statusKey;
@@ -256,37 +238,36 @@ class CourtsListView extends GetView<CourtsController> {
       borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? activeColor.withValues(alpha: 0.15)
+              ? AppColors.primary.withValues(alpha: 0.15)
               : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected
-                ? activeColor
+                ? AppColors.primary
                 : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
             width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Text(
-          label,
+          '$label ($count)',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11.5,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             color: isSelected
-                ? activeColor
-                : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ? AppColors.primary
+                : (isDark ? Colors.grey.shade300 : Colors.grey.shade700),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCourtCard(BuildContext context, CourtModel court) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildCourtCard(
+      BuildContext context, CourtModel court, bool isDark) {
     final status = court.status.toUpperCase();
-
     Color statusColor;
     Color statusBgColor;
     String statusText;
@@ -323,238 +304,103 @@ class CourtsListView extends GetView<CourtsController> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Status Accent Bar
-              Container(
-                width: 4,
-                color: statusColor,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
+          children: [
+            // Status Accent Bar
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 4,
+              child: Container(color: statusColor),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Court Title & Status
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Court Title & Status
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
-                            width: 42,
-                            height: 42,
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.primary.withValues(alpha: 0.20),
-                                  AppColors.primary.withValues(alpha: 0.08),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                                width: 1,
-                              ),
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
                               Icons.stadium_rounded,
                               color: AppColors.primary,
-                              size: 22,
+                              size: 20,
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      court.name,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark
-                                            ? AppColors.textPrimaryDark
-                                            : const Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: statusBgColor,
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: statusColor.withValues(
-                                              alpha: 0.3),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 6,
-                                            height: 6,
-                                            decoration: BoxDecoration(
-                                              color: statusColor,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            statusText,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.3,
-                                              color: statusColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                court.name,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : const Color(0xFF0F172A),
                                 ),
-                                if (court.clubName.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${court.clubName}${court.city.isNotEmpty ? ' • ${court.city}' : ''}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark
-                                          ? Colors.grey.shade400
-                                          : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                              ),
+                              Text(
+                                '${court.clubName} • ${court.city}',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 10),
-
-                      // Price & Booking Action
+                      // Status Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF1E293B)
-                              : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
+                          color: statusBgColor,
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isDark
-                                ? const Color(0xFF334155)
-                                : const Color(0xFFE2E8F0),
+                            color: statusColor.withValues(alpha: 0.4),
                           ),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Hourly Price',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: isDark
-                                        ? Colors.grey.shade400
-                                        : Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
-                                  children: [
-                                    Text(
-                                      '₹${court.basePricePerHour.toStringAsFixed(0)}',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        color: isDark
-                                            ? AppColors.primary
-                                            : const Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '/ hour',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade500,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                            ElevatedButton.icon(
-                              onPressed: isAvailable
-                                  ? () {
-                                      if (Get.isRegistered<ConnectivityService>() &&
-                                          !ConnectivityService.to.isConnected.value) {
-                                        ErrorHandler.showErrorSnackBar(
-                                          'No Internet Connection',
-                                          'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
-                                        );
-                                        return;
-                                      }
-                                      Get.toNamed(Routes.createGame,
-                                          arguments: {'courtId': court.id});
-                                    }
-                                  : null,
-                              icon: Icon(
-                                isAvailable
-                                    ? Icons.sports_soccer_rounded
-                                    : Icons.block_rounded,
-                                size: 15,
-                              ),
-                              label: Text(
-                                isAvailable ? 'Book Pitch' : 'Unavailable',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isAvailable
-                                    ? AppColors.primary
-                                    : Colors.grey.shade400,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor:
-                                    Colors.grey.withValues(alpha: 0.2),
-                                disabledForegroundColor: Colors.grey,
-                                elevation: 0,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
+                            const SizedBox(width: 4),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
@@ -562,10 +408,123 @@ class CourtsListView extends GetView<CourtsController> {
                       ),
                     ],
                   ),
-                ),
+
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+
+                  // Bottom Price & Action Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hourly Price',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                          Text(
+                            '₹${court.basePricePerHour.toStringAsFixed(0)} / hr',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Book Pitch Button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              isAvailable ? AppColors.primary : Colors.grey,
+                          foregroundColor: Colors.white,
+                          elevation: 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                        ),
+                        onPressed: isAvailable
+                            ? () {
+                                if (Get.isRegistered<ConnectivityService>() &&
+                                    !ConnectivityService
+                                        .to.isConnected.value) {
+                                  ErrorHandler.showErrorSnackBar(
+                                    'No Internet Connection',
+                                    'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+                                  );
+                                  return;
+                                }
+                                Get.toNamed(Routes.createGame, arguments: {
+                                  'courtId': court.id,
+                                });
+                              }
+                            : null,
+                        icon: const Icon(Icons.sports_soccer_rounded, size: 16),
+                        label: Text(
+                          isAvailable ? 'Book Pitch' : 'Unavailable',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyCourtsView(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Column(
+          children: [
+            Icon(
+              Icons.stadium_outlined,
+              size: 48,
+              color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'No Courts Found',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'No courts match your selected status filter or search query.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : Colors.grey.shade600,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -692,17 +651,12 @@ class CourtsListView extends GetView<CourtsController> {
             }
 
             final activeCourt = controller.chartCourtId.value;
-            int bookedCount = 0;
-            int freeCount = 0;
+            final slots = controller.getSlotsForActiveCourt();
+            final freeCount = controller.activeCourtAvailableSlotsCount;
+            final bookedCount = controller.activeCourtBookedSlotsCount;
+            final closedCount = controller.activeCourtUnavailableSlotsCount;
 
-            final hoursList = List.generate(18, (index) => index + 6);
-            for (final h in hoursList) {
-              if (controller.getBookingForHour(h, activeCourt) != null) {
-                bookedCount++;
-              } else {
-                freeCount++;
-              }
-            }
+            final courtName = activeCourt == 'court_1' ? 'Court 1' : 'Court 2';
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -712,7 +666,7 @@ class CourtsListView extends GetView<CourtsController> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${activeCourt == 'court_1' ? 'Court 1' : 'Court 2'} Status Chart',
+                      '$courtName Status Chart',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -756,78 +710,170 @@ class CourtsListView extends GetView<CourtsController> {
                             ),
                           ),
                         ),
+                        if (closedCount > 0) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$closedCount Closed',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 18),
 
-                // Bar Graph Visualization
-                SizedBox(
-                  height: 110,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: hoursList.map((hour) {
-                      final booking =
-                          controller.getBookingForHour(hour, activeCourt);
-                      final isBooked = booking != null;
+                // Horizontally Scrollable Bar Graph Visualization
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 100,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: slots.map((slot) {
+                            Color barColor;
+                            double barHeight;
 
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                          child: Tooltip(
-                            message: isBooked
-                                ? '${_formatHour(hour)}: Booked (${booking['title'] ?? 'Match'})'
-                                : '${_formatHour(hour)}: Available / Free',
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 250),
-                              height: isBooked ? 90.0 : 40.0,
-                              decoration: BoxDecoration(
-                                color: isBooked
-                                    ? const Color(0xFFEF4444)
-                                    : const Color(0xFF10B981),
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (isBooked
-                                            ? const Color(0xFFEF4444)
-                                            : const Color(0xFF10B981))
-                                        .withValues(alpha: 0.4),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
+                            if (slot.isAvailable) {
+                              barColor = const Color(0xFF10B981);
+                              barHeight = 52.0;
+                            } else if (slot.isBooked) {
+                              barColor = const Color(0xFFEF4444);
+                              barHeight = 88.0;
+                            } else if (slot.isPending) {
+                              barColor = const Color(0xFFF59E0B);
+                              barHeight = 70.0;
+                            } else {
+                              barColor = const Color(0xFF64748B);
+                              barHeight = 30.0;
+                            }
+
+                            final labelText = _formatHour(slot.hour);
+
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 3.0),
+                              child: InkWell(
+                                onTap: () => _showSlotDetailsModal(
+                                    context, slot, courtName),
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: 38,
+                                  child: Tooltip(
+                                    message: slot.isAvailable
+                                        ? '$labelText: Available (₹${slot.price.toStringAsFixed(0)}/hr)'
+                                        : '${slot.formattedExactTimeRange}: ${slot.status} (${slot.title ?? "Occupied"})',
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        AnimatedContainer(
+                                          duration:
+                                              const Duration(milliseconds: 250),
+                                          height: barHeight,
+                                          decoration: BoxDecoration(
+                                            color: barColor,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: barColor.withValues(
+                                                    alpha: 0.4),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (slot.isBooked || slot.isPending)
+                                          Positioned(
+                                            top: 6,
+                                            child: Container(
+                                              padding: const EdgeInsets
+                                                  .symmetric(
+                                                  horizontal: 3, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black54,
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                slot.exactDurationMinutes !=
+                                                        null
+                                                    ? '${slot.exactDurationMinutes}m'
+                                                    : '1h',
+                                                style: const TextStyle(
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(color: Colors.white24, height: 1),
+                      const SizedBox(height: 8),
+
+                      // X-Axis Hour Labels aligned with bars
+                      Row(
+                        children: slots.map((slot) {
+                          return SizedBox(
+                            width: 44,
+                            child: Text(
+                              _formatHour(slot.hour),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white70,
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(height: 10),
-                const Divider(color: Colors.white24, height: 1),
-                const SizedBox(height: 8),
-
-                // X-Axis Hour Labels
+                const SizedBox(height: 14),
+                // Chart Legend
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text('6 am',
-                        style: TextStyle(fontSize: 10, color: Colors.white60)),
-                    Text('9 am',
-                        style: TextStyle(fontSize: 10, color: Colors.white60)),
-                    Text('12 pm',
-                        style: TextStyle(fontSize: 10, color: Colors.white60)),
-                    Text('3 pm',
-                        style: TextStyle(fontSize: 10, color: Colors.white60)),
-                    Text('6 pm',
-                        style: TextStyle(fontSize: 10, color: Colors.white60)),
-                    Text('9 pm',
-                        style: TextStyle(fontSize: 10, color: Colors.white60)),
-                    Text('11 pm',
-                        style: TextStyle(fontSize: 10, color: Colors.white60)),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLegendItem(
+                        const Color(0xFF10B981), 'Available'),
+                    const SizedBox(width: 14),
+                    _buildLegendItem(
+                        const Color(0xFFEF4444), 'Booked'),
+                    const SizedBox(width: 14),
+                    _buildLegendItem(
+                        const Color(0xFFF59E0B), 'Pending'),
+                    const SizedBox(width: 14),
+                    _buildLegendItem(
+                        const Color(0xFF64748B), 'Closed'),
                   ],
                 ),
               ],
@@ -843,54 +889,90 @@ class CourtsListView extends GetView<CourtsController> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : const Color(0xFF0F172A),
           ),
         ),
         const SizedBox(height: 8),
 
         Obx(() {
+          if (controller.isScheduleLoading.value) {
+            return const SizedBox(
+              height: 60,
+              child: Center(
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.primary),
+              ),
+            );
+          }
+
           final activeCourt = controller.chartCourtId.value;
-          final hoursList = List.generate(18, (index) => index + 6);
+          final courtName = activeCourt == 'court_1' ? 'Court 1' : 'Court 2';
+          final slots = controller.getSlotsForActiveCourt();
 
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: hoursList.map((hour) {
-                final booking = controller.getBookingForHour(hour, activeCourt);
-                final isBooked = booking != null;
-                final timeLabel = _formatHourRange(hour);
+              children: slots.map((slot) {
+                final timeLabel = _formatHourRange(slot.hour);
+
+                Color statusColor;
+                IconData statusIcon;
+                String statusText;
+
+                if (slot.isAvailable) {
+                  statusColor = const Color(0xFF10B981);
+                  statusIcon = Icons.check_circle_rounded;
+                  statusText = 'Available';
+                } else if (slot.isBooked) {
+                  statusColor = const Color(0xFFEF4444);
+                  statusIcon = Icons.lock_clock_rounded;
+                  statusText = 'Booked';
+                } else if (slot.isPending) {
+                  statusColor = const Color(0xFFF59E0B);
+                  statusIcon = Icons.timer_rounded;
+                  statusText = 'Pending';
+                } else {
+                  statusColor = const Color(0xFF64748B);
+                  statusIcon = Icons.block_rounded;
+                  statusText = 'Closed';
+                }
 
                 return InkWell(
                   onTap: () {
-                    if (!isBooked) {
+                    if (slot.isAvailable) {
                       if (Get.isRegistered<ConnectivityService>() &&
                           !ConnectivityService.to.isConnected.value) {
                         ErrorHandler.showErrorSnackBar(
                           'No Internet Connection',
-                          'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+                          'Pitch booking requires an active internet connection.',
                         );
                         return;
                       }
                       Get.toNamed(Routes.createGame, arguments: {
                         'courtId': activeCourt,
-                        'startTime': '${hour.toString().padLeft(2, '0')}:00',
+                        'selectedDate': controller.chartSelectedDate.value,
+                        'startTime': slot.startTime,
+                        'endTime': slot.endTime,
                       });
+                    } else {
+                      ErrorHandler.showWarningSnackBar(
+                        'Slot Occupied (${slot.formattedExactTimeRange})',
+                        'This pitch slot is $statusText. Please select an available green slot.',
+                      );
                     }
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 11, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isBooked
-                          ? const Color(0xFFEF4444).withValues(alpha: 0.12)
-                          : const Color(0xFF10B981).withValues(alpha: 0.12),
+                      color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isBooked
-                            ? const Color(0xFFEF4444).withValues(alpha: 0.4)
-                            : const Color(0xFF10B981).withValues(alpha: 0.4),
+                        color: statusColor.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Column(
@@ -900,35 +982,44 @@ class CourtsListView extends GetView<CourtsController> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isBooked
-                                ? const Color(0xFFEF4444)
-                                : const Color(0xFF10B981),
+                            color: statusColor,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
                             Icon(
-                              isBooked
-                                  ? Icons.lock_clock_rounded
-                                  : Icons.check_circle_rounded,
+                              statusIcon,
                               size: 12,
-                              color: isBooked
-                                  ? const Color(0xFFEF4444)
-                                  : const Color(0xFF10B981),
+                              color: statusColor,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              isBooked ? 'Booked' : 'Available',
+                              statusText,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: isBooked
-                                    ? const Color(0xFFEF4444)
-                                    : const Color(0xFF10B981),
+                                color: statusColor,
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          slot.isBooked || slot.isPending
+                              ? slot.formattedExactTimeRange
+                              : '₹${slot.price.toStringAsFixed(0)}/hr',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: slot.isBooked
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: slot.isBooked
+                                ? const Color(0xFFEF4444)
+                                : (isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600),
+                          ),
                         ),
                       ],
                     ),
@@ -939,6 +1030,191 @@ class CourtsListView extends GetView<CourtsController> {
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Colors.white70),
+        ),
+      ],
+    );
+  }
+
+  void _showSlotDetailsModal(
+      BuildContext context, SlotAvailabilityItem slot, String courtName) {
+    final timeLabel = _formatHourRange(slot.hour);
+
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  slot.isAvailable
+                      ? Icons.check_circle_rounded
+                      : (slot.isBooked
+                          ? Icons.lock_clock_rounded
+                          : Icons.block_rounded),
+                  color: slot.isAvailable
+                      ? const Color(0xFF10B981)
+                      : (slot.isBooked
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF64748B)),
+                  size: 24,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '$courtName • $timeLabel Slot',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Reserved Time Window:',
+                    style: TextStyle(color: Colors.grey)),
+                Text(
+                  slot.formattedExactTimeRange,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Booking Duration:',
+                    style: TextStyle(color: Colors.grey)),
+                Text(
+                  slot.formattedDurationText,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Pitch Status:', style: TextStyle(color: Colors.grey)),
+                Text(
+                  slot.status,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: slot.isAvailable
+                        ? const Color(0xFF10B981)
+                        : (slot.isBooked
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFF64748B)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Hourly Rate:', style: TextStyle(color: Colors.grey)),
+                Text('₹${slot.price.toStringAsFixed(0)} / hr',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            if (slot.title != null && slot.title!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Title / Details:',
+                      style: TextStyle(color: Colors.grey)),
+                  Expanded(
+                    child: Text(
+                      slot.title!,
+                      textAlign: TextAlign.end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (slot.isBooked || slot.isPending) ...[
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Pitch Free Time:',
+                      style: TextStyle(color: Colors.grey)),
+                  Text(
+                    'Frees at ${AppDateUtils.formatTime(slot.exactEndTime ?? slot.endTime)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      slot.isAvailable ? AppColors.primary : Colors.grey,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: slot.isAvailable
+                    ? () {
+                        Get.back();
+                        Get.toNamed(Routes.createGame, arguments: {
+                          'courtId': controller.chartCourtId.value,
+                          'selectedDate': controller.chartSelectedDate.value,
+                          'startTime': slot.startTime,
+                          'endTime': slot.endTime,
+                        });
+                      }
+                    : null,
+                child: Text(
+                  slot.isAvailable ? 'Book This Pitch Slot' : 'Slot Occupied',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

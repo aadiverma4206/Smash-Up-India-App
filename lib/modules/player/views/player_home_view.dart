@@ -163,7 +163,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                           ],
                         ),
                       ),
-                      label: 'Explore',
+                      label: 'My Matches',
                     ),
                     BottomNavigationBarItem(
                       icon: Container(

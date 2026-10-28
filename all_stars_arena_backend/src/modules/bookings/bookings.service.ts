@@ -87,6 +87,14 @@ export class BookingsService {
     }
 
     const court = await CourtsService.getCourtById(courtId);
+    const courtStatus = (court.status || "").toUpperCase();
+    if (courtStatus === "MAINTENANCE" || courtStatus === "BLOCKED") {
+      throw new ApiError(
+        400,
+        `Court ${court.name} is currently in ${courtStatus} status and cannot be booked. Please select an active available court pitch.`,
+        "COURT_UNAVAILABLE",
+      );
+    }
     const overlapCheck = await CourtsService.checkCourtOverlap(
       courtId,
       bookingDate,

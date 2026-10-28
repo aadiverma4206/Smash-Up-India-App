@@ -214,6 +214,15 @@ export class GamesService {
          ON CONFLICT (id) DO NOTHING;`,
         [data.courtId, data.courtId === "court_2" ? "Court 2" : "Court 1"],
       );
+    } else {
+      const cStatus = (courtRes.rows[0].status || "").toUpperCase();
+      if (cStatus === "MAINTENANCE" || cStatus === "BLOCKED") {
+        throw new ApiError(
+          400,
+          `Court ${courtRes.rows[0].name} is currently in ${cStatus} status and cannot be booked. Please select an active available court pitch.`,
+          "COURT_UNAVAILABLE",
+        );
+      }
     }
 
     const formatKey = (data.format || "11v11").toLowerCase().trim();
