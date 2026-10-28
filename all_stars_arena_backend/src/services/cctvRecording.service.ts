@@ -218,7 +218,10 @@ export class CctvRecordingService {
       return this.activeRecordings.get(mappedGameId);
     }
     for (const session of this.activeRecordings.values()) {
-      if (session.recordingId === matchOrRecId || session.gameId === matchOrRecId) {
+      if (
+        session.recordingId === matchOrRecId ||
+        session.gameId === matchOrRecId
+      ) {
         return session;
       }
     }
@@ -379,7 +382,7 @@ export class CctvRecordingService {
         `SELECT id, status, recording_status, started_at, start_time FROM public.cctv_recordings
          WHERE game_id = $1 AND status IN ('RECORDING', 'STARTING')
          ORDER BY created_at DESC LIMIT 1;`,
-        [gameId]
+        [gameId],
       );
       if (existingDb.rows.length > 0) {
         const recRow = existingDb.rows[0];
@@ -393,7 +396,11 @@ export class CctvRecordingService {
             matchId: gameId,
             title,
             status: (recRow.status || "recording").toLowerCase(),
-            startedAt: (recRow.started_at || recRow.start_time || new Date()).toISOString(),
+            startedAt: (
+              recRow.started_at ||
+              recRow.start_time ||
+              new Date()
+            ).toISOString(),
             statusEndpoint: `/api/matches/${gameId}/recording-status`,
           };
         }
@@ -730,7 +737,10 @@ export class CctvRecordingService {
     let localPath = session?.outputFile || rec.local_temp_path;
     if (!localPath) {
       const sanitizedGameId = actualGameId.replace(/[^a-zA-Z0-9_-]/g, "_");
-      localPath = path.join(outputBaseDir, `match_${sanitizedGameId}_${Date.now()}.mp4`);
+      localPath = path.join(
+        outputBaseDir,
+        `match_${sanitizedGameId}_${Date.now()}.mp4`,
+      );
     }
 
     if (session) {
@@ -827,7 +837,9 @@ export class CctvRecordingService {
         try {
           const files = fs
             .readdirSync(outputBaseDir)
-            .filter((f) => f.endsWith(".mp4") && f !== path.basename(localPath));
+            .filter(
+              (f) => f.endsWith(".mp4") && f !== path.basename(localPath),
+            );
           for (const f of files) {
             sampleCandidates.push(path.join(outputBaseDir, f));
           }
@@ -852,7 +864,11 @@ export class CctvRecordingService {
       }
     }
 
-    if (!isValidFile && (options?.reason === "RECONCILED_DEADLINE_EXPIRED_ON_BOOT" || process.env.NODE_ENV === "test")) {
+    if (
+      !isValidFile &&
+      (options?.reason === "RECONCILED_DEADLINE_EXPIRED_ON_BOOT" ||
+        process.env.NODE_ENV === "test")
+    ) {
       isValidFile = true;
       fileSizeBytes = fileSizeBytes || 2048;
     }

@@ -39,4 +39,13 @@ class PlayerDashboardSummaryModel {
       walletBalance: (json['walletBalance'] as num?)?.toDouble() ?? 0.0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'profile': profile?.toJson(),
+        'stats': stats?.toJson(),
+        'activeMatch': activeMatch?.toJson(),
+        'upcomingMatch': upcomingMatch?.toJson(),
+        'recentMatch': recentMatch?.toJson(),
+        'walletBalance': walletBalance,
+      };
 }

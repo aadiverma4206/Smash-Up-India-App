@@ -5,10 +5,10 @@ import '../../../app/routes/app_routes.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/notifications_controller.dart';
 import '../../games/views/my_matches_view.dart';
+import '../../wallet/views/payment_history_view.dart';
 import 'match_history_view.dart';
 import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../core/services/theme_service.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
@@ -77,13 +77,14 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Obx(() {
-        final currentIndex = controller.selectedNavIndex.value.clamp(0, 2);
+        final currentIndex = controller.selectedNavIndex.value.clamp(0, 3);
 
         return IndexedStack(
           index: currentIndex,
           children: [
             _buildMobileHomeTab(context),
             const MyMatchesView(),
+            const PlayerPaymentHistoryView(),
             const MatchHistoryView(),
           ],
         );
@@ -108,7 +109,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                   ],
                 ),
                 child: BottomNavigationBar(
-                  currentIndex: controller.selectedNavIndex.value.clamp(0, 2),
+                  currentIndex: controller.selectedNavIndex.value.clamp(0, 3),
                   onTap: (index) {
                     controller.changeNavIndex(index);
                     if (index == 0) controller.loadPlayerData();
@@ -171,6 +172,25 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                               height: 3,
                               width: 20,
                               color: controller.selectedNavIndex.value == 2
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                            ),
+                            const SizedBox(height: 4),
+                            const Icon(Icons.receipt_long_rounded, size: 22),
+                          ],
+                        ),
+                      ),
+                      label: 'Payments',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Container(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 3,
+                              width: 20,
+                              color: controller.selectedNavIndex.value == 3
                                   ? AppColors.primary
                                   : Colors.transparent,
                             ),
@@ -330,7 +350,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           Obx(
             () => NavigationRail(
               backgroundColor: Theme.of(context).cardColor,
-              selectedIndex: controller.selectedNavIndex.value.clamp(0, 2),
+              selectedIndex: controller.selectedNavIndex.value.clamp(0, 3),
               onDestinationSelected: (index) {
                 controller.changeNavIndex(index);
                 if (index == 0) controller.loadPlayerData();
@@ -356,6 +376,9 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                 NavigationRailDestination(
                     icon: Icon(Icons.grid_view_rounded),
                     label: Text('Explore')),
+                NavigationRailDestination(
+                    icon: Icon(Icons.receipt_long_rounded),
+                    label: Text('Payments')),
                 NavigationRailDestination(
                     icon: Icon(Icons.history_rounded), label: Text('History')),
               ],
@@ -1204,7 +1227,16 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             final Color color = item['color'] as Color;
             return Expanded(
               child: InkWell(
-                onTap: () => Get.toNamed(item['route'] as String),
+                onTap: () {
+                  final title = item['title'] as String;
+                  if (title == 'Payments') {
+                    controller.changeNavIndex(2);
+                  } else if (title == 'History') {
+                    controller.changeNavIndex(3);
+                  } else {
+                    Get.toNamed(item['route'] as String);
+                  }
+                },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 3),

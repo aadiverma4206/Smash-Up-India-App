@@ -132,8 +132,9 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
         // Selection Mode AppBar
         if (controller.isSelectionMode) {
           final selectedCount = controller.selectedIds.length;
-          final isAllSelected = controller.selectedIds.containsAll(visibleIds) &&
-              visibleIds.isNotEmpty;
+          final isAllSelected =
+              controller.selectedIds.containsAll(visibleIds) &&
+                  visibleIds.isNotEmpty;
 
           return AppBar(
             backgroundColor:
@@ -166,8 +167,7 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                 tooltip: isAllSelected ? 'Deselect All' : 'Select All',
               ),
               IconButton(
-                icon:
-                    const Icon(Icons.delete_rounded, color: Colors.redAccent),
+                icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
                 onPressed: () => _showDeleteConfirmation(context, visibleIds),
                 tooltip: 'Delete Selected',
               ),
@@ -189,14 +189,12 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : const Color(0xFF0F172A),
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
           ),
           iconTheme: IconThemeData(
-            color:
-                isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
           actions: [
             IconButton(
@@ -305,8 +303,8 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                           }
 
                           return RefreshIndicator(
-                            onRefresh: () async => controller.fetchNotifications(
-                                isRefresh: true),
+                            onRefresh: () async =>
+                                controller.fetchNotifications(isRefresh: true),
                             child: isTabletOrDesktop
                                 ? GridView.builder(
                                     gridDelegate:
@@ -478,8 +476,9 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                             isSelected
                                 ? Icons.check_circle_rounded
                                 : Icons.radio_button_unchecked_rounded,
-                            color:
-                                isSelected ? AppColors.primary : Colors.grey.shade400,
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade400,
                             size: 22,
                           ),
                         ] else if (!item.isRead) ...[

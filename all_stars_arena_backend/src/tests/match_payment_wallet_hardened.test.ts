@@ -62,20 +62,31 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
     return { userId, token: login.body.data.accessToken };
   };
 
-  const createTestGame = async (entryFee = 300, maxPlayers = 10) => {
-    const gameId = `gam_test_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+  let testSlotCounter = Math.floor(Math.random() * 500) + 100;
+  const createTestGame = async (entryFee = 300, _maxPlayers = 10) => {
+    testSlotCounter++;
+    const gameId = `gm_${Date.now().toString(36)}_${testSlotCounter}`;
     await dbPool.query(
-      `INSERT INTO public.games (id, title, club_id, court_id, creator_id, creator_role_name, format, max_players, entry_fee, skill_requirement, privacy, match_date, start_time, end_time, status, approval_status)
-       VALUES ($1, 'Payment Test Game', 'all_stars_arena_club', 'court_1', $2, 'MANAGER', '5v5', $3, $4, 'Beginner', 'PUBLIC', CURRENT_DATE, '18:00:00', '19:00:00', 'OPEN_FOR_JOINING', 'APPROVED');`,
-      [gameId, managerUserId, maxPlayers, entryFee],
+      `INSERT INTO public.games (id, title, club_id, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, per_player_fee, match_date, start_time, end_time, status, approval_status)
+       VALUES ($1, 'Payment Test Game', 'all_stars_arena_club', 'court_1', $2, 'MANAGER', false, '5v5', $3, $3, (CURRENT_DATE + ($4 || ' days')::interval)::date, '18:00:00', '19:00:00', 'OPEN_FOR_JOINING', 'APPROVED');`,
+      [gameId, managerUserId, entryFee, `${testSlotCounter + 50}`],
     );
     return gameId;
   };
 
   beforeAll(async () => {
+    await dbPool
+      .query("DELETE FROM public.games WHERE title = 'Payment Test Game';")
+      .catch(() => {});
     const mgr = await createTestManager();
     managerUserId = mgr.userId;
     managerToken = mgr.token;
+  });
+
+  afterAll(async () => {
+    await dbPool
+      .query("DELETE FROM public.games WHERE title = 'Payment Test Game';")
+      .catch(() => {});
   });
 
   // 1. Successful Razorpay match payment does not change wallet balance
@@ -630,5 +641,123 @@ describe("Mandatory 16 Payment, Wallet & Refund Requirements Test Suite", () => 
       [player.userId],
     );
     expect(parseFloat(balRes.rows[0].wallet_balance)).toBe(350);
+  });
+
+  // 17. When host player cancels match, ONLY the host who paid is refunded; other players get NO refund
+  it("Rule 17: When host player cancels match, ONLY the player who paid gets refunded to wallet, other players do NOT get refunded", async () => {
+    const hostPlayer = await createTestPlayer("Host Payer", 1000);
+    const nonPayingPlayer = await createTestPlayer("Non Payer", 50);
+
+    const createRes = await request(app)
+      .post("/api/v1/games")
+      .set("Authorization", `Bearer ${hostPlayer.token}`)
+      .send({
+        title: "Cancel Test Match",
+        courtId: "court_1",
+        format: "5v5",
+        entryFee: 400,
+        matchDate: "2026-11-05",
+        startTime: "18:00:00",
+        endTime: "19:00:00",
+        paymentMethod: "WALLET",
+        walletPin: testPin,
+      });
+    expect(createRes.status).toBe(201);
+    const gameId = createRes.body.data.id;
+
+    // Verify host was debited 400 (balance now 600)
+    const hostMidBal = await dbPool.query(
+      `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+      [hostPlayer.userId],
+    );
+    expect(parseFloat(hostMidBal.rows[0].wallet_balance)).toBe(600);
+
+    // Host adds non-paying player to roster (HOST_ADDED)
+    await dbPool.query(
+      `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status, payment_method)
+       VALUES ($1, $2, 'TEAM_B', 'ST', 'PAID', 'HOST_ADDED');`,
+      [gameId, nonPayingPlayer.userId],
+    );
+
+    // Host cancels match
+    const cancelRes = await request(app)
+      .post(`/api/v1/games/${gameId}/cancel`)
+      .set("Authorization", `Bearer ${hostPlayer.token}`)
+      .send({ reason: "Injury" });
+    expect(cancelRes.status).toBe(200);
+
+    // Host wallet balance MUST be refunded back to 1000
+    const hostFinalBal = await dbPool.query(
+      `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+      [hostPlayer.userId],
+    );
+    expect(parseFloat(hostFinalBal.rows[0].wallet_balance)).toBe(1000);
+
+    // Non-paying player wallet balance MUST REMAIN 50 (NO REFUND!)
+    const nonPayingFinalBal = await dbPool.query(
+      `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+      [nonPayingPlayer.userId],
+    );
+    expect(parseFloat(nonPayingFinalBal.rows[0].wallet_balance)).toBe(50);
+  });
+
+  // 18. When manager cancels match, ONLY the player who paid is refunded; non-paying players do NOT get refunded
+  it("Rule 18: When manager cancels match, ONLY the player who paid gets refunded, other players do NOT get refunded", async () => {
+    const hostPlayer = await createTestPlayer("Mgr Cancel Host", 800);
+    const nonPayingPlayer = await createTestPlayer(
+      "Mgr Cancel Free Player",
+      20,
+    );
+
+    const createRes = await request(app)
+      .post("/api/v1/games")
+      .set("Authorization", `Bearer ${hostPlayer.token}`)
+      .send({
+        title: "Manager Cancel Test Match",
+        courtId: "court_1",
+        format: "5v5",
+        entryFee: 300,
+        matchDate: "2026-11-06",
+        startTime: "19:00:00",
+        endTime: "20:00:00",
+        paymentMethod: "WALLET",
+        walletPin: testPin,
+      });
+    expect(createRes.status).toBe(201);
+    const gameId = createRes.body.data.id;
+
+    // Approve the match by manager
+    await dbPool.query(
+      `UPDATE public.games SET approval_status = 'APPROVED' WHERE id = $1;`,
+      [gameId],
+    );
+
+    // Add non-paying player to roster
+    await dbPool.query(
+      `INSERT INTO public.game_players (game_id, user_id, team, position, payment_status, payment_method)
+       VALUES ($1, $2, 'TEAM_B', 'MID', 'PAID', 'FREE');`,
+      [gameId, nonPayingPlayer.userId],
+    );
+
+    // Manager cancels match
+    const cancelRes = await request(app)
+      .post(`/api/v1/manager/games/${gameId}/cancel`)
+      .set("Authorization", `Bearer ${managerToken}`)
+      .send({ cancellationReason: "Turf waterlogged" });
+    expect(cancelRes.status).toBe(200);
+
+    // Host wallet balance MUST be refunded back to 800
+    const hostFinalBal = await dbPool.query(
+      `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+      [hostPlayer.userId],
+    );
+    expect(parseFloat(hostFinalBal.rows[0].wallet_balance)).toBe(800);
+
+    // Non-paying player wallet balance MUST REMAIN 20 (NO REFUND!)
+    const nonPayingFinalBal = await dbPool.query(
+      `SELECT wallet_balance FROM public.player_details WHERE user_id = $1;`,
+      [nonPayingPlayer.userId],
+    );
+    expect(parseFloat(nonPayingFinalBal.rows[0].wallet_balance)).toBe(20);
   });
 });

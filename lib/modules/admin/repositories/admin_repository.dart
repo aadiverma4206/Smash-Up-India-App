@@ -14,11 +14,31 @@ class AdminRepository {
   DatabaseService get _dbService => Get.find<DatabaseService>();
 
   Future<AdminDashboardModel> getDashboard() async {
-    final response = await remoteDataSource.getDashboard();
-    if (response.data == null) {
-      throw AppException('Admin dashboard data could not be retrieved.');
+    const cacheKey = 'admin_dashboard';
+    try {
+      final response = await remoteDataSource.getDashboard();
+      if (response.data == null) {
+        throw AppException('Admin dashboard data could not be retrieved.');
+      }
+      final dashboard = response.data!;
+      try {
+        await _dbService.cacheData(cacheKey, jsonEncode(dashboard.toJson()));
+        await _dbService.recordOnlineSync();
+      } catch (_) {}
+      return dashboard;
+    } catch (e) {
+      try {
+        final cachedJson = await _dbService.getValidCachedData(
+          cacheKey,
+          maxAge: const Duration(days: 3),
+        );
+        if (cachedJson != null && cachedJson.isNotEmpty) {
+          return AdminDashboardModel.fromJson(
+              jsonDecode(cachedJson) as Map<String, dynamic>);
+        }
+      } catch (_) {}
+      rethrow;
     }
-    return response.data!;
   }
 
   Future<List<AdminUserModel>> getUsers({
@@ -33,14 +53,14 @@ class AdminRepository {
         'admin_users_role_${roleId ?? 0}_q_${cleanSearch}_p_${page}_l_$limit';
 
     try {
-      await _dbService.pruneExpiredCache(maxAge: const Duration(days: 5));
+      await _dbService.pruneExpiredCache(maxAge: const Duration(days: 3));
     } catch (_) {}
 
     if (page == 1) {
       try {
         final cachedJsonStr = await _dbService.getValidCachedData(
           cacheKey,
-          maxAge: const Duration(days: 5),
+          maxAge: const Duration(days: 3),
         );
         if (cachedJsonStr != null && cachedJsonStr.isNotEmpty) {
           final List<dynamic> decoded = jsonDecode(cachedJsonStr);

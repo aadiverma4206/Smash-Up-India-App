@@ -8,6 +8,7 @@ import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/services/connectivity_service.dart';
 
 class ManagerDashboardController extends GetxController
     with WidgetsBindingObserver {
@@ -212,6 +213,16 @@ class ManagerDashboardController extends GetxController
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     loadManagerData();
+
+    if (Get.isRegistered<ConnectivityService>()) {
+      ConnectivityService.to.isConnected.listen((connected) {
+        if (connected) {
+          AppLogger.info(
+              '⚡ Connection restored: Auto-refreshing manager dashboard');
+          loadManagerData();
+        }
+      });
+    }
   }
 
   @override

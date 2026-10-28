@@ -196,6 +196,8 @@ export const updateProfileController = asyncHandler(
 
     res
       .status(200)
-      .json(ApiResponse.success("Profile updated successfully", updatedProfile));
+      .json(
+        ApiResponse.success("Profile updated successfully", updatedProfile),
+      );
   },
 );

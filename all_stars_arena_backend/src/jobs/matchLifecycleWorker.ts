@@ -43,22 +43,54 @@ export const runLifecycleCycle = async () => {
       );
 
       const paidPlayers = await client.query(
-        `SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount, gp.payment_method, gp.payment_reference, gp.payment_status, gp.refund_status
+        `SELECT gp.user_id, gp.payment_method, gp.payment_reference, gp.payment_status, gp.refund_status
          FROM public.game_players gp
-         JOIN public.games g ON g.id = gp.game_id
-         WHERE gp.game_id = $1 AND gp.payment_status = 'PAID'
+         WHERE gp.game_id = $1 AND gp.payment_status = 'PAID' AND gp.payment_method IN ('WALLET', 'RAZORPAY')
          FOR UPDATE;`,
         [game.id],
       );
 
       for (const player of paidPlayers.rows) {
-        const refundAmt = Number(player.refund_amount);
+        const isHost = game.creator_id && player.user_id === game.creator_id;
+        let refundAmt = isHost
+          ? parseFloat(game.entry_fee || "0.00")
+          : parseFloat(game.per_player_fee || "0.00");
+
+        if (player.payment_method === "WALLET") {
+          const txCheck = await client.query(
+            `SELECT amount FROM public.transactions 
+             WHERE user_id = $1 AND type = 'PAYMENT' AND reference_id = $2 AND status = 'SUCCESS' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [player.user_id, game.id],
+          );
+          if (txCheck.rows.length > 0) {
+            const amt = parseFloat(txCheck.rows[0].amount || "0.00");
+            if (amt > 0) refundAmt = amt;
+          }
+        } else if (
+          player.payment_method === "RAZORPAY" &&
+          player.payment_reference
+        ) {
+          const poCheck = await client.query(
+            `SELECT amount_paise FROM public.payment_orders 
+             WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2 AND status = 'PAID' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [player.payment_reference, player.user_id],
+          );
+          if (poCheck.rows.length > 0) {
+            const amt = parseFloat(poCheck.rows[0].amount_paise || "0") / 100.0;
+            if (amt > 0) refundAmt = amt;
+          }
+        }
+
         if (
           refundAmt > 0 &&
           player.refund_status !== "REFUNDED_TO_WALLET" &&
           player.payment_status !== "REFUNDED"
         ) {
-          const refundRef = `MATCH_REFUND:${game.id}:${player.user_id}`;
+          const refundRef = isHost
+            ? `MATCH_HOST_REFUND:${game.id}:${player.user_id}`
+            : `MATCH_REFUND:${game.id}:${player.user_id}`;
 
           const existingRefund = await client.query(
             `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,

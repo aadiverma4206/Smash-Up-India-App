@@ -94,21 +94,48 @@ export class AdminService {
       `),
     ]);
 
-    const gRev = gamesRevRes.status === "fulfilled" ? Number(gamesRevRes.value.rows[0]?.rev || 0) : 0;
-    const cbRev = courtBookingsRevRes.status === "fulfilled" ? Number(courtBookingsRevRes.value.rows[0]?.rev || 0) : 0;
-    const poRev = paymentOrdersRevRes.status === "fulfilled" ? Number(paymentOrdersRevRes.value.rows[0]?.rev || 0) : 0;
-    const txRev = txRevRes.status === "fulfilled" ? Number(txRevRes.value.rows[0]?.rev || 0) : 0;
-    const wtRev = walletTxRevRes.status === "fulfilled" ? Number(walletTxRevRes.value.rows[0]?.rev || 0) : 0;
+    const gRev =
+      gamesRevRes.status === "fulfilled"
+        ? Number(gamesRevRes.value.rows[0]?.rev || 0)
+        : 0;
+    const cbRev =
+      courtBookingsRevRes.status === "fulfilled"
+        ? Number(courtBookingsRevRes.value.rows[0]?.rev || 0)
+        : 0;
+    const poRev =
+      paymentOrdersRevRes.status === "fulfilled"
+        ? Number(paymentOrdersRevRes.value.rows[0]?.rev || 0)
+        : 0;
+    const txRev =
+      txRevRes.status === "fulfilled"
+        ? Number(txRevRes.value.rows[0]?.rev || 0)
+        : 0;
+    const wtRev =
+      walletTxRevRes.status === "fulfilled"
+        ? Number(walletTxRevRes.value.rows[0]?.rev || 0)
+        : 0;
 
     let totalRevenue = Math.max(gRev + cbRev, poRev, txRev, wtRev);
     if (totalRevenue === 0) {
       totalRevenue = gRev + cbRev + poRev + txRev + wtRev;
     }
 
-    const gRef = refundsGamesRes.status === "fulfilled" ? Number(refundsGamesRes.value.rows[0]?.ref || 0) : 0;
-    const txRef = refundsTxRes.status === "fulfilled" ? Number(refundsTxRes.value.rows[0]?.ref || 0) : 0;
-    const wtRef = refundsWalletRes.status === "fulfilled" ? Number(refundsWalletRes.value.rows[0]?.ref || 0) : 0;
-    const cbRef = refundsBookingsRes.status === "fulfilled" ? Number(refundsBookingsRes.value.rows[0]?.ref || 0) : 0;
+    const gRef =
+      refundsGamesRes.status === "fulfilled"
+        ? Number(refundsGamesRes.value.rows[0]?.ref || 0)
+        : 0;
+    const txRef =
+      refundsTxRes.status === "fulfilled"
+        ? Number(refundsTxRes.value.rows[0]?.ref || 0)
+        : 0;
+    const wtRef =
+      refundsWalletRes.status === "fulfilled"
+        ? Number(refundsWalletRes.value.rows[0]?.ref || 0)
+        : 0;
+    const cbRef =
+      refundsBookingsRes.status === "fulfilled"
+        ? Number(refundsBookingsRes.value.rows[0]?.ref || 0)
+        : 0;
 
     let totalRefunds = Math.max(gRef + cbRef, txRef, wtRef);
     if (totalRefunds === 0) {
@@ -304,7 +331,7 @@ export class AdminService {
       userPhone: r.user_phone,
       userAvatar: r.user_avatar,
       amount: Number(r.amount || 0),
-      status: String(r.status || 'CONFIRMED').toUpperCase(),
+      status: String(r.status || "CONFIRMED").toUpperCase(),
       type: r.type,
       matchId: r.match_id,
       matchTitle: r.match_title,
@@ -408,12 +435,20 @@ export class AdminService {
         `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
          VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
          ON CONFLICT (id) DO NOTHING;`,
-        [txRes.rows[0]?.id, targetUserId, amountToRefund, newBal, refundDesc, refId],
+        [
+          txRes.rows[0]?.id,
+          targetUserId,
+          amountToRefund,
+          newBal,
+          refundDesc,
+          refId,
+        ],
       );
 
       // Realtime wallet update & user notification
       try {
-        const { sendWalletUpdate, sendUserNotification } = await import("../../services/realtime.service.js");
+        const { sendWalletUpdate, sendUserNotification } =
+          await import("../../services/realtime.service.js");
         sendWalletUpdate(targetUserId, { walletBalance: newBal });
         sendUserNotification(targetUserId, {
           title: "💰 Pitch Booking Refund Credited",

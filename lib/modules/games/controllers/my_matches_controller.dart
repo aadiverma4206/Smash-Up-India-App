@@ -4,6 +4,7 @@ import '../../../data/models/game_model.dart';
 import '../../notifications/services/socket_notification_service.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/services/connectivity_service.dart';
 
 class MyMatchesController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
@@ -19,6 +20,16 @@ class MyMatchesController extends GetxController {
     super.onInit();
     fetchMyMatches(selectedTab.value);
     _initSocketListeners();
+
+    if (Get.isRegistered<ConnectivityService>()) {
+      ConnectivityService.to.isConnected.listen((connected) {
+        if (connected) {
+          AppLogger.info(
+              '⚡ Connection restored: Auto-refreshing player matches');
+          fetchMyMatches(selectedTab.value);
+        }
+      });
+    }
   }
 
   void _initSocketListeners() {
@@ -39,6 +50,16 @@ class MyMatchesController extends GetxController {
               '⚡ [Socket.IO] Match score update event received in MyMatchesController');
           fetchMyMatches(selectedTab.value);
         });
+        SocketNotificationService.to.onEvent('match:cancelled', (data) {
+          AppLogger.info(
+              '⚡ [Socket.IO] Match cancelled event received in MyMatchesController');
+          fetchMyMatches(selectedTab.value);
+        });
+        SocketNotificationService.to.onEvent('match:approved', (data) {
+          AppLogger.info(
+              '⚡ [Socket.IO] Match approved event received in MyMatchesController');
+          fetchMyMatches(selectedTab.value);
+        });
       }
     } catch (e) {
       AppLogger.warning(
@@ -48,31 +69,36 @@ class MyMatchesController extends GetxController {
 
   List<GameModel> get filteredMatches {
     final now = DateTime.now();
-    if (selectedTab.value == 'UPCOMING') {
-      return matchesList.where((m) {
-        final startDt =
-            AppDateUtils.parseMatchDateTime(m.matchDate, m.startTime);
-        final endDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.endTime);
+    return matchesList.where((m) {
+      final statusUpper = m.status.toUpperCase();
+      // Cancelled, rejected, or completed matches must NEVER appear in My Matches upcoming/ongoing tabs!
+      if (statusUpper == 'CANCELLED' ||
+          statusUpper == 'COMPLETED' ||
+          statusUpper == 'FINISHED' ||
+          statusUpper == 'REJECTED') {
+        return false;
+      }
+
+      final startDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.startTime);
+      final endDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.endTime);
+
+      if (selectedTab.value == 'UPCOMING') {
         if (endDt != null && endDt.isBefore(now)) return false; // Past match!
         if (startDt != null && startDt.isAfter(now))
           return true; // Future match!
-        return m.status.toUpperCase() != 'COMPLETED' &&
-            m.status.toUpperCase() != 'CANCELLED';
-      }).toList();
-    } else if (selectedTab.value == 'ONGOING') {
-      return matchesList.where((m) {
-        final startDt =
-            AppDateUtils.parseMatchDateTime(m.matchDate, m.startTime);
-        final endDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.endTime);
-        if (endDt != null && endDt.isBefore(now)) return false; // Past match!
+        return statusUpper != 'ONGOING';
+      } else if (selectedTab.value == 'ONGOING') {
+        if (statusUpper == 'ONGOING') return true;
         if (startDt != null &&
             startDt.isBefore(now) &&
             endDt != null &&
-            endDt.isAfter(now)) return true;
-        return m.status.toUpperCase() == 'ONGOING';
-      }).toList();
-    }
-    return matchesList;
+            endDt.isAfter(now)) {
+          return true;
+        }
+        return false;
+      }
+      return true;
+    }).toList();
   }
 
   Future<void> fetchMyMatches(String tab) async {

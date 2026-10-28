@@ -5,6 +5,8 @@ class AppConstants {
 
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
+  static const String userKey = 'user_data';
+  static const String lastOnlineSyncKey = 'last_online_sync_timestamp';
   static const String themeKey = 'app_theme_mode';
   static const String onboardingCompletedKey = 'onboarding_completed';
 

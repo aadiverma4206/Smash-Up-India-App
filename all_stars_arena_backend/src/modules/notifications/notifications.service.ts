@@ -165,13 +165,14 @@ export class NotificationService {
   static async notifyAdmins(params: {
     title: string;
     body: string;
-    type: "USER_CREATED" | "MATCH_CREATED" | "MATCH_CANCELLED" | "MATCH_COMPLETED";
+    type:
+      "USER_CREATED" | "MATCH_CREATED" | "MATCH_CANCELLED" | "MATCH_COMPLETED";
     data?: Record<string, any>;
     gameId?: string;
   }): Promise<void> {
     try {
       const adminRes = await dbPool.query(
-        `SELECT id FROM public.users WHERE role_id = 1;`
+        `SELECT id FROM public.users WHERE role_id = 1;`,
       );
       for (const row of adminRes.rows) {
         await this.createNotification({

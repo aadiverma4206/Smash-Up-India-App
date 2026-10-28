@@ -22,8 +22,14 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
     updatedByUserId,
   } = payload;
 
-  const teamAScore = Math.max(0, Math.min(99, Math.floor(Number(rawTeamAScore) || 0)));
-  const teamBScore = Math.max(0, Math.min(99, Math.floor(Number(rawTeamBScore) || 0)));
+  const teamAScore = Math.max(
+    0,
+    Math.min(99, Math.floor(Number(rawTeamAScore) || 0)),
+  );
+  const teamBScore = Math.max(
+    0,
+    Math.min(99, Math.floor(Number(rawTeamBScore) || 0)),
+  );
 
   const gameRes = await dbPool.query(
     "SELECT * FROM public.games WHERE id = $1;",

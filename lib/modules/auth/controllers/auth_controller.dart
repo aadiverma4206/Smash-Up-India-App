@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../repositories/auth_repository.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/connectivity_service.dart';
 import '../../../core/storage/secure_storage_service.dart';
+import '../../../core/storage/database_service.dart';
 import '../../../data/models/login_request_model.dart';
 import '../../../data/models/register_model.dart';
 import '../../../data/models/user_model.dart';
@@ -56,27 +59,83 @@ class AuthController extends GetxController {
     isLoading.value = true;
     try {
       final token = await secureStorage.getAccessToken();
-      if (token != null && token.isNotEmpty) {
-        final UserModel user =
-            await repository.getMe().timeout(const Duration(seconds: 6));
+      final cachedUser = await secureStorage.getUser();
 
-        if (user.status == 'SUSPENDED') {
-          await AuthService.to.logout();
-          Get.offAllNamed(Routes.login);
-          ErrorHandler.showErrorSnackBar('Account Suspended',
-              'Your account has been suspended by administration. Please contact support.');
-          return;
+      if (token != null && token.isNotEmpty) {
+        if (cachedUser != null) {
+          AuthService.to.currentUser.value = cachedUser;
+          AuthService.to.isLoggedIn.value = true;
         }
 
-        AuthService.to.currentUser.value = user;
-        AuthService.to.isLoggedIn.value = true;
+        final isOnline = Get.isRegistered<ConnectivityService>()
+            ? ConnectivityService.to.isConnected.value
+            : true;
 
-        routeUserByRole(user.roleId);
-        return;
+        if (isOnline) {
+          try {
+            final UserModel user =
+                await repository.getMe().timeout(const Duration(seconds: 4));
+
+            if (user.status == 'SUSPENDED') {
+              await AuthService.to.logout();
+              Get.offAllNamed(Routes.login);
+              ErrorHandler.showErrorSnackBar('Account Suspended',
+                  'Your account has been suspended by administration. Please contact support.');
+              return;
+            }
+
+            AuthService.to.currentUser.value = user;
+            AuthService.to.isLoggedIn.value = true;
+            await secureStorage.saveUser(user);
+
+            if (Get.isRegistered<DatabaseService>()) {
+              await Get.find<DatabaseService>().recordOnlineSync();
+            }
+
+            routeUserByRole(user.roleId);
+            return;
+          } catch (onlineErr) {
+            AppLogger.warning(
+                'Online profile sync timed out or failed: $onlineErr. Falling back to persistent offline credentials.');
+
+            // Only logout if server explicitly responded with 401 Unauthorized (token invalid/revoked)
+            if (onlineErr is DioException &&
+                onlineErr.response?.statusCode == 401) {
+              await AuthService.to.logout();
+              Get.offAllNamed(Routes.login);
+              return;
+            }
+
+            // Otherwise (no internet, timeout, server down): Seamlessly route using cached user!
+            if (cachedUser != null) {
+              if (Get.isRegistered<DatabaseService>()) {
+                await Get.find<DatabaseService>().checkAndPruneIfOfflineExpired(
+                  maxAge: const Duration(days: 3),
+                );
+              }
+              routeUserByRole(cachedUser.roleId);
+              return;
+            }
+          }
+        } else {
+          // Device is completely OFFLINE without internet
+          if (cachedUser != null) {
+            AppLogger.info(
+                '📱 Device is offline: Restoring persistent offline session for role: ${cachedUser.roleId}');
+
+            if (Get.isRegistered<DatabaseService>()) {
+              await Get.find<DatabaseService>().checkAndPruneIfOfflineExpired(
+                maxAge: const Duration(days: 3),
+              );
+            }
+
+            routeUserByRole(cachedUser.roleId);
+            return;
+          }
+        }
       }
     } catch (e) {
-      AppLogger.warning('Session restore failed or expired: $e');
-      await AuthService.to.logout();
+      AppLogger.warning('Session check exception: $e');
     } finally {
       isLoading.value = false;
     }

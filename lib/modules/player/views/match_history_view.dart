@@ -591,7 +591,10 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
                                   .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(game.status.toUpperCase(),
+                            child: Text(
+                                game.isCancelled
+                                    ? game.cancellationDisplayText.toUpperCase()
+                                    : game.status.toUpperCase(),
                                 style: TextStyle(
                                     color: isCompleted
                                         ? Colors.green
@@ -659,11 +662,49 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
                               ),
                             )
                           else
-                            const Text('Cancelled',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.redAccent,
-                                    fontWeight: FontWeight.bold)),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.cancel_outlined,
+                                          size: 13, color: Colors.redAccent),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          game.cancellationDisplayText,
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.redAccent,
+                                              fontWeight: FontWeight.bold),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (game.cancellationReason != null &&
+                                      game.cancellationReason!
+                                          .trim()
+                                          .isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        game.cancellationReason!.trim(),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isDark
+                                              ? Colors.white60
+                                              : Colors.grey.shade600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           Row(
                             children: [
                               const Icon(Icons.currency_rupee_rounded,

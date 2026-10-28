@@ -3,6 +3,47 @@ import { CourtsService } from "../courts/courts.service.js";
 import { sendUserNotification } from "../../services/realtime.service.js";
 import { ApiError } from "../../utils/apiResponse.js";
 
+function formatTime12h(timeStr: string): string {
+  if (!timeStr) return timeStr;
+  const parts = timeStr.trim().split(":");
+  let hour = parseInt(parts[0], 10);
+  const minute = parts[1] || "00";
+  if (isNaN(hour)) return timeStr;
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${hour}:${minute} ${ampm}`;
+}
+
+function formatDateDisplay(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  const clean = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+  const parts = clean.trim().split("-");
+  if (parts.length === 3) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    if (!isNaN(day) && monthIdx >= 0 && monthIdx < 12) {
+      return `${day} ${months[monthIdx]} ${year}`;
+    }
+  }
+  return dateStr;
+}
+
 export class BookingsService {
   static async createBooking(
     userId: string,
@@ -79,9 +120,13 @@ export class BookingsService {
 
       const booking = res.rows[0];
 
+      const displayDate = formatDateDisplay(bookingDate);
+      const displayStart = formatTime12h(startTime);
+      const displayEnd = formatTime12h(endTime);
+
       sendUserNotification(userId, {
         title: "⚽ Turf Booking Confirmed",
-        message: `Booking for ${court.name} on ${bookingDate} (${startTime} - ${endTime}) confirmed!`,
+        message: `Booking for ${court.name} on ${displayDate} (${displayStart} - ${displayEnd}) confirmed!`,
         type: "SUCCESS",
       });
 

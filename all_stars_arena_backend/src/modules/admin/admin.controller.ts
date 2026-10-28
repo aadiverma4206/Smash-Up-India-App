@@ -26,8 +26,12 @@ export const getAdminDashboardController = asyncHandler(
       refundsBookingsResult,
     ] = await Promise.allSettled([
       dbPool.query("SELECT COUNT(*) as total_users FROM public.users;"),
-      dbPool.query("SELECT COUNT(*) as total_managers FROM public.users WHERE role_id = 2;"),
-      dbPool.query("SELECT COUNT(*) as total_players FROM public.users WHERE role_id = 3;"),
+      dbPool.query(
+        "SELECT COUNT(*) as total_managers FROM public.users WHERE role_id = 2;",
+      ),
+      dbPool.query(
+        "SELECT COUNT(*) as total_players FROM public.users WHERE role_id = 3;",
+      ),
       dbPool.query("SELECT COUNT(*) as total_clubs FROM public.clubs;"),
       dbPool.query("SELECT COUNT(*) as total_games FROM public.games;"),
       dbPool.query(
@@ -139,11 +143,26 @@ export const getAdminDashboardController = asyncHandler(
     }
 
     // Combine all revenue sources safely
-    const cbRev = courtBookingsRevResult.status === "fulfilled" ? Number(courtBookingsRevResult.value.rows[0]?.rev || 0) : 0;
-    const poRev = paymentOrdersRevResult.status === "fulfilled" ? Number(paymentOrdersRevResult.value.rows[0]?.rev || 0) : 0;
-    const txRev = txRevResult.status === "fulfilled" ? Number(txRevResult.value.rows[0]?.rev || 0) : 0;
-    const wtRev = walletTxRevResult.status === "fulfilled" ? Number(walletTxRevResult.value.rows[0]?.rev || 0) : 0;
-    const gpRev = gamePlayersRevResult.status === "fulfilled" ? Number(gamePlayersRevResult.value.rows[0]?.rev || 0) : 0;
+    const cbRev =
+      courtBookingsRevResult.status === "fulfilled"
+        ? Number(courtBookingsRevResult.value.rows[0]?.rev || 0)
+        : 0;
+    const poRev =
+      paymentOrdersRevResult.status === "fulfilled"
+        ? Number(paymentOrdersRevResult.value.rows[0]?.rev || 0)
+        : 0;
+    const txRev =
+      txRevResult.status === "fulfilled"
+        ? Number(txRevResult.value.rows[0]?.rev || 0)
+        : 0;
+    const wtRev =
+      walletTxRevResult.status === "fulfilled"
+        ? Number(walletTxRevResult.value.rows[0]?.rev || 0)
+        : 0;
+    const gpRev =
+      gamePlayersRevResult.status === "fulfilled"
+        ? Number(gamePlayersRevResult.value.rows[0]?.rev || 0)
+        : 0;
 
     let totalRevenue = Math.max(cbRev, poRev, txRev, wtRev, gpRev);
     if (totalRevenue === 0) {
@@ -163,9 +182,18 @@ export const getAdminDashboardController = asyncHandler(
     }
 
     // Combine all refund sources safely
-    const txRef = refundsTxResult.status === "fulfilled" ? Number(refundsTxResult.value.rows[0]?.ref || 0) : 0;
-    const wtRef = refundsWalletResult.status === "fulfilled" ? Number(refundsWalletResult.value.rows[0]?.ref || 0) : 0;
-    const cbRef = refundsBookingsResult.status === "fulfilled" ? Number(refundsBookingsResult.value.rows[0]?.ref || 0) : 0;
+    const txRef =
+      refundsTxResult.status === "fulfilled"
+        ? Number(refundsTxResult.value.rows[0]?.ref || 0)
+        : 0;
+    const wtRef =
+      refundsWalletResult.status === "fulfilled"
+        ? Number(refundsWalletResult.value.rows[0]?.ref || 0)
+        : 0;
+    const cbRef =
+      refundsBookingsResult.status === "fulfilled"
+        ? Number(refundsBookingsResult.value.rows[0]?.ref || 0)
+        : 0;
 
     let totalRefunds = Math.max(txRef, wtRef, cbRef);
     if (totalRefunds === 0) {
@@ -574,9 +602,10 @@ export const processAdminRefundController = asyncHandler(
       req.ip || "127.0.0.1",
     );
 
-    res.status(200).json(
-      ApiResponse.success("Payment refund processed successfully", result),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.success("Payment refund processed successfully", result),
+      );
   },
 );
-

@@ -7,6 +7,7 @@ import '../../../data/models/player_stats_model.dart';
 import '../../../data/models/player_dashboard_summary_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/connectivity_service.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
@@ -34,6 +35,16 @@ class PlayerController extends GetxController {
   void onInit() {
     super.onInit();
     loadPlayerData();
+
+    if (Get.isRegistered<ConnectivityService>()) {
+      ConnectivityService.to.isConnected.listen((connected) {
+        if (connected) {
+          AppLogger.info(
+              '⚡ Connection restored: Auto-refreshing player dashboard data');
+          loadPlayerData();
+        }
+      });
+    }
   }
 
   Future<void> loadPlayerData() async {

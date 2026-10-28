@@ -49,6 +49,9 @@ export const initDbTables = async () => {
       ALTER TABLE public.games DROP CONSTRAINT IF EXISTS games_approval_status_check;
       ALTER TABLE public.games ADD CONSTRAINT games_approval_status_check CHECK (approval_status IN ('PENDING_APPROVAL', 'APPROVED', 'REJECTED'));
 
+      ALTER TABLE public.transactions ALTER COLUMN reference_id TYPE VARCHAR(128);
+      ALTER TABLE public.wallet_transactions ALTER COLUMN reference_id TYPE VARCHAR(128);
+
       CREATE TABLE IF NOT EXISTS public.user_device_tokens (
           id VARCHAR(64) PRIMARY KEY DEFAULT ('dev_' || SUBSTR(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT), 1, 16)),
           user_id VARCHAR(64) NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -443,7 +446,7 @@ export const initDbTables = async () => {
           balance_after NUMERIC(10,2),
           description TEXT,
           status VARCHAR(32),
-          reference_id VARCHAR(64),
+          reference_id VARCHAR(128),
           provider_payment_id VARCHAR(128),
           created_at TIMESTAMP WITH TIME ZONE
       ) LANGUAGE plpgsql AS $$
@@ -469,7 +472,7 @@ export const initDbTables = async () => {
                   COALESCE(NULLIF(t.balance_after, 0), v_current_wallet_balance, 0.00)::NUMERIC(10,2) as balance_after,
                   t.description::TEXT as description,
                   t.status::VARCHAR(32) as status,
-                  t.reference_id::VARCHAR(64) as reference_id,
+                  t.reference_id::VARCHAR(128) as reference_id,
                   wt.provider_payment_id::VARCHAR(128) as provider_payment_id,
                   t.created_at as created_at
               FROM public.transactions t
@@ -491,7 +494,7 @@ export const initDbTables = async () => {
                   COALESCE(NULLIF(wt.balance_after, 0), v_current_wallet_balance, 0.00)::NUMERIC(10,2) as balance_after,
                   wt.description::TEXT as description,
                   wt.status::VARCHAR(32) as status,
-                  wt.reference_id::VARCHAR(64) as reference_id,
+                  wt.reference_id::VARCHAR(128) as reference_id,
                   wt.provider_payment_id::VARCHAR(128) as provider_payment_id,
                   wt.created_at as created_at
               FROM public.wallet_transactions wt
@@ -516,7 +519,7 @@ export const initDbTables = async () => {
                       ELSE 'Turf Pitch Booking via Razorpay'
                   END as description,
                   po.status::VARCHAR(32) as status,
-                  po.id::VARCHAR(64) as reference_id,
+                  po.id::VARCHAR(128) as reference_id,
                   po.provider_payment_id::VARCHAR(128) as provider_payment_id,
                   po.created_at as created_at
               FROM public.payment_orders po
@@ -527,35 +530,6 @@ export const initDbTables = async () => {
                 )
                 AND NOT EXISTS (
                     SELECT 1 FROM public.wallet_transactions wt3 WHERE wt3.reference_id = po.id OR wt3.id = po.id
-                )
-
-              UNION
-
-              SELECT
-                  ('mref_' || gp.game_id || '_' || gp.user_id)::VARCHAR(64) as id,
-                  gp.user_id::VARCHAR(64) as user_id,
-                  'REFUND'::VARCHAR(32) as transaction_type,
-                  COALESCE(g.entry_fee, 0.00)::NUMERIC(10,2) as amount,
-                  v_current_wallet_balance::NUMERIC(10,2) as balance_after,
-                  ('Refund for cancelled match: ' || COALESCE(g.title, 'Football Match'))::TEXT as description,
-                  'SUCCESS'::VARCHAR(32) as status,
-                  ('MATCH_REFUND:' || gp.game_id || ':' || gp.user_id)::VARCHAR(64) as reference_id,
-                  NULL::VARCHAR(128) as provider_payment_id,
-                  COALESCE(g.updated_at, g.created_at, CURRENT_TIMESTAMP) as created_at
-              FROM public.game_players gp
-              JOIN public.games g ON g.id = gp.game_id
-              WHERE gp.user_id = p_user_id
-                AND (g.status = 'CANCELLED' OR gp.payment_status = 'REFUNDED')
-                AND COALESCE(g.entry_fee, 0) > 0
-                AND NOT EXISTS (
-                    SELECT 1 FROM public.transactions t4
-                    WHERE t4.user_id = gp.user_id
-                      AND (t4.reference_id = ('MATCH_REFUND:' || gp.game_id || ':' || gp.user_id) OR UPPER(t4.description) LIKE ('%' || UPPER(COALESCE(g.title, 'Match')) || '%'))
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM public.wallet_transactions wt4
-                    WHERE wt4.user_id = gp.user_id
-                      AND (wt4.reference_id = ('MATCH_REFUND:' || gp.game_id || ':' || gp.user_id) OR UPPER(wt4.description) LIKE ('%' || UPPER(COALESCE(g.title, 'Match')) || '%'))
                 )
           )
           SELECT * FROM combined_ledger

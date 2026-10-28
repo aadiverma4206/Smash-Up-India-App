@@ -4,6 +4,7 @@ import '../repositories/admin_repository.dart';
 import '../../../data/models/admin_models.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/services/connectivity_service.dart';
 
 class AdminController extends GetxController {
   final AdminRepository repository = Get.find<AdminRepository>();
@@ -56,6 +57,19 @@ class AdminController extends GetxController {
     fetchPlayers();
     fetchManagers();
     fetchPaymentHistory();
+
+    if (Get.isRegistered<ConnectivityService>()) {
+      ConnectivityService.to.isConnected.listen((connected) {
+        if (connected) {
+          AppLogger.info(
+              '⚡ Connection restored: Auto-refreshing admin dashboard & users');
+          loadDashboard();
+          fetchUsers();
+          fetchPlayers();
+          fetchManagers();
+        }
+      });
+    }
   }
 
   @override
@@ -89,7 +103,9 @@ class AdminController extends GetxController {
       dashboard.value = d;
     } catch (e) {
       AppLogger.warning('Admin dashboard load error: $e');
-      ErrorHandler.showErrorSnackBar('Dashboard Error', e);
+      if (dashboard.value == null) {
+        ErrorHandler.showErrorSnackBar('Dashboard Error', e);
+      }
     } finally {
       isLoading.value = false;
     }

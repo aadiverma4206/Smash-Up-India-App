@@ -63,7 +63,8 @@ class NotificationsController extends GetxController {
     selectedIds.clear();
   }
 
-  Future<void> deleteSelectedNotifications({bool deleteAll = false, List<String>? visibleIds}) async {
+  Future<void> deleteSelectedNotifications(
+      {bool deleteAll = false, List<String>? visibleIds}) async {
     final List<String> targets = deleteAll
         ? (visibleIds ?? notifications.map((n) => n.id).toList())
         : selectedIds.toList();

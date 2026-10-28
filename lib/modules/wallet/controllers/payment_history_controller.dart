@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../datasources/wallet_remote_datasource.dart';
 import '../repositories/wallet_repository.dart';
 import '../../../data/models/wallet_models.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/utils/app_logger.dart';
 
 class DateGroupedTransactions {
@@ -12,7 +14,7 @@ class DateGroupedTransactions {
 }
 
 class PlayerPaymentHistoryController extends GetxController {
-  final WalletRepository repository = Get.find<WalletRepository>();
+  late final WalletRepository repository;
 
   final RxList<WalletTransactionModel> allTransactions =
       <WalletTransactionModel>[].obs;
@@ -38,6 +40,20 @@ class PlayerPaymentHistoryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (!Get.isRegistered<WalletRemoteDataSource>()) {
+      Get.lazyPut<WalletRemoteDataSource>(
+        () => WalletRemoteDataSource(dioClient: Get.find<DioClient>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<WalletRepository>()) {
+      Get.lazyPut<WalletRepository>(
+        () => WalletRepository(
+            remoteDataSource: Get.find<WalletRemoteDataSource>()),
+        fenix: true,
+      );
+    }
+    repository = Get.find<WalletRepository>();
     fetchTransactions();
   }
 

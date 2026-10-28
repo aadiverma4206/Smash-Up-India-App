@@ -422,7 +422,9 @@ export class ManagerRepository {
     statusTab?: string,
     courtFilter?: string,
   ) {
-    const conditions: string[] = ["(g.court_id IN ('court_1', 'court_2') OR g.court_id IS NOT NULL)"];
+    const conditions: string[] = [
+      "(g.court_id IN ('court_1', 'court_2') OR g.court_id IS NOT NULL)",
+    ];
     const values: any[] = [];
 
     const tabUpper = (statusTab || "").toUpperCase();
@@ -524,6 +526,16 @@ export class ManagerRepository {
       SELECT g.id, g.title, g.court_id, g.creator_id, g.creator_role_name, g.created_by_player,
              g.format, g.entry_fee, COALESCE(g.per_player_fee, 0.00) as per_player_fee, g.status, g.approval_status,
              g.team_a_score, g.team_b_score, g.winner_team, g.description,
+             COALESCE(g.cancellation_reason, g.rejection_reason) as cancellation_reason,
+             g.rejection_reason,
+             CASE
+               WHEN COALESCE(g.cancellation_reason, '') ILIKE '%host%' OR COALESCE(g.cancellation_reason, '') ILIKE '%player%' THEN 'HOST'
+               WHEN COALESCE(g.cancellation_reason, '') ILIKE '%manager%' OR COALESCE(g.rejection_reason, '') ILIKE '%manager%' OR g.approval_status = 'REJECTED' THEN 'MANAGER'
+               WHEN COALESCE(g.cancellation_reason, '') ILIKE '%admin%' THEN 'ADMIN'
+               WHEN COALESCE(g.cancellation_reason, '') ILIKE '%auto%' THEN 'SYSTEM'
+               WHEN g.created_by_player THEN 'HOST'
+               ELSE 'MANAGER'
+             END as cancelled_by,
              g.created_at, g.updated_at,
              TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
              TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
@@ -616,7 +628,7 @@ export class ManagerRepository {
   static async getCourtSlots(courtId: string, date?: string | null) {
     try {
       const expired = await dbPool.query(
-        `SELECT g.id, g.title FROM public.games g
+        `SELECT g.id, g.title, g.creator_id, g.entry_fee, g.per_player_fee FROM public.games g
          WHERE g.approval_status = 'PENDING_APPROVAL' AND g.status <> 'CANCELLED'
            AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP;`,
       );
@@ -631,32 +643,45 @@ export class ManagerRepository {
           [game.id],
         );
         const paidPlayers = await dbPool.query(
-          `SELECT gp.user_id, COALESCE(g.entry_fee, 0) as refund_amount
+          `SELECT gp.user_id, gp.payment_method, gp.payment_reference, gp.payment_status, gp.refund_status
            FROM public.game_players gp
-           JOIN public.games g ON g.id = gp.game_id
-           WHERE gp.game_id = $1 AND gp.payment_status = 'PAID';`,
+           WHERE gp.game_id = $1 AND gp.payment_status = 'PAID' AND gp.payment_method IN ('WALLET', 'RAZORPAY');`,
           [game.id],
         );
         for (const player of paidPlayers.rows) {
-          const amt = Number(player.refund_amount);
-          if (amt > 0) {
+          const isHost = game.creator_id && player.user_id === game.creator_id;
+          let amt = isHost
+            ? parseFloat(game.entry_fee || "0.00")
+            : parseFloat(game.per_player_fee || "0.00");
+          if (amt <= 0) continue;
+
+          const refundRef = isHost
+            ? `MATCH_HOST_REFUND:${game.id}:${player.user_id}`
+            : `MATCH_REFUND:${game.id}:${player.user_id}`;
+          const existing = await dbPool.query(
+            `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+            [player.user_id, refundRef],
+          );
+          if (existing.rows.length === 0) {
+            const desc = `Auto refund: Match "${game.title}" unapproved by start time`;
+            const txRes = await dbPool.query(
+              `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+               RETURNING id, balance_after;`,
+              [player.user_id, amt, desc, refundRef],
+            );
+            const newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
             await dbPool.query(
-              `INSERT INTO public.wallets (user_id, balance) VALUES ($1, $2)
-               ON CONFLICT (user_id) DO UPDATE SET balance = public.wallets.balance + $2, updated_at = CURRENT_TIMESTAMP;`,
-              [player.user_id, amt],
+              `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+               ON CONFLICT (id) DO NOTHING;`,
+              [txRes.rows[0]?.id, player.user_id, amt, newBal, desc, refundRef],
             );
             await dbPool.query(
-              `INSERT INTO public.wallet_transactions (wallet_id, user_id, type, amount, status, description)
-               VALUES ((SELECT id FROM public.wallets WHERE user_id = $1), $1, 'REFUND', $2, 'SUCCESS', $3);`,
-              [
-                player.user_id,
-                amt,
-                `Auto refund: Match "${game.title}" unapproved by start time`,
-              ],
-            );
-            await dbPool.query(
-              `UPDATE public.game_players SET payment_status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE game_id = $1 AND user_id = $2;`,
-              [game.id, player.user_id],
+              `UPDATE public.game_players 
+               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP 
+               WHERE game_id = $3 AND user_id = $4;`,
+              [refundRef, amt, game.id, player.user_id],
             );
           }
         }

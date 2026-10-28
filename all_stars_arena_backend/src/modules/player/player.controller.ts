@@ -41,14 +41,16 @@ export const uploadPlayerAvatar = asyncHandler(
     if (!userId) throw new ApiError(401, "Unauthorized");
 
     const uploadedFile =
-      req.file ||
-      (req.files && (req.files as Express.Multer.File[])[0]);
+      req.file || (req.files && (req.files as Express.Multer.File[])[0]);
 
     if (!uploadedFile) {
       throw new ApiError(400, "No image file uploaded");
     }
 
-    const profileImagesStoreDir = path.join(process.cwd(), "Profile_images_store");
+    const profileImagesStoreDir = path.join(
+      process.cwd(),
+      "Profile_images_store",
+    );
     if (!fs.existsSync(profileImagesStoreDir)) {
       fs.mkdirSync(profileImagesStoreDir, { recursive: true });
     }
@@ -63,9 +65,7 @@ export const uploadPlayerAvatar = asyncHandler(
     // 2. Last 4 digits of phone
     const cleanPhone = phone.replace(/[^0-9]/g, "");
     const lastDigits =
-      cleanPhone.length >= 4
-        ? cleanPhone.slice(-4)
-        : cleanPhone || "0000";
+      cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone || "0000";
 
     // 3. File extension
     let ext = path.extname(uploadedFile.originalname).toLowerCase();
@@ -105,7 +105,11 @@ export const uploadPlayerAvatar = asyncHandler(
     fs.writeFileSync(filePath, fileBuffer);
 
     // Clean temp file if Multer created one
-    if (uploadedFile.path && uploadedFile.path !== filePath && fs.existsSync(uploadedFile.path)) {
+    if (
+      uploadedFile.path &&
+      uploadedFile.path !== filePath &&
+      fs.existsSync(uploadedFile.path)
+    ) {
       try {
         fs.unlinkSync(uploadedFile.path);
       } catch (_) {}
@@ -131,11 +135,16 @@ export const deletePlayerAvatar = asyncHandler(
     if (!userId) throw new ApiError(401, "Unauthorized");
 
     const currentProfile = await PlayerRepository.getProfile(userId);
-    const oldAvatarUrl = currentProfile?.avatarUrl || currentProfile?.avatar_url;
+    const oldAvatarUrl =
+      currentProfile?.avatarUrl || currentProfile?.avatar_url;
     if (oldAvatarUrl && oldAvatarUrl.includes("/Profile_images_store/")) {
       try {
         const oldFileName = path.basename(oldAvatarUrl);
-        const oldFilePath = path.join(process.cwd(), "Profile_images_store", oldFileName);
+        const oldFilePath = path.join(
+          process.cwd(),
+          "Profile_images_store",
+          oldFileName,
+        );
         if (fs.existsSync(oldFilePath)) {
           fs.unlinkSync(oldFilePath);
         }

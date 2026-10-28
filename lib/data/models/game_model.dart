@@ -143,6 +143,9 @@ class GameModel {
   final int? waitlistPosition;
   final List<GameRosterPlayerModel>? roster;
   final String? videoPlaybackUrl;
+  final String? cancellationReason;
+  final String? cancelledBy;
+  final String? rejectionReason;
 
   GameModel({
     required this.id,
@@ -173,9 +176,44 @@ class GameModel {
     this.waitlistPosition,
     this.roster,
     this.videoPlaybackUrl,
+    this.cancellationReason,
+    this.cancelledBy,
+    this.rejectionReason,
   });
 
   double get entryFee => perPlayerFee;
+
+  bool get isCancelled => status.toUpperCase() == 'CANCELLED';
+
+  String get cancellationDisplayText {
+    if (cancelledBy != null && cancelledBy!.trim().isNotEmpty) {
+      final cb = cancelledBy!.trim().toUpperCase();
+      if (cb == 'HOST' || cb == 'PLAYER') return 'Cancelled by Host Player';
+      if (cb == 'MANAGER') return 'Cancelled by Turf Manager';
+      if (cb == 'ADMIN') return 'Cancelled by Admin';
+      if (cb == 'SYSTEM') return 'Auto-Cancelled by System';
+    }
+    final reason = cancellationReason ?? rejectionReason ?? '';
+    final reasonLower = reason.toLowerCase();
+    if (reasonLower.contains('host') || reasonLower.contains('player')) {
+      return 'Cancelled by Host Player';
+    }
+    if (reasonLower.contains('manager') || reasonLower.contains('turf')) {
+      return 'Cancelled by Turf Manager';
+    }
+    if (reasonLower.contains('auto')) {
+      return 'Auto-Cancelled by System';
+    }
+    return 'Cancelled';
+  }
+
+  String get effectiveCancellationReason {
+    final reason = cancellationReason ?? rejectionReason;
+    if (reason != null && reason.trim().isNotEmpty) {
+      return reason.trim();
+    }
+    return cancellationDisplayText;
+  }
 
   factory GameModel.fromJson(Map<String, dynamic> json) {
     return GameModel(
@@ -236,6 +274,12 @@ class GameModel {
           : null,
       videoPlaybackUrl: json['videoPlaybackUrl']?.toString() ??
           json['video_playback_url']?.toString(),
+      cancellationReason: json['cancellationReason']?.toString() ??
+          json['cancellation_reason']?.toString(),
+      cancelledBy:
+          json['cancelledBy']?.toString() ?? json['cancelled_by']?.toString(),
+      rejectionReason: json['rejectionReason']?.toString() ??
+          json['rejection_reason']?.toString(),
     );
   }
 

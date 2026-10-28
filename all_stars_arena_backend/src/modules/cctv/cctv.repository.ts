@@ -314,13 +314,7 @@ export class CctvRepository {
     await dbPool.query(
       `INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)
        VALUES ($1, $2, $3, $4, $5);`,
-      [
-        adminId,
-        data.adminName,
-        data.action,
-        data.target,
-        data.details,
-      ],
+      [adminId, data.adminName, data.action, data.target, data.details],
     );
   }
 }

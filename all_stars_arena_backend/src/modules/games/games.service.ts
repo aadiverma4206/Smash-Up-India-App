@@ -64,7 +64,14 @@ export class GamesService {
           "INVALID_MATCH_STATUS",
         );
       }
-      amountRupees = parseFloat(game.per_player_fee || "0.00");
+      const matchFee = parseFloat(
+        game.created_by_player
+          ? game.per_player_fee || "0.00"
+          : game.per_player_fee || game.entry_fee || "0.00",
+      );
+      if (matchFee > 0) {
+        amountRupees = matchFee;
+      }
     }
 
     if (amountRupees <= 0) {
@@ -482,7 +489,6 @@ export class GamesService {
         );
       }
 
-
       await GamesRepository.addActivityLog(
         {
           gameId: newGame.id,
@@ -529,7 +535,8 @@ export class GamesService {
       const playerName = playerRes.rows[0]?.name || "Player";
       const formattedAmount = `₹${entryFee.toFixed(0)}`;
       const courtDisplayName =
-          newGame.court_name || (data.courtId === "court_2" ? "Court 2" : "Court 1");
+        newGame.court_name ||
+        (data.courtId === "court_2" ? "Court 2" : "Court 1");
 
       const mgrRes = await dbPool.query(
         `SELECT DISTINCT u.id as user_id
@@ -671,7 +678,8 @@ export class GamesService {
         countRes.rows[0]?.current_count || "0",
         10,
       );
-      const maxPlayers = game.max_players || FORMAT_PLAYER_COUNTS[game.format] || 22;
+      const maxPlayers =
+        game.max_players || FORMAT_PLAYER_COUNTS[game.format] || 22;
       if (currentPlayersCount >= maxPlayers) {
         throw new ApiError(
           400,
@@ -680,9 +688,19 @@ export class GamesService {
         );
       }
 
-      const entryFee = parseFloat(game.per_player_fee || "0.00");
-      const paymentMethod = paymentDetails?.paymentMethod || (entryFee > 0 ? "WALLET" : "FREE");
-      let paymentMethodRecorded = entryFee > 0 ? (paymentMethod === "RAZORPAY" ? "RAZORPAY" : "WALLET") : "FREE";
+      const entryFee = parseFloat(
+        game.created_by_player
+          ? game.per_player_fee || "0.00"
+          : game.per_player_fee || game.entry_fee || "0.00",
+      );
+      const paymentMethod =
+        paymentDetails?.paymentMethod || (entryFee > 0 ? "WALLET" : "FREE");
+      let paymentMethodRecorded =
+        entryFee > 0
+          ? paymentMethod === "RAZORPAY"
+            ? "RAZORPAY"
+            : "WALLET"
+          : "FREE";
       let paymentRefRecorded: string | null = null;
 
       if (entryFee > 0) {
@@ -894,7 +912,8 @@ export class GamesService {
       const entryFee = Number(game.entry_fee || 0);
       const formattedAmount = `₹${entryFee.toFixed(0)}`;
       const courtDisplayName =
-          game.court_name || (game.court_id === "court_2" ? "Court 2" : "Court 1");
+        game.court_name ||
+        (game.court_id === "court_2" ? "Court 2" : "Court 1");
 
       const mgrRes = await dbPool.query(
         `SELECT DISTINCT u.id as user_id
@@ -1153,7 +1172,10 @@ export class GamesService {
     for (let i = 0; i < videos.length; i++) {
       const vid = videos[i];
       try {
-        const signedPlaybackUrl = await getSignedPlaybackUrl(vid.video_url, 3600);
+        const signedPlaybackUrl = await getSignedPlaybackUrl(
+          vid.video_url,
+          3600,
+        );
         videoResults.push({
           videoId: vid.id,
           id: vid.id,
@@ -1172,7 +1194,9 @@ export class GamesService {
           playbackUrl: signedPlaybackUrl || vid.video_url || "",
         });
       } catch (err: any) {
-        logger.warn(`Failed to sign playback URL for video ${vid.id}: ${err.message}`);
+        logger.warn(
+          `Failed to sign playback URL for video ${vid.id}: ${err.message}`,
+        );
       }
     }
 
@@ -1248,9 +1272,14 @@ export class GamesService {
         );
       }
 
+      const cancelReasonText =
+        reason && reason.trim().length > 0
+          ? `Cancelled by host player: ${reason.trim()}`
+          : "Cancelled by host player";
+
       await client.query(
-        `UPDATE public.games SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
-        [gameId],
+        `UPDATE public.games SET status = 'CANCELLED', cancellation_reason = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;`,
+        [cancelReasonText, gameId],
       );
 
       try {
@@ -1262,64 +1291,149 @@ export class GamesService {
 
       const hostFee = parseFloat(game.entry_fee || "0.00");
       const perPlayerFee = parseFloat(game.per_player_fee || "0.00");
-      const refundNotifications: Array<{ userId: string; newBalance: number; refundAmount: number }> = [];
+      const refundNotifications: Array<{
+        userId: string;
+        newBalance: number;
+        refundAmount: number;
+      }> = [];
 
-      // 1. Refund Host (who booked the pitch and paid full pitch payment)
+      // 1. Refund Host ONLY if the host player actually paid (payment_status = 'PAID' and payment_method IN ('WALLET', 'RAZORPAY'))
       if (hostFee > 0 && game.creator_id) {
-        const hostRefundRef = `MATCH_HOST_REFUND:${gameId}:${game.creator_id}`;
-        const existingHostRefund = await client.query(
-          `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
-          [game.creator_id, hostRefundRef],
+        const hostPlayerRes = await client.query(
+          `SELECT payment_status, payment_method, payment_reference, refund_status 
+           FROM public.game_players 
+           WHERE game_id = $1 AND user_id = $2 FOR UPDATE;`,
+          [gameId, game.creator_id],
         );
+        const hostRecord = hostPlayerRes.rows[0];
+        const hostMethod = (hostRecord?.payment_method || "").toUpperCase();
+        const hostActuallyPaid = hostRecord
+          ? hostRecord.payment_status === "PAID" &&
+            (hostMethod === "WALLET" || hostMethod === "RAZORPAY")
+          : true;
 
-        if (existingHostRefund.rows.length === 0) {
-          const txRes = await client.query(
-            `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
-             VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
-             RETURNING id, balance_after;`,
-            [
-              game.creator_id,
-              hostFee,
-              `Pitch booking refund for cancelled match: ${game.title || "Football Match"}`,
-              hostRefundRef,
-            ],
-          );
-          const newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
-
-          await client.query(
-            `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
-             VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
-             ON CONFLICT (id) DO NOTHING;`,
-            [
-              txRes.rows[0]?.id,
-              game.creator_id,
-              hostFee,
-              newBal,
-              `Pitch booking refund for cancelled match: ${game.title || "Football Match"}`,
-              hostRefundRef,
-            ],
+        if (
+          hostActuallyPaid &&
+          hostRecord?.refund_status !== "REFUNDED_TO_WALLET" &&
+          hostRecord?.payment_status !== "REFUNDED"
+        ) {
+          const hostRefundRef = `MATCH_HOST_REFUND:${gameId}:${game.creator_id}`;
+          const existingHostRefund = await client.query(
+            `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+            [game.creator_id, hostRefundRef],
           );
 
-          await client.query(
-            `UPDATE public.game_players SET payment_status = 'REFUNDED' WHERE game_id = $1 AND user_id = $2;`,
-            [gameId, game.creator_id],
-          );
+          if (existingHostRefund.rows.length === 0) {
+            const refundDesc =
+              hostMethod === "RAZORPAY"
+                ? `Pitch booking refund for cancelled match (originally paid via Razorpay): ${game.title || "Football Match"}`
+                : `Pitch booking refund for cancelled match: ${game.title || "Football Match"}`;
 
-          refundNotifications.push({ userId: game.creator_id, newBalance: newBal, refundAmount: hostFee });
+            const txRes = await client.query(
+              `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+               RETURNING id, balance_after;`,
+              [game.creator_id, hostFee, refundDesc, hostRefundRef],
+            );
+            const newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
+
+            await client.query(
+              `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+               ON CONFLICT (id) DO NOTHING;`,
+              [
+                txRes.rows[0]?.id,
+                game.creator_id,
+                hostFee,
+                newBal,
+                refundDesc,
+                hostRefundRef,
+              ],
+            );
+
+            await client.query(
+              `UPDATE public.game_players 
+               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP 
+               WHERE game_id = $3 AND user_id = $4;`,
+              [hostRefundRef, hostFee, gameId, game.creator_id],
+            );
+
+            if (hostRecord?.payment_reference) {
+              await client.query(
+                `UPDATE public.payment_orders 
+                 SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP 
+                 WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2;`,
+                [hostRecord.payment_reference, game.creator_id],
+              );
+            }
+
+            refundNotifications.push({
+              userId: game.creator_id,
+              newBalance: newBal,
+              refundAmount: hostFee,
+            });
+          }
         }
       }
 
-      // 2. Refund any non-host players who paid per_player_fee (if any)
+      // 2. Refund ONLY non-host players who ACTUALLY paid (payment_status = 'PAID' and payment_method IN ('WALLET', 'RAZORPAY'))
+      // Players who joined free (FREE) or were added by host (HOST_ADDED) or did not pay MUST NOT be refunded!
       if (perPlayerFee > 0) {
         const playersRes = await client.query(
-          `SELECT user_id FROM public.game_players WHERE game_id = $1 AND payment_status = 'PAID' AND user_id != $2;`,
+          `SELECT user_id, payment_method, payment_reference, payment_status, refund_status 
+           FROM public.game_players 
+           WHERE game_id = $1 AND user_id != $2 AND payment_status = 'PAID' AND payment_method IN ('WALLET', 'RAZORPAY')
+           FOR UPDATE;`,
           [gameId, game.creator_id],
         );
 
         for (const pRow of playersRes.rows) {
           const pUserId = pRow.user_id;
-          const refundRef = `MATCH_REFUND:${gameId}:${pUserId}`;
+          const pMethod = (pRow.payment_method || "").toUpperCase();
+          const pRef = pRow.payment_reference;
 
+          if (
+            pRow.refund_status === "REFUNDED_TO_WALLET" ||
+            pRow.payment_status === "REFUNDED"
+          ) {
+            continue;
+          }
+
+          let refundAmount = 0;
+          if (pMethod === "WALLET") {
+            const txCheck = await client.query(
+              `SELECT amount FROM public.transactions 
+               WHERE user_id = $1 AND type = 'PAYMENT' AND reference_id = $2 AND status = 'SUCCESS' 
+               ORDER BY created_at DESC LIMIT 1;`,
+              [pUserId, gameId],
+            );
+            if (txCheck.rows.length > 0) {
+              const amt = parseFloat(txCheck.rows[0].amount || "0.00");
+              refundAmount = amt > 0 ? amt : 0;
+            } else {
+              refundAmount = 0;
+            }
+          } else if (pMethod === "RAZORPAY" && pRef) {
+            const poCheck = await client.query(
+              `SELECT amount_paise FROM public.payment_orders 
+               WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2 AND status = 'PAID' 
+               ORDER BY created_at DESC LIMIT 1;`,
+              [pRef, pUserId],
+            );
+            if (poCheck.rows.length > 0) {
+              const amt =
+                parseFloat(poCheck.rows[0].amount_paise || "0") / 100.0;
+              refundAmount = amt > 0 ? amt : 0;
+            } else {
+              refundAmount = 0;
+            }
+          } else {
+            refundAmount = 0;
+          }
+
+          if (refundAmount <= 0) continue;
+
+          const refundRef = `MATCH_REFUND:${gameId}:${pUserId}`;
           const existingRefund = await client.query(
             `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
             [pUserId, refundRef],
@@ -1327,16 +1441,16 @@ export class GamesService {
 
           let newBal = 0;
           if (existingRefund.rows.length === 0) {
+            const refundDesc =
+              pMethod === "RAZORPAY"
+                ? `Refund for cancelled match (originally paid via Razorpay): ${game.title || "Football Match"}`
+                : `Refund for cancelled match: ${game.title || "Football Match"}`;
+
             const txRes = await client.query(
               `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
                VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
                RETURNING id, balance_after;`,
-              [
-                pUserId,
-                perPlayerFee,
-                `Refund for cancelled match: ${game.title || "Football Match"}`,
-                refundRef,
-              ],
+              [pUserId, refundAmount, refundDesc, refundRef],
             );
             newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
 
@@ -1347,17 +1461,28 @@ export class GamesService {
               [
                 txRes.rows[0]?.id,
                 pUserId,
-                perPlayerFee,
+                refundAmount,
                 newBal,
-                `Refund for cancelled match: ${game.title || "Football Match"}`,
+                refundDesc,
                 refundRef,
               ],
             );
 
             await client.query(
-              `UPDATE public.game_players SET payment_status = 'REFUNDED' WHERE game_id = $1 AND user_id = $2;`,
-              [gameId, pUserId],
+              `UPDATE public.game_players 
+               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP 
+               WHERE game_id = $3 AND user_id = $4;`,
+              [refundRef, refundAmount, gameId, pUserId],
             );
+
+            if (pRef) {
+              await client.query(
+                `UPDATE public.payment_orders 
+                 SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP 
+                 WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2;`,
+                [pRef, pUserId],
+              );
+            }
           } else {
             const wRes = await client.query(
               `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
@@ -1366,7 +1491,11 @@ export class GamesService {
             newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
           }
 
-          refundNotifications.push({ userId: pUserId, newBalance: newBal, refundAmount: perPlayerFee });
+          refundNotifications.push({
+            userId: pUserId,
+            newBalance: newBal,
+            refundAmount,
+          });
         }
       }
 
@@ -1375,8 +1504,6 @@ export class GamesService {
         [gameId],
       );
 
-      const cancelReasonText =
-        reason && reason.trim() ? reason.trim() : "Cancelled by host player";
       await GamesRepository.addActivityLog(
         {
           gameId,
@@ -1390,13 +1517,25 @@ export class GamesService {
 
       await client.query("COMMIT");
 
-      for (const item of refundNotifications) {
-        sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
-        sendUserNotification(item.userId, {
-          title: "⚠️ Match Cancelled by Host",
-          message: `Host cancelled "${game.title}". ${item.refundAmount > 0 ? `₹${item.refundAmount.toFixed(2)} refunded to your wallet.` : ""}`,
-          type: "WARNING",
+      try {
+        const io = getSocketIO();
+        io.emit("match:cancelled", {
+          gameId,
+          status: "CANCELLED",
+          reason: cancelReasonText,
+          cancelledBy: "HOST",
         });
+      } catch (_) {}
+
+      for (const item of refundNotifications) {
+        if (item.refundAmount > 0) {
+          sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
+          sendUserNotification(item.userId, {
+            title: "⚠️ Match Cancelled by Host",
+            message: `Host cancelled "${game.title}". ₹${item.refundAmount.toFixed(2)} refunded to your wallet.`,
+            type: "WARNING",
+          });
+        }
       }
 
       return { gameId, status: "CANCELLED", reason: cancelReasonText };
@@ -1574,7 +1713,8 @@ export class GamesService {
     // Notify managers
     try {
       const courtDisplayName =
-        game.court_name || (game.court_id === "court_2" ? "Court 2" : "Court 1");
+        game.court_name ||
+        (game.court_id === "court_2" ? "Court 2" : "Court 1");
       const mgrRes = await dbPool.query(
         `SELECT DISTINCT u.id as user_id
          FROM public.users u

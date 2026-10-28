@@ -289,8 +289,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
 
     return PlayerNotificationItem(
       id: model.id,
-      title: model.title,
-      subtitle: model.body,
+      title: AppDateUtils.sanitizeNotificationText(model.title),
+      subtitle: AppDateUtils.sanitizeNotificationText(model.body),
       badgeText: badgeText,
       badgeBgColor: badgeBgColor,
       badgeTextColor: badgeTextColor,
@@ -477,7 +477,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
         if (_controller.isSelectionMode) {
           final selectedCount = _controller.selectedIds.length;
           final isAllSelected =
-              _controller.selectedIds.containsAll(visibleIds) && visibleIds.isNotEmpty;
+              _controller.selectedIds.containsAll(visibleIds) &&
+                  visibleIds.isNotEmpty;
 
           return AppBar(
             backgroundColor:
@@ -493,7 +494,9 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
               ),
             ),
             actions: [
@@ -524,7 +527,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
           leading: IconButton(
             icon: Icon(
               Icons.arrow_back_rounded,
-              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
             onPressed: () => Get.back(),
           ),
@@ -533,7 +537,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
           ),
           actions: [

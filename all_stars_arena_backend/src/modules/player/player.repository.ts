@@ -154,25 +154,32 @@ export class PlayerRepository {
       };
     }
 
-    const played = realPlayedCount > 0 ? realPlayedCount : (matchesJoined > 0 ? row.matches_played || 0 : 0);
+    const played =
+      realPlayedCount > 0
+        ? realPlayedCount
+        : matchesJoined > 0
+          ? row.matches_played || 0
+          : 0;
     return {
       matchesJoined: matchesJoined,
       matches_joined: matchesJoined,
       matchesPlayed: played,
       matches_played: played,
-      matchesWon: matchesJoined > 0 ? (row.matches_won || 0) : 0,
-      matches_won: matchesJoined > 0 ? (row.matches_won || 0) : 0,
-      matchesLost: matchesJoined > 0 ? (row.matches_lost || 0) : 0,
-      matches_lost: matchesJoined > 0 ? (row.matches_lost || 0) : 0,
-      matchesDrawn: matchesJoined > 0 ? (row.matches_drawn || 0) : 0,
-      matches_drawn: matchesJoined > 0 ? (row.matches_drawn || 0) : 0,
-      goalsScored: matchesJoined > 0 ? (row.goals_scored || 0) : 0,
-      goals_scored: matchesJoined > 0 ? (row.goals_scored || 0) : 0,
-      assists: matchesJoined > 0 ? (row.assists || 0) : 0,
-      motmCount: matchesJoined > 0 ? (row.motm_count || 0) : 0,
-      motm_count: matchesJoined > 0 ? (row.motm_count || 0) : 0,
-      winRatePercentage: matchesJoined > 0 ? (parseFloat(row.win_rate_percentage) || 0.0) : 0.0,
-      win_rate_percentage: matchesJoined > 0 ? (parseFloat(row.win_rate_percentage) || 0.0) : 0.0,
+      matchesWon: matchesJoined > 0 ? row.matches_won || 0 : 0,
+      matches_won: matchesJoined > 0 ? row.matches_won || 0 : 0,
+      matchesLost: matchesJoined > 0 ? row.matches_lost || 0 : 0,
+      matches_lost: matchesJoined > 0 ? row.matches_lost || 0 : 0,
+      matchesDrawn: matchesJoined > 0 ? row.matches_drawn || 0 : 0,
+      matches_drawn: matchesJoined > 0 ? row.matches_drawn || 0 : 0,
+      goalsScored: matchesJoined > 0 ? row.goals_scored || 0 : 0,
+      goals_scored: matchesJoined > 0 ? row.goals_scored || 0 : 0,
+      assists: matchesJoined > 0 ? row.assists || 0 : 0,
+      motmCount: matchesJoined > 0 ? row.motm_count || 0 : 0,
+      motm_count: matchesJoined > 0 ? row.motm_count || 0 : 0,
+      winRatePercentage:
+        matchesJoined > 0 ? parseFloat(row.win_rate_percentage) || 0.0 : 0.0,
+      win_rate_percentage:
+        matchesJoined > 0 ? parseFloat(row.win_rate_percentage) || 0.0 : 0.0,
     };
   }
 
@@ -187,12 +194,12 @@ export class PlayerRepository {
         `UPDATE public.games
          SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
          WHERE status NOT IN ('COMPLETED', 'CANCELLED')
-           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`,
       );
     } catch (_) {}
 
     const conditions: string[] = [
-      "gp.user_id = $1",
+      "(gp.user_id = $1 OR g.creator_id = $1)",
       "(UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED') OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)",
     ];
     const values: any[] = [userId];
@@ -211,21 +218,33 @@ export class PlayerRepository {
     values.push(limit, offset);
 
     const query = `
-       SELECT g.id, COALESCE(crt.club_id, 'all_stars_arena_club') as club_id, g.court_id, g.creator_id, g.title, g.description,
+       SELECT g.id, COALESCE(crt.club_id, 'all_stars_arena_club') as club_id, g.court_id, g.creator_id, g.creator_role_name, g.created_by_player, g.title, g.description,
               to_char(g.match_date::date, 'YYYY-MM-DD') as match_date, g.start_time, g.end_time,
               g.status, g.format, 'PUBLIC' as privacy, g.entry_fee, g.entry_fee as per_player_fee, g.entry_fee as my_entry_fee,
               g.team_a_score, g.team_b_score, g.winner_team,
+              COALESCE(g.cancellation_reason, g.rejection_reason) as cancellation_reason,
+              g.rejection_reason,
+              CASE
+                WHEN COALESCE(g.cancellation_reason, '') ILIKE '%host%' OR COALESCE(g.cancellation_reason, '') ILIKE '%player%' THEN 'HOST'
+                WHEN COALESCE(g.cancellation_reason, '') ILIKE '%manager%' OR COALESCE(g.rejection_reason, '') ILIKE '%manager%' OR g.approval_status = 'REJECTED' OR g.manager_id IS NOT NULL THEN 'MANAGER'
+                WHEN COALESCE(g.cancellation_reason, '') ILIKE '%admin%' THEN 'ADMIN'
+                WHEN COALESCE(g.cancellation_reason, '') ILIKE '%auto%' THEN 'SYSTEM'
+                WHEN g.status = 'CANCELLED' AND g.created_by_player = true AND g.manager_id IS NULL THEN 'HOST'
+                WHEN g.status = 'CANCELLED' THEN 'MANAGER'
+                ELSE NULL
+              END as cancelled_by,
               COALESCE(
                 (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
                 g.video_playback_url
               ) as video_playback_url,
               CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
               c.name as club_name,
-              gp.team as my_team, gp.position as my_position,
+              COALESCE(gp.team, 'TEAM_A') as my_team, COALESCE(gp.position, 'MID') as my_position,
               CASE
+                WHEN UPPER(g.status::text) = 'CANCELLED' THEN 'CANCELLED'
                 WHEN UPPER(g.status::text) <> 'COMPLETED' THEN 'PENDING'
                 WHEN g.winner_team = 'DRAW' THEN 'DRAW'
-                WHEN (gp.team = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (gp.team = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
+                WHEN (COALESCE(gp.team, 'TEAM_A') = 'TEAM_A' AND g.winner_team = 'TEAM_A') OR (COALESCE(gp.team, 'TEAM_A') = 'TEAM_B' AND g.winner_team = 'TEAM_B') THEN 'WIN'
                 ELSE 'LOSS'
               END as result,
               (SELECT COUNT(*) FROM public.game_players gp_cnt WHERE gp_cnt.game_id = g.id) as current_players_count,
@@ -249,8 +268,8 @@ export class PlayerRepository {
                 JOIN public.users pu ON pu.id = gp_r.user_id
                 WHERE gp_r.game_id = g.id
               ) as roster
-       FROM public.game_players gp
-       JOIN public.games g ON g.id = gp.game_id
+       FROM public.games g
+       LEFT JOIN public.game_players gp ON gp.game_id = g.id AND gp.user_id = $1
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        LEFT JOIN public.clubs c ON c.id = crt.club_id
        WHERE ${conditions.join(" AND ")}
@@ -267,7 +286,7 @@ export class PlayerRepository {
         `UPDATE public.games
          SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
          WHERE status NOT IN ('COMPLETED', 'CANCELLED')
-           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`,
       );
     } catch (_) {}
 
@@ -347,7 +366,7 @@ export class PlayerRepository {
         `UPDATE public.games
          SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
          WHERE status NOT IN ('COMPLETED', 'CANCELLED')
-           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`,
       );
     } catch (_) {}
 
@@ -370,57 +389,70 @@ export class PlayerRepository {
       `;
     } else if (tab === "PAST" || tab === "COMPLETED" || tab === "HISTORY") {
       query = `
-        SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
+        SELECT COALESCE(gp.team, 'TEAM_A') as user_team, COALESCE(gp.position, 'MID') as user_position, COALESCE(gp.payment_status, 'PAID') as payment_status,
                g.*,
                TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
                TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
                TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
                COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
+               COALESCE(g.cancellation_reason, g.rejection_reason) as cancellation_reason,
+               CASE
+                 WHEN COALESCE(g.cancellation_reason, '') ILIKE '%host%' OR COALESCE(g.cancellation_reason, '') ILIKE '%player%' THEN 'HOST'
+                 WHEN COALESCE(g.cancellation_reason, '') ILIKE '%manager%' OR COALESCE(g.rejection_reason, '') ILIKE '%manager%' OR g.approval_status = 'REJECTED' OR g.manager_id IS NOT NULL THEN 'MANAGER'
+                 WHEN COALESCE(g.cancellation_reason, '') ILIKE '%admin%' THEN 'ADMIN'
+                 WHEN COALESCE(g.cancellation_reason, '') ILIKE '%auto%' THEN 'SYSTEM'
+                 WHEN g.status = 'CANCELLED' AND g.created_by_player = true AND g.manager_id IS NULL THEN 'HOST'
+                 WHEN g.status = 'CANCELLED' THEN 'MANAGER'
+                 ELSE NULL
+               END as cancelled_by,
                (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
-        FROM public.game_players gp
-        JOIN public.games g ON g.id = gp.game_id
+        FROM public.games g
+        LEFT JOIN public.game_players gp ON gp.game_id = g.id AND gp.user_id = $1
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = crt.club_id
-        WHERE gp.user_id = $1
+        WHERE (gp.user_id = $1 OR g.creator_id = $1)
           AND (g.status::text IN ('COMPLETED', 'CANCELLED') OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)
         ORDER BY g.match_date DESC, g.start_time DESC;
       `;
     } else if (tab === "ONGOING") {
       query = `
-        SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
+        SELECT COALESCE(gp.team, 'TEAM_A') as user_team, COALESCE(gp.position, 'MID') as user_position, COALESCE(gp.payment_status, 'PAID') as payment_status,
                g.*,
                TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
                TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
                TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
                COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
                (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
-        FROM public.game_players gp
-        JOIN public.games g ON g.id = gp.game_id
+        FROM public.games g
+        LEFT JOIN public.game_players gp ON gp.game_id = g.id AND gp.user_id = $1
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = crt.club_id
-        WHERE gp.user_id = $1
+        WHERE (gp.user_id = $1 OR g.creator_id = $1)
+          AND UPPER(g.status::text) NOT IN ('COMPLETED', 'CANCELLED', 'FINISHED')
+          AND COALESCE(g.approval_status, 'APPROVED') <> 'REJECTED'
           AND (
             g.status = 'ONGOING'
-            OR (g.status NOT IN ('COMPLETED', 'CANCELLED') AND (g.match_date + g.start_time) <= CURRENT_TIMESTAMP AND (g.match_date + g.end_time) > CURRENT_TIMESTAMP)
+            OR ((g.match_date + g.start_time) <= CURRENT_TIMESTAMP AND (g.match_date + g.end_time) > CURRENT_TIMESTAMP)
           )
         ORDER BY g.match_date DESC, g.start_time DESC;
       `;
     } else {
       // UPCOMING / Active matches
       query = `
-        SELECT gp.team as user_team, gp.position as user_position, gp.payment_status,
+        SELECT COALESCE(gp.team, 'TEAM_A') as user_team, COALESCE(gp.position, 'MID') as user_position, COALESCE(gp.payment_status, 'PAID') as payment_status,
                g.*,
                TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
                TO_CHAR(g.start_time, 'HH24:MI:SS') as start_time,
                TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
                COALESCE(c.name, 'All Stars Turf Raipur') as club_name, COALESCE(crt.name, 'Court 1') as court_name,
                (SELECT COUNT(*) FROM public.game_players gp2 WHERE gp2.game_id = g.id) as current_players_count
-        FROM public.game_players gp
-        JOIN public.games g ON g.id = gp.game_id
+        FROM public.games g
+        LEFT JOIN public.game_players gp ON gp.game_id = g.id AND gp.user_id = $1
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = crt.club_id
-        WHERE gp.user_id = $1
-          AND g.status NOT IN ('COMPLETED', 'CANCELLED')
+        WHERE (gp.user_id = $1 OR g.creator_id = $1)
+          AND UPPER(g.status::text) NOT IN ('COMPLETED', 'CANCELLED', 'FINISHED')
+          AND COALESCE(g.approval_status, 'APPROVED') <> 'REJECTED'
           AND (g.match_date + g.start_time) > CURRENT_TIMESTAMP
         ORDER BY g.match_date ASC, g.start_time ASC;
       `;

@@ -26,7 +26,13 @@ class AuthService extends GetxService {
 
   Future<void> init() async {
     final token = await _secureStorage.getAccessToken();
-    if (token != null && token.isNotEmpty) {
+    final savedUser = await _secureStorage.getUser();
+    if (token != null && token.isNotEmpty && savedUser != null) {
+      currentUser.value = savedUser;
+      isLoggedIn.value = true;
+      AppLogger.info(
+          '🔑 Restored persistent user session: ${savedUser.name} (Role: ${savedUser.roleId})');
+    } else if (token != null && token.isNotEmpty) {
       isLoggedIn.value = true;
     }
   }
@@ -37,6 +43,7 @@ class AuthService extends GetxService {
     isLoggedIn.value = true;
     _secureStorage.saveTokens(
         accessToken: accessToken, refreshToken: refreshToken);
+    _secureStorage.saveUser(user);
 
     if (Get.isRegistered<NotificationService>()) {
       try {

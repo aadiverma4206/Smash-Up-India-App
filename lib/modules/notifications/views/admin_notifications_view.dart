@@ -203,10 +203,13 @@ class AdminNotificationsView extends GetView<NotificationsController> {
       child: Obx(() {
         if (controller.isSelectionMode) {
           final selectedCount = controller.selectedIds.length;
-          final isAllSelected = controller.selectedIds.containsAll(visibleIds) && visibleIds.isNotEmpty;
+          final isAllSelected =
+              controller.selectedIds.containsAll(visibleIds) &&
+                  visibleIds.isNotEmpty;
 
           return AppBar(
-            backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+            backgroundColor:
+                isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
             elevation: 2,
             leading: IconButton(
               icon: const Icon(Icons.close_rounded),
@@ -218,7 +221,9 @@ class AdminNotificationsView extends GetView<NotificationsController> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
               ),
             ),
             actions: [
@@ -254,7 +259,8 @@ class AdminNotificationsView extends GetView<NotificationsController> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
           ),
           iconTheme: IconThemeData(
@@ -296,9 +302,8 @@ class AdminNotificationsView extends GetView<NotificationsController> {
       final query = searchQuery.value;
       final categoryFilter = selectedCategoryFilter.value;
 
-      final allowedNotifications = controller.notifications
-          .where(_isAllowedAdminNotification)
-          .toList();
+      final allowedNotifications =
+          controller.notifications.where(_isAllowedAdminNotification).toList();
 
       final filtered = allowedNotifications.where((n) {
         final cat = _getCategory(n);
@@ -443,14 +448,15 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                           }
 
                           return RefreshIndicator(
-                            onRefresh: () async => controller
-                                .fetchNotifications(isRefresh: true),
+                            onRefresh: () async =>
+                                controller.fetchNotifications(isRefresh: true),
                             child: LayoutBuilder(
                               builder: (context, constraints) {
                                 if (constraints.maxWidth > 850) {
                                   return GridView.builder(
-                                    physics: const AlwaysScrollableScrollPhysics(
-                                        parent: BouncingScrollPhysics()),
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(
+                                            parent: BouncingScrollPhysics()),
                                     gridDelegate:
                                         const SliverGridDelegateWithMaxCrossAxisExtent(
                                       maxCrossAxisExtent: 560,
@@ -496,9 +502,8 @@ class AdminNotificationsView extends GetView<NotificationsController> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Obx(() {
-      final allowed = controller.notifications
-          .where(_isAllowedAdminNotification)
-          .toList();
+      final allowed =
+          controller.notifications.where(_isAllowedAdminNotification).toList();
 
       final countAll = allowed.length;
       final countUser = allowed
@@ -559,9 +564,7 @@ class AdminNotificationsView extends GetView<NotificationsController> {
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary
-                : (isDark
-                    ? const Color(0xFF1E293B)
-                    : const Color(0xFFF1F5F9)),
+                : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected

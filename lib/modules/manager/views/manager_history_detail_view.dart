@@ -298,9 +298,9 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'MATCH CANCELLED',
-                    style: TextStyle(
+                  Text(
+                    game.cancellationDisplayText.toUpperCase(),
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: Colors.redAccent,
@@ -309,7 +309,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'This match was cancelled. Scores, player stats, and CCTV video recordings are disabled for cancelled matches.',
+                    game.effectiveCancellationReason,
                     style: TextStyle(
                       fontSize: 11.5,
                       color: isDark

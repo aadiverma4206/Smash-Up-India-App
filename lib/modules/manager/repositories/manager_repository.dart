@@ -9,28 +9,113 @@ import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/storage/database_service.dart';
+import '../../../core/services/auth_service.dart';
 
 class ManagerRepository {
   final ManagerRemoteDataSource remoteDataSource;
 
   ManagerRepository({required this.remoteDataSource});
 
+  String get _currentUserId =>
+      AuthService.to.currentUser.value?.id ?? 'manager';
+
   Future<ManagerDashboardModel> getDashboard() async {
-    final response = await remoteDataSource.getDashboard();
-    if (response.data == null) {
-      throw AppException('Manager dashboard data not available.');
+    final cacheKey = 'manager_dashboard_$_currentUserId';
+    try {
+      final response = await remoteDataSource.getDashboard();
+      if (response.data == null) {
+        throw AppException('Manager dashboard data not available.');
+      }
+      final dashboard = response.data!;
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          await db.cacheData(cacheKey, jsonEncode(dashboard.toJson()));
+          await db.recordOnlineSync();
+        } catch (_) {}
+      }
+      return dashboard;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedJson = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedJson != null && cachedJson.isNotEmpty) {
+            return ManagerDashboardModel.fromJson(
+                jsonDecode(cachedJson) as Map<String, dynamic>);
+          }
+        } catch (_) {}
+      }
+      rethrow;
     }
-    return response.data!;
   }
 
   Future<Map<String, dynamic>> getClubMetrics() async {
-    final response = await remoteDataSource.getClubMetrics();
-    return response.data ?? {};
+    final cacheKey = 'manager_metrics_$_currentUserId';
+    try {
+      final response = await remoteDataSource.getClubMetrics();
+      final metrics = response.data ?? {};
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          await db.cacheData(cacheKey, jsonEncode(metrics));
+          await db.recordOnlineSync();
+        } catch (_) {}
+      }
+      return metrics;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedJson = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedJson != null && cachedJson.isNotEmpty) {
+            return jsonDecode(cachedJson) as Map<String, dynamic>;
+          }
+        } catch (_) {}
+      }
+      return {};
+    }
   }
 
   Future<List<SlotRequestModel>> getPendingRequests() async {
-    final response = await remoteDataSource.getPendingRequests();
-    return response.data ?? [];
+    final cacheKey = 'manager_pending_requests_$_currentUserId';
+    try {
+      final response = await remoteDataSource.getPendingRequests();
+      final list = response.data ?? [];
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final jsonPayload = jsonEncode(list.map((r) => r.toJson()).toList());
+          await db.cacheData(cacheKey, jsonPayload);
+          await db.recordOnlineSync();
+        } catch (_) {}
+      }
+      return list;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedJson = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedJson != null && cachedJson.isNotEmpty) {
+            final List<dynamic> decoded = jsonDecode(cachedJson);
+            return decoded
+                .map((item) =>
+                    SlotRequestModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
   }
 
   Future<Map<String, dynamic>> approveSlotRequest(String requestId) async {
@@ -47,9 +132,39 @@ class ManagerRepository {
 
   Future<List<GameModel>> getClubMatches(
       {String tab = 'TODAY', String? court}) async {
-    final response =
-        await remoteDataSource.getClubMatches(tab: tab, court: court);
-    return response.data ?? [];
+    final cacheKey =
+        'manager_club_matches_${_currentUserId}_${tab}_${court ?? 'ALL'}';
+    try {
+      final response =
+          await remoteDataSource.getClubMatches(tab: tab, court: court);
+      final list = response.data ?? [];
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final jsonPayload = jsonEncode(list.map((g) => g.toJson()).toList());
+          await db.cacheData(cacheKey, jsonPayload);
+          await db.recordOnlineSync();
+        } catch (_) {}
+      }
+      return list;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedJson = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedJson != null && cachedJson.isNotEmpty) {
+            final List<dynamic> decoded = jsonDecode(cachedJson);
+            return decoded
+                .map((item) => GameModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
   }
 
   Future<List<GameModel>> getClubGames({String? court, String? tab}) async {
@@ -133,8 +248,38 @@ class ManagerRepository {
   }
 
   Future<List<CourtModel>> getClubCourts() async {
-    final response = await remoteDataSource.getClubCourts();
-    return response.data ?? [];
+    final cacheKey = 'manager_courts_$_currentUserId';
+    try {
+      final response = await remoteDataSource.getClubCourts();
+      final list = response.data ?? [];
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final jsonPayload = jsonEncode(list.map((c) => c.toJson()).toList());
+          await db.cacheData(cacheKey, jsonPayload);
+          await db.recordOnlineSync();
+        } catch (_) {}
+      }
+      return list;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedJson = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedJson != null && cachedJson.isNotEmpty) {
+            final List<dynamic> decoded = jsonDecode(cachedJson);
+            return decoded
+                .map(
+                    (item) => CourtModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
   }
 
   Future<CourtModel> updateCourtPricing({
@@ -158,8 +303,38 @@ class ManagerRepository {
   }
 
   Future<List<BookingModel>> getClubBookings() async {
-    final response = await remoteDataSource.getClubBookings();
-    return response.data ?? [];
+    final cacheKey = 'manager_bookings_$_currentUserId';
+    try {
+      final response = await remoteDataSource.getClubBookings();
+      final list = response.data ?? [];
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final jsonPayload = jsonEncode(list.map((b) => b.toJson()).toList());
+          await db.cacheData(cacheKey, jsonPayload);
+          await db.recordOnlineSync();
+        } catch (_) {}
+      }
+      return list;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedJson = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedJson != null && cachedJson.isNotEmpty) {
+            final List<dynamic> decoded = jsonDecode(cachedJson);
+            return decoded
+                .map((item) =>
+                    BookingModel.fromJson(item as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
   }
 
   Future<List<GameModel>> getClubHistory({

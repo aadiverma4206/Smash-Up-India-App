@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/app_date_utils.dart';
 
 part 'notification_model.g.dart';
 
@@ -32,10 +33,13 @@ class NotificationModel {
     if (rawDate != null) {
       createdAtStr = rawDate.toString();
     }
+    final rawTitle = (json['title'] ?? 'Notification').toString();
+    final rawBody = (json['body'] ?? json['message'] ?? '').toString();
+
     return NotificationModel(
       id: (json['id'] ?? json['notification_id'] ?? '').toString(),
-      title: (json['title'] ?? 'Notification').toString(),
-      body: (json['body'] ?? json['message'] ?? '').toString(),
+      title: AppDateUtils.sanitizeNotificationText(rawTitle),
+      body: AppDateUtils.sanitizeNotificationText(rawBody),
       type: (json['type'] ?? 'SYSTEM').toString(),
       data: json['data'] is Map<String, dynamic>
           ? json['data'] as Map<String, dynamic>

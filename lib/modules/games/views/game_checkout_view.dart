@@ -14,83 +14,37 @@ class GameCheckoutView extends GetView<CreateGameController> {
     final fee = controller.pitchBookingAmount;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Pitch Booking Checkout',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Pitch Reservation Summary',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: context.textPrimary,
-                  ),
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 950),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 720;
+
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isWide ? 24 : 16,
+                        vertical: 16,
+                      ),
+                      child: isWide
+                          ? _buildWideTwoColumnLayout(context, fee)
+                          : _buildMobileSingleColumnLayout(context, fee),
+                    );
+                  },
                 ),
-                const SizedBox(height: 10),
-                _buildPitchSummaryCard(context),
-                const SizedBox(height: 20),
-                Text(
-                  'Pricing Breakdown',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: context.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _buildPricingSummaryCard(context, fee),
-                const SizedBox(height: 20),
-                Text(
-                  'Select Payment Method',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: context.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _buildPaymentMethodsCard(context, fee),
-                const SizedBox(height: 20),
-                _buildTestModeNoticeCard(context),
-                const SizedBox(height: 24),
-                Obx(
-                  () => AppButton(
-                    text: 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
-                    isLoading: controller.isProcessing.value,
-                    onPressed: controller.executePaymentAndCreateGame,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
-                    side: BorderSide(
-                        color: AppColors.primary.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  icon: const Icon(Icons.bolt_rounded, color: Colors.amber),
-                  label: const Text(
-                    '⚡ Quick Test Payment (Instant Success)',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: AppColors.primary),
-                  ),
-                  onPressed: controller.isProcessing.value
-                      ? null
-                      : controller.processTestModePayment,
-                ),
-                const SizedBox(height: 30),
-              ],
+              ),
             ),
           ),
           Obx(
@@ -101,6 +55,122 @@ class GameCheckoutView extends GetView<CreateGameController> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMobileSingleColumnLayout(BuildContext context, double fee) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pitch Reservation Summary',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: context.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildPitchSummaryCard(context),
+        const SizedBox(height: 20),
+        Text(
+          'Pricing Breakdown',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: context.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildPricingSummaryCard(context, fee),
+        const SizedBox(height: 20),
+        Text(
+          'Select Payment Method',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: context.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildPaymentMethodsCard(context, fee),
+        const SizedBox(height: 24),
+        Obx(
+          () => AppButton(
+            text: 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
+            isLoading: controller.isProcessing.value,
+            onPressed: controller.executePaymentAndCreateGame,
+          ),
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildWideTwoColumnLayout(BuildContext context, double fee) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left Column: Pitch Summary & Pricing Breakdown
+        Expanded(
+          flex: 5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pitch Reservation Summary',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildPitchSummaryCard(context),
+              const SizedBox(height: 20),
+              Text(
+                'Pricing Breakdown',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildPricingSummaryCard(context, fee),
+            ],
+          ),
+        ),
+        const SizedBox(width: 24),
+
+        // Right Column: Payment Method & Action Button
+        Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select Payment Method',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildPaymentMethodsCard(context, fee),
+              const SizedBox(height: 24),
+              Obx(
+                () => AppButton(
+                  text: 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
+                  isLoading: controller.isProcessing.value,
+                  onPressed: controller.executePaymentAndCreateGame,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -174,33 +244,50 @@ class GameCheckoutView extends GetView<CreateGameController> {
             ],
           ),
           Divider(color: context.borderColor, height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.calendar_month_rounded,
                       size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
-                  Text(dateFormatted,
+                  Flexible(
+                    child: Text(
+                      dateFormatted,
                       style:
-                          TextStyle(fontSize: 12, color: context.textPrimary)),
+                          TextStyle(fontSize: 12, color: context.textPrimary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.access_time_rounded,
                       size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
-                  Text(timeRange,
+                  Flexible(
+                    child: Text(
+                      timeRange,
                       style:
-                          TextStyle(fontSize: 12, color: context.textPrimary)),
+                          TextStyle(fontSize: 12, color: context.textPrimary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
             children: [
               Container(
                 padding:
@@ -217,7 +304,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
                       fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(width: 8),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -445,30 +531,6 @@ class GameCheckoutView extends GetView<CreateGameController> {
           ],
         );
       }),
-    );
-  }
-
-  Widget _buildTestModeNoticeCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Test Environment: You can use the Quick Test Payment button below for immediate simulation, or proceed with standard Razorpay test checkout.',
-              style: TextStyle(color: context.textPrimary, fontSize: 12),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

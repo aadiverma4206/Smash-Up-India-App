@@ -209,9 +209,7 @@ export class AuthService {
 
     // Use the actual Full Name entered by the user during registration
     const userFullName =
-      (data.name || "").trim() ||
-      (decoded.name || "").trim() ||
-      "Player";
+      (data.name || "").trim() || (decoded.name || "").trim() || "Player";
 
     const passwordHash = await bcrypt.hash(data.password, 12);
 
@@ -550,7 +548,12 @@ export class AuthService {
 
   static async updateProfile(
     userId: string,
-    data: { name?: string; phone?: string; city?: string; profileImageUrl?: string },
+    data: {
+      name?: string;
+      phone?: string;
+      city?: string;
+      profileImageUrl?: string;
+    },
   ) {
     const { name, phone, city, profileImageUrl } = data;
     const updates: string[] = [];

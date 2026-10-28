@@ -191,7 +191,7 @@ class DatabaseService {
   }
 
   Future<String?> getValidCachedData(String key,
-      {Duration maxAge = const Duration(days: 5)}) async {
+      {Duration maxAge = const Duration(days: 3)}) async {
     try {
       final results = await _db.query(
         'cached_data',
@@ -208,6 +208,10 @@ class DatabaseService {
             final difference = DateTime.now().difference(updatedAt);
             if (difference <= maxAge) {
               return results.first['payload'] as String?;
+            } else {
+              // Expired after 3 days -> delete from SQLite
+              await _db
+                  .delete('cached_data', where: 'key = ?', whereArgs: [key]);
             }
           }
         }
@@ -217,7 +221,7 @@ class DatabaseService {
   }
 
   Future<void> pruneExpiredCache(
-      {Duration maxAge = const Duration(days: 5)}) async {
+      {Duration maxAge = const Duration(days: 3)}) async {
     try {
       final expiryCutoff = DateTime.now().subtract(maxAge).toIso8601String();
       await _db.delete(
@@ -226,6 +230,45 @@ class DatabaseService {
         whereArgs: [expiryCutoff],
       );
     } catch (_) {}
+  }
+
+  /// Records the latest successful online sync timestamp
+  Future<void> recordOnlineSync() async {
+    try {
+      await cacheData('__last_online_sync__', DateTime.now().toIso8601String());
+    } catch (_) {}
+  }
+
+  /// Gets the latest recorded online sync timestamp
+  Future<DateTime?> getLastOnlineSync() async {
+    try {
+      final val = await getCachedData('__last_online_sync__');
+      if (val != null) {
+        return DateTime.tryParse(val);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// If user has been offline continuously for > 3 days (72 hours),
+  /// purge stale cached business data from SQLite.
+  /// NOTE: Auth credentials in SecureStorage are NEVER deleted.
+  Future<bool> checkAndPruneIfOfflineExpired(
+      {Duration maxAge = const Duration(days: 3)}) async {
+    try {
+      final lastSync = await getLastOnlineSync();
+      if (lastSync != null) {
+        final offlineDuration = DateTime.now().difference(lastSync);
+        if (offlineDuration > maxAge) {
+          // Exceeded 3 continuous days without internet!
+          await _db.delete('cached_data',
+              where: "key != '__last_online_sync__'");
+          await _db.delete('local_notifications');
+          return true; // Expired and purged
+        }
+      }
+    } catch (_) {}
+    return false;
   }
 
   Future<void> clearCache() async {

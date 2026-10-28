@@ -274,28 +274,37 @@ export class ManagerService {
           ? rejectionReason.trim()
           : "Declined by club manager";
 
+      const cancellationReasonText = reasonText
+        .toLowerCase()
+        .includes("manager")
+        ? reasonText
+        : `Declined by club manager: ${reasonText}`;
+
       await client.query(
         `UPDATE public.games
-         SET approval_status = 'REJECTED', status = 'CANCELLED', rejection_reason = $1, manager_id = $2, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $3;`,
-        [reasonText, managerUserId, gameId],
+         SET approval_status = 'REJECTED', status = 'CANCELLED', rejection_reason = $1, cancellation_reason = $2, manager_id = $3, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4;`,
+        [reasonText, cancellationReasonText, managerUserId, gameId],
       );
 
-      const entryFee = parseFloat(game.entry_fee || "0.00");
+      const refundNotifications: Array<{
+        userId: string;
+        newBalance: number;
+        refundAmount: number;
+      }> = [];
+      const processedUserIds = new Set<string>();
+
       const playersRes = await client.query(
         `SELECT user_id, payment_method, payment_reference, payment_status, refund_status 
          FROM public.game_players 
-         WHERE game_id = $1 AND payment_status = 'PAID'
+         WHERE game_id = $1
          FOR UPDATE;`,
         [gameId],
       );
 
-      const refundNotifications: Array<{ userId: string; newBalance: number }> =
-        [];
-
       for (const pRow of playersRes.rows) {
         const pUserId = pRow.user_id;
-        const pMethod = pRow.payment_method || "WALLET";
+        const pMethod = (pRow.payment_method || "").toUpperCase();
         const pRef = pRow.payment_reference;
 
         if (
@@ -305,66 +314,188 @@ export class ManagerService {
           continue;
         }
 
-        if (entryFee > 0) {
-          const refundRef = `MATCH_REFUND:${gameId}:${pUserId}`;
-          const existingRefund = await client.query(
-            `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
-            [pUserId, refundRef],
+        // ONLY players who actually made a payment via WALLET or RAZORPAY are eligible for refund!
+        // Unpaid players or players with FREE / HOST_ADDED MUST NOT receive any refund!
+        if (pRow.payment_status !== "PAID") {
+          continue;
+        }
+
+        if (pMethod !== "WALLET" && pMethod !== "RAZORPAY") {
+          continue;
+        }
+
+        let refundAmount = 0;
+        const isHost = game.created_by_player && pUserId === game.creator_id;
+
+        if (isHost) {
+          refundAmount = parseFloat(game.entry_fee || "0.00");
+        } else if (!game.created_by_player) {
+          refundAmount = parseFloat(
+            game.per_player_fee || game.entry_fee || "0.00",
+          );
+        } else {
+          refundAmount = parseFloat(game.per_player_fee || "0.00");
+        }
+
+        // Verify exact paid amount from transactions or payment orders
+        if (pMethod === "WALLET") {
+          const txCheck = await client.query(
+            `SELECT amount FROM public.transactions 
+             WHERE user_id = $1 AND type = 'PAYMENT' AND reference_id = $2 AND status = 'SUCCESS' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [pUserId, gameId],
+          );
+          if (txCheck.rows.length > 0) {
+            const amt = parseFloat(txCheck.rows[0].amount || "0.00");
+            refundAmount = amt > 0 ? amt : 0;
+          } else {
+            refundAmount = 0;
+          }
+        } else if (pMethod === "RAZORPAY" && pRef) {
+          const poCheck = await client.query(
+            `SELECT amount_paise FROM public.payment_orders 
+             WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2 AND status = 'PAID' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [pRef, pUserId],
+          );
+          if (poCheck.rows.length > 0) {
+            const amt = parseFloat(poCheck.rows[0].amount_paise || "0") / 100.0;
+            refundAmount = amt > 0 ? amt : 0;
+          } else {
+            refundAmount = 0;
+          }
+        } else {
+          refundAmount = 0;
+        }
+
+        if (refundAmount <= 0) {
+          continue;
+        }
+
+        processedUserIds.add(pUserId);
+        const refundRef = isHost
+          ? `MATCH_HOST_REFUND:${gameId}:${pUserId}`
+          : `MATCH_REFUND:${gameId}:${pUserId}`;
+
+        const existingRefund = await client.query(
+          `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+          [pUserId, refundRef],
+        );
+
+        let newBal = 0;
+        if (existingRefund.rows.length === 0) {
+          const refundDesc =
+            pMethod === "RAZORPAY"
+              ? `Refund for match declined by manager (originally paid via Razorpay): ${game.title || "Football Match"}`
+              : `Refund for match declined by manager: ${game.title || "Football Match"}`;
+
+          const txRes = await client.query(
+            `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+             VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+             RETURNING id, balance_after;`,
+            [pUserId, refundAmount, refundDesc, refundRef],
+          );
+          newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
+
+          await client.query(
+            `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+             VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+             ON CONFLICT (id) DO NOTHING;`,
+            [
+              txRes.rows[0]?.id,
+              pUserId,
+              refundAmount,
+              newBal,
+              refundDesc,
+              refundRef,
+            ],
           );
 
-          let newBal = 0;
-          if (existingRefund.rows.length === 0) {
-            const refundDesc =
-              pMethod === "RAZORPAY"
-                ? `Refund for match declined by manager (originally paid via Razorpay): ${game.title || "Football Match"}`
-                : `Refund for match declined by manager: ${game.title || "Football Match"}`;
+          await client.query(
+            `UPDATE public.game_players 
+             SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP 
+             WHERE game_id = $3 AND user_id = $4;`,
+            [refundRef, refundAmount, gameId, pUserId],
+          );
 
-            const txRes = await client.query(
-              `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
-               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
-               RETURNING id, balance_after;`,
-              [pUserId, entryFee, refundDesc, refundRef],
-            );
-            newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
-
+          if (pRef) {
             await client.query(
-              `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
-               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
-               ON CONFLICT (id) DO NOTHING;`,
-              [
-                txRes.rows[0]?.id,
-                pUserId,
-                entryFee,
-                newBal,
-                refundDesc,
-                refundRef,
-              ],
+              `UPDATE public.payment_orders 
+               SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP 
+               WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2;`,
+              [pRef, pUserId],
             );
-
-            await client.query(
-              `UPDATE public.game_players 
-               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP 
-               WHERE game_id = $3 AND user_id = $4;`,
-              [refundRef, entryFee, gameId, pUserId],
-            );
-
-            if (pRef) {
-              await client.query(
-                `UPDATE public.payment_orders 
-                 SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP 
-                 WHERE provider_payment_id = $1 OR provider_order_id = $1 OR id = $1;`,
-                [pRef],
-              );
-            }
-          } else {
-            const wRes = await client.query(
-              `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
-              [pUserId],
-            );
-            newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
           }
+        } else {
+          const wRes = await client.query(
+            `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
+            [pUserId],
+          );
+          newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
+        }
 
-          refundNotifications.push({ userId: pUserId, newBalance: newBal });
+        refundNotifications.push({
+          userId: pUserId,
+          newBalance: newBal,
+          refundAmount,
+        });
+      }
+
+      // If host created match and paid, but wasn't in game_players table:
+      if (
+        game.created_by_player &&
+        game.creator_id &&
+        !processedUserIds.has(game.creator_id)
+      ) {
+        const hostFee = parseFloat(game.entry_fee || "0.00");
+        if (hostFee > 0) {
+          const hostPaidTx = await client.query(
+            `SELECT amount FROM public.transactions 
+             WHERE user_id = $1 AND type = 'PAYMENT' AND reference_id = $2 AND status = 'SUCCESS' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [game.creator_id, gameId],
+          );
+          if (hostPaidTx.rows.length > 0) {
+            const hostRefundRef = `MATCH_HOST_REFUND:${gameId}:${game.creator_id}`;
+            const existingHostRefund = await client.query(
+              `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+              [game.creator_id, hostRefundRef],
+            );
+            if (existingHostRefund.rows.length === 0) {
+              const txRes = await client.query(
+                `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+                 VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+                 RETURNING id, balance_after;`,
+                [
+                  game.creator_id,
+                  hostFee,
+                  `Refund for match declined by manager: ${game.title || "Football Match"}`,
+                  hostRefundRef,
+                ],
+              );
+              const hostNewBal = parseFloat(
+                txRes.rows[0]?.balance_after || "0.00",
+              );
+              await client.query(
+                `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+                 VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+                 ON CONFLICT (id) DO NOTHING;`,
+                [
+                  txRes.rows[0]?.id,
+                  game.creator_id,
+                  hostFee,
+                  hostNewBal,
+                  `Refund for match declined by manager: ${game.title || "Football Match"}`,
+                  hostRefundRef,
+                ],
+              );
+              refundNotifications.push({
+                userId: game.creator_id,
+                newBalance: hostNewBal,
+                refundAmount: hostFee,
+              });
+            }
+          }
         }
       }
 
@@ -382,6 +513,16 @@ export class ManagerService {
 
       await client.query("COMMIT");
 
+      try {
+        const io = getSocketIO();
+        io.emit("match:cancelled", {
+          gameId,
+          status: "CANCELLED",
+          reason: cancellationReasonText,
+          cancelledBy: "MANAGER",
+        });
+      } catch (_) {}
+
       sendUserNotification(game.creator_id, {
         title: "❌ Match Request Declined",
         message: `Your match request for "${game.title}" was declined: ${reasonText}`,
@@ -389,12 +530,14 @@ export class ManagerService {
       });
 
       for (const item of refundNotifications) {
-        sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
-        sendUserNotification(item.userId, {
-          title: "⚠️ Match Cancelled",
-          message: `Match "${game.title}" was declined. ₹${entryFee.toFixed(2)} refunded to your wallet.`,
-          type: "WARNING",
-        });
+        if (item.refundAmount > 0) {
+          sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
+          sendUserNotification(item.userId, {
+            title: "⚠️ Match Cancelled",
+            message: `Match "${game.title}" was declined. ₹${item.refundAmount.toFixed(2)} refunded to your wallet.`,
+            type: "WARNING",
+          });
+        }
       }
 
       return {
@@ -808,9 +951,19 @@ export class ManagerService {
         );
       }
 
+      const cancelReasonText =
+        cancellationReason && cancellationReason.trim().length > 0
+          ? cancellationReason.toLowerCase().includes("manager") ||
+            cancellationReason.toLowerCase().includes("admin")
+            ? cancellationReason.trim()
+            : `Cancelled by club manager: ${cancellationReason.trim()}`
+          : userRole === 1
+            ? "Cancelled by admin"
+            : "Cancelled by club manager";
+
       await client.query(
-        `UPDATE public.games SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
-        [gameId],
+        `UPDATE public.games SET status = 'CANCELLED', cancellation_reason = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2;`,
+        [cancelReasonText, gameId],
       );
 
       let activeRecordingId: string | null = null;
@@ -828,21 +981,24 @@ export class ManagerService {
         }
       } catch (_) {}
 
-      const entryFee = parseFloat(game.entry_fee || "0.00");
+      const refundNotifications: Array<{
+        userId: string;
+        newBalance: number;
+        refundAmount: number;
+      }> = [];
+      const processedUserIds = new Set<string>();
+
       const playersRes = await client.query(
         `SELECT user_id, payment_method, payment_reference, payment_status, refund_status 
          FROM public.game_players 
-         WHERE game_id = $1 AND payment_status = 'PAID'
+         WHERE game_id = $1
          FOR UPDATE;`,
         [gameId],
       );
 
-      const refundNotifications: Array<{ userId: string; newBalance: number }> =
-        [];
-
       for (const pRow of playersRes.rows) {
         const pUserId = pRow.user_id;
-        const pMethod = pRow.payment_method || "WALLET";
+        const pMethod = (pRow.payment_method || "").toUpperCase();
         const pRef = pRow.payment_reference;
 
         if (
@@ -852,67 +1008,188 @@ export class ManagerService {
           continue;
         }
 
-        if (entryFee > 0) {
-          const refundRef = `MATCH_REFUND:${gameId}:${pUserId}`;
+        // ONLY players who actually made a payment via WALLET or RAZORPAY are eligible for refund!
+        // Unpaid players or players with FREE / HOST_ADDED MUST NOT receive any refund!
+        if (pRow.payment_status !== "PAID") {
+          continue;
+        }
 
-          const existingRefund = await client.query(
-            `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
-            [pUserId, refundRef],
+        if (pMethod !== "WALLET" && pMethod !== "RAZORPAY") {
+          continue;
+        }
+
+        let refundAmount = 0;
+        const isHost = game.created_by_player && pUserId === game.creator_id;
+
+        if (isHost) {
+          refundAmount = parseFloat(game.entry_fee || "0.00");
+        } else if (!game.created_by_player) {
+          refundAmount = parseFloat(
+            game.per_player_fee || game.entry_fee || "0.00",
+          );
+        } else {
+          refundAmount = parseFloat(game.per_player_fee || "0.00");
+        }
+
+        // Verify exact paid amount from transactions or payment orders
+        if (pMethod === "WALLET") {
+          const txCheck = await client.query(
+            `SELECT amount FROM public.transactions 
+             WHERE user_id = $1 AND type = 'PAYMENT' AND reference_id = $2 AND status = 'SUCCESS' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [pUserId, gameId],
+          );
+          if (txCheck.rows.length > 0) {
+            const amt = parseFloat(txCheck.rows[0].amount || "0.00");
+            refundAmount = amt > 0 ? amt : 0;
+          } else {
+            refundAmount = 0;
+          }
+        } else if (pMethod === "RAZORPAY" && pRef) {
+          const poCheck = await client.query(
+            `SELECT amount_paise FROM public.payment_orders 
+             WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2 AND status = 'PAID' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [pRef, pUserId],
+          );
+          if (poCheck.rows.length > 0) {
+            const amt = parseFloat(poCheck.rows[0].amount_paise || "0") / 100.0;
+            refundAmount = amt > 0 ? amt : 0;
+          } else {
+            refundAmount = 0;
+          }
+        } else {
+          refundAmount = 0;
+        }
+
+        if (refundAmount <= 0) {
+          continue;
+        }
+
+        processedUserIds.add(pUserId);
+        const refundRef = isHost
+          ? `MATCH_HOST_REFUND:${gameId}:${pUserId}`
+          : `MATCH_REFUND:${gameId}:${pUserId}`;
+
+        const existingRefund = await client.query(
+          `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+          [pUserId, refundRef],
+        );
+
+        let newBal = 0;
+        if (existingRefund.rows.length === 0) {
+          const refundDesc =
+            pMethod === "RAZORPAY"
+              ? `Refund for match cancelled by ${userRole === 1 ? "admin" : "manager"} (originally paid via Razorpay): ${game.title || "Football Match"}`
+              : `Refund for match cancelled by ${userRole === 1 ? "admin" : "manager"}: ${game.title || "Football Match"}`;
+
+          const txRes = await client.query(
+            `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+             VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+             RETURNING id, balance_after;`,
+            [pUserId, refundAmount, refundDesc, refundRef],
+          );
+          newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
+
+          await client.query(
+            `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+             VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+             ON CONFLICT (id) DO NOTHING;`,
+            [
+              txRes.rows[0]?.id,
+              pUserId,
+              refundAmount,
+              newBal,
+              refundDesc,
+              refundRef,
+            ],
           );
 
-          let newBal = 0;
-          if (existingRefund.rows.length === 0) {
-            const refundDesc =
-              pMethod === "RAZORPAY"
-                ? `Refund for match cancelled by ${userRole === 1 ? "admin" : "manager"} (originally paid via Razorpay): ${game.title || "Football Match"}`
-                : `Refund for match cancelled by ${userRole === 1 ? "admin" : "manager"}: ${game.title || "Football Match"}`;
+          await client.query(
+            `UPDATE public.game_players 
+             SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP 
+             WHERE game_id = $3 AND user_id = $4;`,
+            [refundRef, refundAmount, gameId, pUserId],
+          );
 
-            const txRes = await client.query(
-              `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
-               VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
-               RETURNING id, balance_after;`,
-              [pUserId, entryFee, refundDesc, refundRef],
-            );
-            newBal = parseFloat(txRes.rows[0]?.balance_after || "0.00");
-
+          if (pRef) {
             await client.query(
-              `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
-               VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
-               ON CONFLICT (id) DO NOTHING;`,
-              [
-                txRes.rows[0]?.id,
-                pUserId,
-                entryFee,
-                newBal,
-                refundDesc,
-                refundRef,
-              ],
+              `UPDATE public.payment_orders 
+               SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP 
+               WHERE (provider_payment_id = $1 OR provider_order_id = $1 OR id = $1) AND user_id = $2;`,
+              [pRef, pUserId],
             );
-
-            await client.query(
-              `UPDATE public.game_players 
-               SET payment_status = 'REFUNDED', refund_status = 'REFUNDED_TO_WALLET', refund_reference = $1, refund_amount = $2, refunded_at = CURRENT_TIMESTAMP 
-               WHERE game_id = $3 AND user_id = $4;`,
-              [refundRef, entryFee, gameId, pUserId],
-            );
-
-            if (pRef) {
-              await client.query(
-                `UPDATE public.payment_orders 
-                 SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP 
-                 WHERE provider_payment_id = $1 OR provider_order_id = $1 OR id = $1;`,
-                [pRef],
-              );
-            }
-          } else {
-            const wRes = await client.query(
-              `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
-              [pUserId],
-            );
-            newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
           }
+        } else {
+          const wRes = await client.query(
+            `SELECT wallet_balance FROM public.player_wallets WHERE user_id = $1;`,
+            [pUserId],
+          );
+          newBal = parseFloat(wRes.rows[0]?.wallet_balance || "0.00");
+        }
 
-          refundNotifications.push({ userId: pUserId, newBalance: newBal });
+        refundNotifications.push({
+          userId: pUserId,
+          newBalance: newBal,
+          refundAmount,
+        });
+      }
+
+      // If game was created by a player and host paid entry_fee, but host wasn't in game_players table:
+      if (
+        game.created_by_player &&
+        game.creator_id &&
+        !processedUserIds.has(game.creator_id)
+      ) {
+        const hostFee = parseFloat(game.entry_fee || "0.00");
+        if (hostFee > 0) {
+          const hostPaidTx = await client.query(
+            `SELECT amount FROM public.transactions 
+             WHERE user_id = $1 AND type = 'PAYMENT' AND reference_id = $2 AND status = 'SUCCESS' 
+             ORDER BY created_at DESC LIMIT 1;`,
+            [game.creator_id, gameId],
+          );
+          if (hostPaidTx.rows.length > 0) {
+            const hostRefundRef = `MATCH_HOST_REFUND:${gameId}:${game.creator_id}`;
+            const existingHostRefund = await client.query(
+              `SELECT id FROM public.transactions WHERE user_id = $1 AND type = 'REFUND' AND reference_id = $2;`,
+              [game.creator_id, hostRefundRef],
+            );
+            if (existingHostRefund.rows.length === 0) {
+              const txRes = await client.query(
+                `INSERT INTO public.transactions (user_id, type, amount, balance_after, status, description, reference_id)
+                 VALUES ($1, 'REFUND', $2, 0, 'SUCCESS', $3, $4)
+                 RETURNING id, balance_after;`,
+                [
+                  game.creator_id,
+                  hostFee,
+                  `Pitch booking refund for cancelled match: ${game.title || "Football Match"}`,
+                  hostRefundRef,
+                ],
+              );
+              const hostNewBal = parseFloat(
+                txRes.rows[0]?.balance_after || "0.00",
+              );
+              await client.query(
+                `INSERT INTO public.wallet_transactions (id, user_id, transaction_type, amount, balance_after, description, status, reference_id)
+                 VALUES ($1, $2, 'REFUND', $3, $4, $5, 'SUCCESS', $6)
+                 ON CONFLICT (id) DO NOTHING;`,
+                [
+                  txRes.rows[0]?.id,
+                  game.creator_id,
+                  hostFee,
+                  hostNewBal,
+                  `Pitch booking refund for cancelled match: ${game.title || "Football Match"}`,
+                  hostRefundRef,
+                ],
+              );
+              refundNotifications.push({
+                userId: game.creator_id,
+                newBalance: hostNewBal,
+                refundAmount: hostFee,
+              });
+            }
+          }
         }
       }
 
@@ -954,6 +1231,16 @@ export class ManagerService {
 
       await client.query("COMMIT");
 
+      try {
+        const io = getSocketIO();
+        io.emit("match:cancelled", {
+          gameId,
+          status: "CANCELLED",
+          reason: cancelReasonText,
+          cancelledBy: userRole === 1 ? "ADMIN" : "MANAGER",
+        });
+      } catch (_) {}
+
       if (activeRecordingId) {
         try {
           await CctvRecordingService.stopRecording(activeRecordingId, {
@@ -965,12 +1252,14 @@ export class ManagerService {
       }
 
       for (const item of refundNotifications) {
-        sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
-        sendUserNotification(item.userId, {
-          title: "⚠️ Match Cancelled",
-          message: `"${game.title}" was cancelled by ${userRole === 1 ? "admin" : "manager"}. ${entryFee > 0 ? `₹${entryFee.toFixed(2)} refunded to your wallet.` : ""}`,
-          type: "WARNING",
-        });
+        if (item.refundAmount > 0) {
+          sendWalletUpdate(item.userId, { walletBalance: item.newBalance });
+          sendUserNotification(item.userId, {
+            title: "⚠️ Match Cancelled",
+            message: `"${game.title}" was cancelled by ${userRole === 1 ? "admin" : "manager"}. ₹${item.refundAmount.toFixed(2)} refunded to your wallet.`,
+            type: "WARNING",
+          });
+        }
       }
 
       return { gameId, status: "CANCELLED", cancellationReason };
@@ -1140,8 +1429,7 @@ export class ManagerService {
     const cleanDate = matchDate.includes("T")
       ? matchDate.split("T")[0]
       : matchDate;
-    const cleanStart =
-      startTime.length === 5 ? `${startTime}:00` : startTime;
+    const cleanStart = startTime.length === 5 ? `${startTime}:00` : startTime;
     const cleanEnd = endTime.length === 5 ? `${endTime}:00` : endTime;
 
     const newStart = new Date(`${cleanDate}T${cleanStart}+05:30`);
@@ -1625,8 +1913,8 @@ export class ManagerService {
       const completedAtMs = game.updated_at
         ? new Date(game.updated_at).getTime()
         : game.created_at
-        ? new Date(game.created_at).getTime()
-        : 0;
+          ? new Date(game.created_at).getTime()
+          : 0;
       const completedPast10 =
         completedAtMs > 0 && nowMs >= completedAtMs + tenMinsMs;
 

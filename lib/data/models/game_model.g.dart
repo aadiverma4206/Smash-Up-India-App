@@ -41,4 +41,7 @@ Map<String, dynamic> _$GameModelToJson(GameModel instance) => <String, dynamic>{
       'roster': instance.roster,
       'videoPlaybackUrl': instance.videoPlaybackUrl,
       'entryFee': instance.entryFee,
+      'cancellationReason': instance.cancellationReason,
+      'cancelledBy': instance.cancelledBy,
+      'rejectionReason': instance.rejectionReason,
     };

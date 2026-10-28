@@ -420,4 +420,63 @@ class AppDateUtils {
 
     return null;
   }
+
+  static String sanitizeNotificationText(String text) {
+    if (text.trim().isEmpty) return text;
+
+    var result = text;
+
+    // 1. Format ISO Date e.g. 2030-05-20 -> 20 May 2030
+    final dateRegex = RegExp(r'\b(\d{4})-(\d{2})-(\d{2})\b');
+    result = result.replaceAllMapped(dateRegex, (match) {
+      try {
+        final year = int.parse(match.group(1)!);
+        final month = int.parse(match.group(2)!);
+        final day = int.parse(match.group(3)!);
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+          final dt = DateTime(year, month, day);
+          return DateFormat('d MMM yyyy').format(dt);
+        }
+      } catch (_) {}
+      return match.group(0)!;
+    });
+
+    // 2. Format 24-hour Time Range e.g. (15:00:00 - 18:00:00) -> (3:00 PM - 6:00 PM)
+    final rangeRegex = RegExp(
+      r'\((\d{1,2}):(\d{2})(?::\d{2})?\s*-\s*(\d{1,2}):(\d{2})(?::\d{2})?\)',
+    );
+    result = result.replaceAllMapped(rangeRegex, (match) {
+      try {
+        final h1 = int.parse(match.group(1)!);
+        final m1 = int.parse(match.group(2)!);
+        final h2 = int.parse(match.group(3)!);
+        final m2 = int.parse(match.group(4)!);
+
+        final now = DateTime.now();
+        final dt1 = DateTime(now.year, now.month, now.day, h1, m1);
+        final dt2 = DateTime(now.year, now.month, now.day, h2, m2);
+
+        final t1 = DateFormat('h:mm a').format(dt1);
+        final t2 = DateFormat('h:mm a').format(dt2);
+        return '($t1 - $t2)';
+      } catch (_) {}
+      return match.group(0)!;
+    });
+
+    // 3. Format standalone 24-hour time HH:mm:ss -> h:mm a
+    final standaloneTimeRegex =
+        RegExp(r'\b([01]?\d|2[0-3]):([0-5]\d):([0-5]\d)\b');
+    result = result.replaceAllMapped(standaloneTimeRegex, (match) {
+      try {
+        final h = int.parse(match.group(1)!);
+        final m = int.parse(match.group(2)!);
+        final now = DateTime.now();
+        final dt = DateTime(now.year, now.month, now.day, h, m);
+        return DateFormat('h:mm a').format(dt);
+      } catch (_) {}
+      return match.group(0)!;
+    });
+
+    return result;
+  }
 }

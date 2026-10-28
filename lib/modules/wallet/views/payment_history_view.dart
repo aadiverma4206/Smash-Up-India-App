@@ -16,8 +16,7 @@ enum PaymentCategory {
   other,
 }
 
-class PlayerPaymentHistoryView
-    extends GetView<PlayerPaymentHistoryController> {
+class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
   const PlayerPaymentHistoryView({super.key});
 
   PaymentCategory _getPaymentCategory(WalletTransactionModel tx) {
@@ -70,7 +69,9 @@ class PlayerPaymentHistoryView
     }
 
     // Fallback for TOPUP / CREDIT
-    if (typeUpper == 'TOPUP' || typeUpper == 'CREDIT' || typeUpper == 'DEPOSIT') {
+    if (typeUpper == 'TOPUP' ||
+        typeUpper == 'CREDIT' ||
+        typeUpper == 'DEPOSIT') {
       if (descLower.contains('order')) {
         return PaymentCategory.pitchBookingRazorpay;
       }
@@ -95,20 +96,17 @@ class PlayerPaymentHistoryView
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_rounded,
-            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
-          ),
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Get.back();
-            } else {
-              Get.offAllNamed(Routes.home);
-              Get.toNamed(Routes.wallet);
-            }
-          },
-        ),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: Icon(
+                  Icons.arrow_back_rounded,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
+                ),
+                onPressed: () => Get.back(),
+              )
+            : null,
         title: Text(
           'Transaction History & Records',
           style: TextStyle(
@@ -254,9 +252,8 @@ class PlayerPaymentHistoryView
             hintText: 'Search transactions by description or amount...',
             hintStyle: TextStyle(
               fontSize: 13,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : Colors.grey.shade500,
+              color:
+                  isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
             ),
             prefixIcon: const Icon(Icons.search_rounded,
                 color: AppColors.primary, size: 22),
@@ -282,8 +279,6 @@ class PlayerPaymentHistoryView
       ),
     );
   }
-
-
 
   Widget _buildGroupSection(
       BuildContext context, DateGroupedTransactions group) {

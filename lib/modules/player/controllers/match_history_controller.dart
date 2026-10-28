@@ -5,6 +5,7 @@ import '../../../data/models/game_model.dart';
 import '../../../data/models/video_model.dart';
 import '../../games/repositories/games_repository.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/services/connectivity_service.dart';
 
 class MatchHistoryController extends GetxController {
   final PlayerRepository repository = Get.find<PlayerRepository>();
@@ -38,6 +39,16 @@ class MatchHistoryController extends GetxController {
     }
     fetchHistory(isRefresh: true);
     scrollController.addListener(_onScroll);
+
+    if (Get.isRegistered<ConnectivityService>()) {
+      ConnectivityService.to.isConnected.listen((connected) {
+        if (connected) {
+          AppLogger.info(
+              '⚡ Connection restored: Auto-refreshing match history');
+          fetchHistory(isRefresh: true);
+        }
+      });
+    }
   }
 
   @override

@@ -78,7 +78,9 @@ export const deleteNotificationController = asyncHandler(
       throw new ApiError(404, "Notification not found or unauthorized");
     }
 
-    res.status(200).json(ApiResponse.success("Notification deleted successfully"));
+    res
+      .status(200)
+      .json(ApiResponse.success("Notification deleted successfully"));
   },
 );
 
@@ -97,6 +99,10 @@ export const deleteMultipleNotificationsController = asyncHandler(
 
     res
       .status(200)
-      .json(ApiResponse.success(`Deleted ${count} notifications successfully`, { count }));
+      .json(
+        ApiResponse.success(`Deleted ${count} notifications successfully`, {
+          count,
+        }),
+      );
   },
 );
