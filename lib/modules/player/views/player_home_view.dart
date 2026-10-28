@@ -377,7 +377,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                     icon: Icon(Icons.apps_rounded), label: Text('Arena')),
                 NavigationRailDestination(
                     icon: Icon(Icons.grid_view_rounded),
-                    label: Text('Explore')),
+                    label: Text('My Matches')),
                 NavigationRailDestination(
                     icon: Icon(Icons.receipt_long_rounded),
                     label: Text('Payments')),
