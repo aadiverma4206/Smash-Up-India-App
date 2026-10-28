@@ -6,6 +6,8 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/routes/app_routes.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../core/errors/error_handler.dart';
 
 class CourtsListView extends GetView<CourtsController> {
   const CourtsListView({super.key});
@@ -512,8 +514,18 @@ class CourtsListView extends GetView<CourtsController> {
                             ),
                             ElevatedButton.icon(
                               onPressed: isAvailable
-                                  ? () => Get.toNamed(Routes.createGame,
-                                      arguments: {'courtId': court.id})
+                                  ? () {
+                                      if (Get.isRegistered<ConnectivityService>() &&
+                                          !ConnectivityService.to.isConnected.value) {
+                                        ErrorHandler.showErrorSnackBar(
+                                          'No Internet Connection',
+                                          'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+                                        );
+                                        return;
+                                      }
+                                      Get.toNamed(Routes.createGame,
+                                          arguments: {'courtId': court.id});
+                                    }
                                   : null,
                               icon: Icon(
                                 isAvailable
@@ -851,6 +863,14 @@ class CourtsListView extends GetView<CourtsController> {
                 return InkWell(
                   onTap: () {
                     if (!isBooked) {
+                      if (Get.isRegistered<ConnectivityService>() &&
+                          !ConnectivityService.to.isConnected.value) {
+                        ErrorHandler.showErrorSnackBar(
+                          'No Internet Connection',
+                          'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+                        );
+                        return;
+                      }
                       Get.toNamed(Routes.createGame, arguments: {
                         'courtId': activeCourt,
                         'startTime': '${hour.toString().padLeft(2, '0')}:00',

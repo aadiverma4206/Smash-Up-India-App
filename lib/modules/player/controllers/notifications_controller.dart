@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../repositories/player_repository.dart';
+import '../views/player_notification_detail_view.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../core/security/deep_link_service.dart';
 import '../../../core/errors/error_handler.dart';
@@ -105,28 +106,25 @@ class NotificationsController extends GetxController {
       return;
     }
 
+    final readItem = NotificationModel(
+      id: item.id,
+      title: item.title,
+      body: item.body,
+      type: item.type,
+      data: item.data,
+      isRead: true,
+      createdAt: item.createdAt,
+    );
+
     try {
       await repository.markNotificationRead(item.id);
       final idx = notifications.indexWhere((n) => n.id == item.id);
       if (idx != -1) {
-        notifications[idx] = NotificationModel(
-          id: item.id,
-          title: item.title,
-          body: item.body,
-          type: item.type,
-          data: item.data,
-          isRead: true,
-          createdAt: item.createdAt,
-        );
+        notifications[idx] = readItem;
       }
+    } catch (_) {}
 
-      if (item.data != null && item.data!['link'] != null) {
-        final uri = Uri.parse(item.data!['link']);
-        DeepLinkService.handleUri(uri);
-      }
-    } catch (e) {
-      ErrorHandler.showErrorSnackBar('Error', e);
-    }
+    Get.to(() => PlayerNotificationDetailView(model: readItem));
   }
 
   Future<void> markAllRead() async {

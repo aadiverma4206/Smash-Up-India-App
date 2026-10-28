@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../repositories/games_repository.dart';
+import '../datasources/games_remote_datasource.dart';
 import '../../wallet/repositories/wallet_repository.dart';
 import '../../wallet/datasources/wallet_remote_datasource.dart';
 import '../../../data/models/court_model.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/connectivity_service.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/app_date_utils.dart';
@@ -16,7 +18,32 @@ import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
 
 class CreateGameController extends GetxController {
-  final GamesRepository repository = Get.find<GamesRepository>();
+  GamesRepository get repository {
+    if (Get.isRegistered<GamesRepository>()) {
+      return Get.find<GamesRepository>();
+    }
+    final dio = Get.find<DioClient>();
+    final ds = GamesRemoteDataSource(dioClient: dio);
+    return GamesRepository(remoteDataSource: ds);
+  }
+
+  bool get isOnline {
+    if (Get.isRegistered<ConnectivityService>()) {
+      return ConnectivityService.to.isConnected.value;
+    }
+    return true;
+  }
+
+  bool checkInternetConnection({String actionName = 'Pitch booking'}) {
+    if (!isOnline) {
+      ErrorHandler.showErrorSnackBar(
+        'No Internet Connection',
+        '$actionName requires an active internet connection to check court availability and proceed. Please turn on your mobile data or Wi-Fi and try again.',
+      );
+      return false;
+    }
+    return true;
+  }
 
   WalletRepository get _walletRepo {
     if (Get.isRegistered<WalletRepository>()) {
@@ -89,6 +116,17 @@ class CreateGameController extends GetxController {
     loadVenues();
     fetchWalletBalance();
 
+    if (Get.isRegistered<ConnectivityService>()) {
+      ever(ConnectivityService.to.isConnected, (bool online) {
+        if (online) {
+          AppLogger.info('📶 Connection restored in CreateGameController: Syncing venues and slots');
+          loadVenues();
+          fetchWalletBalance();
+          fetchCourtAvailability();
+        }
+      });
+    }
+
     selectedGameTitle.value = 'Football';
     descriptionController.clear();
     selectedDate.value = null;
@@ -126,6 +164,11 @@ class CreateGameController extends GetxController {
   }
 
   Future<void> loadVenues() async {
+    if (!isOnline) {
+      AppLogger.info('Offline mode: Using default turf courts');
+      _populateCourts([]);
+      return;
+    }
     try {
       final fetchedClubs = await repository.getClubs();
       if (fetchedClubs.isNotEmpty) {
@@ -210,6 +253,9 @@ class CreateGameController extends GetxController {
       walletBalance.value = 0.0;
       return;
     }
+    if (!isOnline) {
+      return;
+    }
     try {
       final w = await _walletRepo.getWallet();
       walletBalance.value = w.balance;
@@ -239,6 +285,13 @@ class CreateGameController extends GetxController {
     final court = selectedCourt.value;
     final date = selectedDate.value;
     if (court == null || date == null) {
+      occupiedCourtSlots.clear();
+      slotConflictWarning.value = null;
+      conflictingSlot.value = null;
+      return;
+    }
+
+    if (!isOnline) {
       occupiedCourtSlots.clear();
       slotConflictWarning.value = null;
       conflictingSlot.value = null;
@@ -457,6 +510,7 @@ class CreateGameController extends GetxController {
   }
 
   Future<void> proceedToCheckout() async {
+    if (!checkInternetConnection(actionName: 'Pitch booking')) return;
     isProcessing.value = true;
     try {
       await fetchCourtAvailability();
@@ -468,6 +522,7 @@ class CreateGameController extends GetxController {
   }
 
   Future<void> executePaymentAndCreateGame() async {
+    if (!checkInternetConnection(actionName: 'Pitch booking payment')) return;
     isProcessing.value = true;
     final userRole =
         AuthService.to.currentUser.value?.roleName?.toUpperCase() ?? '';
@@ -718,6 +773,11 @@ class CreateGameController extends GetxController {
     String? razorpayOrderId,
     String? razorpaySignature,
   }) async {
+    if (!checkInternetConnection(actionName: 'Pitch booking')) {
+      isProcessing.value = false;
+      return;
+    }
+
     final court = selectedCourt.value;
     final courtId = (court?.name.toLowerCase().contains('2') == true ||
             court?.id.toLowerCase().contains('2') == true)

@@ -6,7 +6,6 @@ import '../../../data/models/wallet_models.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../app/routes/app_routes.dart';
 
 enum PaymentCategory {
   walletTopup, // Added money to wallet via Razorpay
@@ -151,6 +150,7 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
                   if (controller.groupedTransactions.isEmpty) {
                     return Center(
                       child: SingleChildScrollView(
+                        primary: false,
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: Padding(
                           padding: const EdgeInsets.all(20.0),
@@ -196,6 +196,7 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
                   return RefreshIndicator(
                     onRefresh: controller.fetchTransactions,
                     child: ListView.builder(
+                      primary: false,
                       physics: const AlwaysScrollableScrollPhysics(
                           parent: BouncingScrollPhysics()),
                       padding: const EdgeInsets.symmetric(

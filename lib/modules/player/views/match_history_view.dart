@@ -364,9 +364,11 @@ class _MatchHistoryViewState extends State<MatchHistoryView> {
             return RefreshIndicator(
               onRefresh: () => controller.fetchHistory(isRefresh: true),
               child: Scrollbar(
+                controller: controller.scrollController,
                 thumbVisibility: true,
                 child: ListView.builder(
                   controller: controller.scrollController,
+                  primary: false,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.symmetric(horizontal: 16),

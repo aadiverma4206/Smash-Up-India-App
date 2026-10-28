@@ -12,6 +12,7 @@ import '../../modules/auth/views/reset_password_view.dart';
 import '../../modules/auth/views/sessions_view.dart';
 import '../../modules/auth/views/privacy_policy.dart';
 import '../../modules/player/bindings/player_binding.dart';
+import '../../modules/games/bindings/create_game_binding.dart';
 import '../../modules/player/views/player_home_view.dart';
 import '../../modules/player/views/profile_view.dart';
 import '../../modules/player/views/edit_profile_view.dart';
@@ -67,7 +68,7 @@ import '../../modules/admin/views/admin_payment_history_view.dart';
 import '../../modules/admin/views/admin_payment_detail_view.dart';
 import '../../modules/admin/views/admin_profile_view.dart';
 import '../../modules/admin/views/admin_edit_profile_view.dart';
-import '../../modules/notifications/views/notification_detail_view.dart';
+import '../../modules/player/views/player_notification_detail_view.dart';
 import '../../modules/notifications/views/admin_notifications_view.dart';
 import '../../modules/notifications/views/player_notifications_view.dart';
 import '../../modules/support/views/faq_view.dart';
@@ -181,7 +182,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.notificationDetail,
-      page: () => const NotificationDetailView(),
+      page: () => const PlayerNotificationDetailView(),
       binding: PlayerBinding(),
     ),
     GetPage(
@@ -202,22 +203,22 @@ class AppPages {
     GetPage(
       name: Routes.findGames,
       page: () => const CreateGameView(),
-      binding: PlayerBinding(),
+      binding: CreateGameBinding(),
     ),
     GetPage(
       name: Routes.createGame,
       page: () => const CreateGameView(),
-      binding: PlayerBinding(),
+      binding: CreateGameBinding(),
     ),
     GetPage(
       name: Routes.gameCheckout,
       page: () => const GameCheckoutView(),
-      binding: PlayerBinding(),
+      binding: CreateGameBinding(),
     ),
     GetPage(
       name: Routes.gameDetails,
       page: () => const GameDetailsView(),
-      binding: PlayerBinding(),
+      binding: CreateGameBinding(),
     ),
     GetPage(
       name: Routes.courts,

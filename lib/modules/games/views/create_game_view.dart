@@ -6,6 +6,8 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../core/errors/error_handler.dart';
 
 class CreateGameView extends StatelessWidget {
   const CreateGameView({super.key});
@@ -131,7 +133,9 @@ class CreateGameView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(CreateGameController());
+    final controller = Get.isRegistered<CreateGameController>()
+        ? Get.find<CreateGameController>()
+        : Get.put(CreateGameController(), permanent: true);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -169,6 +173,7 @@ class CreateGameView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildOfflineWarningBanner(context),
                         _buildSectionHeader(
                           context,
                           title: 'Sport & Pitch Info',
@@ -205,6 +210,53 @@ class CreateGameView extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Widget _buildOfflineWarningBanner(BuildContext context) {
+    if (!Get.isRegistered<ConnectivityService>()) return const SizedBox.shrink();
+    return Obx(() {
+      final isOnline = ConnectivityService.to.isConnected.value;
+      if (isOnline) return const SizedBox.shrink();
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade900.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.wifi_off_rounded, color: Colors.redAccent, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'No Internet Connection',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Pitch booking, court slot checks, and checkout require an active internet connection.',
+                    style: TextStyle(
+                      color: Colors.red.shade200,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildSectionHeader(BuildContext context,
@@ -1005,13 +1057,30 @@ class CreateGameView extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: AppButton(
-              text: court != null
-                  ? 'Book ${controller.selectedGameTitle.value} (${court.name}) • ₹${totalAmount.toStringAsFixed(0)}'
-                  : 'Select Pitch / Court to Book',
-              isLoading: controller.isLoading.value,
-              onPressed: controller.proceedToCheckout,
-            ),
+            child: Obx(() {
+              final isOnline = Get.isRegistered<ConnectivityService>()
+                  ? ConnectivityService.to.isConnected.value
+                  : true;
+
+              return AppButton(
+                text: !isOnline
+                    ? 'No Internet • Reconnect to Book'
+                    : court != null
+                        ? 'Book ${controller.selectedGameTitle.value} (${court.name}) • ₹${totalAmount.toStringAsFixed(0)}'
+                        : 'Select Pitch / Court to Book',
+                isLoading: controller.isLoading.value || controller.isProcessing.value,
+                onPressed: () {
+                  if (!isOnline) {
+                    ErrorHandler.showErrorSnackBar(
+                      'No Internet Connection',
+                      'Cannot book pitch without an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+                    );
+                    return;
+                  }
+                  controller.proceedToCheckout();
+                },
+              );
+            }),
           ),
         ],
       );

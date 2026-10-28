@@ -1,9 +1,13 @@
+import 'dart:convert';
+import 'package:get/get.dart';
 import '../datasources/games_remote_datasource.dart';
 import '../../../data/models/game_model.dart';
 import '../../../data/models/court_model.dart';
 import '../../../data/models/video_model.dart';
 import '../../../data/models/wallet_models.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/storage/database_service.dart';
+import '../../../core/utils/app_logger.dart';
 
 class GamesRepository {
   final GamesRemoteDataSource remoteDataSource;
@@ -21,11 +25,77 @@ class GamesRepository {
   }
 
   Future<List<ClubModel>> getClubs({String? city}) async {
-    return await remoteDataSource.getClubs(city: city);
+    final cacheKey = 'clubs_list_${city ?? "all"}';
+    try {
+      final list = await remoteDataSource.getClubs(city: city);
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          await db.cacheData(
+            cacheKey,
+            jsonEncode(list.map((c) => c.toJson()).toList()),
+          );
+        } catch (_) {}
+      }
+      return list;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedStr = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedStr != null && cachedStr.isNotEmpty) {
+            final decoded = jsonDecode(cachedStr);
+            if (decoded is List) {
+              AppLogger.info('Loaded clubs from 3-day offline cache');
+              return decoded
+                  .map((m) => ClubModel.fromJson(Map<String, dynamic>.from(m)))
+                  .toList();
+            }
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
   }
 
   Future<List<CourtModel>> getCourts({String? clubId}) async {
-    return await remoteDataSource.getCourts(clubId: clubId);
+    final cacheKey = 'courts_list_${clubId ?? "all"}';
+    try {
+      final list = await remoteDataSource.getCourts(clubId: clubId);
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          await db.cacheData(
+            cacheKey,
+            jsonEncode(list.map((c) => c.toJson()).toList()),
+          );
+        } catch (_) {}
+      }
+      return list;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedStr = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedStr != null && cachedStr.isNotEmpty) {
+            final decoded = jsonDecode(cachedStr);
+            if (decoded is List) {
+              AppLogger.info('Loaded courts from 3-day offline cache');
+              return decoded
+                  .map((m) => CourtModel.fromJson(Map<String, dynamic>.from(m)))
+                  .toList();
+            }
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
   }
 
   Future<List<GameModel>> getGames({
@@ -41,28 +111,94 @@ class GamesRepository {
     int page = 1,
     int limit = 20,
   }) async {
-    final response = await remoteDataSource.getGames(
-      city: city,
-      format: format,
-      skill: skill,
-      date: date,
-      maxEntryFee: maxEntryFee,
-      status: status,
-      privacy: privacy,
-      court: court,
-      myGames: myGames,
-      page: page,
-      limit: limit,
-    );
-    return response.data ?? [];
+    final cacheKey =
+        'games_list_${city ?? "all"}_${status ?? "all"}_${myGames ?? false}_$page';
+    try {
+      final response = await remoteDataSource.getGames(
+        city: city,
+        format: format,
+        skill: skill,
+        date: date,
+        maxEntryFee: maxEntryFee,
+        status: status,
+        privacy: privacy,
+        court: court,
+        myGames: myGames,
+        page: page,
+        limit: limit,
+      );
+      final games = response.data ?? [];
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          await db.cacheData(
+            cacheKey,
+            jsonEncode(games.map((g) => g.toJson()).toList()),
+          );
+        } catch (_) {}
+      }
+      return games;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedStr = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedStr != null && cachedStr.isNotEmpty) {
+            final decoded = jsonDecode(cachedStr);
+            if (decoded is List) {
+              AppLogger.info('Loaded games from 3-day offline cache');
+              return decoded
+                  .map((m) => GameModel.fromJson(Map<String, dynamic>.from(m)))
+                  .toList();
+            }
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
   }
 
   Future<GameModel> getGameById(String gameId) async {
-    final response = await remoteDataSource.getGameById(gameId);
-    if (response.data == null) {
-      throw AppException('Match details not found.');
+    final cacheKey = 'game_details_$gameId';
+    try {
+      final response = await remoteDataSource.getGameById(gameId);
+      if (response.data == null) {
+        throw AppException('Match details not found.');
+      }
+      final game = response.data!;
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          await db.cacheData(
+            cacheKey,
+            jsonEncode(game.toJson()),
+          );
+        } catch (_) {}
+      }
+      return game;
+    } catch (e) {
+      if (Get.isRegistered<DatabaseService>()) {
+        try {
+          final db = Get.find<DatabaseService>();
+          final cachedStr = await db.getValidCachedData(
+            cacheKey,
+            maxAge: const Duration(days: 3),
+          );
+          if (cachedStr != null && cachedStr.isNotEmpty) {
+            final decoded = jsonDecode(cachedStr);
+            if (decoded is Map) {
+              AppLogger.info('Loaded match $gameId from 3-day offline cache');
+              return GameModel.fromJson(Map<String, dynamic>.from(decoded));
+            }
+          }
+        } catch (_) {}
+      }
+      if (e is AppException) rethrow;
+      throw AppException('Match details not found offline.');
     }
-    return response.data!;
   }
 
   Future<GameModel> createGame(Map<String, dynamic> gameData) async {

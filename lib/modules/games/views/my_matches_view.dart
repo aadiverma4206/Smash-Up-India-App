@@ -52,6 +52,7 @@ class MyMatchesView extends StatelessWidget {
                 onRefresh: () =>
                     controller.fetchMyMatches(controller.selectedTab.value),
                 child: ListView.builder(
+                  primary: false,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   physics: const AlwaysScrollableScrollPhysics(
@@ -168,6 +169,7 @@ class MyMatchesView extends StatelessWidget {
 
     return Center(
       child: SingleChildScrollView(
+        primary: false,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         child: Column(

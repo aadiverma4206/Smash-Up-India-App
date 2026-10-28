@@ -13,6 +13,8 @@ import '../../../core/responsive/responsive_builder.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../core/errors/error_handler.dart';
 
 class PlayerHomeView extends StatefulWidget {
   const PlayerHomeView({super.key});
@@ -769,7 +771,17 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed('/games/create'),
+          onTap: () {
+            if (Get.isRegistered<ConnectivityService>() &&
+                !ConnectivityService.to.isConnected.value) {
+              ErrorHandler.showErrorSnackBar(
+                'No Internet Connection',
+                'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+              );
+              return;
+            }
+            Get.toNamed('/games/create');
+          },
           borderRadius: BorderRadius.circular(30),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
@@ -829,7 +841,20 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: route.isNotEmpty ? () => Get.toNamed(route) : null,
+              onTap: route.isNotEmpty
+                  ? () {
+                      if (route == '/games/create' &&
+                          Get.isRegistered<ConnectivityService>() &&
+                          !ConnectivityService.to.isConnected.value) {
+                        ErrorHandler.showErrorSnackBar(
+                          'No Internet Connection',
+                          'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+                        );
+                        return;
+                      }
+                      Get.toNamed(route);
+                    }
+                  : null,
               borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -1234,7 +1259,17 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                   } else if (title == 'History') {
                     controller.changeNavIndex(3);
                   } else {
-                    Get.toNamed(item['route'] as String);
+                    final route = item['route'] as String;
+                    if (route == '/games/create' &&
+                        Get.isRegistered<ConnectivityService>() &&
+                        !ConnectivityService.to.isConnected.value) {
+                      ErrorHandler.showErrorSnackBar(
+                        'No Internet Connection',
+                        'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
+                      );
+                      return;
+                    }
+                    Get.toNamed(route);
                   }
                 },
                 borderRadius: BorderRadius.circular(12),

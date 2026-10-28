@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/notifications_controller.dart';
+import 'player_notification_detail_view.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/notification_model.dart';
@@ -110,7 +111,7 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
 
     if (_controller.notifications.isNotEmpty) {
       for (final raw in _controller.notifications) {
-        final parsedDt = AppDateUtils.parseDate(raw.createdAt) ?? now;
+        final parsedDt = AppDateUtils.parseDateTime(raw.createdAt) ?? now;
         items.add(_mapModelToPlayerItem(raw, parsedDt));
       }
     } else {
@@ -869,7 +870,7 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                   _controller.toggleSelection(item.id);
                 } else {
                   _markItemAsRead(item);
-                  _showNotificationDetailModal(item);
+                  _openNotificationDetailPage(item);
                 }
               },
               onLongPress: () {
@@ -1239,85 +1240,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-  void _showNotificationDetailModal(PlayerNotificationItem item) {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: item.iconBgLight,
-                  child: Icon(item.icon, color: item.iconColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              item.subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.textSecondaryDark
-                    : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  AppDateUtils.formatDateTime(item.dateTime),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                if (item.badgeText != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: item.badgeBgColor ?? Colors.amber.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      item.badgeText!,
-                      style: TextStyle(
-                        color: item.badgeTextColor ?? Colors.amber.shade900,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Get.back(),
-                child: const Text('Close'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _openNotificationDetailPage(PlayerNotificationItem item) {
+    Get.to(() => PlayerNotificationDetailView(item: item));
   }
 }
 

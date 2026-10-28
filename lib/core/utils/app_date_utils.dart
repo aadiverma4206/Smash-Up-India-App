@@ -208,19 +208,17 @@ class AppDateUtils {
 
   static DateTime? parseDateTime(dynamic input) {
     if (input == null) return null;
-    if (input is DateTime) return input;
+    if (input is DateTime) return input.toLocal();
     if (input is int) {
-      if (input < 10000000000) {
-        return DateTime.fromMillisecondsSinceEpoch(input * 1000);
-      }
-      return DateTime.fromMillisecondsSinceEpoch(input);
+      final isSec = input < 10000000000;
+      final ms = isSec ? input * 1000 : input;
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
     }
     if (input is double) {
       final intVal = input.toInt();
-      if (intVal < 10000000000) {
-        return DateTime.fromMillisecondsSinceEpoch(intVal * 1000);
-      }
-      return DateTime.fromMillisecondsSinceEpoch(intVal);
+      final isSec = intVal < 10000000000;
+      final ms = isSec ? intVal * 1000 : intVal;
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
     }
 
     if (input is String) {
@@ -229,21 +227,20 @@ class AppDateUtils {
 
       final asNum = int.tryParse(trimmed);
       if (asNum != null) {
-        if (asNum < 10000000000) {
-          return DateTime.fromMillisecondsSinceEpoch(asNum * 1000);
-        }
-        return DateTime.fromMillisecondsSinceEpoch(asNum);
+        final isSec = asNum < 10000000000;
+        final ms = isSec ? asNum * 1000 : asNum;
+        return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
       }
 
-      // Try direct ISO-8601 parsing (handles '2026-10-21T07:44:45.000Z' and timezone offsets)
+      // Try direct ISO-8601 parsing (handles '2026-10-28T07:44:45.000Z' and timezone offsets)
       final direct = DateTime.tryParse(trimmed);
-      if (direct != null) return direct;
+      if (direct != null) return direct.toLocal();
 
-      // Handle space-separated timestamps e.g. "2026-10-21 07:44:45" or "2026-10-21 07:44:45+00"
+      // Handle space-separated timestamps e.g. "2026-10-28 07:44:45" or "2026-10-28 07:44:45+00"
       if (trimmed.contains(' ') && !trimmed.contains('T')) {
         final withT = trimmed.replaceFirst(' ', 'T');
         final withTParsed = DateTime.tryParse(withT);
-        if (withTParsed != null) return withTParsed;
+        if (withTParsed != null) return withTParsed.toLocal();
       }
 
       final formats = [
@@ -266,7 +263,8 @@ class AppDateUtils {
 
       for (final fmt in formats) {
         try {
-          return DateFormat(fmt).parse(trimmed);
+          final parsed = DateFormat(fmt).parse(trimmed);
+          return parsed.toLocal();
         } catch (_) {}
       }
     }

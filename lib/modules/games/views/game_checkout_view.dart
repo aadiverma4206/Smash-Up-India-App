@@ -5,9 +5,16 @@ import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/payment_processing_overlay.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/services/connectivity_service.dart';
+import '../../../core/errors/error_handler.dart';
 
-class GameCheckoutView extends GetView<CreateGameController> {
+class GameCheckoutView extends StatelessWidget {
   const GameCheckoutView({super.key});
+
+  CreateGameController get controller =>
+      Get.isRegistered<CreateGameController>()
+          ? Get.find<CreateGameController>()
+          : Get.put(CreateGameController(), permanent: true);
 
   @override
   Widget build(BuildContext context) {
@@ -96,11 +103,27 @@ class GameCheckoutView extends GetView<CreateGameController> {
         _buildPaymentMethodsCard(context, fee),
         const SizedBox(height: 24),
         Obx(
-          () => AppButton(
-            text: 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
-            isLoading: controller.isProcessing.value,
-            onPressed: controller.executePaymentAndCreateGame,
-          ),
+          () {
+            final isOnline = Get.isRegistered<ConnectivityService>()
+                ? ConnectivityService.to.isConnected.value
+                : true;
+            return AppButton(
+              text: !isOnline
+                  ? 'No Internet • Connect to Pay'
+                  : 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
+              isLoading: controller.isProcessing.value,
+              onPressed: () {
+                if (!isOnline) {
+                  ErrorHandler.showErrorSnackBar(
+                    'No Internet Connection',
+                    'Cannot confirm payment without an active internet connection. Please check your network and try again.',
+                  );
+                  return;
+                }
+                controller.executePaymentAndCreateGame();
+              },
+            );
+          },
         ),
         const SizedBox(height: 32),
       ],
@@ -161,11 +184,27 @@ class GameCheckoutView extends GetView<CreateGameController> {
               _buildPaymentMethodsCard(context, fee),
               const SizedBox(height: 24),
               Obx(
-                () => AppButton(
-                  text: 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
-                  isLoading: controller.isProcessing.value,
-                  onPressed: controller.executePaymentAndCreateGame,
-                ),
+                () {
+                  final isOnline = Get.isRegistered<ConnectivityService>()
+                      ? ConnectivityService.to.isConnected.value
+                      : true;
+                  return AppButton(
+                    text: !isOnline
+                        ? 'No Internet • Connect to Pay'
+                        : 'Confirm & Book Pitch • ₹${fee.toStringAsFixed(0)}',
+                    isLoading: controller.isProcessing.value,
+                    onPressed: () {
+                      if (!isOnline) {
+                        ErrorHandler.showErrorSnackBar(
+                          'No Internet Connection',
+                          'Cannot confirm payment without an active internet connection. Please check your network and try again.',
+                        );
+                        return;
+                      }
+                      controller.executePaymentAndCreateGame();
+                    },
+                  );
+                },
               ),
             ],
           ),

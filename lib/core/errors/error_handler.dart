@@ -9,96 +9,143 @@ import 'error_mapper.dart';
 
 class ErrorHandler {
   static String getErrorMessage(dynamic error) {
-    if (error == null) return 'An unexpected error occurred. Please try again.';
+    if (error == null) return 'An unexpected error occurred.';
+
+    String message;
 
     if (error is AppException) {
-      return error.message;
-    }
-
-    if (error is DioException) {
+      message = error.message;
+    } else if (error is DioException) {
       if (error.error is AppException) {
-        return (error.error as AppException).message;
+        message = (error.error as AppException).message;
+      } else {
+        message = ErrorMapper.mapDioError(error).message;
       }
-      return ErrorMapper.mapDioError(error).message;
-    }
-
-    if (error is SocketException ||
+    } else if (error is SocketException ||
         error.toString().contains('SocketException')) {
-      return 'No internet connection. Please check your network connection and try again.';
+      message = 'No internet connection';
+    } else if (error is TimeoutException) {
+      message = 'No internet connection';
+    } else if (error is FormatException || error is TypeError) {
+      message = 'Something went wrong';
+    } else {
+      final String raw = error.toString().trim();
+      if (raw.startsWith('Exception: ')) {
+        message = raw.substring(11).trim();
+      } else {
+        message = raw
+            .replaceAll(
+                RegExp(
+                    r'^(?:DioException\s*\[.*?\]:?\s*null\s*Error:\s*AppException:\s*|AppException:\s*|DioException\s*\[.*?\]:\s*)'),
+                '')
+            .trim();
+      }
     }
 
-    if (error is TimeoutException) {
-      return 'Connection timed out. Please check your internet connection and try again.';
+    if (message.isEmpty) {
+      return 'An unexpected error occurred.';
     }
 
-    if (error is FormatException) {
-      return 'Internal server error. Invalid data format received.';
+    // Sanitize technical error strings, internal IP addresses, URLs, or network timeout logs
+    final lower = message.toLowerCase();
+    if (lower.contains('http://') ||
+        lower.contains('https://') ||
+        lower.contains('connection timed out') ||
+        lower.contains('connection refused') ||
+        lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('dioexception') ||
+        lower.contains('check server connectivity') ||
+        lower.contains('server took too long') ||
+        lower.contains('timed out after') ||
+        lower.contains('no_internet')) {
+      return 'No internet connection';
     }
 
-    if (error is TypeError) {
-      return 'Internal server error. Unexpected data format received.';
-    }
-
-    final String raw = error.toString().trim();
-    if (raw.startsWith('Exception: ')) {
-      return raw.substring(11).trim();
-    }
-
-    final clean = raw
-        .replaceAll(
-            RegExp(
-                r'^(?:DioException\s*\[.*?\]:?\s*null\s*Error:\s*AppException:\s*|AppException:\s*|DioException\s*\[.*?\]:\s*)'),
-            '')
-        .trim();
-
-    return clean.isNotEmpty
-        ? clean
-        : 'An unexpected error occurred. Please try again.';
+    return message;
   }
 
+  /// Immediately cancels any active or queued snackbars,
+  /// and displays an ultra-compact single-line Navi UPI style pill toast.
   static void showErrorSnackBar(String title, dynamic error,
       {Duration? duration}) {
     final message = getErrorMessage(error);
-    Get.snackbar(
-      title,
-      message,
-      backgroundColor: AppColors.error,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(12),
-      borderRadius: 10,
-      duration: duration ?? const Duration(seconds: 4),
-      icon: const Icon(Icons.error_outline_rounded, color: Colors.white),
+    final isNetwork = message.contains('No internet') ||
+        message.contains('Unable to connect');
+
+    _showCompactPillToast(
+      message: message,
+      icon: isNetwork ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+      backgroundColor: const Color(0xFFDC2626),
+      duration: duration,
     );
   }
 
   static void showSuccessSnackBar(String title, String message,
       {Duration? duration}) {
-    Get.snackbar(
-      title,
-      message,
+    _showCompactPillToast(
+      message: message,
+      icon: Icons.check_circle_outline_rounded,
       backgroundColor: AppColors.primary,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(12),
-      borderRadius: 10,
-      duration: duration ?? const Duration(seconds: 3),
-      icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
+      duration: duration,
     );
   }
 
   static void showWarningSnackBar(String title, String message,
       {Duration? duration}) {
-    Get.snackbar(
-      title,
-      message,
-      backgroundColor: Colors.amber.shade800,
-      colorText: Colors.white,
+    _showCompactPillToast(
+      message: message,
+      icon: Icons.warning_amber_rounded,
+      backgroundColor: const Color(0xFFD97706),
+      duration: duration,
+    );
+  }
+
+  static void _showCompactPillToast({
+    required String message,
+    required IconData icon,
+    required Color backgroundColor,
+    Duration? duration,
+  }) {
+    try {
+      // Immediately cancel and close any active or queued snackbar
+      Get.closeAllSnackbars();
+    } catch (_) {}
+
+    Get.rawSnackbar(
+      messageText: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: backgroundColor,
       snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(12),
-      borderRadius: 10,
-      duration: duration ?? const Duration(seconds: 4),
-      icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+      borderRadius: 25,
+      duration: duration ?? const Duration(seconds: 2),
+      boxShadows: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.25),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
     );
   }
 }
