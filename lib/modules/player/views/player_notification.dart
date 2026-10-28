@@ -583,7 +583,6 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildSelectionAppBar(context, visibleIds),
-      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -823,9 +822,145 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
     );
   }
 
-                    const SizedBox(height: 8),
+  Widget _buildNotificationCard(
+    BuildContext context,
+    PlayerNotificationItem item,
+    bool isDark,
+  ) {
+    return Obx(() {
+      final isSelected = _controller.selectedIds.contains(item.id);
+      final isSelectionMode = _controller.isSelectionMode;
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : (item.isRead
+                    ? (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0))
+                    : AppColors.primary.withValues(alpha: 0.5)),
+            width: isSelected ? 2.0 : (item.isRead ? 0.8 : 1.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                if (isSelectionMode) {
+                  _controller.toggleSelection(item.id);
+                } else {
+                  _markItemAsRead(item);
+                  _showNotificationDetailModal(item);
+                }
+              },
+              onLongPress: () {
+                if (!isSelectionMode) {
+                  _controller.toggleSelection(item.id);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: isDark ? item.iconBgDark : item.iconBgLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        item.icon,
+                        color: item.iconColor,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.title,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: item.isRead
+                                        ? FontWeight.w600
+                                        : FontWeight.bold,
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
+                              if (item.badgeText != null) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: item.badgeBgColor ??
+                                        const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    item.badgeText!,
+                                    style: TextStyle(
+                                      color: item.badgeTextColor ??
+                                          const Color(0xFFD97706),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.subtitle,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _formatItemTime(item.dateTime),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppColors.textMutedDark
+                                  : const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Obx(() {
-                      final isSelected = _controller.selectedIds.contains(item.id);
+                      final isSelected =
+                          _controller.selectedIds.contains(item.id);
                       final isSelectionMode = _controller.isSelectionMode;
 
                       if (isSelectionMode) {
@@ -851,7 +986,7 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                     }),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
