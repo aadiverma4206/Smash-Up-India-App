@@ -134,6 +134,7 @@ class GameModel {
   final String? creatorId;
   final String? creatorRoleName;
   final bool createdByPlayer;
+  final String? creatorName;
   final int teamAScore;
   final int teamBScore;
   final String? winnerTeam;
@@ -165,6 +166,7 @@ class GameModel {
     this.skillRequirement = 'INTERMEDIATE',
     this.privacy = 'PUBLIC',
     this.creatorId,
+    this.creatorName,
     this.creatorRoleName,
     this.createdByPlayer = false,
     this.teamAScore = 0,
@@ -180,6 +182,33 @@ class GameModel {
     this.cancelledBy,
     this.rejectionReason,
   });
+
+  String get hostDisplayName {
+    if (creatorName != null && creatorName!.trim().isNotEmpty) {
+      return creatorName!.trim();
+    }
+    if (roster != null && roster!.isNotEmpty) {
+      if (creatorId != null && creatorId!.trim().isNotEmpty) {
+        final creatorInRoster = roster!.firstWhere(
+          (p) => p.userId == creatorId,
+          orElse: () => roster!.first,
+        );
+        if (creatorInRoster.name.trim().isNotEmpty &&
+            creatorInRoster.name.trim().toLowerCase() != 'player') {
+          return creatorInRoster.name.trim();
+        }
+      }
+      final firstPlayer = roster!.first;
+      if (firstPlayer.name.trim().isNotEmpty &&
+          firstPlayer.name.trim().toLowerCase() != 'player') {
+        return firstPlayer.name.trim();
+      }
+    }
+    if (createdByPlayer) {
+      return 'Player';
+    }
+    return 'Manager';
+  }
 
   double get entryFee => perPlayerFee;
 
@@ -250,6 +279,12 @@ class GameModel {
       privacy: (json['privacy'] ?? 'PUBLIC').toString(),
       creatorId:
           json['creatorId']?.toString() ?? json['creator_id']?.toString(),
+      creatorName: json['creatorName']?.toString() ??
+          json['creator_name']?.toString() ??
+          json['hostName']?.toString() ??
+          json['host_name']?.toString() ??
+          json['playerName']?.toString() ??
+          json['player_name']?.toString(),
       creatorRoleName: json['creatorRoleName']?.toString() ??
           json['creator_role_name']?.toString(),
       createdByPlayer:

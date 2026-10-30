@@ -65,9 +65,31 @@ export class ManagerRepository {
       const ongoingQuery = `
         SELECT g.*,
                CASE WHEN (g.court_id = 'court_2' OR g.court_id LIKE '%2') THEN 'Court 2' ELSE 'Court 1' END as court_name,
+               u.name as host_name,
+               u.name as creator_name,
                (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
-               (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
+               (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count,
+               (
+                 SELECT COALESCE(json_agg(
+                   json_build_object(
+                     'userId', gp.user_id,
+                     'user_id', gp.user_id,
+                     'name', COALESCE(pu.name, 'Player'),
+                     'profileImageUrl', pu.profile_image_url,
+                     'profile_image_url', pu.profile_image_url,
+                     'team', COALESCE(gp.team, 'TEAM_A'),
+                     'position', COALESCE(gp.position, 'MID'),
+                     'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
+                     'payment_status', COALESCE(gp.payment_status, 'PAID'),
+                     'phone', pu.phone
+                   )
+                 ), '[]'::json)
+                 FROM public.game_players gp
+                 JOIN public.users pu ON pu.id = gp.user_id
+                 WHERE gp.game_id = g.id
+               ) as roster
         FROM public.games g
+        LEFT JOIN public.users u ON u.id = g.creator_id
         WHERE (g.club_id = $1 OR $1 = 'all_stars_arena_club')
           AND (
             g.court_id = $2
@@ -86,9 +108,31 @@ export class ManagerRepository {
       const upcomingQuery = `
         SELECT g.*,
                CASE WHEN (g.court_id = 'court_2' OR g.court_id LIKE '%2') THEN 'Court 2' ELSE 'Court 1' END as court_name,
+               u.name as host_name,
+               u.name as creator_name,
                (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
-               (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
+               (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count,
+               (
+                 SELECT COALESCE(json_agg(
+                   json_build_object(
+                     'userId', gp.user_id,
+                     'user_id', gp.user_id,
+                     'name', COALESCE(pu.name, 'Player'),
+                     'profileImageUrl', pu.profile_image_url,
+                     'profile_image_url', pu.profile_image_url,
+                     'team', COALESCE(gp.team, 'TEAM_A'),
+                     'position', COALESCE(gp.position, 'MID'),
+                     'paymentStatus', COALESCE(gp.payment_status, 'PAID'),
+                     'payment_status', COALESCE(gp.payment_status, 'PAID'),
+                     'phone', pu.phone
+                   )
+                 ), '[]'::json)
+                 FROM public.game_players gp
+                 JOIN public.users pu ON pu.id = gp.user_id
+                 WHERE gp.game_id = g.id
+               ) as roster
         FROM public.games g
+        LEFT JOIN public.users u ON u.id = g.creator_id
         WHERE (g.club_id = $1 OR $1 = 'all_stars_arena_club')
           AND (
             g.court_id = $2
@@ -116,9 +160,9 @@ export class ManagerRepository {
   }
 
   static async getClubMetricsData(clubId: string) {
-    // 1. Players count
+    // 1. Players count (role_id = 3 corresponds to Players in public.users)
     const playersRes = await dbPool.query(
-      `SELECT COUNT(*) as total_players FROM public.users WHERE UPPER(COALESCE(role::text, 'PLAYER')) = 'PLAYER';`,
+      `SELECT COUNT(*) as total_players FROM public.users WHERE role_id = 3 OR role_id IS NULL;`,
     );
 
     // 2. Courts count
@@ -127,7 +171,7 @@ export class ManagerRepository {
       [clubId],
     );
 
-    // 3. Future Bookings count (strictly scheduled after current time)
+    // 3. Future Bookings count (Court Bookings + Scheduled Games)
     const futureBookingsRes = await dbPool.query(
       `SELECT (
           COALESCE((
@@ -136,13 +180,7 @@ export class ManagerRepository {
               AND UPPER(COALESCE(status::text, 'CONFIRMED')) NOT IN ('CANCELLED', 'REJECTED')
               AND (
                 booking_date::date > CURRENT_DATE
-                OR (
-                  booking_date::date = CURRENT_DATE
-                  AND (
-                    (start_time ~ '^[0-9]{1,2}:[0-9]{2}' AND start_time::time >= CURRENT_TIME)
-                    OR (end_time ~ '^[0-9]{1,2}:[0-9]{2}' AND end_time::time > CURRENT_TIME)
-                  )
-                )
+                OR (booking_date::date = CURRENT_DATE AND UPPER(COALESCE(status::text, '')) NOT IN ('CANCELLED', 'REJECTED', 'COMPLETED', 'FINISHED'))
               )
           ), 0)
           +
@@ -152,13 +190,7 @@ export class ManagerRepository {
               AND UPPER(COALESCE(status::text, 'OPEN')) NOT IN ('CANCELLED', 'REJECTED', 'COMPLETED', 'FINISHED')
               AND (
                 match_date::date > CURRENT_DATE
-                OR (
-                  match_date::date = CURRENT_DATE
-                  AND (
-                    (start_time ~ '^[0-9]{1,2}:[0-9]{2}' AND start_time::time >= CURRENT_TIME)
-                    OR (end_time ~ '^[0-9]{1,2}:[0-9]{2}' AND end_time::time > CURRENT_TIME)
-                  )
-                )
+                OR (match_date::date = CURRENT_DATE AND UPPER(COALESCE(status::text, '')) NOT IN ('CANCELLED', 'REJECTED', 'COMPLETED', 'FINISHED'))
               )
           ), 0)
         ) as future_bookings;`,

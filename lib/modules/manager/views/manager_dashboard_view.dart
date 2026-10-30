@@ -1077,10 +1077,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         ? AppDateUtils.formatDate(game.matchDate, format: 'dd MMM yyyy')
         : 'Today';
 
-    final timeDisplay = hasGame && game.startTime.isNotEmpty
-        ? (game.endTime.isNotEmpty
-            ? '${game.startTime} - ${game.endTime}'
-            : game.startTime)
+    final timeDisplay = hasGame && (game.startTime.isNotEmpty || game.endTime.isNotEmpty)
+        ? AppDateUtils.formatTimeRange(game.startTime, game.endTime)
         : '';
 
     return Container(
@@ -1248,7 +1246,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      'Host: Player',
+                      'Host: ${game.hostDisplayName}',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
