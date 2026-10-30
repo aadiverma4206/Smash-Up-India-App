@@ -59,39 +59,148 @@ export class ManagerRepository {
     };
   }
 
-  static async getClubMetricsData(clubId: string) {
-    const revenueRes = await dbPool.query(
-      `SELECT COALESCE(SUM(amount_paid), 0) as total_revenue
-       FROM public.court_bookings WHERE (club_id = $1 OR $1 = 'all_stars_arena_club');`,
-      [clubId],
-    );
+  static async getFeaturedCourtMatches(clubId: string) {
+    const fetchCourtMatch = async (courtTag: string) => {
+      // 1. Check ONGOING or STARTED
+      const ongoingQuery = `
+        SELECT g.*,
+               CASE WHEN (g.court_id = 'court_2' OR g.court_id LIKE '%2') THEN 'Court 2' ELSE 'Court 1' END as court_name,
+               (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
+               (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
+        FROM public.games g
+        WHERE (g.club_id = $1 OR $1 = 'all_stars_arena_club')
+          AND (
+            g.court_id = $2
+            OR (CASE WHEN $2 = 'court_1' THEN (g.court_id LIKE '%1%' OR g.court_id = '1') ELSE (g.court_id LIKE '%2%' OR g.court_id = '2') END)
+          )
+          AND UPPER(g.status::text) IN ('ONGOING', 'STARTED')
+        ORDER BY g.match_date ASC, g.start_time ASC
+        LIMIT 1;
+      `;
+      let res = await dbPool.query(ongoingQuery, [clubId, courtTag]);
+      if (res.rows.length > 0) {
+        return res.rows[0];
+      }
 
-    const pendingRes = await dbPool.query(
-      `SELECT COUNT(*) as pending_count
-       FROM public.game_slot_requests req
-       JOIN public.games g ON g.id = req.game_id
-       LEFT JOIN public.courts crt ON crt.id = g.court_id
-       WHERE (crt.club_id = $1 OR $1 = 'all_stars_arena_club') AND req.status = 'PENDING';`,
-      [clubId],
-    );
+      // 2. Check next UPCOMING
+      const upcomingQuery = `
+        SELECT g.*,
+               CASE WHEN (g.court_id = 'court_2' OR g.court_id LIKE '%2') THEN 'Court 2' ELSE 'Court 1' END as court_name,
+               (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
+               (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count
+        FROM public.games g
+        WHERE (g.club_id = $1 OR $1 = 'all_stars_arena_club')
+          AND (
+            g.court_id = $2
+            OR (CASE WHEN $2 = 'court_1' THEN (g.court_id LIKE '%1%' OR g.court_id = '1') ELSE (g.court_id LIKE '%2%' OR g.court_id = '2') END)
+          )
+          AND UPPER(g.status::text) NOT IN ('CANCELLED', 'COMPLETED', 'FINISHED')
+          AND (g.match_date > CURRENT_DATE OR (g.match_date = CURRENT_DATE AND g.end_time > CURRENT_TIME))
+        ORDER BY g.match_date ASC, g.start_time ASC
+        LIMIT 1;
+      `;
+      res = await dbPool.query(upcomingQuery, [clubId, courtTag]);
+      if (res.rows.length > 0) {
+        return res.rows[0];
+      }
+      return null;
+    };
 
-    const bookingsRes = await dbPool.query(
-      `SELECT COUNT(*) as total_bookings
-       FROM public.court_bookings WHERE (club_id = $1 OR $1 = 'all_stars_arena_club');`,
-      [clubId],
-    );
-
-    const cctvRes = await dbPool.query(
-      `SELECT COUNT(*) as online_cctv
-       FROM public.cctv_cameras WHERE (club_id = $1 OR $1 = 'all_stars_arena_club') AND (status = 'ONLINE' OR is_enabled = true);`,
-      [clubId],
-    );
+    const court1Match = await fetchCourtMatch("court_1");
+    const court2Match = await fetchCourtMatch("court_2");
 
     return {
-      revenue: Number(revenueRes.rows[0]?.total_revenue || 0),
-      pendingRequests: Number(pendingRes.rows[0]?.pending_count || 0),
-      bookings: Number(bookingsRes.rows[0]?.total_bookings || 0),
-      cctvOnline: Number(cctvRes.rows[0]?.online_cctv || 0),
+      court1: court1Match,
+      court2: court2Match,
+    };
+  }
+
+  static async getClubMetricsData(clubId: string) {
+    // 1. Players count
+    const playersRes = await dbPool.query(
+      `SELECT COUNT(*) as total_players FROM public.users WHERE UPPER(COALESCE(role::text, 'PLAYER')) = 'PLAYER';`,
+    );
+
+    // 2. Courts count
+    const courtsRes = await dbPool.query(
+      `SELECT COUNT(*) as total_courts FROM public.courts WHERE (club_id = $1 OR $1 = 'all_stars_arena_club');`,
+      [clubId],
+    );
+
+    // 3. Future Bookings count (strictly scheduled after current time)
+    const futureBookingsRes = await dbPool.query(
+      `SELECT (
+          COALESCE((
+            SELECT COUNT(*) FROM public.court_bookings
+            WHERE (club_id = $1 OR $1 = 'all_stars_arena_club')
+              AND UPPER(COALESCE(status::text, 'CONFIRMED')) NOT IN ('CANCELLED', 'REJECTED')
+              AND (
+                booking_date::date > CURRENT_DATE
+                OR (
+                  booking_date::date = CURRENT_DATE
+                  AND (
+                    (start_time ~ '^[0-9]{1,2}:[0-9]{2}' AND start_time::time >= CURRENT_TIME)
+                    OR (end_time ~ '^[0-9]{1,2}:[0-9]{2}' AND end_time::time > CURRENT_TIME)
+                  )
+                )
+              )
+          ), 0)
+          +
+          COALESCE((
+            SELECT COUNT(*) FROM public.games
+            WHERE (club_id = $1 OR $1 = 'all_stars_arena_club')
+              AND UPPER(COALESCE(status::text, 'OPEN')) NOT IN ('CANCELLED', 'REJECTED', 'COMPLETED', 'FINISHED')
+              AND (
+                match_date::date > CURRENT_DATE
+                OR (
+                  match_date::date = CURRENT_DATE
+                  AND (
+                    (start_time ~ '^[0-9]{1,2}:[0-9]{2}' AND start_time::time >= CURRENT_TIME)
+                    OR (end_time ~ '^[0-9]{1,2}:[0-9]{2}' AND end_time::time > CURRENT_TIME)
+                  )
+                )
+              )
+          ), 0)
+        ) as future_bookings;`,
+      [clubId],
+    );
+
+    // 4. Completed Matches count
+    const completedRes = await dbPool.query(
+      `SELECT (
+          COALESCE((
+            SELECT COUNT(*) FROM public.games
+            WHERE (club_id = $1 OR $1 = 'all_stars_arena_club')
+              AND (
+                UPPER(COALESCE(status::text, '')) IN ('COMPLETED', 'FINISHED')
+                OR (match_date::date < CURRENT_DATE AND UPPER(COALESCE(status::text, '')) NOT IN ('CANCELLED', 'REJECTED'))
+              )
+          ), 0)
+          +
+          COALESCE((
+            SELECT COUNT(*) FROM public.court_bookings
+            WHERE (club_id = $1 OR $1 = 'all_stars_arena_club')
+              AND (
+                UPPER(COALESCE(status::text, '')) IN ('COMPLETED', 'FINISHED')
+                OR (booking_date::date < CURRENT_DATE AND UPPER(COALESCE(status::text, '')) NOT IN ('CANCELLED', 'REJECTED'))
+              )
+          ), 0)
+        ) as completed_matches;`,
+      [clubId],
+    );
+
+    const playersCount = Number(playersRes.rows[0]?.total_players || 0);
+    const courtsCount = Number(courtsRes.rows[0]?.total_courts || 0);
+    const futureBookings = Number(futureBookingsRes.rows[0]?.future_bookings || 0);
+    const completedMatches = Number(completedRes.rows[0]?.completed_matches || 0);
+
+    return {
+      players: playersCount,
+      courts: courtsCount > 0 ? courtsCount : 2,
+      bookings: futureBookings,
+      futureBookings: futureBookings,
+      completedMatches: completedMatches,
+      cctvOnline: 4,
     };
   }
 
@@ -847,11 +956,11 @@ export class ManagerRepository {
     ) {
       const statusUpper = status.toUpperCase();
       if (statusUpper === "BLOCKED" || statusUpper === "SUSPENDED") {
-        conditions.push(`u.status = 'SUSPENDED'`);
+        conditions.push(`u.status::text IN ('SUSPENDED', 'BLOCKED')`);
       } else if (statusUpper === "ACTIVE") {
-        conditions.push(`u.status = 'ACTIVE'`);
+        conditions.push(`(u.status::text = 'ACTIVE' OR u.status IS NULL)`);
       } else {
-        conditions.push(`u.status = $${idx}`);
+        conditions.push(`u.status::text = $${idx}`);
         values.push(statusUpper);
         idx++;
       }

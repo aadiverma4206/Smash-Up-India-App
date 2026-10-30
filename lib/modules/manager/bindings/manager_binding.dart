@@ -9,6 +9,9 @@ import '../../cctv/controllers/cctv_controller.dart';
 import '../../cctv/controllers/cctv_live_controller.dart';
 import '../../games/datasources/games_remote_datasource.dart';
 import '../../games/repositories/games_repository.dart';
+import '../../player/datasources/player_remote_datasource.dart';
+import '../../player/repositories/player_repository.dart';
+import '../../player/controllers/notifications_controller.dart';
 import '../../../core/network/dio_client.dart';
 
 class ManagerBinding extends Bindings {
@@ -38,6 +41,26 @@ class ManagerBinding extends Bindings {
       Get.lazyPut<ManagerRepository>(
         () => ManagerRepository(
             remoteDataSource: Get.find<ManagerRemoteDataSource>()),
+        fenix: true,
+      );
+    }
+
+    if (!Get.isRegistered<PlayerRemoteDataSource>()) {
+      Get.lazyPut<PlayerRemoteDataSource>(
+        () => PlayerRemoteDataSource(dioClient: Get.find<DioClient>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<PlayerRepository>()) {
+      Get.lazyPut<PlayerRepository>(
+        () => PlayerRepository(
+            remoteDataSource: Get.find<PlayerRemoteDataSource>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<NotificationsController>()) {
+      Get.lazyPut<NotificationsController>(
+        () => NotificationsController(),
         fenix: true,
       );
     }

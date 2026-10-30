@@ -5,6 +5,7 @@ import '../../../data/models/game_model.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/widgets/match_date_picker_dialog.dart';
 import '../../../app/theme/app_colors.dart';
 
 class ManagerGamesView extends GetView<ManagerGamesController> {
@@ -215,13 +216,15 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                               ),
                               onSelected: (_) async {
                                 if (key == 'SELECT DATE') {
-                                  final picked = await showDatePicker(
+                                  final picked = await showMatchDatePicker(
                                     context: context,
                                     initialDate: customDate ?? DateTime.now(),
                                     firstDate: DateTime.now()
                                         .subtract(const Duration(days: 365)),
                                     lastDate: DateTime.now()
                                         .add(const Duration(days: 365)),
+                                    matchDates: controller.scheduledMatchDates,
+                                    upcomingMatchDates: controller.upcomingMatchDates,
                                   );
                                   if (picked != null) {
                                     controller.setCustomDate(picked);
@@ -634,46 +637,125 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
 
   void _confirmCancelMatch(BuildContext context, GameModel game) {
     final reasonController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Match: ${game.title}'),
-        content: Column(
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Cancelling will trigger automatic full refunds to all joined player wallets.',
-              style: TextStyle(color: Colors.redAccent, fontSize: 12),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.highlight_off_rounded, color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Cancel Match: ${game.title}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
+            Text(
+              'Cancelling will trigger automatic full refunds to all joined player wallets.',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Colors.redAccent.shade200,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 10),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Enter reason for match cancellation...',
-                border: OutlineInputBorder(),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
               ),
+              decoration: InputDecoration(
+                hintText: 'Enter reason for match cancellation...',
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                ),
+                filled: true,
+                fillColor: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Close', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      controller.cancelMatchWithRefunds(
+                          game.id, reasonController.text.trim());
+                    },
+                    child: const Text('Cancel & Issue Refunds', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Get.back();
-              controller.cancelMatchWithRefunds(
-                  game.id, reasonController.text.trim());
-            },
-            child: const Text('Cancel & Issue Refunds',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

@@ -30,6 +30,68 @@ class ManagerGamesController extends GetxController {
   final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();
   final RxBool isLoadingVideos = false.obs;
 
+  Set<String> get scheduledMatchDates {
+    final dates = <String>{};
+    final courtFilter = selectedCourtFilter.value.toLowerCase().trim();
+
+    for (final game in games) {
+      if (game.matchDate.isNotEmpty) {
+        if (courtFilter != 'all' && courtFilter.isNotEmpty) {
+          final cId = (game.courtId ?? '').toLowerCase().trim();
+          final cName = game.courtName.toLowerCase().trim();
+
+          bool matchesCourt = cId == courtFilter || cName == courtFilter;
+          if (courtFilter.contains('1')) {
+            matchesCourt = matchesCourt || cId.contains('1') || cName.contains('1');
+          } else if (courtFilter.contains('2')) {
+            matchesCourt = matchesCourt || cId.contains('2') || cName.contains('2');
+          }
+          if (!matchesCourt) continue;
+        }
+
+        final dt = AppDateUtils.parseDate(game.matchDate);
+        if (dt != null) {
+          final formatted =
+              '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+          dates.add(formatted);
+        }
+      }
+    }
+    return dates;
+  }
+
+  Set<String> get upcomingMatchDates {
+    final dates = <String>{};
+    final courtFilter = selectedCourtFilter.value.toLowerCase().trim();
+
+    for (final game in games) {
+      if (game.matchDate.isNotEmpty) {
+        if (courtFilter != 'all' && courtFilter.isNotEmpty) {
+          final cId = (game.courtId ?? '').toLowerCase().trim();
+          final cName = game.courtName.toLowerCase().trim();
+
+          bool matchesCourt = cId == courtFilter || cName == courtFilter;
+          if (courtFilter.contains('1')) {
+            matchesCourt = matchesCourt || cId.contains('1') || cName.contains('1');
+          } else if (courtFilter.contains('2')) {
+            matchesCourt = matchesCourt || cId.contains('2') || cName.contains('2');
+          }
+          if (!matchesCourt) continue;
+        }
+
+        if (AppDateUtils.isMatchInFuture(game.matchDate, game.startTime)) {
+          final dt = AppDateUtils.parseDate(game.matchDate);
+          if (dt != null) {
+            final formatted =
+                '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+            dates.add(formatted);
+          }
+        }
+      }
+    }
+    return dates;
+  }
+
   @override
   void onInit() {
     super.onInit();

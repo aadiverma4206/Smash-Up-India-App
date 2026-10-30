@@ -410,6 +410,7 @@ class CreateGameView extends StatelessWidget {
             const SizedBox(height: 8),
             LayoutBuilder(
               builder: (context, constraints) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
                 final itemWidth = courts.length >= 2
                     ? (constraints.maxWidth - 10) / 2
                     : constraints.maxWidth;
@@ -420,76 +421,114 @@ class CreateGameView extends StatelessWidget {
                   children: courts.map((court) {
                     final isSelected = selectedCourt?.id == court.id ||
                         selectedCourt?.name == court.name;
+                    final cStatus = court.status.toUpperCase();
+                    final isDisabled =
+                        cStatus == 'MAINTENANCE' || cStatus == 'BLOCKED';
 
                     return SizedBox(
                       width: itemWidth,
-                      child: InkWell(
-                        onTap: () {
-                          controller.selectCourt(court);
-                        },
-                        borderRadius: BorderRadius.circular(10),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary.withValues(alpha: 0.12)
-                                : context.backgroundColor,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : context.borderColor,
-                              width: isSelected ? 1.5 : 1,
+                      child: Opacity(
+                        opacity: isDisabled ? 0.55 : 1.0,
+                        child: InkWell(
+                          onTap: isDisabled
+                              ? () {
+                                  ErrorHandler.showWarningSnackBar(
+                                    'Court Unavailable',
+                                    '${court.name} is currently in $cStatus status and cannot be selected.',
+                                  );
+                                }
+                              : () {
+                                  controller.selectCourt(court);
+                                },
+                          borderRadius: BorderRadius.circular(10),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isDisabled
+                                  ? (isDark
+                                      ? Colors.grey.shade900
+                                      : Colors.grey.shade200)
+                                  : (isSelected
+                                      ? AppColors.primary
+                                          .withValues(alpha: 0.12)
+                                      : context.backgroundColor),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isDisabled
+                                    ? Colors.grey.shade400
+                                    : (isSelected
+                                        ? AppColors.primary
+                                        : context.borderColor),
+                                width: isSelected && !isDisabled ? 1.5 : 1,
+                              ),
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected
-                                    ? Icons.radio_button_checked_rounded
-                                    : Icons.radio_button_unchecked_rounded,
-                                size: 18,
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : context.textSecondary,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      court.name,
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? AppColors.primary
-                                            : context.textPrimary,
-                                        fontWeight: isSelected
-                                            ? FontWeight.bold
-                                            : FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${court.surfaceType} • ₹${court.basePricePerHour.toStringAsFixed(0)}/hr',
-                                      style: TextStyle(
-                                        color: context.textSecondary,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ],
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isDisabled
+                                      ? Icons.block_rounded
+                                      : (isSelected
+                                          ? Icons.radio_button_checked_rounded
+                                          : Icons
+                                              .radio_button_unchecked_rounded),
+                                  size: 18,
+                                  color: isDisabled
+                                      ? Colors.grey.shade500
+                                      : (isSelected
+                                          ? AppColors.primary
+                                          : context.textSecondary),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        court.name,
+                                        style: TextStyle(
+                                          color: isDisabled
+                                              ? Colors.grey.shade500
+                                              : (isSelected
+                                                  ? AppColors.primary
+                                                  : context.textPrimary),
+                                          fontWeight: isSelected && !isDisabled
+                                              ? FontWeight.bold
+                                              : FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isDisabled
+                                            ? (cStatus == 'MAINTENANCE'
+                                                ? 'Maintenance'
+                                                : 'Blocked')
+                                            : '${court.surfaceType} • ₹${court.basePricePerHour.toStringAsFixed(0)}/hr',
+                                        style: TextStyle(
+                                          color: isDisabled
+                                              ? (cStatus == 'MAINTENANCE'
+                                                  ? Colors.amber.shade800
+                                                  : Colors.redAccent)
+                                              : context.textSecondary,
+                                          fontSize: 10,
+                                          fontWeight: isDisabled
+                                              ? FontWeight.bold
+                                              : FontWeight.w500,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

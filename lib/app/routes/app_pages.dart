@@ -40,7 +40,6 @@ import '../../modules/wallet/views/payment_history_view.dart';
 import '../../modules/wallet/views/wallet_pin_view.dart';
 import '../../modules/manager/bindings/manager_binding.dart';
 import '../../modules/manager/views/manager_dashboard_view.dart';
-import '../../modules/manager/views/manager_games_view.dart';
 import '../../modules/manager/views/manager_game_details_view.dart';
 import '../../modules/manager/views/manager_courts_view.dart';
 import '../../modules/manager/views/manager_courts_management_view.dart';
@@ -52,6 +51,7 @@ import '../../modules/manager/views/manager_history_standalone_view.dart';
 import '../../modules/manager/views/manager_history_detail_view.dart';
 import '../../modules/manager/views/manager_notifications_view.dart';
 import '../../modules/manager/views/manager_profile_view.dart';
+import '../../modules/manager/views/manager_edit_profile_view.dart';
 import '../../modules/cctv/bindings/cctv_binding.dart';
 import '../../modules/cctv/views/add_cctv_view.dart';
 import '../../modules/cctv/views/cctv_details_view.dart';
@@ -273,7 +273,7 @@ class AppPages {
     ),
     GetPage(
       name: '/manager/games',
-      page: () => const ManagerGamesView(),
+      page: () => const ManagerCourtsView(),
       binding: ManagerBinding(),
     ),
     GetPage(
@@ -330,6 +330,11 @@ class AppPages {
     GetPage(
       name: Routes.managerProfile,
       page: () => const ManagerProfileView(),
+      binding: ManagerBinding(),
+    ),
+    GetPage(
+      name: Routes.managerProfileEdit,
+      page: () => const ManagerEditProfileView(),
       binding: ManagerBinding(),
     ),
     GetPage(

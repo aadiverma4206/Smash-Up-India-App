@@ -26,14 +26,12 @@ class CreateGameController extends GetxController {
     final ds = GamesRemoteDataSource(dioClient: dio);
     return GamesRepository(remoteDataSource: ds);
   }
-
   bool get isOnline {
     if (Get.isRegistered<ConnectivityService>()) {
       return ConnectivityService.to.isConnected.value;
     }
     return true;
   }
-
   bool checkInternetConnection({String actionName = 'Pitch booking'}) {
     if (!isOnline) {
       ErrorHandler.showErrorSnackBar(
@@ -234,15 +232,20 @@ class CreateGameController extends GetxController {
     }
 
     if (availableCourts.isNotEmpty) {
+      final activeAvailable = availableCourts.firstWhereOrNull(
+        (c) => c.status.toUpperCase() == 'AVAILABLE',
+      );
+
       if (selectedCourt.value == null) {
-        selectedCourt.value = availableCourts.first;
+        selectedCourt.value = activeAvailable ?? availableCourts.first;
       } else {
         final match = availableCourts.firstWhereOrNull(
           (c) =>
-              c.id == selectedCourt.value!.id ||
-              c.name == selectedCourt.value!.name,
+              (c.id == selectedCourt.value!.id ||
+                  c.name == selectedCourt.value!.name) &&
+              c.status.toUpperCase() == 'AVAILABLE',
         );
-        selectedCourt.value = match ?? availableCourts.first;
+        selectedCourt.value = match ?? activeAvailable ?? availableCourts.first;
       }
       fetchCourtAvailability();
     }
@@ -265,6 +268,14 @@ class CreateGameController extends GetxController {
   }
 
   void selectCourt(CourtModel court) {
+    final cStatus = court.status.toUpperCase();
+    if (cStatus == 'MAINTENANCE' || cStatus == 'BLOCKED') {
+      ErrorHandler.showWarningSnackBar(
+        'Court Unavailable',
+        '${court.name} is currently in $cStatus status and cannot be selected.',
+      );
+      return;
+    }
     selectedCourt.value = court;
     fetchCourtAvailability();
   }
@@ -274,7 +285,8 @@ class CreateGameController extends GetxController {
     final alt = availableCourts.firstWhereOrNull(
       (c) =>
           c.id != current?.id &&
-          c.name.toLowerCase() != current?.name.toLowerCase(),
+          c.name.toLowerCase() != current?.name.toLowerCase() &&
+          c.status.toUpperCase() == 'AVAILABLE',
     );
     if (alt != null) {
       selectCourt(alt);

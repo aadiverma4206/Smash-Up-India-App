@@ -7,6 +7,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/errors/error_handler.dart';
 
 class PlayerNotificationItem {
   final String id;
@@ -408,15 +409,9 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
       _localItems[i] = _localItems[i].copyWith(isRead: true);
     }
     _controller.markAllRead();
-    Get.snackbar(
+    ErrorHandler.showSuccessSnackBar(
       'Marked as Read',
       'All notifications marked as read',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: AppColors.primary.withValues(alpha: 0.9),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
     );
   }
 
@@ -906,6 +901,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                               Expanded(
                                 child: Text(
                                   item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: item.isRead
@@ -943,6 +940,8 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                           const SizedBox(height: 4),
                           Text(
                             item.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13,
                               color: isDark

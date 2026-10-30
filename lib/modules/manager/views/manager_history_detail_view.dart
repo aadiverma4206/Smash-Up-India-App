@@ -1761,7 +1761,7 @@ class ManagerHistoryDetailView extends GetView<ManagerGamesController> {
                     icon: const Icon(Icons.play_arrow_rounded,
                         color: Colors.white, size: 22),
                     label: Text(
-                      'Watch Recorded Match Video ($cameraDisplayName)',
+                      'Recorded Match Video ($cameraDisplayName)',
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

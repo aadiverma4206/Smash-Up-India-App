@@ -12,6 +12,7 @@ import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/profile_image_viewer_page.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/routes/app_routes.dart';
 import '../../support/widgets/support_legal_cards.dart';
 
 class ManagerProfileView extends StatefulWidget {
@@ -62,12 +63,9 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
           imageQuality: 85,
         );
       } catch (_) {
-        Get.snackbar(
+        ErrorHandler.showWarningSnackBar(
           'Notice',
           'Could not open image picker. Please check app permissions.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.amber.shade800,
-          colorText: Colors.white,
         );
         return;
       }
@@ -111,21 +109,15 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
           }
         }
 
-        Get.snackbar(
+        ErrorHandler.showSuccessSnackBar(
           'Success',
           'Profile photo updated successfully!',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
         );
       }
     } catch (_) {
-      Get.snackbar(
+      ErrorHandler.showErrorSnackBar(
         'Upload Issue',
         'Could not update profile photo. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
       );
     } finally {
       isUploading.value = false;
@@ -180,6 +172,91 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
     );
   }
 
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+        backgroundColor: Theme.of(context).cardColor,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Manager Log Out',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to log out of the Manager Control Center?',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : const Color(0xFF475569),
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Color(0xFF10B981),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF3B30),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Get.back();
+                      await AuthService.to.logout();
+                    },
+                    child: const Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -213,6 +290,14 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
               },
             );
           }),
+          IconButton(
+            icon: const Icon(Icons.edit_note_rounded, size: 28),
+            tooltip: 'Edit Profile',
+            onPressed: () async {
+              await Get.toNamed(Routes.managerProfileEdit);
+              await fetchManagerProfile();
+            },
+          ),
         ],
       ),
       body: SafeArea(
@@ -482,7 +567,7 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                               borderRadius: BorderRadius.circular(24)),
                           backgroundColor: Theme.of(context).cardColor,
                         ),
-                        onPressed: () => AuthService.to.logout(),
+                        onPressed: () => _showLogoutConfirmationDialog(context),
                         icon: const Icon(Icons.logout_rounded,
                             color: Colors.redAccent, size: 18),
                         label: const Text('Log Out',

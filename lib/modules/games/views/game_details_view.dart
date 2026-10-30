@@ -802,7 +802,7 @@ class GameDetailsView extends StatelessWidget {
                 icon: const Icon(Icons.play_arrow_rounded,
                     color: Colors.white, size: 22),
                 label: Text(
-                  'Watch Recorded Match Video (${selectedVid?.cameraName ?? "Main Camera"})',
+                  'Recorded Match Video ${selectedVid?.cameraName ?? "Main"}',
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

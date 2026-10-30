@@ -34,6 +34,9 @@ export class ManagerService {
     const stats = await ManagerRepository.getDashboardStats(club.id);
     const courts = await ManagerRepository.getCourtsByClub(club.id);
     const pendingGames = await ManagerRepository.getPendingPlayerGames(club.id);
+    const featuredMatches = await ManagerRepository.getFeaturedCourtMatches(
+      club.id,
+    );
 
     const totalRevenue = Number(stats.totalRevenueRupees || 0);
     const totalBookings = Number(stats.totalBookings || 0);
@@ -49,6 +52,9 @@ export class ManagerService {
       activeMatches,
       occupancyRatePercentage,
       onlineCctvCount,
+      courtMatches: featuredMatches,
+      court1Match: featuredMatches.court1,
+      court2Match: featuredMatches.court2,
       stats: {
         ...stats,
         pendingGamesCount: pendingGames.length,

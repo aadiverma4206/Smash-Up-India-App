@@ -1,413 +1,184 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/manager_dashboard_controller.dart';
-import '../repositories/manager_repository.dart';
-import '../../../app/theme/app_colors.dart';
-import '../../../core/services/auth_service.dart';
-import '../../../core/storage/database_service.dart';
-import '../../../core/utils/app_date_utils.dart';
-import '../../../core/utils/app_logger.dart';
-import '../../../core/widgets/app_loader.dart';
-import '../../../core/widgets/empty_state.dart';
-import '../../../data/models/game_model.dart';
-import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/notification_model.dart';
+import '../../../core/responsive/responsive_builder.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_text_field.dart';
+import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/app_date_utils.dart';
+import '../../player/controllers/notifications_controller.dart';
 
-class ManagerAlertItem {
-  final String id;
-  final String title;
-  final String subtitle;
-  final String? badgeText;
-  final Color? badgeBgColor;
-  final Color? badgeTextColor;
-  final String category;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBgLight;
-  final Color iconBgDark;
-  final DateTime dateTime;
-  final bool isUnread;
-  final bool isPendingAction;
-  final GameModel? originalGame;
-  final SlotRequestModel? originalSlot;
-
-  ManagerAlertItem({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    this.badgeText,
-    this.badgeBgColor,
-    this.badgeTextColor,
-    required this.category,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBgLight,
-    required this.iconBgDark,
-    required this.dateTime,
-    required this.isUnread,
-    this.isPendingAction = false,
-    this.originalGame,
-    this.originalSlot,
-  });
-}
-
-class ManagerNotificationsView extends StatefulWidget {
+class ManagerNotificationsView extends GetView<NotificationsController> {
   const ManagerNotificationsView({super.key});
 
   @override
-  State<ManagerNotificationsView> createState() =>
-      _ManagerNotificationsViewState();
-}
+  NotificationsController get controller =>
+      Get.isRegistered<NotificationsController>()
+          ? Get.find<NotificationsController>()
+          : Get.put(NotificationsController());
 
-class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
-  late final ManagerDashboardController dashboardController;
-  final ManagerRepository repository = Get.find<ManagerRepository>();
-  final DatabaseService dbService = Get.find<DatabaseService>();
+  static final TextEditingController searchController = TextEditingController();
+  static final RxString searchQuery = ''.obs;
 
-  final TextEditingController _searchController = TextEditingController();
-
-  final RxString _searchQuery = ''.obs;
-  final RxString _activeCategoryFilter = 'All activity'.obs;
-  final RxBool _showUnreadOnly = false.obs;
-  final RxBool _isOfflineMode = false.obs;
-  final RxBool _isLoadingNotifications = false.obs;
-
-  final RxList<NotificationModel> _serverNotifications =
-      <NotificationModel>[].obs;
-
-  @override
-  void initState() {
-    super.initState();
-    dashboardController = Get.find<ManagerDashboardController>();
-    _fetchAndSyncNotifications();
+  String _formatTimeAgo(String createdAt) {
+    return AppDateUtils.formatRelativeTime(createdAt);
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _fetchAndSyncNotifications() async {
-    _isLoadingNotifications.value = true;
-    final userId = Get.find<AuthService>().currentUser.value?.id ?? '';
-
-    try {
-      await dashboardController.loadManagerData();
-
-      final List<NotificationModel> remoteNotifs =
-          await repository.getNotifications(page: 1, limit: 100);
-      _isOfflineMode.value = false;
-
-      if (userId.isNotEmpty && remoteNotifs.isNotEmpty) {
-        final List<Map<String, dynamic>> jsonList =
-            remoteNotifs.map((n) => n.toJson()).toList();
-        await dbService.upsertLocalNotifications(userId, jsonList);
-      }
-
-      _serverNotifications.assignAll(remoteNotifs);
-    } catch (e) {
-      AppLogger.warning(
-          'Network error fetching manager notifications, falling back to local SQLite cache: $e');
-      _isOfflineMode.value = true;
-
-      if (userId.isNotEmpty) {
-        final localRows = await dbService.getLocalNotifications(userId);
-        final cachedNotifs =
-            localRows.map((r) => NotificationModel.fromJson(r)).toList();
-        _serverNotifications.assignAll(cachedNotifs);
-      }
-    } finally {
-      _isLoadingNotifications.value = false;
+  Color _getCategoryBgColor(String type, bool isDark) {
+    final t = type.toUpperCase();
+    if (t.contains('SUCCESS') ||
+        t.contains('MATCH') ||
+        t.contains('CONFIRMED') ||
+        t.contains('SLOT') ||
+        t.contains('BOOKING')) {
+      return isDark ? const Color(0xFF132B1F) : const Color(0xFFE8F8F0);
     }
+    if (t.contains('WARNING') ||
+        t.contains('ALERT') ||
+        t.contains('REFUND') ||
+        t.contains('CANCEL') ||
+        t.contains('REJECT')) {
+      return isDark ? const Color(0xFF2E1318) : const Color(0xFFFDE8E8);
+    }
+    if (t.contains('CCTV') || t.contains('VIDEO')) {
+      return isDark ? const Color(0xFF231834) : const Color(0xFFF2E8FD);
+    }
+    return isDark ? const Color(0xFF122234) : const Color(0xFFE8F2FD);
   }
 
-  List<ManagerAlertItem> _buildAlertItems() {
-    final now = DateTime.now();
-    final itemsMap = <String, ManagerAlertItem>{};
-
-    for (final game in dashboardController.pendingPlayerGames) {
-      final parsedDate =
-          AppDateUtils.parseMatchDateTime(game.matchDate, game.startTime) ??
-              now;
-      final key = 'pending_game_${game.id}';
-      itemsMap[key] = ManagerAlertItem(
-        id: key,
-        title: 'New match awaiting approval',
-        subtitle: '${game.title} · ${game.format} · ${game.courtName}',
-        badgeText: 'Pending',
-        badgeBgColor: const Color(0xFFFEF3C7),
-        badgeTextColor: const Color(0xFFD97706),
-        category: 'MATCH',
-        icon: Icons.assignment_outlined,
-        iconColor: const Color(0xFFEA580C),
-        iconBgLight: const Color(0xFFFFEDD5),
-        iconBgDark: const Color(0xFF3B2509),
-        dateTime: parsedDate,
-        isUnread: true,
-        isPendingAction: true,
-        originalGame: game,
-      );
+  Color _getCategoryIconColor(String type) {
+    final t = type.toUpperCase();
+    if (t.contains('SUCCESS') ||
+        t.contains('MATCH') ||
+        t.contains('CONFIRMED') ||
+        t.contains('SLOT') ||
+        t.contains('BOOKING')) {
+      return const Color(0xFF00C853);
     }
-
-    for (final slot in dashboardController.pendingRequests) {
-      final parsedDate = AppDateUtils.parseDateTime(slot.createdAt) ?? now;
-      final key = 'pending_slot_${slot.id}';
-      itemsMap[key] = ManagerAlertItem(
-        id: key,
-        title: 'New player joined match',
-        subtitle:
-            '${slot.playerName ?? "Player"} joined ${slot.gameTitle ?? "Court Match"} (${slot.courtName ?? "Court 1"})',
-        badgeText: 'Pending',
-        badgeBgColor: const Color(0xFFFEF3C7),
-        badgeTextColor: const Color(0xFFD97706),
-        category: 'SLOT',
-        icon: Icons.person_add_alt_1_rounded,
-        iconColor: const Color(0xFF9333EA),
-        iconBgLight: const Color(0xFFF3E8FF),
-        iconBgDark: const Color(0xFF2C1542),
-        dateTime: parsedDate,
-        isUnread: true,
-        isPendingAction: true,
-        originalSlot: slot,
-      );
+    if (t.contains('WARNING') ||
+        t.contains('ALERT') ||
+        t.contains('REFUND') ||
+        t.contains('CANCEL') ||
+        t.contains('REJECT')) {
+      return const Color(0xFFE53935);
     }
-
-    for (final notif in _serverNotifications) {
-      final parsedDate = AppDateUtils.parseDateTime(notif.createdAt) ?? now;
-      final typeUpper = notif.type.toUpperCase();
-
-      IconData icon = Icons.notifications_active_rounded;
-      Color iconColor = AppColors.primary;
-      Color iconBgLight = AppColors.primary.withValues(alpha: 0.15);
-      Color iconBgDark = const Color(0xFF0F331A);
-      String category = 'SYSTEM';
-      String? badgeText;
-      Color? badgeBgColor;
-      Color? badgeTextColor;
-
-      if (typeUpper.contains('PAYMENT') || typeUpper.contains('WALLET')) {
-        category = 'PAYMENT';
-        icon = Icons.account_balance_wallet_rounded;
-        iconColor = const Color(0xFF059669);
-        iconBgLight = const Color(0xFFD1FAE5);
-        iconBgDark = const Color(0xFF0C382A);
-      } else if (typeUpper.contains('REFUND') || typeUpper.contains('CANCEL')) {
-        category = 'REFUND';
-        icon = Icons.cancel_outlined;
-        iconColor = const Color(0xFFDC2626);
-        iconBgLight = const Color(0xFFFEE2E2);
-        iconBgDark = const Color(0xFF3B0D0D);
-        badgeText = 'Refund';
-        badgeBgColor = const Color(0xFFFEE2E2);
-        badgeTextColor = const Color(0xFFDC2626);
-      } else if (typeUpper.contains('MATCH') || typeUpper.contains('SLOT')) {
-        category = 'MATCH';
-        icon = Icons.sports_soccer_rounded;
-        iconColor = AppColors.primary;
-        iconBgLight = AppColors.primary.withValues(alpha: 0.15);
-        iconBgDark = const Color(0xFF0F331A);
-      }
-
-      itemsMap[notif.id] = ManagerAlertItem(
-        id: notif.id,
-        title: notif.title,
-        subtitle: notif.body,
-        badgeText: badgeText,
-        badgeBgColor: badgeBgColor,
-        badgeTextColor: badgeTextColor,
-        category: category,
-        icon: icon,
-        iconColor: iconColor,
-        iconBgLight: iconBgLight,
-        iconBgDark: iconBgDark,
-        dateTime: parsedDate,
-        isUnread: !notif.isRead,
-      );
+    if (t.contains('CCTV') || t.contains('VIDEO')) {
+      return const Color(0xFF8E24AA);
     }
-
-    final resultList = itemsMap.values.toList();
-    resultList.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-    return resultList;
+    return const Color(0xFF1E88E5);
   }
 
-  List<ManagerAlertItem> _getFilteredItems(List<ManagerAlertItem> allItems) {
-    final query = _searchQuery.value.trim().toLowerCase();
-    final category = _activeCategoryFilter.value;
-    final unreadOnly = _showUnreadOnly.value;
-
-    return allItems.where((item) {
-      if (unreadOnly && !item.isUnread) return false;
-
-      if (category == 'Match Approvals' && item.category != 'MATCH') {
-        return false;
-      }
-      if (category == 'Slot Requests' && item.category != 'SLOT') {
-        return false;
-      }
-      if (category == 'Payments & Refunds' &&
-          item.category != 'PAYMENT' &&
-          item.category != 'REFUND') {
-        return false;
-      }
-
-      if (query.isNotEmpty) {
-        final titleMatch = item.title.toLowerCase().contains(query);
-        final subMatch = item.subtitle.toLowerCase().contains(query);
-        if (!titleMatch && !subMatch) return false;
-      }
-
-      return true;
-    }).toList();
+  IconData _getCategoryIcon(String type) {
+    final t = type.toUpperCase();
+    if (t.contains('MATCH') ||
+        t.contains('GAME') ||
+        t.contains('SLOT') ||
+        t.contains('BOOKING')) {
+      return Icons.sports_soccer_rounded;
+    }
+    if (t.contains('REFUND') || t.contains('WALLET') || t.contains('PAYMENT')) {
+      return Icons.account_balance_wallet_outlined;
+    }
+    if (t.contains('CCTV') || t.contains('VIDEO')) {
+      return Icons.videocam_outlined;
+    }
+    if (t.contains('WARNING') || t.contains('ALERT')) {
+      return Icons.warning_amber_rounded;
+    }
+    if (t.contains('USER') || t.contains('PLAYER') || t.contains('JOIN')) {
+      return Icons.person_outline_rounded;
+    }
+    return Icons.notifications_active_outlined;
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void _showDeleteConfirmation(BuildContext context, List<String> visibleIds) {
+    final count = controller.selectedIds.length;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Notifications & Alerts'),
-      ),
-      body: SafeArea(
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Obx(() {
-              if (!_isOfflineMode.value) return const SizedBox.shrink();
-              return Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: Colors.orange.withValues(alpha: 0.15),
-                child: Row(
-                  children: const [
-                    Icon(Icons.wifi_off_rounded,
-                        color: Colors.orange, size: 18),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Offline Mode · Showing 3-Day Cached Notifications',
-                        style: TextStyle(
-                            color: Colors.orange,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-              );
-            }),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    onChanged: (val) => _searchQuery.value = val,
-                    style: TextStyle(
-                      color:
-                          isDark ? AppColors.textPrimaryDark : Colors.black87,
-                      fontSize: 14,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search notifications by keyword...',
-                      prefixIcon: const Icon(Icons.search_rounded,
-                          color: AppColors.primary),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded, size: 18),
-                              onPressed: () {
-                                _searchController.clear();
-                                _searchQuery.value = '';
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Theme.of(context).cardColor,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                            color: isDark
-                                ? AppColors.darkBorder
-                                : const Color(0xFFE2E8F0)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        'All activity',
-                        'Match Approvals',
-                        'Slot Requests',
-                        'Payments & Refunds',
-                      ].map((cat) {
-                        return Obx(() {
-                          final isSelected = _activeCategoryFilter.value == cat;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(cat,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : (isDark
-                                            ? AppColors.textPrimaryDark
-                                            : Colors.black87),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  )),
-                              selected: isSelected,
-                              selectedColor: AppColors.primary,
-                              backgroundColor: Theme.of(context).cardColor,
-                              onSelected: (_) =>
-                                  _activeCategoryFilter.value = cat,
-                            ),
-                          );
-                        });
-                      }).toList(),
-                    ),
-                  ),
-                ],
               ),
             ),
-            Expanded(
-              child: Obx(() {
-                if (_isLoadingNotifications.value &&
-                    _serverNotifications.isEmpty) {
-                  return const AppLoader(
-                      message: 'Syncing manager notifications...');
-                }
-
-                final allAlerts = _buildAlertItems();
-                final filtered = _getFilteredItems(allAlerts);
-
-                if (filtered.isEmpty) {
-                  return const EmptyStateWidget(
-                    title: 'No Notifications Found',
-                    subtitle:
-                        'No notifications or pending alerts match your current filter.',
-                    icon: Icons.notifications_none_rounded,
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: _fetchAndSyncNotifications,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = filtered[index];
-                      return _buildAlertCard(context, item);
-                    },
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
                   ),
-                );
-              }),
+                  child: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Delete Notifications?',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Are you sure you want to delete $count selected notification(s)? This action cannot be undone.',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      controller.deleteSelectedNotifications();
+                    },
+                    child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -415,189 +186,452 @@ class _ManagerNotificationsViewState extends State<ManagerNotificationsView> {
     );
   }
 
-  Widget _buildAlertCard(BuildContext context, ManagerAlertItem item) {
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context, List<String> visibleIds) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final formattedTime = AppDateUtils.formatRelativeTime(item.dateTime);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: item.isUnread
-              ? AppColors.primary.withValues(alpha: 0.5)
-              : (isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE)),
-          width: item.isUnread ? 1.2 : 1,
-        ),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 3, offset: Offset(0, 1)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark ? item.iconBgDark : item.iconBgLight,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(item.icon, color: item.iconColor, size: 20),
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: Obx(() {
+        // Selection Mode AppBar
+        if (controller.isSelectionMode) {
+          final selectedCount = controller.selectedIds.length;
+          final isAllSelected =
+              controller.selectedIds.containsAll(visibleIds) &&
+                  visibleIds.isNotEmpty;
+
+          return AppBar(
+            backgroundColor:
+                isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+            elevation: 2,
+            leading: IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => controller.clearSelection(),
+              tooltip: 'Cancel Selection',
+            ),
+            title: Text(
+              '$selectedCount Selected',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  isAllSelected
+                      ? Icons.deselect_rounded
+                      : Icons.select_all_rounded,
+                  color: AppColors.primary,
+                ),
+                onPressed: () => controller.selectAll(visibleIds),
+                tooltip: isAllSelected ? 'Deselect All' : 'Select All',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
+                onPressed: () => _showDeleteConfirmation(context, visibleIds),
+                tooltip: 'Delete Selected',
+              ),
+              const SizedBox(width: 4),
+            ],
+          );
+        }
+
+        // Standard AppBar
+        return AppBar(
+          backgroundColor: isDark
+              ? Theme.of(context).scaffoldBackgroundColor
+              : AppColors.sageGreenAppBar,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          title: Text(
+            'Notifications',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            ),
+          ),
+          iconTheme: IconThemeData(
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.done_all_rounded,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
+              ),
+              onPressed: () => controller.markAllRead(),
+              tooltip: 'Mark All as Read',
+            ),
+            const SizedBox(width: 4),
+          ],
+        );
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Obx(() {
+      final query = searchQuery.value;
+      final filtered = controller.notifications.where((n) {
+        if (query.isEmpty) return true;
+        return n.title.toLowerCase().contains(query) ||
+            n.body.toLowerCase().contains(query);
+      }).toList();
+
+      final visibleIds = filtered.map((n) => n.id).toList();
+
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: _buildAppBar(context, visibleIds),
+        body: ResponsiveBuilder(
+          builder: (context, deviceType) {
+            final isTabletOrDesktop = deviceType == DeviceType.tablet ||
+                deviceType == DeviceType.desktop;
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0, vertical: 10.0),
+                  child: Column(
+                    children: [
+                      AppTextField(
+                        label: '',
+                        hint: 'Filter Notifications...',
+                        controller: searchController,
+                        prefixIcon: const Icon(Icons.search,
+                            color: AppColors.primary, size: 20),
+                        suffixIcon: Obx(() {
+                          if (searchQuery.value.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            icon: const Icon(Icons.clear_rounded,
+                                color: Colors.grey, size: 20),
+                            onPressed: () {
+                              searchController.clear();
+                              searchQuery.value = '';
+                            },
+                          );
+                        }),
+                        onChanged: (val) {
+                          searchQuery.value = val.trim().toLowerCase();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: Obx(() {
+                          if (controller.isLoading.value &&
+                              controller.notifications.isEmpty) {
+                            return _buildShimmerView(context, deviceType);
+                          }
+
+                          if (filtered.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.notifications_off_outlined,
+                                    size: 48,
+                                    color: isDark
+                                        ? AppColors.textSecondaryDark
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No notifications found.',
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? AppColors.textSecondaryDark
+                                          : Colors.grey.shade700,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return RefreshIndicator(
+                            onRefresh: () async =>
+                                controller.fetchNotifications(isRefresh: true),
+                            child: isTabletOrDesktop
+                                ? GridView.builder(
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount:
+                                          deviceType == DeviceType.desktop
+                                              ? 3
+                                              : 2,
+                                      childAspectRatio: 2.8,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 8,
+                                    ),
+                                    itemCount: filtered.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildNotificationTile(
+                                          context, filtered[index]);
+                                    },
+                                  )
+                                : ListView.separated(
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      return _buildNotificationTile(
+                                          context, filtered[index]);
+                                    },
+                                  ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    });
+  }
+
+  Widget _buildNotificationTile(BuildContext context, NotificationModel item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = _getCategoryBgColor(item.type, isDark);
+    final iconColor = _getCategoryIconColor(item.type);
+    final iconData = _getCategoryIcon(item.type);
+    final timeAgo = _formatTimeAgo(item.createdAt);
+
+    return Obx(() {
+      final isSelected = controller.selectedIds.contains(item.id);
+      final isSelectionMode = controller.isSelectionMode;
+
+      return Container(
+        margin: EdgeInsets.zero,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : (item.isRead
+                    ? (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0))
+                    : AppColors.primary.withValues(alpha: 0.5)),
+            width: isSelected ? 2.0 : (item.isRead ? 0.8 : 1.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              if (isSelected)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  child: Container(color: AppColors.primary),
+                ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => controller.markAsReadAndNavigate(item),
+                  onLongPress: () => controller.toggleSelection(item.id),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14.0, vertical: 12.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : Colors.black87,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Icon(iconData, color: iconColor, size: 22),
                           ),
                         ),
-                        if (item.badgeText != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: item.badgeBgColor ?? AppColors.primary,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              item.badgeText!,
-                              style: TextStyle(
-                                color: item.badgeTextColor ?? Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item.title,
+                                      style: TextStyle(
+                                        fontWeight: item.isRead
+                                            ? FontWeight.w600
+                                            : FontWeight.bold,
+                                        fontSize: 14.5,
+                                        color: isDark
+                                            ? AppColors.textPrimaryDark
+                                            : const Color(0xFF0F172A),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (timeAgo.isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      timeAgo,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? AppColors.textSecondaryDark
+                                            : Colors.grey.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                item.body,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : const Color(0xFF475569),
+                                  height: 1.3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelectionMode) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            isSelected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade400,
+                            size: 22,
+                          ),
+                        ] else if (!item.isRead) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.only(top: 4),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
                             ),
                           ),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : Colors.grey.shade600,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                formattedTime,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : Colors.grey.shade500,
-                ),
-              ),
-              if (item.isPendingAction) ...[
-                Row(
-                  children: [
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
-                        side: const BorderSide(color: Colors.redAccent),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () => _handleRejectAction(item),
-                      child: const Text('Reject',
-                          style: TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () => _handleApproveAction(item),
-                      child: const Text('Approve',
-                          style: TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildShimmerView(BuildContext context, DeviceType deviceType) {
+    final isGrid =
+        deviceType == DeviceType.tablet || deviceType == DeviceType.desktop;
+    if (isGrid) {
+      return GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        shrinkWrap: true,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: deviceType == DeviceType.desktop ? 3 : 2,
+          childAspectRatio: 2.8,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: 6,
+        itemBuilder: (_, __) => _buildSingleShimmerCard(context),
+      );
+    }
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: 6,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (_, __) => _buildSingleShimmerCard(context),
     );
   }
 
-  void _handleApproveAction(ManagerAlertItem item) async {
-    if (item.originalGame != null) {
-      await dashboardController.approvePlayerGame(item.originalGame!.id);
-      _fetchAndSyncNotifications();
-    } else if (item.originalSlot != null) {
-      await dashboardController.approveSlotRequest(item.originalSlot!.id);
-      _fetchAndSyncNotifications();
-    }
-  }
-
-  void _handleRejectAction(ManagerAlertItem item) async {
-    final reasonController = TextEditingController();
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Reject Request'),
-        content: TextField(
-          controller: reasonController,
-          decoration: const InputDecoration(
-            hintText: 'Enter rejection reason...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () async {
-              Get.back();
-              if (item.originalGame != null) {
-                await dashboardController.rejectPlayerGame(
-                    item.originalGame!.id, reasonController.text.trim());
-              } else if (item.originalSlot != null) {
-                await dashboardController.rejectSlotRequest(
-                    item.originalSlot!.id, reasonController.text.trim());
-              }
-              _fetchAndSyncNotifications();
-            },
-            child: const Text('Reject', style: TextStyle(color: Colors.white)),
+  Widget _buildSingleShimmerCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        children: [
+          const AppShimmer(
+              width: 44, height: 44, shape: BoxShape.circle, enable3D: true),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    AppShimmer(
+                        width: 130,
+                        height: 14,
+                        borderRadius: 4,
+                        enable3D: true),
+                    AppShimmer(
+                        width: 45, height: 11, borderRadius: 4, enable3D: true),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const AppShimmer(
+                    width: 170, height: 11, borderRadius: 4, enable3D: true),
+              ],
+            ),
           ),
         ],
       ),

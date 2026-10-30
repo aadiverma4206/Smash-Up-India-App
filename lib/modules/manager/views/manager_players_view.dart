@@ -83,6 +83,21 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
       List<Map<String, dynamic>> players) {
     var list = List<Map<String, dynamic>>.from(players);
 
+    // Instant status filtering for Active / Blocked / All
+    if (selectedStatus.value == 'ACTIVE') {
+      list = list.where((p) {
+        final st = (p['status'] ?? '').toString().toUpperCase();
+        final isBlocked =
+            (st == 'BLOCKED' || st == 'SUSPENDED' || p['isBlocked'] == true);
+        return !isBlocked;
+      }).toList();
+    } else if (selectedStatus.value == 'BLOCKED') {
+      list = list.where((p) {
+        final st = (p['status'] ?? '').toString().toUpperCase();
+        return st == 'BLOCKED' || st == 'SUSPENDED' || p['isBlocked'] == true;
+      }).toList();
+    }
+
     if (selectedPosition.value != 'ALL') {
       final pos = selectedPosition.value.toUpperCase();
       list = list.where((p) {
@@ -681,43 +696,69 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
     final reasonController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            const Icon(Icons.block_rounded, color: Colors.redAccent, size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Block Player: $name',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
-                ),
-              ),
-            ),
-          ],
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
         ),
-        content: Column(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.block_rounded, color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Block Player: $name',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Text(
               'Restricting player access will prevent them from joining matches or booking slots at this turf.',
               style: TextStyle(
-                fontSize: 12,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : const Color(0xFF475569),
+                fontSize: 12.5,
+                color: isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             TextField(
               controller: reasonController,
-              maxLines: 3,
+              maxLines: 2,
               style: TextStyle(
                 color: isDark ? AppColors.textPrimaryDark : Colors.black87,
                 fontSize: 13,
@@ -725,55 +766,65 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
               decoration: InputDecoration(
                 hintText: 'Enter reason for restriction...',
                 hintStyle: TextStyle(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : const Color(0xFF94A3B8),
+                  color: isDark ? AppColors.textSecondaryDark : const Color(0xFF94A3B8),
                   fontSize: 12,
                 ),
                 filled: true,
-                fillColor:
-                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                fillColor: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color:
-                        isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
+                    color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
                   ),
                 ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Get.back();
+                      await controller.blockPlayer(
+                          playerId, reasonController.text.trim());
+                    },
+                    child: const Text('Confirm Block',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color:
-                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () async {
-              Get.back();
-              await controller.blockPlayer(
-                  playerId, reasonController.text.trim());
-            },
-            child: const Text('Confirm Block',
-                style: TextStyle(fontWeight: FontWeight.w800)),
-          ),
-        ],
       ),
     );
   }
@@ -781,64 +832,104 @@ class _ManagerPlayersViewState extends State<ManagerPlayersView> {
   void _confirmUnblock(BuildContext context, String playerId, String name) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.check_circle_outline_rounded,
-                color: Color(0xFF00C853), size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Unblock Player: $name',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C853).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle_outline_rounded,
+                      color: Color(0xFF00C853), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Unblock Player: $name',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Are you sure you want to restore match and turf booking access for $name?',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00C853),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Get.back();
+                      await controller.unblockPlayer(playerId);
+                    },
+                    child: const Text('Confirm Unblock',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        content: Text(
-          'Are you sure you want to restore match and turf booking access for $name?',
-          style: TextStyle(
-            fontSize: 13,
-            color:
-                isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color:
-                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00C853),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () async {
-              Get.back();
-              await controller.unblockPlayer(playerId);
-            },
-            child: const Text('Confirm Unblock',
-                style: TextStyle(fontWeight: FontWeight.w800)),
-          ),
-        ],
       ),
     );
   }

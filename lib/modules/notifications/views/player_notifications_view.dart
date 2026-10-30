@@ -436,7 +436,7 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                                             ? AppColors.textPrimaryDark
                                             : const Color(0xFF0F172A),
                                       ),
-                                      maxLines: 2,
+                                      maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -464,7 +464,7 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
                                       : const Color(0xFF475569),
                                   height: 1.3,
                                 ),
-                                maxLines: 2,
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],

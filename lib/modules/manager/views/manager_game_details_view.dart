@@ -7,6 +7,7 @@ import '../../../core/widgets/app_loader.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/widgets/match_date_picker_dialog.dart';
 
 class ManagerGameDetailsView extends GetView<ManagerGamesController> {
   ManagerGameDetailsView({super.key});
@@ -850,7 +851,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       icon: const Icon(Icons.fullscreen_rounded,
                           color: AppColors.primary),
                       label: Text(
-                          'Watch Recorded Match Video ($cameraDisplayName)',
+                          'Recorded Match Video ($cameraDisplayName)',
                           style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold)),
@@ -1276,41 +1277,63 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
 
   void _showExtendTimeDialog(BuildContext context, GameModel game) {
     int selectedMinutes = 15;
-    Get.dialog(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Get.bottomSheet(
       StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: context.cardColor,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Row(
-              children: [
-                const Icon(Icons.more_time_rounded,
-                    color: AppColors.primary, size: 24),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Extend Match Time',
-                    style: TextStyle(
-                      color: context.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-              ],
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: context.cardColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            content: Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.more_time_rounded, color: AppColors.primary, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Extend Match Time',
+                        style: TextStyle(
+                          color: context.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 Text(
                   'Select extra minutes to extend for match "${game.title}" and its live CCTV recording:',
-                  style: TextStyle(color: context.textSecondary, fontSize: 13),
+                  style: TextStyle(color: context.textSecondary, fontSize: 12.5),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
-                  spacing: 8,
+                  spacing: 10,
                   children: [10, 15, 30].map((mins) {
                     final isSel = selectedMinutes == mins;
                     return ChoiceChip(
@@ -1320,6 +1343,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       labelStyle: TextStyle(
                         color: isSel ? Colors.white : context.textPrimary,
                         fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                       onSelected: (val) {
                         if (val) {
@@ -1329,41 +1353,55 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(color: context.borderColor),
+                        ),
+                        onPressed: () => Get.back(),
+                        child: Text('Cancel', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Obx(() => ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            onPressed: controller.isExtendingTime.value
+                                ? null
+                                : () {
+                                    Get.back();
+                                    controller.extendMatchTime(game.id,
+                                        additionalMinutes: selectedMinutes);
+                                  },
+                            child: controller.isExtendingTime.value
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2),
+                                  )
+                                : Text(
+                                    'Extend +$selectedMinutes Min',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                          )),
+                    ),
+                  ],
+                ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text('Cancel'),
-              ),
-              Obx(() => ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                    ),
-                    onPressed: controller.isExtendingTime.value
-                        ? null
-                        : () {
-                            Get.back();
-                            controller.extendMatchTime(game.id,
-                                additionalMinutes: selectedMinutes);
-                          },
-                    child: controller.isExtendingTime.value
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
-                          )
-                        : Text(
-                            'Extend +$selectedMinutes Min',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                          ),
-                  )),
-            ],
           );
         },
       ),
@@ -1376,22 +1414,59 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     final scoreBController =
         TextEditingController(text: game.teamBScore.toString());
     final isFinalRx = (game.status == 'COMPLETED').obs;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: context.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          game.status == 'COMPLETED' ? 'Edit Match Score' : 'Update Live Score',
-          style: TextStyle(color: context.textPrimary, fontSize: 16),
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
         ),
-        content: Column(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.scoreboard_rounded, color: AppColors.primary, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    game.status == 'COMPLETED' ? 'Edit Match Score' : 'Update Live Score',
+                    style: TextStyle(color: context.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Text(
               'Enter scores for "${game.title}". Players will immediately see this updated on their match scoreboard.',
-              style: TextStyle(fontSize: 12, color: context.textSecondary),
+              style: TextStyle(fontSize: 12.5, color: context.textSecondary),
             ),
             const SizedBox(height: 16),
             Row(
@@ -1420,7 +1495,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 8),
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
                     ],
@@ -1456,7 +1531,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 8),
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
                     ],
@@ -1473,31 +1548,49 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       onChanged: (val) => isFinalRx.value = val ?? false,
                     ),
                     const Text('Mark as Final Score',
-                        style: TextStyle(fontSize: 12)),
+                        style: TextStyle(fontSize: 12.5)),
                   ],
                 )),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: context.borderColor),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      final a = (int.tryParse(scoreAController.text.trim()) ?? 0)
+                          .clamp(0, 99);
+                      final b = (int.tryParse(scoreBController.text.trim()) ?? 0)
+                          .clamp(0, 99);
+                      Get.back();
+                      controller.submitMatchScore(game.id, a, b,
+                          isFinal: isFinalRx.value);
+                    },
+                    child:
+                        const Text('Save Score', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
-              final a = (int.tryParse(scoreAController.text.trim()) ?? 0)
-                  .clamp(0, 99);
-              final b = (int.tryParse(scoreBController.text.trim()) ?? 0)
-                  .clamp(0, 99);
-              Get.back();
-              controller.submitMatchScore(game.id, a, b,
-                  isFinal: isFinalRx.value);
-            },
-            child:
-                const Text('Save Score', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -1507,17 +1600,56 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
         TextEditingController(text: game.teamAScore.toString());
     final scoreBController =
         TextEditingController(text: game.teamBScore.toString());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: context.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Stop & Complete Match: ${game.title}',
-            style: TextStyle(color: context.textPrimary, fontSize: 16)),
-        content: Column(
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Stop & Complete Match: ${game.title}',
+                    style: TextStyle(color: context.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             const Text(
               'Enter the final score before completing this match:',
               style: TextStyle(fontSize: 12.5),
@@ -1585,55 +1717,132 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 ),
               ],
             ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: context.borderColor),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Back', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      final a = int.tryParse(scoreAController.text.trim()) ?? 0;
+                      final b = int.tryParse(scoreBController.text.trim()) ?? 0;
+                      Get.back();
+                      controller.completeGame(game.id, a, b);
+                    },
+                    child: const Text('Stop & Complete',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Back'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              final a = int.tryParse(scoreAController.text.trim()) ?? 0;
-              final b = int.tryParse(scoreBController.text.trim()) ?? 0;
-              Get.back();
-              controller.completeGame(game.id, a, b);
-            },
-            child: const Text('Stop & Complete',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
 
   void _confirmCancelMatch(BuildContext context, GameModel game) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: context.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Match: ${game.title}',
-            style: TextStyle(color: context.textPrimary)),
-        content: const Text(
-            'Are you sure you want to cancel this match? Full wallet refunds will be processed to joined players.',
-            style: TextStyle(fontSize: 12)),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Back'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Get.back();
-              controller.cancelMatchWithRefunds(
-                  game.id, 'Cancelled by manager');
-            },
-            child: const Text('Confirm Cancel',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.highlight_off_rounded, color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Cancel Match: ${game.title}',
+                    style: TextStyle(color: context.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Are you sure you want to cancel this match? Full wallet refunds will be processed to joined players.',
+              style: TextStyle(fontSize: 12.5),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: context.borderColor),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Back', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      controller.cancelMatchWithRefunds(
+                          game.id, 'Cancelled by manager');
+                    },
+                    child: const Text('Confirm Cancel',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1664,8 +1873,10 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     } catch (_) {}
 
     final reasonController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
+    Get.bottomSheet(
+      isScrollControlled: true,
       StatefulBuilder(
         builder: (ctx, setState) {
           String formatTime(TimeOfDay tod) {
@@ -1681,38 +1892,62 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             return '$y-$m-$d';
           }
 
-          return AlertDialog(
-            backgroundColor: context.cardColor,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                const Icon(Icons.edit_calendar_rounded,
-                    color: AppColors.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Reschedule Match',
-                    style: TextStyle(
-                      color: context.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-              ],
+          return Container(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
             ),
-            content: SingleChildScrollView(
+            decoration: BoxDecoration(
+              color: context.cardColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Update the scheduled date & time for "${game.title}". All joined players will receive an instant notification.',
-                    style:
-                        TextStyle(fontSize: 12.5, color: context.textSecondary),
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Reschedule Match',
+                          style: TextStyle(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Update scheduled date & time for "${game.title}". Players receive instant notification.',
+                    style: TextStyle(fontSize: 12.5, color: context.textSecondary),
+                  ),
+                  const SizedBox(height: 14),
                   Text('New Match Date',
                       style: TextStyle(
                           fontSize: 12,
@@ -1721,13 +1956,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                   const SizedBox(height: 6),
                   InkWell(
                     onTap: () async {
-                      final picked = await showDatePicker(
+                      final picked = await showMatchDatePicker(
                         context: context,
                         initialDate: selectedDate.isBefore(DateTime.now())
                             ? DateTime.now()
                             : selectedDate,
                         firstDate: DateTime.now(),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
+                        matchDates: controller.scheduledMatchDates,
+                        upcomingMatchDates: controller.upcomingMatchDates,
                       );
                       if (picked != null) {
                         setState(() => selectedDate = picked);
@@ -1736,7 +1973,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         border: Border.all(color: context.borderColor),
                         borderRadius: BorderRadius.circular(10),
@@ -1754,7 +1991,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -1780,7 +2017,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                               borderRadius: BorderRadius.circular(10),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 12),
+                                    horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
                                   border:
                                       Border.all(color: context.borderColor),
@@ -1830,7 +2067,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                               borderRadius: BorderRadius.circular(10),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 12),
+                                    horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
                                   border:
                                       Border.all(color: context.borderColor),
@@ -1858,8 +2095,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Text('Reason for Rescheduling (Optional)',
+                  const SizedBox(height: 12),
+                  Text('Reason (Optional)',
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1871,52 +2108,64 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     style: TextStyle(color: context.textPrimary, fontSize: 13),
                     decoration: InputDecoration(
                       hintText:
-                          'e.g. Ground maintenance, weather delay, requested by players',
+                          'e.g. Ground maintenance, weather delay',
                       hintStyle:
                           TextStyle(color: context.textSecondary, fontSize: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: context.borderColor),
                       ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: context.borderColor),
+                          ),
+                          onPressed: () => Get.back(),
+                          child: Text('Cancel', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          onPressed: () async {
+                            final formattedDate = formatDate(selectedDate);
+                            final formattedStart = formatTime(selectedStartTime);
+                            final formattedEnd = formatTime(selectedEndTime);
+
+                            Get.back();
+                            await controller.rescheduleMatch(
+                              gameId: game.id,
+                              matchDate: formattedDate,
+                              startTime: formattedStart,
+                              endTime: formattedEnd,
+                              courtId: game.courtId,
+                              reason: reasonController.text.trim(),
+                            );
+                          },
+                          child: const Text('Confirm Reschedule',
+                              style: TextStyle(
+                                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text('Cancel',
-                    style: TextStyle(color: context.textSecondary)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                ),
-                onPressed: () async {
-                  final formattedDate = formatDate(selectedDate);
-                  final formattedStart = formatTime(selectedStartTime);
-                  final formattedEnd = formatTime(selectedEndTime);
-
-                  Get.back();
-                  await controller.rescheduleMatch(
-                    gameId: game.id,
-                    matchDate: formattedDate,
-                    startTime: formattedStart,
-                    endTime: formattedEnd,
-                    courtId: game.courtId,
-                    reason: reasonController.text.trim(),
-                  );
-                },
-                child: const Text('Confirm Reschedule',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ],
           );
         },
       ),

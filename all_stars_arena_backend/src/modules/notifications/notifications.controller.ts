@@ -97,12 +97,10 @@ export const deleteMultipleNotificationsController = asyncHandler(
       Boolean(deleteAll),
     );
 
-    res
-      .status(200)
-      .json(
-        ApiResponse.success(`Deleted ${count} notifications successfully`, {
-          count,
-        }),
-      );
+    res.status(200).json(
+      ApiResponse.success(`Deleted ${count} notifications successfully`, {
+        count,
+      }),
+    );
   },
 );

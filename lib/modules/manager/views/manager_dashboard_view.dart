@@ -204,9 +204,9 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                           const SizedBox(height: 18),
                           _buildPrimaryActionsGrid(context),
                           const SizedBox(height: 20),
-                          _buildClubHeader(context, d),
-                          const SizedBox(height: 20),
                           _buildMetricsSection(context, d),
+                          const SizedBox(height: 20),
+                          _buildFeaturedCourtMatchesSection(context),
                           const SizedBox(height: 20),
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
@@ -287,8 +287,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                               _buildNotificationButton(context),
                               const SizedBox(width: 6),
                               _buildProfileAvatar(context),
-                              const SizedBox(width: 6),
-                              _buildLogoutButton(context),
                             ],
                           ),
                         ],
@@ -688,6 +686,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     });
   }
 
+  // ignore: unused_element
   Widget _buildLogoutButton(BuildContext context) {
     return InkWell(
       onTap: () => _confirmLogout(context),
@@ -716,26 +715,86 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
   }
 
   void _confirmLogout(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     Get.dialog(
-      AlertDialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
         backgroundColor: Theme.of(context).cardColor,
-        title: const Text('Manager Log Out'),
-        content: const Text(
-            'Are you sure you want to log out of the Manager Control Center?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Manager Log Out',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to log out of the Manager Control Center?',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : const Color(0xFF475569),
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Color(0xFF10B981),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF3B30),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Get.back();
+                      await AuthService.to.logout();
+                    },
+                    child: const Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () async {
-              Get.back();
-              await AuthService.to.logout();
-            },
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -757,7 +816,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed('/manager/games'),
+          onTap: () => Get.toNamed('/manager/courts/manage'),
           borderRadius: BorderRadius.circular(30),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
@@ -770,13 +829,13 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.sports_soccer_rounded,
+                  child: const Icon(Icons.stadium_rounded,
                       color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
-                    'Manage Turf Club & Matches',
+                    'Manage Courts',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
@@ -900,69 +959,391 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     );
   }
 
-  Widget _buildClubHeader(BuildContext context, dynamic d) {
+  Widget _buildFeaturedCourtMatchesSection(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Obx(() {
+      final court1Game = controller.court1FeaturedMatch;
+      final court2Game = controller.court2FeaturedMatch;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.stadium_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Court Live & Next Matches',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkInputBg
+                      : const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  '1 Per Court',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildCourtFeaturedCard(
+            context,
+            courtName: 'Court 1',
+            courtNum: 1,
+            game: court1Game,
+          ),
+          const SizedBox(height: 12),
+          _buildCourtFeaturedCard(
+            context,
+            courtName: 'Court 2',
+            courtNum: 2,
+            game: court2Game,
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildCourtFeaturedCard(
+    BuildContext context, {
+    required String courtName,
+    required int courtNum,
+    required GameModel? game,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool hasGame = game != null;
+
+    final String statusUpper = (game?.status ?? '').toUpperCase();
+    final bool isOngoing = statusUpper == 'ONGOING' || statusUpper == 'STARTED';
+
+    Color themeColor;
+    Color badgeBgColor;
+    Color badgeTextColor;
+    String badgeLabel;
+
+    if (!hasGame) {
+      themeColor = isDark ? Colors.grey.shade600 : Colors.grey.shade500;
+      badgeBgColor = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
+      badgeTextColor = isDark ? Colors.grey.shade400 : Colors.grey.shade700;
+      badgeLabel = 'NO MATCH';
+    } else if (isOngoing) {
+      themeColor = Colors.orange.shade800;
+      badgeBgColor = Colors.orange.shade800.withValues(alpha: 0.15);
+      badgeTextColor = Colors.orange.shade800;
+      badgeLabel = '🔴 ONGOING';
+    } else {
+      themeColor = const Color(0xFF1E88E5); // Vibrant Blue theme for Future/Upcoming
+      badgeBgColor = const Color(0xFF1E88E5).withValues(alpha: 0.12);
+      badgeTextColor = const Color(0xFF1E88E5);
+      badgeLabel = '🗓️ UPCOMING';
+    }
+
+    final formattedDate = hasGame && game.matchDate.isNotEmpty
+        ? AppDateUtils.formatDate(game.matchDate, format: 'dd MMM yyyy')
+        : 'Today';
+
+    final timeDisplay = hasGame && game.startTime.isNotEmpty
+        ? (game.endTime.isNotEmpty
+            ? '${game.startTime} - ${game.endTime}'
+            : game.startTime)
+        : '';
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+          color: isOngoing
+              ? Colors.orange.shade700
+              : (hasGame
+                  ? const Color(0xFF1E88E5).withValues(alpha: 0.6)
+                  : (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0))),
+          width: isOngoing ? 1.5 : (hasGame ? 1.2 : 1.0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  d?.club.name ?? 'Assigned Turf Club',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          isDark ? AppColors.textPrimaryDark : Colors.black87),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(6),
+              Row(
+                children: [
+                  Icon(
+                    Icons.sports_soccer_rounded,
+                    size: 18,
+                    color: hasGame ? themeColor : AppColors.primary,
                   ),
-                  child: const Text('Authorized Club',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(width: 6),
+                  Text(
+                    courtName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeBgColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: badgeTextColor, width: 0.8),
+                ),
+                child: Text(
+                  badgeLabel,
+                  style: TextStyle(
+                    color: badgeTextColor,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            '📍 ${d?.club.address ?? "VIP Road"}, ${d?.club.city ?? "Raipur"}',
-            style: TextStyle(
-                color:
-                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
-                fontSize: 12),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+          const SizedBox(height: 10),
+          if (hasGame) ...[
+            Text(
+              game.title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time_filled_rounded,
+                  size: 13,
+                  color: themeColor,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '$formattedDate • $timeDisplay',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : Colors.grey.shade700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.darkInputBg
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    game.format,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white70 : Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '👥 ${game.currentPlayers}/${game.maxPlayers} Players',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '₹${game.perPlayerFee.toInt()}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ),
+                if (game.createdByPlayer)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Host: Player',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 34,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeColor,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: EdgeInsets.zero,
+                ),
+                onPressed: () {
+                  if (Get.isRegistered<ManagerGamesController>()) {
+                    Get.find<ManagerGamesController>().selectedGame.value = game;
+                    Get.find<ManagerGamesController>().fetchMatchRecording(game.id);
+                  }
+                  Get.toNamed(
+                    '/manager/games/details',
+                    arguments: {'gameId': game.id, 'game': game},
+                  );
+                },
+                icon: Icon(
+                  isOngoing
+                      ? Icons.play_circle_fill_rounded
+                      : Icons.touch_app_rounded,
+                  size: 15,
+                  color: Colors.white,
+                ),
+                label: Text(
+                  isOngoing ? 'Manage Ongoing Match' : 'View Match Details',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            Text(
+              'No active or upcoming match scheduled for $courtName.',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 32,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: isDark ? AppColors.darkBorder : Colors.grey.shade300,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: EdgeInsets.zero,
+                ),
+                onPressed: () {
+                  controller.selectCourt(courtNum - 1);
+                  controller.changeNavIndex(1);
+                },
+                icon: Icon(
+                  Icons.stadium_outlined,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
+                label: Text(
+                  'Manage $courtName',
+                  style: TextStyle(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : Colors.grey.shade800,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -974,39 +1355,98 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Club Metrics',
-          style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textPrimaryDark : Colors.black87),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.bar_chart_rounded,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Club Metrics',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.darkInputBg
+                    : const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                  width: 0.8,
+                ),
+              ),
+              child: const Text(
+                'Live Analytics',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Obx(() {
           final m = controller.clubMetrics;
-          final revenue = m['revenue'] != null
-              ? (m['revenue'] as num).toStringAsFixed(0)
-              : (d?.totalRevenue?.toStringAsFixed(0) ?? "0");
-          final pending = m['pendingRequests'] != null
-              ? '${m['pendingRequests']}'
-              : '${controller.pendingRequests.length}';
-          final bookings = m['bookings'] != null
-              ? '${m['bookings']}'
-              : '${d?.totalBookings ?? 0}';
-          final cctv = m['cctvOnline'] != null
-              ? '${m['cctvOnline']} Online'
-              : '${d?.onlineCctvCount ?? 0} Online';
+
+          final playersCount = m['players'] != null
+              ? '${m['players']}'
+              : ((controller.dashboard.value?.totalPlayers ?? 0) > 0
+                  ? '${controller.dashboard.value!.totalPlayers}'
+                  : (controller.playersList.isNotEmpty
+                      ? '${controller.playersList.length}'
+                      : '0'));
+
+          final courtsCount = m['courts'] != null && (m['courts'] as num) > 0
+              ? '${m['courts']}'
+              : ((controller.dashboard.value?.totalCourts ?? 0) > 0
+                  ? '${controller.dashboard.value!.totalCourts}'
+                  : (controller.courts.isNotEmpty
+                      ? '${controller.courts.length}'
+                      : '2'));
+
+          final bookingsCount = m['futureBookings'] != null
+              ? '${m['futureBookings']}'
+              : '${controller.futureBookingsCount}';
+
+          final completedMatchesCount = m['completedMatches'] != null
+              ? '${m['completedMatches']}'
+              : '${controller.completedMatchesCount}';
 
           return Row(
             children: [
               _buildSmallStatCard(
-                  context, 'Revenue', '₹$revenue', Icons.payments_outlined),
+                  context, 'Players', playersCount, Icons.people_alt_outlined),
+              const SizedBox(width: 6),
               _buildSmallStatCard(
-                  context, 'Pending Req', pending, Icons.person_add_outlined),
+                  context, 'Courts', courtsCount, Icons.stadium_outlined),
+              const SizedBox(width: 6),
               _buildSmallStatCard(
-                  context, 'Bookings', bookings, Icons.stadium_outlined),
+                  context, 'Bookings', bookingsCount, Icons.confirmation_number_outlined),
+              const SizedBox(width: 6),
               _buildSmallStatCard(
-                  context, 'CCTV', cctv, Icons.videocam_outlined),
+                  context, 'Completed', completedMatchesCount, Icons.emoji_events_outlined),
             ],
           );
         }),
@@ -1020,42 +1460,54 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE)),
-          boxShadow: const [
+            color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
+            width: 1.0,
+          ),
+          boxShadow: [
             BoxShadow(
-                color: Colors.black12, blurRadius: 2, offset: Offset(0, 1)),
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: AppColors.primary),
+            Icon(icon, size: 20, color: AppColors.primary),
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  height: 1.1,
+                  color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                ),
+              ),
+            ),
             const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(value,
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          isDark ? AppColors.textPrimaryDark : Colors.black87)),
-            ),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(label,
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : Colors.grey.shade600),
-                  maxLines: 1),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.1,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade600,
+                ),
+                maxLines: 1,
+              ),
             ),
           ],
         ),
@@ -1252,45 +1704,146 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
   void _showRejectGameModal(BuildContext context, GameModel game) {
     final reasonController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reject Match: ${game.title}'),
-        content: Column(
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Enter rejection reason provided to host:',
-                style: TextStyle(fontSize: 12)),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.cancel_outlined,
+                      color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Reject Match: ${game.title}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Enter rejection reason provided to host:',
+              style: TextStyle(
+                fontSize: 12.5,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+              ),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: reasonController,
               maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'e.g. Court slot unavailable',
-                border: OutlineInputBorder(),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
               ),
+              decoration: InputDecoration(
+                hintText: 'e.g. Court slot unavailable',
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade400,
+                ),
+                filled: true,
+                fillColor:
+                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : const Color(0xFFE2E8F0)),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel',
+                        style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      controller.rejectPlayerGame(
+                          game.id, reasonController.text.trim());
+                    },
+                    child: const Text('Confirm Reject',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Get.back();
-              controller.rejectPlayerGame(
-                  game.id, reasonController.text.trim());
-            },
-            child: const Text('Confirm Reject',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -1579,44 +2132,146 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
   void _showRejectModal(BuildContext context, SlotRequestModel req) {
     final reasonController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        title: Text('Reject Request: ${req.playerName}'),
-        content: Column(
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Enter rejection reason provided to player:',
-                style: TextStyle(fontSize: 12)),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person_remove_rounded,
+                      color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Reject Request: ${req.playerName}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Enter rejection reason provided to player:',
+              style: TextStyle(
+                fontSize: 12.5,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+              ),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: reasonController,
               maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'e.g. Requested position unavailable',
-                border: OutlineInputBorder(),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
               ),
+              decoration: InputDecoration(
+                hintText: 'e.g. Requested position unavailable',
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade400,
+                ),
+                filled: true,
+                fillColor:
+                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : const Color(0xFFE2E8F0)),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel',
+                        style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      controller.rejectSlotRequest(
+                          req.id, reasonController.text.trim());
+                    },
+                    child: const Text('Confirm Reject',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Get.back();
-              controller.rejectSlotRequest(
-                  req.id, reasonController.text.trim());
-            },
-            child: const Text('Confirm Reject',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -2130,45 +2785,147 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
 
   void _confirmCancelMatch(BuildContext context, GameModel game) {
     final reasonController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Match: ${game.title}'),
-        content: Column(
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-                'Cancelling will trigger automatic refunds to all joined players.',
-                style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.highlight_off_rounded,
+                      color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Cancel Match: ${game.title}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Cancelling will trigger automatic refunds to all joined players.',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Colors.redAccent.shade200,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Reason for cancellation...',
-                border: OutlineInputBorder(),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
               ),
+              decoration: InputDecoration(
+                hintText: 'Reason for cancellation...',
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade400,
+                ),
+                filled: true,
+                fillColor:
+                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : const Color(0xFFE2E8F0)),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Close',
+                        style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      Get.find<ManagerGamesController>().cancelMatchWithRefunds(
+                          game.id, reasonController.text.trim());
+                    },
+                    child: const Text('Cancel & Issue Refunds',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Get.back();
-              Get.find<ManagerGamesController>().cancelMatchWithRefunds(
-                  game.id, reasonController.text.trim());
-            },
-            child: const Text('Cancel & Issue Refunds',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -2177,12 +2934,6 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
   Widget _buildQuickModulesGrid(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final modules = [
-      {
-        'icon': Icons.sports_soccer_rounded,
-        'title': 'Club Games',
-        'route': '/manager/games',
-        'color': AppColors.primary
-      },
       {
         'icon': Icons.stadium_rounded,
         'title': 'Courts & Price',

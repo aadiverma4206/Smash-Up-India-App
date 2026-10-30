@@ -5,6 +5,7 @@ import '../../../data/models/court_model.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/skeleton_loader.dart';
+import '../../../core/errors/error_handler.dart';
 
 class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
   const ManagerCourtsManagementView({super.key});
@@ -74,7 +75,7 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Pitches & Courts (${courtsList.length})',
+                        'Pitches & Courts',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -656,12 +657,9 @@ class ManagerCourtsManagementView extends GetView<ManagerDashboardController> {
                                 final newPrice = double.tryParse(
                                     priceController.text.trim());
                                 if (newPrice == null || newPrice < 0) {
-                                  Get.snackbar(
+                                  ErrorHandler.showErrorSnackBar(
                                     'Invalid Price',
                                     'Please enter a valid price per 1 hour.',
-                                    snackPosition: SnackPosition.TOP,
-                                    backgroundColor: Colors.redAccent,
-                                    colorText: Colors.white,
                                   );
                                   return;
                                 }

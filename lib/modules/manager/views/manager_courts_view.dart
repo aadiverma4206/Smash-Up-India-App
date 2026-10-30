@@ -608,63 +608,125 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
   void _showRejectDialog(
       BuildContext context, String gameId, String gameTitle) {
     final reasonController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reject Match: $gameTitle',
-            style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? AppColors.textPrimaryDark
-                    : Colors.black87)),
-        content: Column(
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Enter rejection reason for player host:',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppColors.textSecondaryDark
-                        : Colors.grey.shade700)),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Reject Match: $gameTitle',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Enter rejection reason for player host:',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+              ),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: reasonController,
               maxLines: 2,
               style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.textPrimaryDark
-                      : Colors.black87),
+                fontSize: 13,
+                color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+              ),
               decoration: InputDecoration(
                 hintText: 'e.g. Court time slot conflict',
                 hintStyle: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppColors.textSecondaryDark
-                        : Colors.grey.shade400),
-                border: const OutlineInputBorder(),
+                  fontSize: 12,
+                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                ),
+                filled: true,
+                fillColor: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      final reason = reasonController.text.trim();
+                      Get.back();
+                      controller.rejectPlayerGame(gameId, reason);
+                    },
+                    child: const Text('Confirm Reject', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-            ),
-            onPressed: () {
-              final reason = reasonController.text.trim();
-              Get.back();
-              controller.rejectPlayerGame(gameId, reason);
-            },
-            child: const Text('Confirm Reject',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

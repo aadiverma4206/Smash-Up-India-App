@@ -711,7 +711,7 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                               : Colors.grey.shade700,
                           height: 1.3,
                         ),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],

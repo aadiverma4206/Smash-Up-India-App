@@ -8,7 +8,9 @@ import '../../../data/models/slot_request_model.dart';
 import '../../../data/models/game_model.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/utils/app_date_utils.dart';
 import '../../../core/services/connectivity_service.dart';
+import '../../../core/widgets/match_date_picker_dialog.dart';
 
 class ManagerDashboardController extends GetxController
     with WidgetsBindingObserver {
@@ -20,6 +22,7 @@ class ManagerDashboardController extends GetxController
   final RxList<BookingModel> bookings = <BookingModel>[].obs;
   final RxList<SlotRequestModel> pendingRequests = <SlotRequestModel>[].obs;
   final RxList<GameModel> clubMatches = <GameModel>[].obs;
+  final RxList<GameModel> allClubGames = <GameModel>[].obs;
 
   final RxList<GameModel> pendingPlayerGames = <GameModel>[].obs;
   final RxList<Map<String, dynamic>> court1Slots = <Map<String, dynamic>>[].obs;
@@ -38,6 +41,242 @@ class ManagerDashboardController extends GetxController
   final RxBool isUpdatingCourt = false.obs;
   final RxInt selectedNavIndex = 0.obs;
   final RxString searchQuery = ''.obs;
+
+  Set<String> get scheduledMatchDates {
+    final dates = <String>{};
+
+    void addDateStr(dynamic raw) {
+      if (raw == null) return;
+      final dt = AppDateUtils.parseDate(raw);
+      if (dt != null) {
+        final formatted =
+            '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+        dates.add(formatted);
+      }
+    }
+
+    if (courts.isEmpty) {
+      // Fallback if courts list is not yet populated
+      for (final game in allClubGames) {
+        addDateStr(game.matchDate);
+      }
+      for (final game in clubMatches) {
+        addDateStr(game.matchDate);
+      }
+      for (final slot in currentCourtSlots) {
+        addDateStr(slot['matchDate'] ??
+            slot['match_date'] ??
+            slot['bookingDate'] ??
+            slot['booking_date']);
+      }
+      return dates;
+    }
+
+    final clampedIndex = selectedCourtIndex.value.clamp(0, courts.length - 1);
+    final targetCourt = courts[clampedIndex];
+    final targetIndex = clampedIndex;
+    final targetNum = (targetIndex + 1).toString(); // "1" for Court 1, "2" for Court 2
+
+    bool isForCurrentCourt(String? cId, String? cName) {
+      final targetId = targetCourt.id.toLowerCase().trim();
+      final targetName = targetCourt.name.toLowerCase().trim();
+
+      final id = (cId ?? '').toLowerCase().trim();
+      final name = (cName ?? '').toLowerCase().trim();
+
+      if (id.isNotEmpty) {
+        if (id == targetId ||
+            id == 'court_$targetNum' ||
+            id == targetNum ||
+            id.contains('court_$targetNum')) {
+          return true;
+        }
+      }
+      if (name.isNotEmpty) {
+        if (name == targetName) return true;
+        if (name.contains('court $targetNum')) return true;
+        if (name.contains('court_$targetNum')) return true;
+        if (name.contains(targetNum)) return true;
+      }
+      return false;
+    }
+
+    // 1. All club games filtered by active court
+    for (final game in allClubGames) {
+      if (isForCurrentCourt(game.courtId, game.courtName)) {
+        addDateStr(game.matchDate);
+      }
+    }
+
+    // 2. Club matches filtered by active court
+    for (final game in clubMatches) {
+      if (isForCurrentCourt(game.courtId, game.courtName)) {
+        addDateStr(game.matchDate);
+      }
+    }
+
+    // 3. Pending player games filtered by active court
+    for (final game in pendingPlayerGames) {
+      if (isForCurrentCourt(game.courtId, game.courtName)) {
+        addDateStr(game.matchDate);
+      }
+    }
+
+    // 4. Current court slots (already fetched specifically for active court)
+    for (final slot in currentCourtSlots) {
+      addDateStr(slot['matchDate'] ??
+          slot['match_date'] ??
+          slot['bookingDate'] ??
+          slot['booking_date']);
+    }
+
+    if (targetIndex == 0) {
+      for (final slot in court1Slots) {
+        addDateStr(slot['matchDate'] ??
+            slot['match_date'] ??
+            slot['bookingDate'] ??
+            slot['booking_date']);
+      }
+    } else if (targetIndex == 1) {
+      for (final slot in court2Slots) {
+        addDateStr(slot['matchDate'] ??
+            slot['match_date'] ??
+            slot['bookingDate'] ??
+            slot['booking_date']);
+      }
+    }
+
+    // 5. Bookings filtered by active court
+    for (final b in bookings) {
+      if (isForCurrentCourt(b.courtId, b.courtName)) {
+        addDateStr(b.bookingDate);
+      }
+    }
+
+    return dates;
+  }
+
+  Set<String> get upcomingMatchDates {
+    final dates = <String>{};
+
+    void addUpcomingDateStr(dynamic rawDate, dynamic startTime) {
+      if (rawDate == null) return;
+      if (AppDateUtils.isMatchInFuture(rawDate, startTime)) {
+        final dt = AppDateUtils.parseDate(rawDate);
+        if (dt != null) {
+          final formatted =
+              '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+          dates.add(formatted);
+        }
+      }
+    }
+
+    if (courts.isEmpty) {
+      for (final game in allClubGames) {
+        addUpcomingDateStr(game.matchDate, game.startTime);
+      }
+      for (final game in clubMatches) {
+        addUpcomingDateStr(game.matchDate, game.startTime);
+      }
+      for (final slot in currentCourtSlots) {
+        addUpcomingDateStr(
+          slot['matchDate'] ??
+              slot['match_date'] ??
+              slot['bookingDate'] ??
+              slot['booking_date'],
+          slot['startTime'] ?? slot['start_time'],
+        );
+      }
+      return dates;
+    }
+
+    final clampedIndex = selectedCourtIndex.value.clamp(0, courts.length - 1);
+    final targetCourt = courts[clampedIndex];
+    final targetIndex = clampedIndex;
+    final targetNum = (targetIndex + 1).toString();
+
+    bool isForCurrentCourt(String? cId, String? cName) {
+      final targetId = targetCourt.id.toLowerCase().trim();
+      final targetName = targetCourt.name.toLowerCase().trim();
+
+      final id = (cId ?? '').toLowerCase().trim();
+      final name = (cName ?? '').toLowerCase().trim();
+
+      if (id.isNotEmpty) {
+        if (id == targetId ||
+            id == 'court_$targetNum' ||
+            id == targetNum ||
+            id.contains('court_$targetNum')) {
+          return true;
+        }
+      }
+      if (name.isNotEmpty) {
+        if (name == targetName) return true;
+        if (name.contains('court $targetNum')) return true;
+        if (name.contains('court_$targetNum')) return true;
+        if (name.contains(targetNum)) return true;
+      }
+      return false;
+    }
+
+    for (final game in allClubGames) {
+      if (isForCurrentCourt(game.courtId, game.courtName)) {
+        addUpcomingDateStr(game.matchDate, game.startTime);
+      }
+    }
+
+    for (final game in clubMatches) {
+      if (isForCurrentCourt(game.courtId, game.courtName)) {
+        addUpcomingDateStr(game.matchDate, game.startTime);
+      }
+    }
+
+    for (final game in pendingPlayerGames) {
+      if (isForCurrentCourt(game.courtId, game.courtName)) {
+        addUpcomingDateStr(game.matchDate, game.startTime);
+      }
+    }
+
+    for (final slot in currentCourtSlots) {
+      addUpcomingDateStr(
+        slot['matchDate'] ??
+            slot['match_date'] ??
+            slot['bookingDate'] ??
+            slot['booking_date'],
+        slot['startTime'] ?? slot['start_time'],
+      );
+    }
+
+    if (targetIndex == 0) {
+      for (final slot in court1Slots) {
+        addUpcomingDateStr(
+          slot['matchDate'] ??
+              slot['match_date'] ??
+              slot['bookingDate'] ??
+              slot['booking_date'],
+          slot['startTime'] ?? slot['start_time'],
+        );
+      }
+    } else if (targetIndex == 1) {
+      for (final slot in court2Slots) {
+        addUpcomingDateStr(
+          slot['matchDate'] ??
+              slot['match_date'] ??
+              slot['bookingDate'] ??
+              slot['booking_date'],
+          slot['startTime'] ?? slot['start_time'],
+        );
+      }
+    }
+
+    for (final b in bookings) {
+      if (isForCurrentCourt(b.courtId, b.courtName)) {
+        addUpcomingDateStr(b.bookingDate, b.startTime);
+      }
+    }
+
+    return dates;
+  }
 
   List<Map<String, dynamic>> get filteredCourtSlots {
     List<Map<String, dynamic>> list = List.from(currentCourtSlots);
@@ -113,11 +352,13 @@ class ManagerDashboardController extends GetxController
           ? customSelectedDate.value!
           : today;
 
-      final picked = await showDatePicker(
+      final picked = await showMatchDatePicker(
         context: Get.context!,
         initialDate: initial,
         firstDate: today,
         lastDate: DateTime(2030),
+        matchDates: scheduledMatchDates,
+        upcomingMatchDates: upcomingMatchDates,
       );
       if (picked != null) {
         customSelectedDate.value = picked;
@@ -154,7 +395,7 @@ class ManagerDashboardController extends GetxController
     return all.where((g) {
       if (seen.contains(g.id)) return false;
       seen.add(g.id);
-      return g.courtId == 'court_1';
+      return _isGameForCourt(g, 1);
     }).toList();
   }
 
@@ -164,8 +405,197 @@ class ManagerDashboardController extends GetxController
     return all.where((g) {
       if (seen.contains(g.id)) return false;
       seen.add(g.id);
-      return g.courtId == 'court_2';
+      return _isGameForCourt(g, 2);
     }).toList();
+  }
+
+  bool _isGameForCourt(GameModel game, int courtNum) {
+    final cId = (game.courtId ?? '').toLowerCase().trim();
+    final cName = game.courtName.toLowerCase().trim();
+    final targetStr = 'court_$courtNum';
+    final targetName = 'court $courtNum';
+
+    if (cId == targetStr || cId == courtNum.toString() || cId.endsWith(courtNum.toString())) {
+      return true;
+    }
+    if (cName.contains(targetName) || cName.contains(targetStr)) {
+      return true;
+    }
+    if (courtNum == 1 && (cName.contains('pitch 1') || cId.contains('court_1'))) {
+      return true;
+    }
+    if (courtNum == 2 && (cName.contains('pitch 2') || cId.contains('court_2'))) {
+      return true;
+    }
+    return false;
+  }
+
+  GameModel? getCourtFeaturedMatch(int courtNum) {
+    if (courtNum == 1 && dashboard.value?.court1Match != null) {
+      return dashboard.value!.court1Match;
+    }
+    if (courtNum == 2 && dashboard.value?.court2Match != null) {
+      return dashboard.value!.court2Match;
+    }
+
+    final Map<String, GameModel> allGamesMap = {};
+    for (final g in allClubGames) {
+      allGamesMap[g.id] = g;
+    }
+    for (final g in clubMatches) {
+      allGamesMap[g.id] = g;
+    }
+    for (final g in pendingPlayerGames) {
+      allGamesMap[g.id] = g;
+    }
+
+    final courtGames = allGamesMap.values
+        .where((g) => _isGameForCourt(g, courtNum))
+        .toList();
+
+    if (courtGames.isEmpty) return null;
+
+    final ongoing = courtGames.where((g) {
+      final st = g.status.toUpperCase();
+      return st == 'ONGOING' || st == 'STARTED';
+    }).toList();
+
+    if (ongoing.isNotEmpty) {
+      return ongoing.first;
+    }
+
+    final upcoming = courtGames.where((g) {
+      final st = g.status.toUpperCase();
+      return st != 'CANCELLED' && st != 'COMPLETED' && st != 'FINISHED';
+    }).toList();
+
+    if (upcoming.isEmpty) return null;
+
+    upcoming.sort((a, b) {
+      final dateCmp = a.matchDate.compareTo(b.matchDate);
+      if (dateCmp != 0) return dateCmp;
+      return a.startTime.compareTo(b.startTime);
+    });
+
+    return upcoming.first;
+  }
+
+  GameModel? get court1FeaturedMatch => getCourtFeaturedMatch(1);
+  GameModel? get court2FeaturedMatch => getCourtFeaturedMatch(2);
+
+  int get futureBookingsCount {
+    if (clubMetrics['futureBookings'] != null) {
+      return (clubMetrics['futureBookings'] as num).toInt();
+    }
+    if (dashboard.value != null && dashboard.value!.futureBookings > 0) {
+      return dashboard.value!.futureBookings;
+    }
+
+    final Set<String> uniqueFutureIds = {};
+
+    for (final b in bookings) {
+      final st = b.status.toUpperCase();
+      if (st != 'CANCELLED' && st != 'REJECTED') {
+        if (AppDateUtils.isMatchInFuture(b.bookingDate, b.startTime) ||
+            AppDateUtils.isMatchInFuture(b.bookingDate, b.endTime)) {
+          uniqueFutureIds.add('b_${b.id}');
+        }
+      }
+    }
+
+    for (final g in allClubGames) {
+      final st = g.status.toUpperCase();
+      if (st != 'CANCELLED' && st != 'COMPLETED' && st != 'FINISHED' && st != 'REJECTED') {
+        if (AppDateUtils.isMatchInFuture(g.matchDate, g.startTime) ||
+            AppDateUtils.isMatchInFuture(g.matchDate, g.endTime)) {
+          uniqueFutureIds.add('g_${g.id}');
+        }
+      }
+    }
+
+    for (final g in clubMatches) {
+      final st = g.status.toUpperCase();
+      if (st != 'CANCELLED' && st != 'COMPLETED' && st != 'FINISHED' && st != 'REJECTED') {
+        if (AppDateUtils.isMatchInFuture(g.matchDate, g.startTime) ||
+            AppDateUtils.isMatchInFuture(g.matchDate, g.endTime)) {
+          uniqueFutureIds.add('g_${g.id}');
+        }
+      }
+    }
+
+    return uniqueFutureIds.length;
+  }
+
+  int get totalBookingsCount {
+    if (clubMetrics['bookings'] != null && (clubMetrics['bookings'] as num) > 0) {
+      return (clubMetrics['bookings'] as num).toInt();
+    }
+    if (clubMetrics['totalBookings'] != null && (clubMetrics['totalBookings'] as num) > 0) {
+      return (clubMetrics['totalBookings'] as num).toInt();
+    }
+    if (dashboard.value != null && dashboard.value!.totalBookings > 0) {
+      return dashboard.value!.totalBookings;
+    }
+
+    final Set<String> uniqueIds = {};
+
+    for (final b in bookings) {
+      final st = b.status.toUpperCase();
+      if (st != 'CANCELLED' && st != 'REJECTED') {
+        uniqueIds.add('b_${b.id}');
+      }
+    }
+
+    for (final g in allClubGames) {
+      final st = g.status.toUpperCase();
+      if (st != 'CANCELLED' && st != 'REJECTED') {
+        uniqueIds.add('g_${g.id}');
+      }
+    }
+
+    for (final g in clubMatches) {
+      final st = g.status.toUpperCase();
+      if (st != 'CANCELLED' && st != 'REJECTED') {
+        uniqueIds.add('g_${g.id}');
+      }
+    }
+
+    return uniqueIds.length;
+  }
+
+  int get completedMatchesCount {
+    if (clubMetrics['completedMatches'] != null && (clubMetrics['completedMatches'] as num) > 0) {
+      return (clubMetrics['completedMatches'] as num).toInt();
+    }
+    if (dashboard.value != null && dashboard.value!.completedMatches > 0) {
+      return dashboard.value!.completedMatches;
+    }
+
+    final Set<String> uniqueCompletedIds = {};
+
+    for (final g in allClubGames) {
+      final st = g.status.toUpperCase();
+      if (st == 'COMPLETED' || st == 'FINISHED') {
+        uniqueCompletedIds.add(g.id);
+      } else if (st != 'CANCELLED' && g.matchDate.isNotEmpty) {
+        if (AppDateUtils.isMatchInPast(g.matchDate, g.endTime)) {
+          uniqueCompletedIds.add(g.id);
+        }
+      }
+    }
+
+    for (final g in clubMatches) {
+      final st = g.status.toUpperCase();
+      if (st == 'COMPLETED' || st == 'FINISHED') {
+        uniqueCompletedIds.add(g.id);
+      } else if (st != 'CANCELLED' && g.matchDate.isNotEmpty) {
+        if (AppDateUtils.isMatchInPast(g.matchDate, g.endTime)) {
+          uniqueCompletedIds.add(g.id);
+        }
+      }
+    }
+
+    return uniqueCompletedIds.length;
   }
 
   void changeNavIndex(int index) {
@@ -191,13 +621,9 @@ class ManagerDashboardController extends GetxController
       if (idx != -1) {
         courts[idx] = updated;
       }
-      Get.snackbar(
+      ErrorHandler.showSuccessSnackBar(
         'Court Updated',
         '${updated.name} updated: ₹${basePrice.toStringAsFixed(0)}/hr • $status',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: const Color(0xFF00C853),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
       );
       isUpdatingCourt.value = false;
       return true;
@@ -251,6 +677,13 @@ class ManagerDashboardController extends GetxController
       final matches =
           await repository.getClubMatches(tab: selectedMatchTab.value);
       clubMatches.assignAll(matches);
+
+      try {
+        final allGames = await repository.getClubGames();
+        allClubGames.assignAll(allGames);
+      } catch (e) {
+        AppLogger.warning('Error fetching all club games: $e');
+      }
 
       List<CourtModel> crts = [];
       try {
@@ -438,7 +871,13 @@ class ManagerDashboardController extends GetxController
   final Rxn<Map<String, dynamic>> selectedPlayerDetail =
       Rxn<Map<String, dynamic>>();
 
+  String? lastPlayersSearch;
+  String? lastPlayersStatus;
+
   Future<void> fetchAllPlayers({String? search, String? status}) async {
+    lastPlayersSearch = search;
+    lastPlayersStatus = status;
+
     isPlayersLoading.value = true;
     try {
       final list =
@@ -476,15 +915,30 @@ class ManagerDashboardController extends GetxController
 
   Future<void> blockPlayer(String playerId, String reason) async {
     isActionLoading.value = true;
+
+    // Instant local update so player updates/removes immediately in UI
+    final index = playersList.indexWhere(
+        (p) => (p['id'] ?? p['userId'] ?? '').toString() == playerId);
+    if (index != -1) {
+      final updatedPlayer = Map<String, dynamic>.from(playersList[index]);
+      updatedPlayer['status'] = 'SUSPENDED';
+      updatedPlayer['isBlocked'] = true;
+      playersList[index] = updatedPlayer;
+      playersList.refresh();
+    }
+
     try {
       await repository.blockPlayer(playerId, reason);
-      await fetchAllPlayers();
+      await fetchAllPlayers(
+          search: lastPlayersSearch, status: lastPlayersStatus);
       if (selectedPlayerDetail.value != null) {
         await fetchPlayerDetailHistory(playerId);
       }
       ErrorHandler.showSuccessSnackBar(
           'Player Blocked', 'Player access has been restricted');
     } catch (e) {
+      await fetchAllPlayers(
+          search: lastPlayersSearch, status: lastPlayersStatus);
       ErrorHandler.showErrorSnackBar('Block Error', e);
     } finally {
       isActionLoading.value = false;
@@ -493,15 +947,30 @@ class ManagerDashboardController extends GetxController
 
   Future<void> unblockPlayer(String playerId) async {
     isActionLoading.value = true;
+
+    // Instant local update so player updates/removes immediately in UI
+    final index = playersList.indexWhere(
+        (p) => (p['id'] ?? p['userId'] ?? '').toString() == playerId);
+    if (index != -1) {
+      final updatedPlayer = Map<String, dynamic>.from(playersList[index]);
+      updatedPlayer['status'] = 'ACTIVE';
+      updatedPlayer['isBlocked'] = false;
+      playersList[index] = updatedPlayer;
+      playersList.refresh();
+    }
+
     try {
       await repository.unblockPlayer(playerId);
-      await fetchAllPlayers();
+      await fetchAllPlayers(
+          search: lastPlayersSearch, status: lastPlayersStatus);
       if (selectedPlayerDetail.value != null) {
         await fetchPlayerDetailHistory(playerId);
       }
       ErrorHandler.showSuccessSnackBar(
           'Player Unblocked', 'Player access restored');
     } catch (e) {
+      await fetchAllPlayers(
+          search: lastPlayersSearch, status: lastPlayersStatus);
       ErrorHandler.showErrorSnackBar('Unblock Error', e);
     } finally {
       isActionLoading.value = false;
