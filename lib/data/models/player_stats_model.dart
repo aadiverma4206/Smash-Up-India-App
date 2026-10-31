@@ -28,16 +28,23 @@ class PlayerStatsModel {
     this.customStats,
   });
 
-  factory PlayerStatsModel.fromJson(Map<String, dynamic> json) {
-    final int played =
-        (json['matchesPlayed'] ?? json['matches_played'] as num?)?.toInt() ?? 0;
-    final int joined = (json['matchesJoined'] ??
-                json['matches_joined'] ??
-                json['joinedMatches'] ??
-                json['joined_matches'] as num?)
-            ?.toInt() ??
-        0;
+  static int _toInt(dynamic val) {
+    if (val == null) return 0;
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? (double.tryParse(val)?.toInt() ?? 0);
+    }
+    return 0;
+  }
 
+  static double _toDouble(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    if (val is String) return double.tryParse(val) ?? 0.0;
+    return 0.0;
+  }
+
+  factory PlayerStatsModel.fromJson(Map<String, dynamic> json) {
     List<DynamicStatCustomItem>? customList;
     if (json['customStats'] is List) {
       customList = (json['customStats'] as List)
@@ -50,23 +57,19 @@ class PlayerStatsModel {
     }
 
     return PlayerStatsModel(
-      matchesJoined: joined,
-      matchesPlayed: played,
-      matchesWon:
-          (json['matchesWon'] ?? json['matches_won'] as num?)?.toInt() ?? 0,
-      matchesLost:
-          (json['matchesLost'] ?? json['matches_lost'] as num?)?.toInt() ?? 0,
-      matchesDrawn:
-          (json['matchesDrawn'] ?? json['matches_drawn'] as num?)?.toInt() ?? 0,
-      goalsScored:
-          (json['goalsScored'] ?? json['goals_scored'] as num?)?.toInt() ?? 0,
-      assists: (json['assists'] as num?)?.toInt() ?? 0,
-      motmCount:
-          (json['motmCount'] ?? json['motm_count'] as num?)?.toInt() ?? 0,
-      winRatePercentage:
-          (json['winRatePercentage'] ?? json['win_rate_percentage'] as num?)
-                  ?.toDouble() ??
-              0.0,
+      matchesJoined: _toInt(json['matchesJoined'] ??
+          json['matches_joined'] ??
+          json['joinedMatches'] ??
+          json['joined_matches']),
+      matchesPlayed: _toInt(json['matchesPlayed'] ?? json['matches_played']),
+      matchesWon: _toInt(json['matchesWon'] ?? json['matches_won']),
+      matchesLost: _toInt(json['matchesLost'] ?? json['matches_lost']),
+      matchesDrawn: _toInt(json['matchesDrawn'] ?? json['matches_drawn']),
+      goalsScored: _toInt(json['goalsScored'] ?? json['goals_scored']),
+      assists: _toInt(json['assists']),
+      motmCount: _toInt(json['motmCount'] ?? json['motm_count']),
+      winRatePercentage: _toDouble(
+          json['winRatePercentage'] ?? json['win_rate_percentage']),
       customStats: customList,
     );
   }

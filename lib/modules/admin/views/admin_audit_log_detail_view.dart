@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/admin_models.dart';
 import '../../../core/responsive/responsive_builder.dart';
+import '../../../core/utils/app_date_utils.dart';
 import '../../../app/theme/app_colors.dart';
 
 class AdminAuditLogDetailView extends StatefulWidget {
@@ -34,24 +35,75 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
     }
   }
 
+  String _getHumanTitle(String rawAction) {
+    final act = rawAction.trim().toUpperCase();
+    switch (act) {
+      case 'MANAGER_ACCOUNT_CREATED':
+        return 'Manager Account Created';
+      case 'ADMIN_ACCOUNT_CREATED':
+        return 'Admin Account Created';
+      case 'USER_SUSPENDED':
+        return 'User Account Suspended';
+      case 'USER_REACTIVATED':
+        return 'User Account Reactivated';
+      case 'MATCH_CREATED':
+      case 'GAME_CREATED':
+        return 'New Match Created';
+      case 'MATCH_CANCELLED':
+      case 'PITCH_BOOKING_CANCELLED':
+        return 'Match Cancelled & Refunded';
+      case 'MATCH_COMPLETED':
+        return 'Match Completed';
+      case 'CLUB_VENUE_APPROVED':
+        return 'Turf Venue Approved';
+      case 'MATCH_DISPUTE_RESOLVED':
+        return 'Match Dispute Resolved';
+      case 'PAYMENT_REFUNDED':
+      case 'REFUND_ISSUED':
+        return 'Payment Refund Issued';
+      default:
+        return rawAction
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map((w) => w.isNotEmpty
+                ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+                : '')
+            .join(' ');
+    }
+  }
+
+  String _sanitizeTarget(String? rawTarget) {
+    if (rawTarget == null || rawTarget.trim().isEmpty) return 'N/A';
+    final target = rawTarget.trim();
+    if (target.startsWith('User:usr_') || target.startsWith('usr_')) {
+      final cleanId = target.replaceFirst('User:', '').trim();
+      if (cleanId.length > 12) {
+        return 'User Account (${cleanId.substring(0, 10)}...)';
+      }
+      return 'User Account ($cleanId)';
+    }
+    return target;
+  }
+
   Color _getBadgeColor(String action) {
     final act = action.toLowerCase();
     if (act.contains('approved') ||
         act.contains('success') ||
-        act.contains('confirm')) {
-      return Colors.green;
+        act.contains('confirm') ||
+        act.contains('completed')) {
+      return const Color(0xFF00C853);
     }
     if (act.contains('refund') ||
         act.contains('cancel') ||
         act.contains('suspend')) {
-      return AppColors.error;
+      return const Color(0xFFE53935);
     }
-    if (act.contains('join') ||
-        act.contains('create') ||
-        act.contains('user')) {
-      return Colors.purple;
+    if (act.contains('create') ||
+        act.contains('user') ||
+        act.contains('manager')) {
+      return const Color(0xFF8E24AA);
     }
-    return AppColors.primary;
+    return const Color(0xFF1E88E5);
   }
 
   IconData _getCategoryIcon(String action) {
@@ -60,16 +112,16 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
       return Icons.check_circle_rounded;
     }
     if (act.contains('refund') || act.contains('payment')) {
-      return Icons.account_balance_wallet_rounded;
+      return Icons.receipt_long_outlined;
     }
     if (act.contains('cancel')) {
       return Icons.cancel_rounded;
     }
     if (act.contains('score') || act.contains('match')) {
-      return Icons.emoji_events_rounded;
+      return Icons.sports_soccer_rounded;
     }
-    if (act.contains('join') || act.contains('user')) {
-      return Icons.person_add_rounded;
+    if (act.contains('user') || act.contains('manager')) {
+      return Icons.person_outline_rounded;
     }
     return Icons.security_rounded;
   }
@@ -79,11 +131,35 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final badgeColor = _getBadgeColor(log.action);
     final iconData = _getCategoryIcon(log.action);
+    final humanTitle = _getHumanTitle(log.action);
+    final cleanTarget = _sanitizeTarget(log.target);
+
+    final actorName = (log.adminName != null && log.adminName!.isNotEmpty)
+        ? log.adminName!
+        : (log.userId != null && log.userId!.isNotEmpty
+            ? log.userId!
+            : 'System');
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Audit Log Details'),
+        title: Text(
+          'Audit Log Details',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+          ),
+        ),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: isDark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : AppColors.sageGreenAppBar,
+        iconTheme: IconThemeData(
+          color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+        ),
         centerTitle: true,
       ),
       body: ResponsiveBuilder(
@@ -104,6 +180,7 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                   ),
                   child: Column(
                     children: [
+                      // Header Event Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -116,11 +193,12 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                                 : const Color(0xFFE2E8F0),
                             width: 1,
                           ),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
-                              color: Colors.black12,
+                              color: Colors.black
+                                  .withValues(alpha: isDark ? 0.2 : 0.04),
                               blurRadius: 8,
-                              offset: Offset(0, 3),
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
@@ -141,14 +219,14 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                             ),
                             const SizedBox(height: 14),
                             Text(
-                              log.action,
+                              humanTitle,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: isDark
                                     ? AppColors.textPrimaryDark
-                                    : Colors.black87,
+                                    : const Color(0xFF0F172A),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -161,11 +239,8 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  log.createdAt.length >= 19
-                                      ? log.createdAt
-                                          .substring(0, 19)
-                                          .replaceAll('T', ' ')
-                                      : log.createdAt,
+                                  AppDateUtils.formatDateTime(log.createdAt,
+                                      format: 'dd MMM yyyy, h:mm a'),
                                   style: TextStyle(
                                     color: badgeColor,
                                     fontSize: 12,
@@ -177,6 +252,19 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                         ),
                       ),
                       const SizedBox(height: 16),
+
+                      // Event Summary Narrative Banner
+                      _buildSummaryNarrativeCard(
+                        context,
+                        actor: actorName,
+                        target: cleanTarget,
+                        actionTitle: humanTitle,
+                        details: log.details,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Event Description Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -194,13 +282,13 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Event Description & Details',
+                              'Event Description & Notes',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: isDark
                                     ? AppColors.textPrimaryDark
-                                    : Colors.black87,
+                                    : const Color(0xFF0F172A),
                               ),
                             ),
                             const Divider(height: 20),
@@ -209,17 +297,19 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                                   ? log.details!
                                   : 'No further details recorded for this system action.',
                               style: TextStyle(
-                                fontSize: 14,
-                                height: 1.4,
+                                fontSize: 13.5,
+                                height: 1.45,
                                 color: isDark
                                     ? AppColors.textPrimaryDark
-                                    : Colors.black87,
+                                    : const Color(0xFF334155),
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
+
+                      // Metadata Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -237,25 +327,33 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'System & Technical Metadata',
+                              'Actor & System Metadata',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: isDark
                                     ? AppColors.textPrimaryDark
-                                    : Colors.black87,
+                                    : const Color(0xFF0F172A),
                               ),
                             ),
                             const Divider(height: 20),
-                            _buildMetaRow(context, Icons.badge_outlined,
-                                'Log ID', log.id),
                             _buildMetaRow(
                               context,
-                              Icons.person_outline_rounded,
-                              'Initiator / User ID',
-                              log.userId != null && log.userId!.isNotEmpty
-                                  ? log.userId!
-                                  : 'System Event',
+                              Icons.person_pin_rounded,
+                              'Action Initiated By',
+                              actorName,
+                            ),
+                            _buildMetaRow(
+                              context,
+                              Icons.badge_outlined,
+                              'Target Entity Affected',
+                              cleanTarget,
+                            ),
+                            _buildMetaRow(
+                              context,
+                              Icons.receipt_long_outlined,
+                              'Log ID',
+                              '#${log.id}',
                             ),
                             _buildMetaRow(
                               context,
@@ -263,7 +361,7 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               'IP Address',
                               log.ipAddress != null && log.ipAddress!.isNotEmpty
                                   ? log.ipAddress!
-                                  : '127.0.0.1 (Local System)',
+                                  : '127.0.0.1 (Local Network)',
                             ),
                           ],
                         ),
@@ -276,6 +374,93 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSummaryNarrativeCard(
+    BuildContext context, {
+    required String actor,
+    required String target,
+    required String actionTitle,
+    required String? details,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.primary.withValues(alpha: 0.1)
+            : const Color(0xFFE8F8F0),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.primary,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.4,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF0F172A),
+                    ),
+                    children: [
+                      TextSpan(
+                        text: actor,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const TextSpan(text: ' executed '),
+                      TextSpan(
+                        text: actionTitle,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      if (target != 'N/A') ...[
+                        const TextSpan(text: ' on '),
+                        TextSpan(
+                          text: target,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                      const TextSpan(text: '.'),
+                    ],
+                  ),
+                ),
+                if (details != null && details.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Notes: ${details.trim()}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -310,7 +495,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : const Color(0xFF0F172A),
                   ),
                 ),
               ],

@@ -175,16 +175,22 @@ class AdminDashboardModel {
 
 class AuditLogModel {
   final String id;
+  final String? adminId;
+  final String? adminName;
   final String? userId;
   final String action;
+  final String? target;
   final String? details;
   final String? ipAddress;
   final String createdAt;
 
   AuditLogModel({
     required this.id,
+    this.adminId,
+    this.adminName,
     this.userId,
     required this.action,
+    this.target,
     this.details,
     this.ipAddress,
     required this.createdAt,
@@ -193,8 +199,11 @@ class AuditLogModel {
   factory AuditLogModel.fromJson(Map<String, dynamic> json) {
     return AuditLogModel(
       id: (json['id'] ?? '').toString(),
+      adminId: json['admin_id']?.toString() ?? json['adminId']?.toString(),
+      adminName: json['admin_name']?.toString() ?? json['adminName']?.toString(),
       userId: json['user_id']?.toString() ?? json['userId']?.toString(),
       action: (json['action'] ?? 'SYSTEM_EVENT').toString(),
+      target: json['target']?.toString(),
       details: json['details']?.toString(),
       ipAddress:
           json['ip_address']?.toString() ?? json['ipAddress']?.toString(),
@@ -204,8 +213,11 @@ class AuditLogModel {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'adminId': adminId,
+        'adminName': adminName,
         'userId': userId,
         'action': action,
+        'target': target,
         'details': details,
         'ipAddress': ipAddress,
         'createdAt': createdAt,

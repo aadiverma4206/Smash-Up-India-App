@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/auth_controller.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
@@ -13,9 +12,6 @@ class ForgotPasswordView extends GetView<AuthController> {
   final TextEditingController identifierController = TextEditingController();
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-  static const String sportsImageUrl =
-      'https://images.unsplash.com/photo-1543351611-58f69d7c1781?auto=format&fit=crop&q=80&w=1000';
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -23,6 +19,9 @@ class ForgotPasswordView extends GetView<AuthController> {
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final String heroImagePath = isDark
+        ? 'assets/images/Home_page/dark.png'
+        : 'assets/images/Home_page/light.png';
 
     return Scaffold(
       backgroundColor:
@@ -37,9 +36,11 @@ class ForgotPasswordView extends GetView<AuthController> {
                 Container(
                   height: 200,
                   width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0F172A),
-                    borderRadius: BorderRadius.only(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF07120E)
+                        : const Color(0xFF1E1035),
+                    borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(28),
                       bottomRight: Radius.circular(28),
                     ),
@@ -49,10 +50,13 @@ class ForgotPasswordView extends GetView<AuthController> {
                       bottomLeft: Radius.circular(28),
                       bottomRight: Radius.circular(28),
                     ),
-                    child: CachedNetworkImage(
-                      imageUrl: sportsImageUrl,
+                    child: Image.asset(
+                      heroImagePath,
+                      width: double.infinity,
+                      height: 200,
                       fit: BoxFit.cover,
-                      errorWidget: (context, url, error) => Container(
+                      alignment: Alignment.center,
+                      errorBuilder: (context, error, stackTrace) => Container(
                         color: const Color(0xFF0F172A),
                         child: const Center(
                           child: Icon(Icons.lock_reset_rounded,

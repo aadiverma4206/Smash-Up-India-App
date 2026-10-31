@@ -249,8 +249,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                           const SizedBox(height: 16),
                           _buildStatsSection(context),
                           const SizedBox(height: 20),
-                          _buildQuickModulesGrid(context),
-                          const SizedBox(height: 20),
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -1209,111 +1207,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-  Widget _buildQuickModulesGrid(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final modules = [
-      {
-        'icon': Icons.stadium_rounded,
-        'title': 'Book Pitch',
-        'route': '/games/create',
-        'color': AppColors.primary
-      },
-      {
-        'icon': Icons.stadium_outlined,
-        'title': 'Turf Courts',
-        'route': Routes.courts,
-        'color': const Color(0xFF0288D1)
-      },
-      {
-        'icon': Icons.history_rounded,
-        'title': 'History',
-        'route': Routes.playerHistoryStandalone,
-        'color': const Color(0xFF7B1FA2)
-      },
-      {
-        'icon': Icons.receipt_long_rounded,
-        'title': 'Payments',
-        'route': '/player/payment-history',
-        'color': const Color(0xFFE65100)
-      },
-    ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Quick Navigation',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : Colors.black87)),
-        const SizedBox(height: 10),
-        Row(
-          children: modules.map((item) {
-            final Color color = item['color'] as Color;
-            return Expanded(
-              child: InkWell(
-                onTap: () {
-                  final title = item['title'] as String;
-                  if (title == 'Payments') {
-                    controller.changeNavIndex(2);
-                  } else if (title == 'History') {
-                    controller.changeNavIndex(3);
-                  } else {
-                    final route = item['route'] as String;
-                    if (route == '/games/create' &&
-                        Get.isRegistered<ConnectivityService>() &&
-                        !ConnectivityService.to.isConnected.value) {
-                      ErrorHandler.showErrorSnackBar(
-                        'No Internet Connection',
-                        'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
-                      );
-                      return;
-                    }
-                    Get.toNamed(route);
-                  }
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: isDark
-                            ? AppColors.darkBorder
-                            : color.withValues(alpha: 0.3)),
-                    boxShadow: const [
-                      BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 3,
-                          offset: Offset(0, 1)),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(item['icon'] as IconData, color: color, size: 20),
-                      const SizedBox(height: 6),
-                      Text(
-                        item['title'] as String,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : Colors.black87,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
 
   Widget _buildReferAdBanner(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

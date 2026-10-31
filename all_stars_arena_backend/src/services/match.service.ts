@@ -1,5 +1,6 @@
 import { dbPool } from "../config/db.config.js";
 import { getSocketIO } from "../config/socket.config.js";
+import { PlayerRepository } from "../modules/player/player.repository.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { logger } from "../utils/logger.js";
 
@@ -78,6 +79,18 @@ export const updateLiveMatchScore = async (payload: ScoreUpdatePayload) => {
        WHERE id = $4;`,
       [teamAScore, teamBScore, winnerTeam, gameId],
     );
+
+    try {
+      const playersRes = await dbPool.query(
+        `SELECT user_id FROM public.game_players WHERE game_id = $1;`,
+        [gameId],
+      );
+      for (const pRow of playersRes.rows) {
+        if (pRow.user_id) {
+          await PlayerRepository.getStats(pRow.user_id);
+        }
+      }
+    } catch (_) {}
   } else {
     await dbPool.query(
       `UPDATE public.games

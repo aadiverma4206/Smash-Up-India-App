@@ -75,3 +75,5 @@ flutter:
     - assets/images/No_data/
     - assets/images/Home_page/
     - assets/images/find_Games/
+    - assets/images/Login/
+    - assets/images/Register/

@@ -107,79 +107,176 @@ export class PlayerRepository {
   }
 
   static async getStats(userId: string) {
+    try {
+      await dbPool.query(
+        `UPDATE public.games
+         SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+         WHERE status NOT IN ('COMPLETED', 'CANCELLED')
+           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`,
+      );
+    } catch (_) {}
+
     const res = await dbPool.query(
       `SELECT * FROM public.player_stats WHERE user_id = $1;`,
       [userId],
     );
-    const joinedRes = await dbPool
+
+    const statsRes = await dbPool
       .query(
-        `SELECT COUNT(*)::int as joined_count FROM public.game_players WHERE user_id = $1;`,
+        `SELECT
+          COUNT(DISTINCT CASE
+            WHEN UPPER(COALESCE(g.status::text, 'OPEN')) <> 'CANCELLED'
+             AND UPPER(COALESCE(gp.payment_status::text, 'PAID')) NOT IN ('CANCELLED', 'REFUNDED', 'FAILED')
+            THEN g.id
+          END)::int AS joined_count,
+
+          COUNT(DISTINCT CASE
+            WHEN UPPER(COALESCE(g.status::text, 'OPEN')) <> 'CANCELLED'
+             AND UPPER(COALESCE(gp.payment_status::text, 'PAID')) NOT IN ('CANCELLED', 'REFUNDED', 'FAILED')
+             AND (UPPER(g.status::text) = 'COMPLETED' OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)
+            THEN g.id
+          END)::int AS played_count,
+
+          /* Won count: ONLY counted if score/winner is officially announced AND player's team won */
+          COUNT(DISTINCT CASE
+            WHEN UPPER(COALESCE(g.status::text, 'OPEN')) <> 'CANCELLED'
+             AND UPPER(COALESCE(gp.payment_status::text, 'PAID')) NOT IN ('CANCELLED', 'REFUNDED', 'FAILED')
+             AND (UPPER(g.status::text) = 'COMPLETED' OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)
+             AND (
+               (g.winner_team IS NOT NULL AND g.winner_team <> '') OR
+               (g.team_a_score IS NOT NULL AND g.team_b_score IS NOT NULL)
+             )
+             AND (
+               (UPPER(COALESCE(g.winner_team::text, '')) = 'TEAM_A' AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_A') OR
+               (UPPER(COALESCE(g.winner_team::text, '')) = 'TEAM_B' AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_B') OR
+               (g.winner_team IS NULL AND g.team_a_score > g.team_b_score AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_A') OR
+               (g.winner_team IS NULL AND g.team_b_score > g.team_a_score AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_B')
+             )
+            THEN g.id
+          END)::int AS won_count,
+
+          /* Drawn count: ONLY counted if score/winner is officially announced AND teams tied */
+          COUNT(DISTINCT CASE
+            WHEN UPPER(COALESCE(g.status::text, 'OPEN')) <> 'CANCELLED'
+             AND UPPER(COALESCE(gp.payment_status::text, 'PAID')) NOT IN ('CANCELLED', 'REFUNDED', 'FAILED')
+             AND (UPPER(g.status::text) = 'COMPLETED' OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)
+             AND (
+               (g.winner_team IS NOT NULL AND g.winner_team <> '') OR
+               (g.team_a_score IS NOT NULL AND g.team_b_score IS NOT NULL)
+             )
+             AND (
+               UPPER(COALESCE(g.winner_team::text, '')) = 'DRAW' OR
+               (g.team_a_score IS NOT NULL AND g.team_b_score IS NOT NULL AND g.team_a_score = g.team_b_score)
+             )
+            THEN g.id
+          END)::int AS drawn_count,
+
+          /* Lost count: ONLY counted if score/winner is officially announced AND player's team lost */
+          COUNT(DISTINCT CASE
+            WHEN UPPER(COALESCE(g.status::text, 'OPEN')) <> 'CANCELLED'
+             AND UPPER(COALESCE(gp.payment_status::text, 'PAID')) NOT IN ('CANCELLED', 'REFUNDED', 'FAILED')
+             AND (UPPER(g.status::text) = 'COMPLETED' OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)
+             AND (
+               (g.winner_team IS NOT NULL AND g.winner_team <> '') OR
+               (g.team_a_score IS NOT NULL AND g.team_b_score IS NOT NULL)
+             )
+             AND (
+               (UPPER(COALESCE(g.winner_team::text, '')) = 'TEAM_A' AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_B') OR
+               (UPPER(COALESCE(g.winner_team::text, '')) = 'TEAM_B' AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_A') OR
+               (g.winner_team IS NULL AND g.team_a_score > g.team_b_score AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_B') OR
+               (g.winner_team IS NULL AND g.team_b_score > g.team_a_score AND UPPER(COALESCE(gp.team::text, 'TEAM_A')) = 'TEAM_A')
+             )
+            THEN g.id
+          END)::int AS lost_count
+         FROM public.games g
+         LEFT JOIN public.game_players gp ON gp.game_id = g.id AND gp.user_id = $1
+         WHERE gp.user_id = $1 OR g.creator_id = $1;`,
         [userId],
       )
-      .catch(() => ({ rows: [{ joined_count: 0 }] }));
+      .catch(() => ({
+        rows: [
+          {
+            joined_count: 0,
+            played_count: 0,
+            won_count: 0,
+            drawn_count: 0,
+            lost_count: 0,
+          },
+        ],
+      }));
 
-    const playedRes = await dbPool
-      .query(
-        `SELECT COUNT(DISTINCT gp.game_id)::int as played_count
-         FROM public.game_players gp
-         JOIN public.games g ON g.id = gp.game_id
-         WHERE gp.user_id = $1 AND g.status = 'COMPLETED';`,
-        [userId],
-      )
-      .catch(() => ({ rows: [{ played_count: 0 }] }));
+    const dynamicStats = statsRes.rows[0] || {
+      joined_count: 0,
+      played_count: 0,
+      won_count: 0,
+      drawn_count: 0,
+      lost_count: 0,
+    };
 
-    const matchesJoined = joinedRes.rows[0]?.joined_count || 0;
-    const realPlayedCount = playedRes.rows[0]?.played_count || 0;
-    const row = res.rows[0];
+    const row = res.rows[0] || {};
 
-    if (!row) {
-      return {
-        matchesJoined: matchesJoined,
-        matches_joined: matchesJoined,
-        matchesPlayed: realPlayedCount,
-        matches_played: realPlayedCount,
-        matchesWon: 0,
-        matches_won: 0,
-        matchesLost: 0,
-        matches_lost: 0,
-        matchesDrawn: 0,
-        matches_drawn: 0,
-        goalsScored: 0,
-        goals_scored: 0,
-        assists: 0,
-        motmCount: 0,
-        motm_count: 0,
-        winRatePercentage: 0.0,
-        win_rate_percentage: 0.0,
-      };
-    }
+    /* Always use the live dynamic calculations from games and game_players */
+    const matchesJoined = dynamicStats.joined_count || 0;
+    const matchesPlayed = dynamicStats.played_count || 0;
+    const matchesWon = dynamicStats.won_count || 0;
+    const matchesDrawn = dynamicStats.drawn_count || 0;
+    const matchesLost = dynamicStats.lost_count || 0;
 
-    const played =
-      realPlayedCount > 0
-        ? realPlayedCount
-        : matchesJoined > 0
-          ? row.matches_played || 0
-          : 0;
+    const goalsScored = Number(row.goals_scored ?? row.goals ?? 0);
+    const assists = Number(row.assists ?? 0);
+    const motmCount = Number(row.motm_count ?? row.motm ?? 0);
+
+    const winRatePercentage =
+      matchesPlayed > 0
+        ? Number(((matchesWon / matchesPlayed) * 100).toFixed(1))
+        : 0.0;
+
+    try {
+      await dbPool.query(
+        `INSERT INTO public.player_stats (user_id, matches_played, wins, draws, losses, win_rate, goals_scored, assists, motm_count, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET
+           matches_played = EXCLUDED.matches_played,
+           wins = EXCLUDED.wins,
+           draws = EXCLUDED.draws,
+           losses = EXCLUDED.losses,
+           win_rate = EXCLUDED.win_rate,
+           goals_scored = EXCLUDED.goals_scored,
+           assists = EXCLUDED.assists,
+           motm_count = EXCLUDED.motm_count,
+           updated_at = CURRENT_TIMESTAMP;`,
+        [
+          userId,
+          matchesPlayed,
+          matchesWon,
+          matchesDrawn,
+          matchesLost,
+          winRatePercentage,
+          goalsScored,
+          assists,
+          motmCount,
+        ],
+      );
+    } catch (_) {}
+
     return {
-      matchesJoined: matchesJoined,
+      matchesJoined,
       matches_joined: matchesJoined,
-      matchesPlayed: played,
-      matches_played: played,
-      matchesWon: matchesJoined > 0 ? row.matches_won || 0 : 0,
-      matches_won: matchesJoined > 0 ? row.matches_won || 0 : 0,
-      matchesLost: matchesJoined > 0 ? row.matches_lost || 0 : 0,
-      matches_lost: matchesJoined > 0 ? row.matches_lost || 0 : 0,
-      matchesDrawn: matchesJoined > 0 ? row.matches_drawn || 0 : 0,
-      matches_drawn: matchesJoined > 0 ? row.matches_drawn || 0 : 0,
-      goalsScored: matchesJoined > 0 ? row.goals_scored || 0 : 0,
-      goals_scored: matchesJoined > 0 ? row.goals_scored || 0 : 0,
-      assists: matchesJoined > 0 ? row.assists || 0 : 0,
-      motmCount: matchesJoined > 0 ? row.motm_count || 0 : 0,
-      motm_count: matchesJoined > 0 ? row.motm_count || 0 : 0,
-      winRatePercentage:
-        matchesJoined > 0 ? parseFloat(row.win_rate_percentage) || 0.0 : 0.0,
-      win_rate_percentage:
-        matchesJoined > 0 ? parseFloat(row.win_rate_percentage) || 0.0 : 0.0,
+      matchesPlayed,
+      matches_played: matchesPlayed,
+      matchesWon,
+      matches_won: matchesWon,
+      matchesLost,
+      matches_lost: matchesLost,
+      matchesDrawn,
+      matches_drawn: matchesDrawn,
+      goalsScored,
+      goals_scored: goalsScored,
+      assists,
+      motmCount,
+      motm_count: motmCount,
+      winRatePercentage,
+      win_rate_percentage: winRatePercentage,
     };
   }
 

@@ -417,10 +417,38 @@ export const getAuditLogsController = asyncHandler(
     const limitNum = Math.min(Math.max(Number(limit) || 40, 1), 100);
     const offset = (pageNum - 1) * limitNum;
 
-    const logs = await dbPool.query(
-      "SELECT * FROM public.audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2;",
-      [limitNum, offset],
-    );
+    const query = `
+      SELECT
+        al.id,
+        al.admin_id,
+        COALESCE(
+          NULLIF(TRIM(al.admin_name), ''),
+          u_admin.name,
+          u_admin.email,
+          'System'
+        ) as admin_name,
+        al.user_id,
+        al.action,
+        COALESCE(
+          NULLIF(TRIM(u_target.name), ''),
+          NULLIF(TRIM(u_target.email), ''),
+          NULLIF(TRIM(al.target), ''),
+          'System Entity'
+        ) as target,
+        al.details,
+        al.ip_address,
+        al.created_at
+      FROM public.audit_logs al
+      LEFT JOIN public.users u_admin ON u_admin.id = al.admin_id
+      LEFT JOIN public.users u_target ON (
+        u_target.id = al.user_id
+        OR u_target.id = REGEXP_REPLACE(COALESCE(al.target, ''), '^User:\\s*', '', 'i')
+      )
+      ORDER BY al.created_at DESC
+      LIMIT $1 OFFSET $2;
+    `;
+
+    const logs = await dbPool.query(query, [limitNum, offset]);
 
     res.status(200).json(
       ApiResponse.success("Audit logs retrieved", logs.rows, {

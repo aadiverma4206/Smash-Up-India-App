@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/auth_controller.dart';
 import 'privacy_policy.dart';
 import '../../../app/theme/app_colors.dart';
@@ -150,8 +149,10 @@ class _LoginViewState extends State<LoginView> {
     required double height,
     double borderRadius = 28,
   }) {
-    const String sportsImageUrl =
-        'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=1000';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final String heroImagePath = isDark
+        ? 'assets/images/Login/dark.png'
+        : 'assets/images/Login/light.png';
 
     return Stack(
       children: [
@@ -159,7 +160,7 @@ class _LoginViewState extends State<LoginView> {
           height: height,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
+            color: isDark ? const Color(0xFF07120E) : const Color(0xFF1E1035),
             borderRadius: borderRadius > 0
                 ? BorderRadius.only(
                     bottomLeft: Radius.circular(borderRadius),
@@ -174,22 +175,18 @@ class _LoginViewState extends State<LoginView> {
                     bottomRight: Radius.circular(borderRadius),
                   )
                 : BorderRadius.zero,
-            child: CachedNetworkImage(
-              imageUrl: sportsImageUrl,
+            child: Image.asset(
+              heroImagePath,
+              width: double.infinity,
+              height: height,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: const Color(0xFF0F172A),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                    strokeWidth: 2,
-                  ),
-                ),
-              ),
-              errorWidget: (context, url, error) => Container(
-                decoration: const BoxDecoration(
+              alignment: Alignment.center,
+              errorBuilder: (context, error, stackTrace) => Container(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    colors: isDark
+                        ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+                        : [const Color(0xFF1E1035), const Color(0xFF0F172A)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),

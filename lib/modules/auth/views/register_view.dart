@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/auth_controller.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/routes/app_routes.dart';
@@ -27,9 +26,6 @@ class RegisterView extends GetView<AuthController> {
   final GlobalKey<FormState> step1Key = GlobalKey<FormState>();
   final GlobalKey<FormState> step2Key = GlobalKey<FormState>();
   final GlobalKey<FormState> step3Key = GlobalKey<FormState>();
-
-  static const String sportsImageUrl =
-      'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=1000';
 
   @override
   Widget build(BuildContext context) {
@@ -70,14 +66,19 @@ class RegisterView extends GetView<AuthController> {
   }
 
   Widget _buildHeroHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final String heroImagePath = isDark
+        ? 'assets/images/Register/dark.png'
+        : 'assets/images/Register/light.png';
+
     return Stack(
       children: [
         Container(
           height: 200,
           width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF07120E) : const Color(0xFF1E1035),
+            borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(28),
               bottomRight: Radius.circular(28),
             ),
@@ -87,19 +88,13 @@ class RegisterView extends GetView<AuthController> {
               bottomLeft: Radius.circular(28),
               bottomRight: Radius.circular(28),
             ),
-            child: CachedNetworkImage(
-              imageUrl: sportsImageUrl,
+            child: Image.asset(
+              heroImagePath,
+              width: double.infinity,
+              height: 200,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: const Color(0xFF0F172A),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                    strokeWidth: 2,
-                  ),
-                ),
-              ),
-              errorWidget: (context, url, error) => Container(
+              alignment: Alignment.center,
+              errorBuilder: (context, error, stackTrace) => Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -435,8 +430,9 @@ class RegisterView extends GetView<AuthController> {
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Enter Password';
-                if (v.length < 8)
+                if (v.length < 8) {
                   return 'Password must be at least 8 characters';
+                }
                 final hasUpper = v.contains(RegExp(r'[A-Z]'));
                 final hasLower = v.contains(RegExp(r'[a-z]'));
                 final hasDigit = v.contains(RegExp(r'\d'));
