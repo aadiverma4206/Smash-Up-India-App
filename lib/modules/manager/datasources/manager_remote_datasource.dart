@@ -148,8 +148,14 @@ class ManagerRemoteDataSource {
     );
   }
 
-  Future<ApiResponseModel<GameModel>> startGame(String gameId) async {
-    final response = await dioClient.dio.post('/manager/games/$gameId/start');
+  Future<ApiResponseModel<GameModel>> startGame(String gameId,
+      {int? durationMinutes}) async {
+    final response = await dioClient.dio.post(
+      '/manager/games/$gameId/start',
+      data: durationMinutes != null && durationMinutes > 0
+          ? {'durationMinutes': durationMinutes}
+          : null,
+    );
     return ApiResponseParser.parse<GameModel>(
       response.data,
       (json) => GameModel.fromJson(json as Map<String, dynamic>),

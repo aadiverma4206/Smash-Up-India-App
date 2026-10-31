@@ -10,6 +10,7 @@ import {
   sendWalletUpdate,
 } from "../../services/realtime.service.js";
 import { dbPool } from "../../config/db.config.js";
+import { env } from "../../config/env.config.js";
 import { getSocketIO } from "../../config/socket.config.js";
 import { ApiError } from "../../utils/apiResponse.js";
 import { logger } from "../../utils/logger.js";
@@ -81,13 +82,7 @@ export class ManagerService {
     dateStr?: string,
   ) {
     const club = await ManagerRepository.getManagerClub(userId);
-    if (!club) {
-      throw new ApiError(
-        404,
-        "No assigned club found for this manager",
-        "NO_CLUB_ASSIGNED",
-      );
-    }
+    const clubId = club?.id || "all_stars_arena_club";
 
     const normalizedCourtId =
       courtId && courtId.includes("2") ? "court_2" : "court_1";
@@ -1281,6 +1276,7 @@ export class ManagerService {
     managerId: string,
     managerName: string,
     gameId: string,
+    options?: { durationMinutes?: number },
   ) {
     const gameRes = await dbPool.query(
       "SELECT * FROM public.games WHERE id = $1;",
@@ -1289,7 +1285,29 @@ export class ManagerService {
     if (gameRes.rows.length === 0)
       throw new ApiError(404, "Match not found", "MATCH_NOT_FOUND");
 
-    const updatedGame = await ManagerRepository.startMatchGame(gameId);
+    const originalGame = gameRes.rows[0];
+
+    // Compute booked duration in minutes from the booked slot
+    let durationMinutes = options?.durationMinutes;
+    if (!durationMinutes || durationMinutes <= 0) {
+      if (originalGame.start_time && originalGame.end_time) {
+        const parseMins = (t: string) => {
+          const parts = String(t).split(":").map(Number);
+          return (parts[0] || 0) * 60 + (parts[1] || 0);
+        };
+        const s = parseMins(originalGame.start_time);
+        let e = parseMins(originalGame.end_time);
+        if (e <= s) e += 24 * 60;
+        const diff = e - s;
+        if (diff > 0) durationMinutes = diff;
+      }
+    }
+    if (!durationMinutes || durationMinutes <= 0) durationMinutes = 90;
+
+    const updatedGame = await ManagerRepository.startMatchGame(
+      gameId,
+      durationMinutes,
+    );
 
     try {
       const cameras = await CctvRepository.getCamerasByClub(
@@ -1306,15 +1324,24 @@ export class ManagerService {
         ));
 
       if (courtCamera) {
-        await dbPool.query(
-          `UPDATE public.cctv_cameras SET status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
-          [courtCamera.id],
-        );
+        await dbPool
+          .query(
+            `UPDATE public.cctv_cameras SET status = 'RECORDING', health_status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+            [courtCamera.id],
+          )
+          .catch(async () => {
+            await dbPool
+              .query(
+                `UPDATE public.cctv_cameras SET health_status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+                [courtCamera.id],
+              )
+              .catch(() => {});
+          });
 
         CctvService.startMatchRecording(
           managerId,
           managerName,
-          2,
+          1,
           gameId,
           courtCamera.id,
         ).catch((err) => {
@@ -1341,7 +1368,7 @@ export class ManagerService {
       actorName: managerName,
       actorRoleName: "MANAGER",
       actionType: "MATCH_STARTED",
-      details: `Match started dynamically at ${updatedGame.start_time || "current time"}. Scheduled end: ${updatedGame.end_time || "+1.5h"}. CCTV recording active.`,
+      details: `Match started dynamically at ${updatedGame.start_time || "current time"}. Scheduled end: ${updatedGame.end_time} (${durationMinutes}m booked duration). CCTV recording active (+5m post-match).`,
     });
 
     try {
@@ -1349,12 +1376,16 @@ export class ManagerService {
       io.to(`game:${gameId}`).emit("match:started", {
         gameId,
         status: "ONGOING",
-        message: "Match has been started by manager!",
+        startTime: updatedGame.start_time,
+        endTime: updatedGame.end_time,
+        matchDate: updatedGame.match_date,
+        durationMinutes,
+        message: `Match started by manager! Runs until ${updatedGame.end_time}.`,
       });
       io.emit("match:live_feed", {
         gameId,
         status: "ONGOING",
-        eventText: `⚽ MATCH STARTED: ${gameRes.rows[0].title}`,
+        eventText: `⚽ MATCH STARTED: ${gameRes.rows[0].title} (Duration: ${durationMinutes}m)`,
       });
     } catch (_) {}
 
@@ -1579,17 +1610,24 @@ export class ManagerService {
     }
 
     const completedGame = await ManagerRepository.completeMatchGame(gameId);
+    const postMatchMins = env.RECORDING_POST_MATCH_MINUTES || 5;
 
     try {
       const recording = await CctvRepository.getRecordingByGame(gameId);
-      if (recording) {
+      if (
+        recording &&
+        (recording.status === "RECORDING" ||
+          recording.recording_status === "RECORDING" ||
+          recording.recording_status === "POST_MATCH")
+      ) {
         await dbPool.query(
           `UPDATE public.cctv_recordings
            SET recording_status = 'POST_MATCH',
-               stop_deadline = CURRENT_TIMESTAMP + INTERVAL '10 minutes',
+               stop_deadline = CURRENT_TIMESTAMP + ($2 || ' minutes')::interval,
+               post_match_stop_at = CURRENT_TIMESTAMP + ($2 || ' minutes')::interval,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $1;`,
-          [recording.id],
+          [recording.id, postMatchMins],
         );
         await dbPool.query(
           `INSERT INTO public.cctv_recording_events (recording_id, event_type, actor_user_id, metadata)
@@ -1597,21 +1635,26 @@ export class ManagerService {
           [
             recording.id,
             managerId,
-            JSON.stringify({ postMatchWindowMinutes: 10 }),
+            JSON.stringify({
+              postMatchWindowMinutes: postMatchMins,
+              reason: "Manager stopped match. CCTV recording +5m from stop time.",
+            }),
           ],
         );
-      }
 
-      if (completedGame && completedGame.court_id) {
-        await dbPool.query(
-          `UPDATE public.cctv_cameras SET status = 'ONLINE', updated_at = CURRENT_TIMESTAMP WHERE court_id = $1;`,
-          [completedGame.court_id],
+        CctvRecordingService.schedulePostMatchStop(
+          recording.id || gameId,
+          postMatchMins,
+        );
+
+        logger.info(
+          `📹 [Manager] CCTV recording ${recording.id} will continue recording for +${postMatchMins}m after match stop.`,
         );
       }
     } catch (err) {
       logger.error(
         { err },
-        `Error transitioning CCTV to POST_MATCH (+10m buffer) for Game ${gameId}`,
+        `Error transitioning CCTV to POST_MATCH (+${postMatchMins}m buffer) for Game ${gameId}`,
       );
     }
 
@@ -1622,9 +1665,24 @@ export class ManagerService {
       actorRoleName: "MANAGER",
       actionType: "MATCH_COMPLETED",
       details: scoreData
-        ? `Match completed at ${completedGame.end_time}. Final Score: Team A ${scoreData.teamAScore} - ${scoreData.teamBScore} Team B`
-        : `Match stopped at ${completedGame.end_time}. CCTV camera set to +10 min post-match recording window.`,
+        ? `Match completed at ${completedGame.end_time}. Final Score: Team A ${scoreData.teamAScore} - ${scoreData.teamBScore} Team B. CCTV recording for +${postMatchMins}m buffer.`
+        : `Match stopped at ${completedGame.end_time}. CCTV camera set to +${postMatchMins} min post-match recording window.`,
     });
+
+    try {
+      const io = getSocketIO();
+      io.to(`game:${gameId}`).emit("match:completed", {
+        gameId,
+        status: "COMPLETED",
+        endTime: completedGame.end_time,
+        message: "Match stopped by manager. Final score locked.",
+      });
+      io.emit("match:live_feed", {
+        gameId,
+        status: "COMPLETED",
+        eventText: `🏁 MATCH STOPPED: ${completedGame.title || "Match"}`,
+      });
+    } catch (_) {}
 
     return completedGame;
   }
@@ -1887,15 +1945,15 @@ export class ManagerService {
       }
     }
 
-    // Condition: Video is only released and shown in the UI 10 minutes after match completion
+    // Condition: Video is released and shown in the UI 5 minutes after match completion
     const isCompleted = game.status === "COMPLETED";
     let isVideoReleased = false;
 
     if (isCompleted) {
       const nowMs = Date.now();
-      const tenMinsMs = 10 * 60 * 1000;
+      const postMatchMs = (env.RECORDING_POST_MATCH_MINUTES || 5) * 60 * 1000;
 
-      let scheduledEndPast10 = false;
+      let scheduledEndPast5 = false;
       if (game.match_date && game.end_time) {
         let datePart = "";
         if (game.match_date instanceof Date) {
@@ -1911,8 +1969,8 @@ export class ManagerService {
             ? `${game.end_time}:00`
             : String(game.end_time);
         const parsed = new Date(`${datePart}T${timeStr}`).getTime();
-        if (!isNaN(parsed) && nowMs >= parsed + tenMinsMs) {
-          scheduledEndPast10 = true;
+        if (!isNaN(parsed) && nowMs >= parsed + postMatchMs) {
+          scheduledEndPast5 = true;
         }
       }
 
@@ -1921,10 +1979,10 @@ export class ManagerService {
         : game.created_at
           ? new Date(game.created_at).getTime()
           : 0;
-      const completedPast10 =
-        completedAtMs > 0 && nowMs >= completedAtMs + tenMinsMs;
+      const completedPast5 =
+        completedAtMs > 0 && nowMs >= completedAtMs + postMatchMs;
 
-      isVideoReleased = scheduledEndPast10 || completedPast10;
+      isVideoReleased = scheduledEndPast5 || completedPast5;
     }
 
     const effectivePlaybackUrl = isVideoReleased
@@ -1938,7 +1996,7 @@ export class ManagerService {
         gameId,
         status: isCompleted ? "PROCESSING" : "NOT_RECORDED",
         message: isCompleted
-          ? "Match video is processing and will be available 10 minutes after match completion."
+          ? "Match video is processing and will be available 5 minutes after match completion."
           : "No recording exists for this match",
         videos: [],
         isVideoReleased: false,

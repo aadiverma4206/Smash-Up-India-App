@@ -217,8 +217,9 @@ class ManagerRepository {
     return response.data!;
   }
 
-  Future<GameModel> startGame(String gameId) async {
-    final response = await remoteDataSource.startGame(gameId);
+  Future<GameModel> startGame(String gameId, {int? durationMinutes}) async {
+    final response = await remoteDataSource.startGame(gameId,
+        durationMinutes: durationMinutes);
     if (response.data == null) {
       throw AppException('Failed to start match.');
     }

@@ -111,9 +111,13 @@ export const initDbTables = async () => {
 
       ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS encrypted_connection_reference TEXT;
       ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS health_status VARCHAR(32) DEFAULT 'ONLINE';
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'ONLINE';
       ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS camera_type VARCHAR(32) DEFAULT 'RTSP_DOME';
       ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS connection_type VARCHAR(32) DEFAULT 'RTSP';
       ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS stream_reference VARCHAR(255);
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS ip_address VARCHAR(64);
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS port INTEGER DEFAULT 554;
+      ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS rtsp_url_encrypted TEXT;
       ALTER TABLE public.cctv_cameras ADD COLUMN IF NOT EXISTS created_by VARCHAR(64);
 
       CREATE TABLE IF NOT EXISTS public.cctv_recordings (
@@ -143,7 +147,12 @@ export const initDbTables = async () => {
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
 
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'RECORDING';
       ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS recording_status VARCHAR(32) DEFAULT 'RECORDING';
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS start_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS court_id VARCHAR(64);
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS camera_id VARCHAR(64);
+      ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS storage_bucket VARCHAR(128) DEFAULT 'all-stars-arena-recordings';
       ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS post_match_stop_at TIMESTAMP WITH TIME ZONE;
       ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS scheduled_match_end_at TIMESTAMP WITH TIME ZONE;
       ALTER TABLE public.cctv_recordings ADD COLUMN IF NOT EXISTS storage_object_key VARCHAR(512);
@@ -843,6 +852,11 @@ export const initDbTables = async () => {
       SELECT 'all_stars_arena_club', id FROM public.users WHERE role_id = 2 OR role_id = 1
       ON CONFLICT DO NOTHING;
 
+      -- Ensure users listed in club_managers have role_id = 2 (Manager) if not admin
+      UPDATE public.users
+      SET role_id = 2
+      WHERE id IN (SELECT user_id FROM public.club_managers) AND role_id <> 1;
+
       -- 5. Performance Indexes for users search & pagination scaling (10,000+ users)
       CREATE INDEX IF NOT EXISTS idx_users_role_name_asc ON public.users(role_id, name ASC);
       CREATE INDEX IF NOT EXISTS idx_users_name_lower ON public.users(LOWER(name));
@@ -1049,6 +1063,16 @@ export const initDbTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_court_bookings_slot_overlap 
           ON public.court_bookings(court_id, booking_date, start_time, end_time) 
           WHERE status = 'CONFIRMED';
+
+      -- Performance optimization indexes for Match History & Match Details
+      CREATE INDEX IF NOT EXISTS idx_games_history_date_status ON public.games(match_date DESC, start_time DESC, status);
+      CREATE INDEX IF NOT EXISTS idx_games_player_history_lookup ON public.games(creator_id, status, match_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_games_club_history_lookup ON public.games(club_id, status, match_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_game_players_user_game ON public.game_players(user_id, game_id);
+      CREATE INDEX IF NOT EXISTS idx_game_players_game_payment ON public.game_players(game_id, payment_status);
+      CREATE INDEX IF NOT EXISTS idx_game_videos_game_status ON public.game_videos(game_id, status, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_court_bookings_user_date ON public.court_bookings(user_id, booking_date DESC);
+      CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created ON public.wallet_transactions(user_id, created_at DESC);
     `);
     logger.info(
       "Database Schema, Indexes & Stored Functions Synchronized Successfully",

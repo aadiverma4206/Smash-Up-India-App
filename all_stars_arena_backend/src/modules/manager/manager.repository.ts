@@ -38,13 +38,26 @@ export class ManagerRepository {
       `SELECT COUNT(*) as total_courts FROM public.courts WHERE club_id = $1;`,
       [clubId],
     );
-    const cctvRes = await dbPool.query(
-      `SELECT COUNT(*) as total_cameras,
-              COUNT(*) FILTER (WHERE status = 'ONLINE') as online_cameras,
-              COUNT(*) FILTER (WHERE status = 'RECORDING') as recording_cameras
-       FROM public.cctv_cameras WHERE club_id = $1;`,
-      [clubId],
-    );
+    let cctvRes: any = { rows: [{ total_cameras: 0, online_cameras: 0, recording_cameras: 0 }] };
+    try {
+      cctvRes = await dbPool.query(
+        `SELECT COUNT(*) as total_cameras,
+                COUNT(*) FILTER (WHERE status = 'ONLINE') as online_cameras,
+                COUNT(*) FILTER (WHERE status = 'RECORDING') as recording_cameras
+         FROM public.cctv_cameras WHERE club_id = $1;`,
+        [clubId],
+      );
+    } catch (_) {
+      try {
+        cctvRes = await dbPool.query(
+          `SELECT COUNT(*) as total_cameras,
+                  COUNT(*) FILTER (WHERE health_status = 'ONLINE') as online_cameras,
+                  COUNT(*) FILTER (WHERE health_status = 'RECORDING') as recording_cameras
+           FROM public.cctv_cameras WHERE club_id = $1;`,
+          [clubId],
+        );
+      } catch (__) {}
+    }
 
     return {
       totalGames: Number(gamesRes.rows[0]?.total_games || 0),
@@ -499,17 +512,49 @@ export class ManagerRepository {
     return res.rows[0];
   }
 
-  static async startMatchGame(gameId: string) {
+  static async startMatchGame(gameId: string, durationMinutes?: number) {
+    let durationMins = durationMinutes;
+
+    if (!durationMins || durationMins <= 0) {
+      const currRes = await dbPool.query(
+        `SELECT start_time, end_time FROM public.games WHERE id = $1;`,
+        [gameId],
+      );
+      if (currRes.rows.length > 0) {
+        const { start_time, end_time } = currRes.rows[0];
+        if (start_time && end_time) {
+          const parseMins = (t: string) => {
+            const parts = String(t).split(":").map(Number);
+            return (parts[0] || 0) * 60 + (parts[1] || 0);
+          };
+          const s = parseMins(start_time);
+          let e = parseMins(end_time);
+          if (e <= s) e += 24 * 60;
+          const diff = e - s;
+          if (diff > 0) {
+            durationMins = diff;
+          }
+        }
+      }
+    }
+
+    if (!durationMins || durationMins <= 0) {
+      durationMins = 90;
+    }
+
     const res = await dbPool.query(
       `UPDATE public.games
        SET status = 'ONGOING',
            match_date = CURRENT_DATE,
            start_time = CURRENT_TIME,
-           end_time = CURRENT_TIME + INTERVAL '90 minutes',
+           end_time = CASE
+             WHEN (CURRENT_TIME + ($2 || ' minutes')::interval) <= CURRENT_TIME THEN '23:59:59'::time
+             ELSE (CURRENT_TIME + ($2 || ' minutes')::interval)
+           END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1
        RETURNING *;`,
-      [gameId],
+      [gameId, durationMins],
     );
     return res.rows[0];
   }
@@ -518,7 +563,10 @@ export class ManagerRepository {
     const res = await dbPool.query(
       `UPDATE public.games
        SET status = 'COMPLETED',
-           end_time = CURRENT_TIME,
+           end_time = CASE
+             WHEN CURRENT_TIME <= start_time THEN (start_time + INTERVAL '1 minute')
+             ELSE CURRENT_TIME
+           END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1
        RETURNING *;`,
@@ -683,8 +731,8 @@ export class ManagerRepository {
              TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
              CASE
                WHEN g.status = 'COMPLETED' AND (
-                 (g.match_date + g.end_time + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
-                 OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+                 (g.match_date + g.end_time + INTERVAL '5 minutes') <= CURRENT_TIMESTAMP
+                 OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '5 minutes') <= CURRENT_TIMESTAMP
                ) THEN COALESCE(
                  (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
                  g.video_playback_url
@@ -740,7 +788,7 @@ export class ManagerRepository {
              crt.peak_multiplier, crt.weekend_multiplier, crt.peak_window_start, crt.peak_window_end,
              crt.status, crt.image_url, crt.created_at, crt.updated_at,
              (SELECT COUNT(*) FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true) as camera_count,
-             (SELECT cam.status FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true LIMIT 1) as camera_status
+             (SELECT COALESCE(cam.health_status, 'ONLINE') FROM public.cctv_cameras cam WHERE cam.court_id = crt.id AND cam.is_enabled = true LIMIT 1) as camera_status
       FROM public.courts crt
       WHERE crt.club_id = $1
       ORDER BY
@@ -930,7 +978,7 @@ export class ManagerRepository {
       FROM public.games g
       LEFT JOIN public.users u ON u.id = g.creator_id
       LEFT JOIN LATERAL (
-        SELECT id, status FROM public.cctv_cameras
+        SELECT id, COALESCE(health_status, 'ONLINE') as status FROM public.cctv_cameras
         WHERE court_id = g.court_id AND is_enabled = true
         ORDER BY created_at DESC LIMIT 1
       ) cam ON true
@@ -1041,15 +1089,17 @@ export class ManagerRepository {
 
     const historyRes = await dbPool.query(
       `SELECT gp.game_id, gp.payment_status, gp.team, gp.position as game_position, gp.joined_at,
-              g.title as game_title, g.match_date, g.start_time, g.end_time, g.format,
+              g.title as game_title, to_char(g.match_date::date, 'YYYY-MM-DD') as match_date, g.start_time, g.end_time, g.format,
               g.entry_fee, g.status as match_status,
               crt.name as court_name, clb.name as club_name,
-              gv.video_url
+              COALESCE(
+                (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
+                g.video_playback_url
+              ) as video_url
        FROM public.game_players gp
        INNER JOIN public.games g ON g.id = gp.game_id
        LEFT JOIN public.courts crt ON crt.id = g.court_id
        LEFT JOIN public.clubs clb ON clb.id = g.club_id
-       LEFT JOIN public.game_videos gv ON gv.game_id = g.id AND gv.status = 'AVAILABLE'
        WHERE gp.user_id = $1
        ORDER BY g.match_date DESC, g.start_time DESC;`,
       [playerId],

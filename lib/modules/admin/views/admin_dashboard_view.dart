@@ -269,8 +269,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                               _buildNotificationButton(context),
                               const SizedBox(width: 8),
                               _buildProfileButton(context),
-                              const SizedBox(width: 8),
-                              _buildLogoutAvatar(context),
                             ],
                           ),
                         ],
@@ -540,7 +538,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF7E57C2), width: 1.5),
+        border: Border.all(color: AppColors.primary, width: 1.5),
         boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
@@ -552,7 +550,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           height: 38,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
-            color: const Color(0xFF7E57C2),
+            color: AppColors.primary,
             child: const Icon(Icons.admin_panel_settings_rounded,
                 color: Colors.white, size: 20),
           ),
@@ -618,7 +616,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF7E57C2), width: 1.5),
+            border: Border.all(color: AppColors.primary, width: 1.5),
             boxShadow: const [
               BoxShadow(
                   color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
@@ -633,14 +631,14 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     fit: BoxFit.cover,
                     errorWidget: (_, __, ___) => const Icon(
                       Icons.person_rounded,
-                      color: Color(0xFF7E57C2),
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   )
                 : const Center(
                     child: Icon(
                       Icons.person_rounded,
-                      color: Color(0xFF7E57C2),
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   ),
@@ -648,33 +646,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         ),
       );
     });
-  }
-
-  Widget _buildLogoutAvatar(BuildContext context) {
-    return InkWell(
-      onTap: () => _confirmLogout(context),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.error, width: 1.5),
-          boxShadow: const [
-            BoxShadow(
-                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-          ],
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.logout_rounded,
-            color: AppColors.error,
-            size: 18,
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildAdminPillBar(BuildContext context) {
@@ -1160,27 +1131,5 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     );
   }
 
-  void _confirmLogout(BuildContext context) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Admin Log Out'),
-        content:
-            const Text('Are you sure you want to log out of the Admin Portal?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () async {
-              Get.back();
-              await AuthService.to.logout();
-            },
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
+
 }

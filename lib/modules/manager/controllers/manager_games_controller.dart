@@ -403,14 +403,18 @@ class ManagerGamesController extends GetxController {
     }
   }
 
-  Future<void> startGame(String gameId) async {
+  Future<void> startGame(String gameId, {int? durationMinutes}) async {
     isLoading.value = true;
     try {
-      final updated = await repository.startGame(gameId);
+      final updated = await repository.startGame(gameId,
+          durationMinutes: durationMinutes);
       selectedGame.value = updated;
       fetchClubGames();
-      ErrorHandler.showSuccessSnackBar('Match Started',
-          'Match is now ONGOING. CCTV recording auto-started!');
+      final endFormatted = AppDateUtils.formatTime(updated.endTime);
+      ErrorHandler.showSuccessSnackBar(
+        'Match Started',
+        'Match is ONGOING until $endFormatted. CCTV recording active (+5m buffer)!',
+      );
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Start Error', e);
     } finally {
@@ -477,7 +481,7 @@ class ManagerGamesController extends GetxController {
       fetchClubGames();
       await fetchMatchRecording(gameId);
       ErrorHandler.showSuccessSnackBar(
-          'Match Completed', 'Match is finished and moved to Match History.');
+          'Match Completed', 'Match stopped. CCTV camera will continue recording for +5 minutes post-match buffer.');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Complete Error', e);
     } finally {

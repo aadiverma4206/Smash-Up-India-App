@@ -29,6 +29,8 @@ class MatchHistoryController extends GetxController {
   final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();
   final RxBool isLoadingVideos = false.obs;
 
+  String? _loadedVideoGameId;
+
   @override
   void onInit() {
     super.onInit();
@@ -36,8 +38,9 @@ class MatchHistoryController extends GetxController {
       final argGame = Get.arguments as GameModel;
       selectedGame.value = argGame;
       fetchMatchRecording(argGame.id);
+    } else {
+      fetchHistory(isRefresh: true);
     }
-    fetchHistory(isRefresh: true);
     scrollController.addListener(_onScroll);
 
     if (Get.isRegistered<ConnectivityService>()) {
@@ -137,6 +140,10 @@ class MatchHistoryController extends GetxController {
   }
 
   Future<void> fetchMatchRecording(String gameId) async {
+    if (gameId.isEmpty) return;
+    if (_loadedVideoGameId == gameId && matchVideos.isNotEmpty) return;
+    _loadedVideoGameId = gameId;
+
     isLoadingVideos.value = true;
     matchVideos.clear();
     selectedVideo.value = null;

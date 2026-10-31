@@ -62,6 +62,10 @@ import {
 const router = Router();
 
 router.use(authenticateToken);
+
+// Court slot schedule is accessible to players (for slot check during booking) as well as managers
+router.get("/courts/:courtId/slots", getCourtSlotsController);
+
 router.use(requireRole([1, 2]));
 
 router.get("/dashboard", getDashboardController);
@@ -69,7 +73,6 @@ router.get("/club", getManagerClubController);
 router.get("/metrics", getClubMetricsController);
 
 router.get("/courts", getManagerCourtsController);
-router.get("/courts/:courtId/slots", getCourtSlotsController);
 router.post(
   "/courts",
   validateRequest(createCourtSchema),

@@ -7,7 +7,6 @@ import '../../../core/widgets/app_text_field.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
 import '../../player/controllers/notifications_controller.dart';
-import 'notification_detail_view.dart';
 
 enum AdminNotificationCategory {
   userCreated,
@@ -277,16 +276,6 @@ class AdminNotificationsView extends GetView<NotificationsController> {
               onPressed: () => controller.markAllRead(),
               tooltip: 'Mark All as Read',
             ),
-            IconButton(
-              icon: Icon(
-                Icons.refresh_rounded,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : const Color(0xFF0F172A),
-              ),
-              onPressed: () => controller.fetchNotifications(isRefresh: true),
-              tooltip: 'Refresh Notifications',
-            ),
             const SizedBox(width: 4),
           ],
         );
@@ -383,71 +372,70 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                           }
 
                           if (filtered.isEmpty) {
-                            return Center(
+                            return RefreshIndicator(
+                              color: AppColors.primary,
+                              onRefresh: () async =>
+                                  controller.fetchNotifications(isRefresh: true),
                               child: SingleChildScrollView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? const Color(0xFF1E293B)
-                                            : const Color(0xFFF1F5F9),
-                                        shape: BoxShape.circle,
+                                physics: const AlwaysScrollableScrollPhysics(
+                                    parent: BouncingScrollPhysics()),
+                                child: Container(
+                                  constraints: BoxConstraints(
+                                    minHeight:
+                                        MediaQuery.of(context).size.height *
+                                            0.4,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF1E293B)
+                                              : const Color(0xFFF1F5F9),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.notifications_off_outlined,
+                                          size: 48,
+                                          color: isDark
+                                              ? AppColors.textSecondaryDark
+                                              : Colors.grey.shade600,
+                                        ),
                                       ),
-                                      child: Icon(
-                                        Icons.notifications_off_outlined,
-                                        size: 48,
-                                        color: isDark
-                                            ? AppColors.textSecondaryDark
-                                            : Colors.grey.shade600,
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No admin notifications found',
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? AppColors.textPrimaryDark
+                                              : const Color(0xFF111827),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No admin notifications found',
-                                      style: TextStyle(
-                                        color: isDark
-                                            ? AppColors.textPrimaryDark
-                                            : const Color(0xFF111827),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Try clearing your search query or selecting a different category filter.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? AppColors.textSecondaryDark
+                                              : Colors.grey.shade600,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'Try clearing your search query or selecting a different category filter.',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: isDark
-                                            ? AppColors.textSecondaryDark
-                                            : Colors.grey.shade600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    OutlinedButton.icon(
-                                      onPressed: () {
-                                        searchController.clear();
-                                        searchQuery.value = '';
-                                        selectedCategoryFilter.value = 'ALL';
-                                        controller.fetchNotifications(
-                                            isRefresh: true);
-                                      },
-                                      icon: const Icon(Icons.refresh_rounded,
-                                          size: 16),
-                                      label:
-                                          const Text('Reset Filters & Refresh'),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
                           }
 
                           return RefreshIndicator(
+                            color: AppColors.primary,
                             onRefresh: () async =>
                                 controller.fetchNotifications(isRefresh: true),
                             child: LayoutBuilder(

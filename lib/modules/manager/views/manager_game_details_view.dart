@@ -378,27 +378,74 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                   width: 1,
                 ),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    isPaused
-                        ? Icons.pause_circle_filled_rounded
-                        : Icons.sensors_rounded,
-                    color: isPaused ? Colors.amber.shade800 : Colors.green,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      isPaused
-                          ? 'Match is currently PAUSED'
-                          : 'Match is ONGOING & LIVE',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Icon(
+                        isPaused
+                            ? Icons.pause_circle_filled_rounded
+                            : Icons.sensors_rounded,
                         color: isPaused ? Colors.amber.shade800 : Colors.green,
+                        size: 20,
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isPaused
+                              ? 'Match is currently PAUSED'
+                              : 'Match is ONGOING & LIVE',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isPaused ? Colors.amber.shade800 : Colors.green,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: (isPaused ? Colors.amber : Colors.green)
+                          .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer_outlined,
+                            size: 16, color: Colors.green),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Booked Duration: ${AppDateUtils.calculateDurationMinutes(game.startTime, game.endTime)} mins • Ends at ${AppDateUtils.formatTime(game.endTime)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: context.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.videocam_outlined,
+                          size: 15, color: Colors.green),
+                      const SizedBox(width: 6),
+                      Text(
+                        'CCTV Recording: Active (+5m post-match auto-stop)',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: context.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -553,7 +600,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       borderRadius: BorderRadius.circular(24)),
                   elevation: 2,
                 ),
-                onPressed: () => controller.startGame(game.id),
+                onPressed: () => _confirmStartMatch(context, game),
                 icon: const Icon(Icons.play_arrow_rounded,
                     color: Colors.white, size: 22),
                 label: Text(
@@ -1595,6 +1642,180 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
     );
   }
 
+  void _confirmStartMatch(BuildContext context, GameModel game) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final durationMinutes =
+        AppDateUtils.calculateDurationMinutes(game.startTime, game.endTime);
+    final now = DateTime.now();
+    final startFormatted = AppDateUtils.formatTime(now);
+    final projectedEnd = now.add(Duration(minutes: durationMinutes));
+    final endFormatted = AppDateUtils.formatTime(projectedEnd);
+    final cctvStop = projectedEnd.add(const Duration(minutes: 5));
+    final cctvStopFormatted = AppDateUtils.formatTime(cctvStop);
+
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.play_arrow_rounded,
+                      color: AppColors.primary, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Start Match: ${game.title}',
+                    style: TextStyle(
+                        color: context.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.bookmark_border_rounded,
+                          size: 16, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Booked Slot: ${AppDateUtils.formatTimeRange(game.startTime, game.endTime)} ($durationMinutes mins)',
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: context.textPrimary),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule_rounded,
+                          size: 16, color: Colors.green),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Starting Now: $startFormatted ➔ $endFormatted ($durationMinutes mins duration)',
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.videocam_rounded,
+                          size: 16, color: Colors.amber),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'CCTV Camera: Records match and automatically stops at $cctvStopFormatted (+5 min post-match buffer).',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: context.textSecondary,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: context.borderColor),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel',
+                        style: TextStyle(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Get.back();
+                      controller.startGame(game.id,
+                          durationMinutes: durationMinutes);
+                    },
+                    child: Text('Start Match ($durationMinutes mins)',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _confirmStopMatch(BuildContext context, GameModel game) {
     final scoreAController =
         TextEditingController(text: game.teamAScore.toString());
@@ -1717,6 +1938,30 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 ),
               ],
             ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.videocam_rounded, color: Colors.amber, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'CCTV Notice: When stopped, camera continues recording for 5 minutes post-match to capture final moments, then auto-finalizes.',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: context.textPrimary,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -1746,7 +1991,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       Get.back();
                       controller.completeGame(game.id, a, b);
                     },
-                    child: const Text('Stop & Complete',
+                    child: const Text('Stop & Complete (+5m CCTV)',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),

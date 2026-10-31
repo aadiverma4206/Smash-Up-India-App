@@ -229,6 +229,9 @@ class GamesRemoteDataSource {
   Future<List<CourtSlotModel>> getCourtAvailability(
       String courtId, String date) async {
     final List<CourtSlotModel> slots = [];
+    bool fetched = false;
+
+    // 1. Primary endpoint: /courts/:courtId/availability
     try {
       final response = await dioClient.dio.get(
         '${ApiConstants.courts}/$courtId/availability',
@@ -245,12 +248,14 @@ class GamesRemoteDataSource {
             .toList();
         slots.addAll(list);
       }
+      fetched = true;
     } catch (_) {}
 
-    if (slots.isEmpty) {
+    // 2. Fallback only if availability endpoint threw an error (not when day is free / empty):
+    if (!fetched) {
       try {
         final response = await dioClient.dio.get(
-          '/manager/courts/$courtId/slots',
+          '${ApiConstants.courts}/$courtId/slots',
           queryParameters: {'date': date},
         );
         final raw = response.data is Map

@@ -221,8 +221,14 @@ export class AdminService {
               THEN CONCAT(g.team_a_score::text, ' - ', g.team_b_score::text)
             ELSE '0 - 0'
           END as score,
-          COALESCE(gv.video_url, g.video_playback_url) as video_url,
-          ((gv.video_url IS NOT NULL AND gv.video_url != '') OR (g.video_playback_url IS NOT NULL AND g.video_playback_url != '')) as has_video,
+          COALESCE(
+            (SELECT gv_sub.video_url FROM public.game_videos gv_sub WHERE gv_sub.game_id = g.id AND gv_sub.video_url IS NOT NULL AND gv_sub.video_url != '' ORDER BY gv_sub.created_at DESC LIMIT 1),
+            g.video_playback_url
+          ) as video_url,
+          (
+            EXISTS (SELECT 1 FROM public.game_videos gv_sub WHERE gv_sub.game_id = g.id AND gv_sub.video_url IS NOT NULL AND gv_sub.video_url != '')
+            OR (g.video_playback_url IS NOT NULL AND g.video_playback_url != '')
+          ) as has_video,
           CASE
             WHEN g.status::text = 'CANCELLED' THEN COALESCE(g.entry_fee, 0)
             ELSE 0
@@ -237,13 +243,6 @@ export class AdminService {
         LEFT JOIN public.users u ON u.id = g.creator_id
         LEFT JOIN public.courts crt ON crt.id = g.court_id
         LEFT JOIN public.clubs c ON c.id = COALESCE(crt.club_id, g.club_id, 'all_stars_arena_club')
-        LEFT JOIN LATERAL (
-          SELECT video_url
-          FROM public.game_videos gv_sub
-          WHERE gv_sub.game_id = g.id AND gv_sub.video_url IS NOT NULL AND gv_sub.video_url != ''
-          ORDER BY gv_sub.created_at DESC
-          LIMIT 1
-        ) gv ON true
         WHERE COALESCE(g.entry_fee, 0) > 0
 
         UNION ALL

@@ -189,18 +189,9 @@ export class PlayerRepository {
     offset = 0,
     statusFilter?: string,
   ) {
-    try {
-      await dbPool.query(
-        `UPDATE public.games
-         SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
-         WHERE status NOT IN ('COMPLETED', 'CANCELLED')
-           AND (match_date + end_time) <= CURRENT_TIMESTAMP;`,
-      );
-    } catch (_) {}
-
     const conditions: string[] = [
       "(gp.user_id = $1 OR g.creator_id = $1)",
-      "(UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED') OR (g.match_date + g.end_time) <= CURRENT_TIMESTAMP)",
+      "(UPPER(g.status::text) IN ('COMPLETED', 'CANCELLED') OR g.match_date::date <= CURRENT_DATE)",
     ];
     const values: any[] = [userId];
     let idx = 2;

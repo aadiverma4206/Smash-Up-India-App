@@ -453,7 +453,7 @@ export class CctvService {
     }
 
     const scheduledMatchEnd = new Date(
-      Math.max(matchEndMs, now.getTime() + 60 * 60 * 1000),
+      matchEndMs > now.getTime() ? matchEndMs : now.getTime() + 15 * 60 * 1000,
     );
     const stopDeadline = new Date(
       scheduledMatchEnd.getTime() + postMatchMins * 60 * 1000,

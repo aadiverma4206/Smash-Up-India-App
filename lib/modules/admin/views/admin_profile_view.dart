@@ -70,6 +70,90 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     }
   }
 
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+        backgroundColor: Theme.of(context).cardColor,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Admin Log Out',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to log out of the Admin Portal?',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : const Color(0xFF475569),
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Color(0xFF10B981),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF3B30),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Get.back();
+                      await AuthService.to.logout();
+                    },
+                    child: const Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickAndUploadImage(ImageSource source) async {
     try {
       Get.back();
@@ -320,7 +404,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                    color: const Color(0xFF7E57C2), width: 3),
+                                    color: AppColors.primary, width: 3),
                                 boxShadow: const [
                                   BoxShadow(
                                       color: Colors.black12,
@@ -343,7 +427,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                           child: const Center(
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              color: Color(0xFF7E57C2),
+                                              color: AppColors.primary,
                                             ),
                                           ),
                                         ),
@@ -363,7 +447,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF7E57C2),
+                                  color: AppColors.primary,
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
@@ -381,7 +465,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                             const Positioned.fill(
                               child: Center(
                                 child: CircularProgressIndicator(
-                                    color: Color(0xFF7E57C2)),
+                                    color: AppColors.primary),
                               ),
                             ),
                         ],
@@ -404,7 +488,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                           horizontal: 14, vertical: 5),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF7E57C2), Color(0xFF512DA8)],
+                          colors: [AppColors.primary, AppColors.primaryDark],
                         ),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: const [
@@ -455,7 +539,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                           Row(
                             children: [
                               const Icon(Icons.analytics_rounded,
-                                  color: Color(0xFF7E57C2), size: 20),
+                                  color: AppColors.primary, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'System Summary Overview',
@@ -535,7 +619,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                           Row(
                             children: [
                               const Icon(Icons.person_outline_rounded,
-                                  color: Color(0xFF7E57C2), size: 20),
+                                  color: AppColors.primary, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Account Credentials & Info',
@@ -585,7 +669,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                               borderRadius: BorderRadius.circular(24)),
                           backgroundColor: Theme.of(context).cardColor,
                         ),
-                        onPressed: () => AuthService.to.logout(),
+                        onPressed: () => _showLogoutConfirmationDialog(context),
                         icon: const Icon(Icons.logout_rounded,
                             color: Colors.redAccent, size: 18),
                         label: const Text(
@@ -598,26 +682,14 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Center(
-                      child: Column(
-                        children: const [
-                          Text(
-                            'ALL STARS ARENA • ADMIN PORTAL v1.0.0',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'ENTERPRISE SYSTEM CONTROL',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF7E57C2),
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                    const Center(
+                      child: Text(
+                        'ALL STARS ARENA • ADMIN PORTAL v1.0.0',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -671,7 +743,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF7E57C2)),
+        Icon(icon, size: 18, color: AppColors.primary),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -707,14 +779,14 @@ class _AdminProfileViewState extends State<AdminProfileView> {
     return Container(
       width: 104,
       height: 104,
-      color: const Color(0xFF7E57C2).withValues(alpha: 0.15),
+      color: AppColors.primary.withValues(alpha: 0.15),
       alignment: Alignment.center,
       child: Text(
         initial,
         style: const TextStyle(
           fontSize: 38,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF7E57C2),
+          color: AppColors.primary,
         ),
       ),
     );

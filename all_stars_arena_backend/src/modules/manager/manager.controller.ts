@@ -158,11 +158,13 @@ export const startGameController = asyncHandler(
     const managerId = req.user?.id || "SYS";
     const managerName = req.user?.email || "Manager";
     const { id: gameId } = req.params;
+    const { durationMinutes } = req.body || {};
 
     const game = await ManagerService.startMatch(
       managerId,
       managerName,
       gameId,
+      { durationMinutes: durationMinutes ? Number(durationMinutes) : undefined },
     );
     res
       .status(200)

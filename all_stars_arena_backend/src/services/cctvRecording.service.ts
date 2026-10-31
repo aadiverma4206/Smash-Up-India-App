@@ -1001,6 +1001,17 @@ export class CctvRecordingService {
       )
       .catch(() => {});
 
+    if (rec.camera_id || rec.court_id) {
+      await dbPool
+        .query(
+          `UPDATE public.cctv_cameras
+           SET status = 'ONLINE', updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1 OR court_id = $2;`,
+          [rec.camera_id || null, rec.court_id || null],
+        )
+        .catch(() => {});
+    }
+
     try {
       const io = getSocketIO();
       io.emit("match:recording_completed", {
@@ -1396,5 +1407,40 @@ export class CctvRecordingService {
       stopDeadline: newDeadline.toISOString(),
       ...row,
     };
+  }
+
+  static schedulePostMatchStop(
+    recordingOrGameId: string,
+    postMatchMinutes = 5,
+  ): void {
+    const session = this.getActiveSession(recordingOrGameId);
+    if (!session) return;
+
+    if (session.stopTimer) {
+      clearTimeout(session.stopTimer);
+    }
+
+    const delayMs = Math.max(postMatchMinutes * 60 * 1000, 5000);
+    const newStopDeadline = new Date(Date.now() + delayMs);
+    session.scheduledStopAt = newStopDeadline;
+
+    session.stopTimer = setTimeout(async () => {
+      logger.info(
+        `⏰ [CCTV Recorder] Post-match window (${postMatchMinutes}m) expired for Match ${session.gameId}. Stopping recording...`,
+      );
+      await CctvRecordingService.stopRecording(
+        session.recordingId || session.gameId,
+        {
+          reason: "POST_MATCH_WINDOW_EXPIRED",
+          manualStop: false,
+        },
+      ).catch((e) =>
+        logger.error({ e }, "Error in post-match auto-stop handler"),
+      );
+    }, delayMs);
+
+    logger.info(
+      `📹 [CCTV Recorder] Match stopped. Recording will stop at ${newStopDeadline.toISOString()} (+${postMatchMinutes}m post-match) for Match ${session.gameId}`,
+    );
   }
 }

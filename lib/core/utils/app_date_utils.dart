@@ -206,6 +206,25 @@ class AppDateUtils {
     return fallback;
   }
 
+  static int calculateDurationMinutes(dynamic startTime, dynamic endTime,
+      {int fallback = 90}) {
+    final start = parseTimeOfDay(startTime);
+    final end = parseTimeOfDay(endTime);
+    if (start == null || end == null) return fallback;
+    int startMins = start.hour * 60 + start.minute;
+    int endMins = end.hour * 60 + end.minute;
+    if (endMins <= startMins) {
+      endMins += 24 * 60; // crossed midnight
+    }
+    final diff = endMins - startMins;
+    return diff > 0 ? diff : fallback;
+  }
+
+  static DateTime calculateProjectedEndTime(
+      DateTime startTime, int durationMinutes) {
+    return startTime.add(Duration(minutes: durationMinutes));
+  }
+
   static DateTime? parseDateTime(dynamic input) {
     if (input == null) return null;
     if (input is DateTime) return input.toLocal();

@@ -137,8 +137,8 @@ export class GamesRepository {
               (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
               CASE
                 WHEN g.status = 'COMPLETED' AND (
-                  (g.match_date + g.end_time + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
-                  OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '10 minutes') <= CURRENT_TIMESTAMP
+                  (g.match_date + g.end_time + INTERVAL '5 minutes') <= CURRENT_TIMESTAMP
+                  OR (COALESCE(g.updated_at, g.created_at) + INTERVAL '5 minutes') <= CURRENT_TIMESTAMP
                 ) THEN COALESCE(
                   (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
                   g.video_playback_url
