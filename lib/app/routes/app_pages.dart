@@ -412,7 +412,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.adminPayments,
-      page: () => const AdminPaymentHistoryView(),
+      page: () => AdminPaymentHistoryView(),
       binding: AdminBinding(),
     ),
     GetPage(

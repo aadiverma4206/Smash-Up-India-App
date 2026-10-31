@@ -9,6 +9,8 @@ import '../../cctv/datasources/cctv_remote_datasource.dart';
 import '../../cctv/repositories/cctv_repository.dart';
 import '../../cctv/controllers/cctv_controller.dart';
 import '../../cctv/controllers/cctv_live_controller.dart';
+import '../../games/datasources/games_remote_datasource.dart';
+import '../../games/repositories/games_repository.dart';
 import '../../../core/network/dio_client.dart';
 
 class AdminBinding extends Bindings {
@@ -24,6 +26,20 @@ class AdminBinding extends Bindings {
     Get.lazyPut<AdminController>(
       () => AdminController(),
     );
+
+    if (!Get.isRegistered<GamesRemoteDataSource>()) {
+      Get.lazyPut<GamesRemoteDataSource>(
+        () => GamesRemoteDataSource(dioClient: Get.find<DioClient>()),
+        fenix: true,
+      );
+    }
+    if (!Get.isRegistered<GamesRepository>()) {
+      Get.lazyPut<GamesRepository>(
+        () => GamesRepository(
+            remoteDataSource: Get.find<GamesRemoteDataSource>()),
+        fenix: true,
+      );
+    }
 
     if (!Get.isRegistered<ManagerRemoteDataSource>()) {
       Get.lazyPut<ManagerRemoteDataSource>(

@@ -565,7 +565,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                   context,
                                   label: 'Total Users',
                                   value:
-                                      '${dashboard?.totalUsers ?? profileData['total_users'] ?? '128+'}',
+                                      '${dashboard?.totalUsers ?? profileData['total_users'] ?? 0}',
                                   icon: Icons.people_outline_rounded,
                                   color: Colors.blue,
                                 ),
@@ -575,7 +575,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                   context,
                                   label: 'Managers',
                                   value:
-                                      '${dashboard?.totalManagers ?? profileData['total_managers'] ?? '12'}',
+                                      '${dashboard?.totalManagers ?? profileData['total_managers'] ?? 0}',
                                   icon: Icons.badge_outlined,
                                   color: Colors.orange,
                                 ),
@@ -585,7 +585,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                                   context,
                                   label: 'Courts',
                                   value:
-                                      '${profileData['total_courts'] ?? '2'}',
+                                      '${(dashboard?.totalClubs != null && dashboard!.totalClubs > 0) ? dashboard.totalClubs : (profileData['total_courts'] ?? 2)}',
                                   icon: Icons.stadium_outlined,
                                   color: Colors.green,
                                 ),
@@ -653,6 +653,85 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                               city.isNotEmpty ? city : 'Raipur, Chhattisgarh',
                               Icons.location_on_outlined),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0),
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: InkWell(
+                        onTap: () => Get.toNamed('/admin/managers/create'),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.person_add_alt_1_rounded,
+                                  color: AppColors.primary,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Create Manager',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? AppColors.textPrimaryDark
+                                            : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Add & register new venue manager account',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isDark
+                                            ? AppColors.textSecondaryDark
+                                            : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 22,
+                                color: isDark
+                                    ? Colors.grey.shade500
+                                    : const Color(0xFF94A3B8),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

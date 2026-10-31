@@ -15,32 +15,85 @@ class AdminUsersView extends GetView<AdminController> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text('User Management'),
-          bottom: TabBar(
-            indicatorColor: AppColors.primary,
-            indicatorWeight: 3,
-            labelColor: AppColors.primary,
-            unselectedLabelColor:
-                isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
-            labelStyle:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            tabs: const [
-              Tab(
-                icon: Icon(Icons.sports_soccer_rounded, size: 20),
-                text: 'Players',
-              ),
-              Tab(
-                icon: Icon(Icons.admin_panel_settings_rounded, size: 20),
-                text: 'Managers',
-              ),
-            ],
+          title: Text(
+            'User Management',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            ),
+          ),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          backgroundColor: isDark
+              ? Theme.of(context).scaffoldBackgroundColor
+              : AppColors.sageGreenAppBar,
+          iconTheme: IconThemeData(
+            color:
+                isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            AdminPlayersView(showAppBar: false),
-            AdminManagersView(showAppBar: false),
+            // Ultra-Compact Segmented Pill Tab Bar
+            Container(
+              color: isDark
+                  ? Theme.of(context).scaffoldBackgroundColor
+                  : AppColors.sageGreenAppBar,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Container(
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkCard
+                      : Colors.white.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.darkBorder
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: TabBar(
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  indicator: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    color: AppColors.primary,
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: isDark
+                      ? AppColors.textSecondaryDark
+                      : const Color(0xFF475569),
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Players'),
+                    Tab(text: 'Managers'),
+                  ],
+                ),
+              ),
+            ),
+
+            // Tab Content View
+            Expanded(
+              child: TabBarView(
+                children: [
+                  AdminPlayersView(showAppBar: false),
+                  AdminManagersView(showAppBar: false),
+                ],
+              ),
+            ),
           ],
         ),
       ),

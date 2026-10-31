@@ -176,16 +176,6 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
   List<String> _buildCandidateUrls([String? cachedTunnelUrl]) {
     final candidates = <String>[];
 
-    final proxyUrl = _backendProxyHlsUrl;
-    if (proxyUrl.isNotEmpty && !candidates.contains(proxyUrl)) {
-      candidates.add(proxyUrl);
-    }
-
-    final directUrl = _directMediaMtxHlsUrl;
-    if (directUrl.isNotEmpty && !candidates.contains(directUrl)) {
-      candidates.add(directUrl);
-    }
-
     if (_baseUrl.isNotEmpty) {
       final clean = _baseUrl.replaceAll(RegExp(r'/$'), '');
       final customUrl = clean.contains('/cam')
@@ -194,6 +184,16 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
       if (!candidates.contains(customUrl)) {
         candidates.add(customUrl);
       }
+    }
+
+    final proxyUrl = _backendProxyHlsUrl;
+    if (proxyUrl.isNotEmpty && !candidates.contains(proxyUrl)) {
+      candidates.add(proxyUrl);
+    }
+
+    final directUrl = _directMediaMtxHlsUrl;
+    if (directUrl.isNotEmpty && !candidates.contains(directUrl)) {
+      candidates.add(directUrl);
     }
 
     return candidates;
@@ -250,13 +250,14 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
         final uri = Uri.parse(candidateUrl);
         tempController = VideoPlayerController.networkUrl(
           uri,
+          formatHint: VideoFormat.hls,
           videoPlayerOptions: VideoPlayerOptions(
             mixWithOthers: true,
             allowBackgroundPlayback: false,
           ),
         );
 
-        await tempController.initialize().timeout(const Duration(seconds: 4));
+        await tempController.initialize().timeout(const Duration(seconds: 10));
         await tempController.setVolume(0.0);
         await tempController.play();
 
@@ -1250,11 +1251,13 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
               ),
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Padding(
-                padding: const EdgeInsets.all(22.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(22.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -1517,7 +1520,8 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                   ],
                 ),
               ),
-            );
+            ),
+          );
           },
         );
       },

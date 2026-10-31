@@ -189,9 +189,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           _buildCircularActionsGrid(context),
                           const SizedBox(height: 20),
                           _buildMetricsSection(context),
-                          const SizedBox(height: 20),
-                          _buildQuickModulesGrid(context),
-                          const SizedBox(height: 20),
+                              const SizedBox(height: 20),
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -703,7 +701,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       {
         'icon': Icons.sports_soccer_rounded,
         'title': 'Player',
-        'route': Routes.adminPlayers,
+        'route': Routes.managerPlayers,
       },
       {
         'icon': Icons.badge_rounded,
@@ -819,8 +817,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         'icon': Icons.admin_panel_settings_outlined,
       },
       {
-        'label': 'Turf Clubs',
-        'value': '${d?.totalClubs ?? 0}',
+        'label': 'Courts',
+        'value': '${(d?.totalClubs != null && d!.totalClubs > 0) ? d.totalClubs : 2}',
         'icon': Icons.stadium_outlined,
       },
       {
@@ -997,105 +995,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildQuickModulesGrid(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final modules = [
-      {
-        'icon': Icons.person_add_rounded,
-        'title': 'Create Manager',
-        'route': '/admin/managers/create',
-        'color': const Color(0xFF7B1FA2),
-      },
-      {
-        'icon': Icons.security_rounded,
-        'title': 'Audit Logs',
-        'route': Routes.adminAuditLogs,
-        'color': const Color(0xFF2E7D32),
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Management Modules',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.textPrimaryDark : Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: modules.map((item) {
-            final Color color = item['color'] as Color;
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      if (item.containsKey('action')) {
-                        (item['action'] as VoidCallback)();
-                      } else {
-                        Get.toNamed(item['route'] as String);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : color.withValues(alpha: 0.3),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: isDark ? 0.2 : 0.04,
-                            ),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(item['icon'] as IconData,
-                              color: color, size: 22),
-                          const SizedBox(height: 6),
-                          Text(
-                            item['title'] as String,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : Colors.black87,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 

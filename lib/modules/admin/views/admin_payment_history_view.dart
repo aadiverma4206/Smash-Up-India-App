@@ -1,14 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
 import '../../../data/models/admin_models.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/app_date_utils.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/widgets/app_loader.dart';
 
 class AdminPaymentHistoryView extends GetView<AdminController> {
-  const AdminPaymentHistoryView({super.key});
+  AdminPaymentHistoryView({super.key});
+
+  final TextEditingController searchController = TextEditingController();
+
+  String _getDateGroupHeader(String dateStr) {
+    final dt = AppDateUtils.parseDateTime(dateStr);
+    if (dt == null) return 'Earlier';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final itemDate = DateTime(dt.year, dt.month, dt.day);
+
+    if (itemDate.isAtSameMomentAs(today)) {
+      return 'Today';
+    } else if (itemDate.isAtSameMomentAs(yesterday)) {
+      return 'Yesterday';
+    } else {
+      return DateFormat('dd MMMM yyyy').format(dt);
+    }
+  }
+
+  Map<String, List<AdminPaymentModel>> _groupPaymentsByDate(
+      List<AdminPaymentModel> list) {
+    final Map<String, List<AdminPaymentModel>> grouped = {};
+    for (final item in list) {
+      final header = _getDateGroupHeader(
+          item.createdAt.isNotEmpty ? item.createdAt : (item.matchTime ?? ''));
+      if (!grouped.containsKey(header)) {
+        grouped[header] = [];
+      }
+      grouped[header]!.add(item);
+    }
+    return grouped;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,93 +55,189 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text(
+          title: Text(
             'Player Payment History',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : const Color(0xFF0F172A),
+            ),
           ),
           elevation: 0,
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          backgroundColor: isDark
+              ? Theme.of(context).scaffoldBackgroundColor
+              : AppColors.sageGreenAppBar,
+          iconTheme: IconThemeData(
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : const Color(0xFF0F172A),
+          ),
         ),
         body: RefreshIndicator(
+          color: AppColors.primary,
           onRefresh: controller.fetchPaymentHistory,
-          child: Column(
-            children: [
-              // Revenue & Refund Summary Header Card
-              _buildSummaryHeaderCard(context),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: [
+              // 1. Summary Header Card
+              SliverToBoxAdapter(
+                child: _buildSummaryHeaderCard(context),
+              ),
 
-              // Search Bar & Filter Chips
-              _buildSearchAndFilters(context),
+              // 2. Search & Filter Chips
+              SliverToBoxAdapter(
+                child: _buildSearchAndFilters(context),
+              ),
 
-              const SizedBox(height: 8),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 8),
+              ),
 
-              // Payment List
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoadingPayments.value &&
-                      controller.payments.isEmpty) {
-                    return const AppLoader(
-                        message: 'Loading payment records...');
-                  }
+              // 3. Payment Records List (Grouped by Date)
+              Obx(() {
+                if (controller.isLoadingPayments.value &&
+                    controller.payments.isEmpty) {
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppLoader(message: 'Loading payment records...'),
+                  );
+                }
 
-                  if (controller.payments.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.4,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.receipt_long_outlined,
-                                  size: 64,
-                                  color: isDark
-                                      ? AppColors.textSecondaryDark
-                                      : Colors.grey.shade400,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No Payment History Found',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? AppColors.textPrimaryDark
-                                        : Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Player payment records will appear here.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
+                if (controller.payments.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.darkCard
+                                  : const Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.receipt_long_outlined,
+                              size: 48,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : Colors.grey.shade600,
                             ),
                           ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    itemCount: controller.payments.length,
-                    itemBuilder: (context, index) {
-                      final payment = controller.payments[index];
-                      return _buildPaymentCard(context, payment);
-                    },
+                          const SizedBox(height: 16),
+                          Text(
+                            'No Payment History Found',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Player payment and refund records will appear here.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
-                }),
+                }
+
+                final grouped = _groupPaymentsByDate(controller.payments);
+                final List<Widget> slivers = [];
+
+                for (final entry in grouped.entries) {
+                  // Date Section Header
+                  slivers.add(
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.darkCard
+                                    : const Color(0xFFE2E8F0),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                entry.key,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Divider(
+                                color: isDark
+                                    ? AppColors.darkBorder
+                                    : const Color(0xFFE2E8F0),
+                                height: 1,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${entry.value.length} ${entry.value.length == 1 ? "record" : "records"}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+
+                  // Payment Cards List for this date
+                  slivers.add(
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final payment = entry.value[index];
+                            return _buildPaymentCard(context, payment);
+                          },
+                          childCount: entry.value.length,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverMainAxisGroup(slivers: slivers);
+              }),
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 24),
               ),
             ],
           ),
@@ -121,23 +253,29 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
       final summary = controller.paymentSummary.value;
       final totalRev = summary?.totalRevenue ?? 0.0;
       final totalRef = summary?.totalRefunds ?? 0.0;
-      final netRev = summary?.netRevenue ?? (totalRev - totalRef);
+      final netRev = summary?.netRevenue ?? (totalRev + totalRef);
 
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isDark
                 ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
-                : [const Color(0xFF130722), const Color(0xFF2A1248)],
+                : [const Color(0xFF0F172A), const Color(0xFF1E293B)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark
+                ? AppColors.darkBorder
+                : Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.15),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.15),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -163,29 +301,29 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                     Text(
                       '₹${netRev.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        color: Color(0xFF00C853),
-                        fontSize: 24,
+                        color: Color(0xFF00E676),
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: const Color(0xFF00E676).withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.account_balance_wallet_rounded,
-                    color: Color(0xFF00C853),
-                    size: 28,
+                    color: Color(0xFF00E676),
+                    size: 26,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            Divider(color: Colors.white.withValues(alpha: 0.15), height: 1),
+            Divider(color: Colors.white.withValues(alpha: 0.12), height: 1),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -199,7 +337,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                             width: 8,
                             height: 8,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF00C853),
+                              color: Color(0xFF00E676),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -213,7 +351,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         '₹${totalRev.toStringAsFixed(0)}',
                         style: const TextStyle(
@@ -227,12 +365,12 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                 ),
                 Container(
                   width: 1,
-                  height: 30,
-                  color: Colors.white.withValues(alpha: 0.15),
+                  height: 28,
+                  color: Colors.white.withValues(alpha: 0.12),
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 12),
+                    padding: const EdgeInsets.only(left: 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -256,7 +394,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           '₹${totalRef.toStringAsFixed(0)}',
                           style: const TextStyle(
@@ -287,51 +425,76 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
       {'label': 'Refunded', 'value': 'REFUNDED'},
     ];
 
+    if (searchController.text != controller.paymentSearchQuery.value) {
+      searchController.text = controller.paymentSearchQuery.value;
+      searchController.selection = TextSelection.fromPosition(
+        TextPosition(offset: searchController.text.length),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
           TextField(
+            controller: searchController,
             onChanged: controller.onPaymentSearchChanged,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => FocusScope.of(context).unfocus(),
             style: TextStyle(
-              color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
               fontSize: 14,
             ),
             decoration: InputDecoration(
               hintText: 'Search player name, phone or match title...',
               hintStyle: TextStyle(
-                color:
-                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : const Color(0xFF94A3B8),
                 fontSize: 13,
               ),
-              prefixIcon: Icon(
-                Icons.search,
+              prefixIcon: const Icon(
+                Icons.search_rounded,
                 size: 20,
-                color:
-                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                color: AppColors.primary,
               ),
+              suffixIcon: Obx(() {
+                if (controller.paymentSearchQuery.value.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return IconButton(
+                  icon: const Icon(Icons.clear_rounded,
+                      color: Colors.grey, size: 18),
+                  onPressed: () {
+                    searchController.clear();
+                    controller.onPaymentSearchChanged('');
+                  },
+                );
+              }),
               filled: true,
               fillColor: Theme.of(context).cardColor,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
                   color:
-                      isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB),
+                      isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
                   color:
-                      isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB),
+                      isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
                   color: AppColors.primary,
-                  width: 1.5,
+                  width: 1.8,
                 ),
               ),
             ),
@@ -340,6 +503,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
           Obx(
             () => SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               child: Row(
                 children: filters.map((f) {
                   final isSelected =
@@ -360,12 +524,12 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                               ? Colors.white
                               : (isDark
                                   ? AppColors.textSecondaryDark
-                                  : Colors.grey.shade700),
+                                  : const Color(0xFF475569)),
                         ),
                       ),
                       selectedColor: AppColors.primary,
                       backgroundColor: isDark
-                          ? AppColors.darkInputBg
+                          ? AppColors.darkCard
                           : Theme.of(context).cardColor,
                       onSelected: (_) =>
                           controller.setPaymentFilter(f['value'] as String),
@@ -376,7 +540,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                               ? AppColors.primary
                               : (isDark
                                   ? AppColors.darkBorder
-                                  : const Color(0xFFE5E7EB)),
+                                  : const Color(0xFFE2E8F0)),
                         ),
                       ),
                     ),
@@ -397,9 +561,9 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
     final isNegative = isCancelled || isRefunded;
 
     Color statusBgColor =
-        isDark ? const Color(0xFF1B382B) : const Color(0xFFE8F8F0);
+        isDark ? const Color(0xFF132B1F) : const Color(0xFFE8F8F0);
     Color statusTextColor =
-        isDark ? const Color(0xFF4ADE80) : const Color(0xFF00C853);
+        isDark ? const Color(0xFF00E676) : const Color(0xFF00C853);
 
     if (isCancelled) {
       statusBgColor =
@@ -419,14 +583,14 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : const Color(0xFFE5E7EB),
+          color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -441,7 +605,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
               arguments: payment,
             );
           },
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -481,7 +645,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                               fontWeight: FontWeight.bold,
                               color: isDark
                                   ? AppColors.textPrimaryDark
-                                  : Colors.black87,
+                                  : const Color(0xFF0F172A),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -495,7 +659,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                               fontSize: 12,
                               color: isDark
                                   ? AppColors.textSecondaryDark
-                                  : Colors.grey.shade600,
+                                  : const Color(0xFF64748B),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -541,20 +705,21 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                 const SizedBox(height: 12),
                 Divider(
                   height: 1,
-                  color:
-                      isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+                  color: isDark
+                      ? AppColors.darkBorder
+                      : const Color(0xFFF1F5F9),
                 ),
                 const SizedBox(height: 10),
 
-                // Match details & CCTV Recording indicator
+                // Match details & CCTV Video indicator
                 Row(
                   children: [
                     Icon(
-                      Icons.sports_soccer,
+                      Icons.sports_soccer_rounded,
                       size: 16,
                       color: isDark
                           ? AppColors.textSecondaryDark
-                          : Colors.grey.shade600,
+                          : const Color(0xFF64748B),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -565,7 +730,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                           fontWeight: FontWeight.w600,
                           color: isDark
                               ? AppColors.textPrimaryDark
-                              : Colors.black87,
+                              : const Color(0xFF0F172A),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -604,7 +769,6 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
 
                 const SizedBox(height: 6),
 
-                // Club Name, Court Name & Score
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -614,7 +778,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                         fontSize: 11.5,
                         color: isDark
                             ? AppColors.textSecondaryDark
-                            : Colors.grey.shade600,
+                            : const Color(0xFF64748B),
                       ),
                     ),
                     Container(
@@ -622,8 +786,8 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? AppColors.darkInputBg
-                            : const Color(0xFFF3F4F6),
+                            ? AppColors.darkCard
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -633,7 +797,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                           fontWeight: FontWeight.bold,
                           color: isDark
                               ? AppColors.textPrimaryDark
-                              : Colors.black87,
+                              : const Color(0xFF0F172A),
                         ),
                       ),
                     ),

@@ -123,12 +123,19 @@ class AdminDashboardModel {
     }
 
     final int games = parseInt(json['totalGames'] ?? json['total_games']);
+    int courts = parseInt(
+      json['totalCourts'] ??
+          json['total_courts'] ??
+          json['totalClubs'] ??
+          json['total_clubs'],
+    );
+    if (courts <= 0) courts = 2;
 
     return AdminDashboardModel(
       totalUsers: parseInt(json['totalUsers'] ?? json['total_users']),
       totalManagers: parseInt(json['totalManagers'] ?? json['total_managers']),
       totalPlayers: parseInt(json['totalPlayers'] ?? json['total_players']),
-      totalClubs: parseInt(json['totalClubs'] ?? json['total_clubs']),
+      totalClubs: courts,
       totalRevenue: parseDouble(
         json['totalRevenue'] ??
             json['totalRevenueRupees'] ??

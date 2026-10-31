@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/admin_controller.dart';
 import '../../../data/models/admin_models.dart';
+import '../../../data/models/game_model.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/app_date_utils.dart';
 import '../../../core/utils/image_utils.dart';
 
 class AdminPaymentDetailView extends GetView<AdminController> {
@@ -20,6 +22,7 @@ class AdminPaymentDetailView extends GetView<AdminController> {
       );
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isCancelled = payment.status == 'CANCELLED';
     final isRefunded = payment.status == 'REFUNDED';
     final avatarUrl = ImageUtils.resolveImageUrl(payment.userAvatar);
@@ -27,12 +30,27 @@ class AdminPaymentDetailView extends GetView<AdminController> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Payment & Match Details',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : const Color(0xFF0F172A),
+          ),
         ),
         elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: isDark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : AppColors.sageGreenAppBar,
+        iconTheme: IconThemeData(
+          color: isDark
+              ? AppColors.textPrimaryDark
+              : const Color(0xFF0F172A),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -56,6 +74,11 @@ class AdminPaymentDetailView extends GetView<AdminController> {
 
             // CCTV Video Recording Card
             _buildCctvVideoCard(context, payment),
+
+            const SizedBox(height: 16),
+
+            // Team A & Team B Roster Section
+            _buildTeamsRosterCard(context, payment),
 
             if (isCancelled || isRefunded) ...[
               const SizedBox(height: 16),
@@ -251,6 +274,15 @@ class AdminPaymentDetailView extends GetView<AdminController> {
     );
   }
 
+  String _formatScheduledTime(String? timeStr) {
+    if (timeStr == null || timeStr.trim().isEmpty) return 'N/A';
+    return AppDateUtils.formatDateTime(
+      timeStr,
+      format: 'dd MMM yyyy, h:mm a',
+      fallback: timeStr,
+    );
+  }
+
   Widget _buildMatchDetailsCard(
     BuildContext context,
     AdminPaymentModel payment,
@@ -288,7 +320,7 @@ class AdminPaymentDetailView extends GetView<AdminController> {
           _buildDetailRow(
             context,
             icon: Icons.stadium_rounded,
-            label: 'Turf Club',
+            label: 'Court',
             value: payment.clubName,
           ),
           const SizedBox(height: 10),
@@ -311,8 +343,17 @@ class AdminPaymentDetailView extends GetView<AdminController> {
             context,
             icon: Icons.calendar_today_rounded,
             label: 'Scheduled Time',
-            value: payment.matchTime ?? 'N/A',
+            value: _formatScheduledTime(payment.matchTime),
           ),
+          if (payment.createdAt.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildDetailRow(
+              context,
+              icon: Icons.access_time_rounded,
+              label: 'Payment Date',
+              value: _formatScheduledTime(payment.createdAt),
+            ),
+          ],
         ],
       ),
     );
@@ -363,7 +404,7 @@ class AdminPaymentDetailView extends GetView<AdminController> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  hasVid ? 'AVAILABLE' : 'PROCESSING',
+                  hasVid ? 'AVAILABLE' : 'UNAVAILABLE',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -375,38 +416,59 @@ class AdminPaymentDetailView extends GetView<AdminController> {
           ),
           const SizedBox(height: 12),
           if (hasVid) ...[
-            Container(
-              width: double.infinity,
-              height: 160,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    Icons.play_circle_fill_rounded,
-                    size: 56,
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
-                  Positioned(
-                    bottom: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'Full HD CCTV Stream',
-                        style: TextStyle(color: Colors.white, fontSize: 11),
+            GestureDetector(
+              onTap: () {
+                Get.toNamed(
+                  '/videos/player',
+                  arguments: {
+                    'videoUrl': payment.videoUrl,
+                    'title': payment.matchTitle,
+                  },
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      Icons.play_circle_fill_rounded,
+                      size: 56,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                    Positioned(
+                      bottom: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Tap to Play CCTV Recording',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ] else ...[
@@ -428,7 +490,7 @@ class AdminPaymentDetailView extends GetView<AdminController> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'CCTV video recording for this match is currently being rendered or unavailable.',
+                      'CCTV video recording for this match is currently unavailable.',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
@@ -441,6 +503,232 @@ class AdminPaymentDetailView extends GetView<AdminController> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamsRosterCard(
+    BuildContext context,
+    AdminPaymentModel payment,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (payment.matchId == null || payment.matchId!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<GameModel?>(
+      future: controller.fetchGameById(payment.matchId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+              ),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+
+        final game = snapshot.data;
+        if (game == null) {
+          return const SizedBox.shrink();
+        }
+
+        final teamA = game.teamA;
+        final teamB = game.teamB;
+
+        return Column(
+          children: [
+            // Team A Section
+            _buildTeamRosterSection(
+              context,
+              teamName: 'Team A',
+              teamColor: Colors.blue,
+              players: teamA,
+              score: game.teamAScore,
+            ),
+            const SizedBox(height: 16),
+            // Team B Section
+            _buildTeamRosterSection(
+              context,
+              teamName: 'Team B',
+              teamColor: Colors.redAccent,
+              players: teamB,
+              score: game.teamBScore,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTeamRosterSection(
+    BuildContext context, {
+    required String teamName,
+    required Color teamColor,
+    required List<GameRosterPlayerModel> players,
+    int? score,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : const Color(0xFFEEEEEE),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: teamColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    teamName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: teamColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${players.length} ${players.length == 1 ? "Player" : "Players"}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: teamColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (score != null)
+                Text(
+                  'Score: $score',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : const Color(0xFF0F172A),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (players.isEmpty)
+            Text(
+              'No players assigned to $teamName yet.',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : Colors.grey.shade600,
+              ),
+            )
+          else
+            Column(
+              children: players.map((p) {
+                final avatar = ImageUtils.resolveImageUrl(p.profileImageUrl);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor:
+                            AppColors.primary.withValues(alpha: 0.12),
+                        backgroundImage: avatar != null
+                            ? CachedNetworkImageProvider(avatar)
+                            : null,
+                        child: avatar == null
+                            ? Text(
+                                p.name.isNotEmpty
+                                    ? p.name[0].toUpperCase()
+                                    : 'P',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : const Color(0xFF0F172A),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (p.phone != null &&
+                                p.phone!.trim().isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                p.phone!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : const Color(0xFF64748B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );

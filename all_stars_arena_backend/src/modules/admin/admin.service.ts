@@ -17,17 +17,19 @@ export class AdminService {
       refundsWalletRes,
       refundsBookingsRes,
     ] = await Promise.allSettled([
-      // 1. Pitch / Match bookings gross revenue
+      // 1. Completed Pitch / Match bookings revenue
       dbPool.query(`
-        SELECT COALESCE(SUM(entry_fee), 0) as rev
-        FROM public.games
-        WHERE status::text != 'CANCELLED' AND entry_fee > 0;
+        SELECT COALESCE(SUM(COALESCE(g.entry_fee, 0)), 0) as rev
+        FROM public.game_players gp
+        JOIN public.games g ON g.id = gp.game_id
+        WHERE UPPER(g.status::text) = 'COMPLETED'
+          AND UPPER(gp.payment_status::text) IN ('PAID', 'SUCCESS', 'COMPLETED');
       `),
-      // 2. Direct Court bookings gross revenue
+      // 2. Direct Court bookings revenue (completed/confirmed)
       dbPool.query(`
-        SELECT COALESCE(SUM(amount_paid), 0) as rev
+        SELECT COALESCE(SUM(COALESCE(amount_paid, 0)), 0) as rev
         FROM public.court_bookings
-        WHERE LOWER(status::text) NOT IN ('cancelled', 'failed');
+        WHERE UPPER(status::text) IN ('COMPLETED', 'CONFIRMED', 'SUCCESS');
       `),
       // 3. Razorpay payment orders
       dbPool.query(`
@@ -40,14 +42,7 @@ export class AdminService {
         SELECT COALESCE(SUM(ABS(amount)), 0) as rev
         FROM public.transactions
         WHERE LOWER(status::text) IN ('success', 'paid', 'completed')
-          AND (
-            LOWER(type::text) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment', 'slot_booking')
-            OR LOWER(description) LIKE '%topup%'
-            OR LOWER(description) LIKE '%recharge%'
-            OR LOWER(description) LIKE '%deposit%'
-            OR LOWER(description) LIKE '%booking%'
-            OR LOWER(description) LIKE '%payment%'
-          )
+          AND UPPER(type::text) IN ('GAME_FEE', 'BOOKING', 'SLOT_BOOKING', 'ENTRY_FEE')
           AND LOWER(type::text) NOT LIKE '%refund%';
       `),
       // 5. Wallet transactions
@@ -55,20 +50,16 @@ export class AdminService {
         SELECT COALESCE(SUM(ABS(amount)), 0) as rev
         FROM public.wallet_transactions
         WHERE LOWER(status::text) IN ('success', 'paid', 'completed')
-          AND (
-            LOWER(transaction_type::text) IN ('topup', 'deposit', 'game_fee', 'booking', 'credit', 'recharge', 'payment')
-            OR LOWER(description) LIKE '%topup%'
-            OR LOWER(description) LIKE '%recharge%'
-            OR LOWER(description) LIKE '%deposit%'
-            OR LOWER(description) LIKE '%booking%'
-          )
+          AND UPPER(transaction_type::text) IN ('GAME_FEE', 'BOOKING', 'SLOT_BOOKING', 'ENTRY_FEE')
           AND LOWER(transaction_type::text) NOT LIKE '%refund%';
       `),
-      // 6. Refunds from cancelled games (pitch bookings refunded to player wallet)
+      // 6. Refunds from cancelled games (refunded to player wallet)
       dbPool.query(`
-        SELECT COALESCE(SUM(COALESCE(entry_fee, 0)), 0) as ref
-        FROM public.games
-        WHERE status::text = 'CANCELLED' AND entry_fee > 0;
+        SELECT COALESCE(SUM(COALESCE(g.entry_fee, 0)), 0) as ref
+        FROM public.game_players gp
+        JOIN public.games g ON g.id = gp.game_id
+        WHERE UPPER(g.status::text) = 'CANCELLED'
+          AND UPPER(gp.payment_status::text) IN ('REFUNDED', 'PAID', 'SUCCESS');
       `),
       // 7. Refunds from transactions ledger
       dbPool.query(`
@@ -82,9 +73,12 @@ export class AdminService {
       dbPool.query(`
         SELECT COALESCE(SUM(ABS(amount)), 0) as ref
         FROM public.wallet_transactions
-        WHERE LOWER(transaction_type::text) LIKE '%refund%'
-           OR LOWER(description) LIKE '%refund%'
-           OR LOWER(status::text) LIKE '%refund%';
+        WHERE UPPER(status::text) IN ('SUCCESS', 'COMPLETED', 'PAID', 'REFUNDED')
+          AND (
+            UPPER(transaction_type::text) LIKE '%REFUND%'
+            OR LOWER(description) LIKE '%refund%'
+            OR LOWER(description) LIKE '%cancelled%'
+          );
       `),
       // 9. Cancelled/Refunded direct court bookings
       dbPool.query(`
@@ -115,9 +109,10 @@ export class AdminService {
         ? Number(walletTxRevRes.value.rows[0]?.rev || 0)
         : 0;
 
-    let totalRevenue = Math.max(gRev + cbRev, poRev, txRev, wtRev);
+    const completedMatchRevenue = gRev + cbRev;
+    let totalRevenue = completedMatchRevenue;
     if (totalRevenue === 0) {
-      totalRevenue = gRev + cbRev + poRev + txRev + wtRev;
+      totalRevenue = Math.max(poRev, txRev, wtRev);
     }
 
     const gRef =
@@ -137,12 +132,10 @@ export class AdminService {
         ? Number(refundsBookingsRes.value.rows[0]?.ref || 0)
         : 0;
 
-    let totalRefunds = Math.max(gRef + cbRef, txRef, wtRef);
-    if (totalRefunds === 0) {
-      totalRefunds = gRef + cbRef + txRef + wtRef;
-    }
+    const cancelledMatchRefunds = gRef + cbRef;
+    let totalRefunds = Math.max(cancelledMatchRefunds, wtRef, txRef);
 
-    const netRevenue = Math.max(0, totalRevenue - totalRefunds);
+    const netRevenue = totalRevenue + totalRefunds;
 
     return {
       totalRevenue,

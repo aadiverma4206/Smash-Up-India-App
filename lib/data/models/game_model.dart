@@ -212,6 +212,16 @@ class GameModel {
 
   double get entryFee => perPlayerFee;
 
+  List<GameRosterPlayerModel> get teamA {
+    if (roster == null) return [];
+    return roster!.where((p) => p.isTeamA).toList();
+  }
+
+  List<GameRosterPlayerModel> get teamB {
+    if (roster == null) return [];
+    return roster!.where((p) => p.isTeamB).toList();
+  }
+
   bool get isCancelled => status.toUpperCase() == 'CANCELLED';
 
   String get cancellationDisplayText {

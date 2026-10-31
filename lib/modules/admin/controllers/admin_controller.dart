@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import '../repositories/admin_repository.dart';
+import '../../games/datasources/games_remote_datasource.dart';
+import '../../games/repositories/games_repository.dart';
 import '../../../data/models/admin_models.dart';
+import '../../../data/models/game_model.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/services/connectivity_service.dart';
@@ -385,5 +389,27 @@ class AdminController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<GameModel?> fetchGameById(String gameId) async {
+    try {
+      if (!Get.isRegistered<GamesRemoteDataSource>()) {
+        Get.lazyPut<GamesRemoteDataSource>(
+          () => GamesRemoteDataSource(dioClient: Get.find<DioClient>()),
+          fenix: true,
+        );
+      }
+      if (!Get.isRegistered<GamesRepository>()) {
+        Get.lazyPut<GamesRepository>(
+          () => GamesRepository(
+              remoteDataSource: Get.find<GamesRemoteDataSource>()),
+          fenix: true,
+        );
+      }
+      return await Get.find<GamesRepository>().getGameById(gameId);
+    } catch (e) {
+      AppLogger.warning('Failed to fetch game details for $gameId: $e');
+    }
+    return null;
   }
 }
