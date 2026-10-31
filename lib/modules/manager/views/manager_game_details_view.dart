@@ -399,7 +399,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: isPaused ? Colors.amber.shade800 : Colors.green,
+                            color:
+                                isPaused ? Colors.amber.shade800 : Colors.green,
                           ),
                         ),
                       ),
@@ -897,8 +898,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       },
                       icon: const Icon(Icons.fullscreen_rounded,
                           color: AppColors.primary),
-                      label: Text(
-                          'Recorded Match Video ($cameraDisplayName)',
+                      label: Text('Recorded Match Video ($cameraDisplayName)',
                           style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold)),
@@ -1333,7 +1333,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: context.cardColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1345,7 +1346,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      color:
+                          isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1358,7 +1360,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                         color: AppColors.primary.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.more_time_rounded, color: AppColors.primary, size: 22),
+                      child: const Icon(Icons.more_time_rounded,
+                          color: AppColors.primary, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1376,7 +1379,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                 const SizedBox(height: 12),
                 Text(
                   'Select extra minutes to extend for match "${game.title}" and its live CCTV recording:',
-                  style: TextStyle(color: context.textSecondary, fontSize: 12.5),
+                  style:
+                      TextStyle(color: context.textSecondary, fontSize: 12.5),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -1407,11 +1411,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           side: BorderSide(color: context.borderColor),
                         ),
                         onPressed: () => Get.back(),
-                        child: Text('Cancel', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                        child: Text('Cancel',
+                            style: TextStyle(
+                                color: context.textPrimary,
+                                fontWeight: FontWeight.w600)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1420,7 +1428,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                               elevation: 0,
                             ),
                             onPressed: controller.isExtendingTime.value
@@ -1499,13 +1508,19 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     color: AppColors.primary.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.scoreboard_rounded, color: AppColors.primary, size: 22),
+                  child: const Icon(Icons.scoreboard_rounded,
+                      color: AppColors.primary, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    game.status == 'COMPLETED' ? 'Edit Match Score' : 'Update Live Score',
-                    style: TextStyle(color: context.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                    game.status == 'COMPLETED'
+                        ? 'Edit Match Score'
+                        : 'Update Live Score',
+                    style: TextStyle(
+                        color: context.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -1605,11 +1620,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       side: BorderSide(color: context.borderColor),
                     ),
                     onPressed: () => Get.back(),
-                    child: Text('Cancel', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                    child: Text('Cancel',
+                        style: TextStyle(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1618,20 +1637,24 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () {
-                      final a = (int.tryParse(scoreAController.text.trim()) ?? 0)
-                          .clamp(0, 99);
-                      final b = (int.tryParse(scoreBController.text.trim()) ?? 0)
-                          .clamp(0, 99);
+                      final a =
+                          (int.tryParse(scoreAController.text.trim()) ?? 0)
+                              .clamp(0, 99);
+                      final b =
+                          (int.tryParse(scoreBController.text.trim()) ?? 0)
+                              .clamp(0, 99);
                       Get.back();
                       controller.submitMatchScore(game.id, a, b,
                           isFinal: isFinalRx.value);
                     },
-                    child:
-                        const Text('Save Score', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text('Save Score',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -1708,9 +1731,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E293B)
-                    : const Color(0xFFF1F5F9),
+                color:
+                    isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: context.borderColor),
               ),
@@ -1804,8 +1826,7 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     },
                     child: Text('Start Match ($durationMinutes mins)',
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -1859,13 +1880,17 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     color: Colors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent, size: 22),
+                  child: const Icon(Icons.stop_circle_rounded,
+                      color: Colors.redAccent, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Stop & Complete Match: ${game.title}',
-                    style: TextStyle(color: context.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: context.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -1948,7 +1973,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.videocam_rounded, color: Colors.amber, size: 20),
+                  const Icon(Icons.videocam_rounded,
+                      color: Colors.amber, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1969,11 +1995,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       side: BorderSide(color: context.borderColor),
                     ),
                     onPressed: () => Get.back(),
-                    child: Text('Back', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                    child: Text('Back',
+                        style: TextStyle(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1982,7 +2012,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () {
@@ -1992,7 +2023,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       controller.completeGame(game.id, a, b);
                     },
                     child: const Text('Stop & Complete (+5m CCTV)',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -2036,13 +2068,17 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     color: Colors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.highlight_off_rounded, color: Colors.redAccent, size: 22),
+                  child: const Icon(Icons.highlight_off_rounded,
+                      color: Colors.redAccent, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Cancel Match: ${game.title}',
-                    style: TextStyle(color: context.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: context.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -2059,11 +2095,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       side: BorderSide(color: context.borderColor),
                     ),
                     onPressed: () => Get.back(),
-                    child: Text('Back', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                    child: Text('Back',
+                        style: TextStyle(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -2072,7 +2112,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () {
@@ -2081,7 +2122,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           game.id, 'Cancelled by manager');
                     },
                     child: const Text('Confirm Cancel',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -2146,7 +2188,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
             ),
             decoration: BoxDecoration(
               color: context.cardColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -2159,7 +2202,9 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        color: isDark
+                            ? Colors.grey.shade700
+                            : Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -2172,7 +2217,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           color: AppColors.primary.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: 22),
+                        child: const Icon(Icons.edit_calendar_rounded,
+                            color: AppColors.primary, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -2190,7 +2236,8 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                   const SizedBox(height: 12),
                   Text(
                     'Update scheduled date & time for "${game.title}". Players receive instant notification.',
-                    style: TextStyle(fontSize: 12.5, color: context.textSecondary),
+                    style:
+                        TextStyle(fontSize: 12.5, color: context.textSecondary),
                   ),
                   const SizedBox(height: 14),
                   Text('New Match Date',
@@ -2352,15 +2399,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                     maxLines: 2,
                     style: TextStyle(color: context.textPrimary, fontSize: 13),
                     decoration: InputDecoration(
-                      hintText:
-                          'e.g. Ground maintenance, weather delay',
+                      hintText: 'e.g. Ground maintenance, weather delay',
                       hintStyle:
                           TextStyle(color: context.textSecondary, fontSize: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: context.borderColor),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -2370,11 +2417,15 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             side: BorderSide(color: context.borderColor),
                           ),
                           onPressed: () => Get.back(),
-                          child: Text('Cancel', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                          child: Text('Cancel',
+                              style: TextStyle(
+                                  color: context.textPrimary,
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -2383,12 +2434,14 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
                           ),
                           onPressed: () async {
                             final formattedDate = formatDate(selectedDate);
-                            final formattedStart = formatTime(selectedStartTime);
+                            final formattedStart =
+                                formatTime(selectedStartTime);
                             final formattedEnd = formatTime(selectedEndTime);
 
                             Get.back();
@@ -2403,7 +2456,9 @@ class ManagerGameDetailsView extends GetView<ManagerGamesController> {
                           },
                           child: const Text('Confirm Reschedule',
                               style: TextStyle(
-                                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12)),
                         ),
                       ),
                     ],

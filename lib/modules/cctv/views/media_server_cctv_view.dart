@@ -1258,270 +1258,271 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.35),
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.dns_rounded,
+                              color: AppColors.primary,
+                              size: 22,
                             ),
                           ),
-                          child: const Icon(
-                            Icons.dns_rounded,
-                            color: AppColors.primary,
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Media Server Address',
-                                style: TextStyle(
-                                  color: textPrimary,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.2,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Media Server Address',
+                                  style: TextStyle(
+                                    color: textPrimary,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.2,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Configure MediaMTX HLS Host',
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontSize: 12,
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Configure MediaMTX HLS Host',
+                                  style: TextStyle(
+                                    color: textSecondary,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Enter the base URL where MediaMTX HLS port 8888 is reachable:',
-                      style: TextStyle(
-                        color: textSecondary,
-                        fontSize: 12.5,
-                        height: 1.4,
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: inputBg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderColor, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: textController,
-                        onChanged: (_) => setDialogState(() {}),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Enter the base URL where MediaMTX HLS port 8888 is reachable:',
                         style: TextStyle(
-                          color: textPrimary,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
-                        keyboardType: TextInputType.url,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 14),
-                          hintText: 'http://10.0.2.2:8888',
-                          hintStyle:
-                              TextStyle(color: textSecondary, fontSize: 13),
-                          prefixIcon: const Icon(
-                            Icons.link_rounded,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                          suffixIcon: currentInput.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(Icons.cancel,
-                                      color: textSecondary, size: 18),
-                                  onPressed: () {
-                                    textController.clear();
-                                    setDialogState(() {});
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
+                          color: textSecondary,
+                          fontSize: 12.5,
+                          height: 1.4,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt_rounded,
-                            color: Color(0xFFFBBF24), size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Quick Network Presets:',
+                      const SizedBox(height: 14),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: inputBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor, width: 1.2),
+                        ),
+                        child: TextField(
+                          controller: textController,
+                          onChanged: (_) => setDialogState(() {}),
                           style: TextStyle(
-                            color: textSecondary,
-                            fontSize: 11.5,
+                            color: textPrimary,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
                           ),
+                          keyboardType: TextInputType.url,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 14),
+                            hintText: 'http://10.0.2.2:8888',
+                            hintStyle:
+                                TextStyle(color: textSecondary, fontSize: 13),
+                            prefixIcon: const Icon(
+                              Icons.link_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            suffixIcon: currentInput.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.cancel,
+                                        color: textSecondary, size: 18),
+                                    onPressed: () {
+                                      textController.clear();
+                                      setDialogState(() {});
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                          ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Column(
-                      children: presets.map((preset) {
-                        final isCurrent = currentInput == preset['url'];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6.0),
-                          child: InkWell(
-                            onTap: () {
-                              textController.text = preset['url']!;
-                              setDialogState(() {});
-                            },
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 9),
-                              decoration: BoxDecoration(
-                                color: isCurrent
-                                    ? AppColors.primary
-                                        .withValues(alpha: isDark ? 0.3 : 0.12)
-                                    : inputBg,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Icon(Icons.bolt_rounded,
+                              color: Color(0xFFFBBF24), size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Quick Network Presets:',
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Column(
+                        children: presets.map((preset) {
+                          final isCurrent = currentInput == preset['url'];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6.0),
+                            child: InkWell(
+                              onTap: () {
+                                textController.text = preset['url']!;
+                                setDialogState(() {});
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 9),
+                                decoration: BoxDecoration(
                                   color: isCurrent
-                                      ? AppColors.primary
-                                      : borderColor,
-                                  width: isCurrent ? 1.5 : 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    isCurrent
-                                        ? Icons.radio_button_checked
-                                        : Icons.radio_button_off,
-                                    size: 16,
+                                      ? AppColors.primary.withValues(
+                                          alpha: isDark ? 0.3 : 0.12)
+                                      : inputBg,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
                                     color: isCurrent
                                         ? AppColors.primary
-                                        : textSecondary,
+                                        : borderColor,
+                                    width: isCurrent ? 1.5 : 1,
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          preset['label']!,
-                                          style: TextStyle(
-                                            color: isCurrent
-                                                ? (isDark
-                                                    ? Colors.white
-                                                    : AppColors.primaryDark)
-                                                : textPrimary,
-                                            fontWeight: isCurrent
-                                                ? FontWeight.bold
-                                                : FontWeight.w500,
-                                            fontSize: 12.5,
-                                          ),
-                                        ),
-                                        Text(
-                                          preset['url']!,
-                                          style: TextStyle(
-                                            color: textSecondary,
-                                            fontSize: 10.5,
-                                            fontFamily: 'monospace',
-                                          ),
-                                        ),
-                                      ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isCurrent
+                                          ? Icons.radio_button_checked
+                                          : Icons.radio_button_off,
+                                      size: 16,
+                                      color: isCurrent
+                                          ? AppColors.primary
+                                          : textSecondary,
                                     ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 2.5),
-                                    decoration: BoxDecoration(
-                                      color: cardColor,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      preset['sub']!,
-                                      style: TextStyle(
-                                        color: isCurrent
-                                            ? AppColors.primary
-                                            : textSecondary,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            preset['label']!,
+                                            style: TextStyle(
+                                              color: isCurrent
+                                                  ? (isDark
+                                                      ? Colors.white
+                                                      : AppColors.primaryDark)
+                                                  : textPrimary,
+                                              fontWeight: isCurrent
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              fontSize: 12.5,
+                                            ),
+                                          ),
+                                          Text(
+                                            preset['url']!,
+                                            style: TextStyle(
+                                              color: textSecondary,
+                                              fontSize: 10.5,
+                                              fontFamily: 'monospace',
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 7, vertical: 2.5),
+                                      decoration: BoxDecoration(
+                                        color: cardColor,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        preset['sub']!,
+                                        style: TextStyle(
+                                          color: isCurrent
+                                              ? AppColors.primary
+                                              : textSecondary,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: textSecondary,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                          ),
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 18, vertical: 11),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: textSecondary,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                            ),
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w500),
                             ),
                           ),
-                          icon: const Icon(Icons.check_rounded, size: 16),
-                          label: const Text(
-                            'Save & Connect',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.2,
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
+                            icon: const Icon(Icons.check_rounded, size: 16),
+                            label: const Text(
+                              'Save & Connect',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            onPressed: () {
+                              final newUrl = textController.text.trim();
+                              if (newUrl.isNotEmpty) {
+                                Navigator.pop(ctx);
+                                _saveBaseUrl(newUrl);
+                              }
+                            },
                           ),
-                          onPressed: () {
-                            final newUrl = textController.text.trim();
-                            if (newUrl.isNotEmpty) {
-                              Navigator.pop(ctx);
-                              _saveBaseUrl(newUrl);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
+            );
           },
         );
       },

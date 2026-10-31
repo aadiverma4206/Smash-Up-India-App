@@ -557,8 +557,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
             _buildFilterChip(
                 'MATCH', 'Matches & Slots ($countMatch)', current, isDark),
             const SizedBox(width: 8),
-            _buildFilterChip(
-                'REFUND', 'Cancelled & Refunded ($countRefund)', current, isDark),
+            _buildFilterChip('REFUND', 'Cancelled & Refunded ($countRefund)',
+                current, isDark),
             const SizedBox(width: 8),
             _buildFilterChip(
                 'SYSTEM', 'System & Venues ($countSystem)', current, isDark),
@@ -741,8 +741,7 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                                   : const Color(0xFF475569),
                             ),
                           ),
-                          if (targetName != null &&
-                              targetName.isNotEmpty) ...[
+                          if (targetName != null && targetName.isNotEmpty) ...[
                             const SizedBox(width: 8),
                             Text('•',
                                 style: TextStyle(
@@ -766,8 +765,7 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                           ],
                         ],
                       ),
-                      if (log.details != null &&
-                          log.details!.isNotEmpty) ...[
+                      if (log.details != null && log.details!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           log.details!,

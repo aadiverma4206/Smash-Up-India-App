@@ -224,7 +224,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                                     lastDate: DateTime.now()
                                         .add(const Duration(days: 365)),
                                     matchDates: controller.scheduledMatchDates,
-                                    upcomingMatchDates: controller.upcomingMatchDates,
+                                    upcomingMatchDates:
+                                        controller.upcomingMatchDates,
                                   );
                                   if (picked != null) {
                                     controller.setCustomDate(picked);
@@ -675,7 +676,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                     color: Colors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.highlight_off_rounded, color: Colors.redAccent, size: 22),
+                  child: const Icon(Icons.highlight_off_rounded,
+                      color: Colors.redAccent, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -684,7 +686,9 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF0F172A),
                     ),
                   ),
                 ),
@@ -710,15 +714,22 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                 hintText: 'Enter reason for match cancellation...',
                 hintStyle: TextStyle(
                   fontSize: 12,
-                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade400,
                 ),
                 filled: true,
-                fillColor: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                fillColor:
+                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                  borderSide: BorderSide(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : const Color(0xFFE2E8F0)),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
             ),
             const SizedBox(height: 20),
@@ -728,11 +739,18 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0)),
                     ),
                     onPressed: () => Get.back(),
-                    child: Text('Close', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+                    child: Text('Close',
+                        style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -741,7 +759,8 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () {
@@ -749,7 +768,11 @@ class ManagerGamesView extends GetView<ManagerGamesController> {
                       controller.cancelMatchWithRefunds(
                           game.id, reasonController.text.trim());
                     },
-                    child: const Text('Cancel & Issue Refunds', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: const Text('Cancel & Issue Refunds',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12)),
                   ),
                 ),
               ],

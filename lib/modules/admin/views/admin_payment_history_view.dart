@@ -60,9 +60,8 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : const Color(0xFF0F172A),
+              color:
+                  isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
             ),
           ),
           elevation: 0,
@@ -72,9 +71,7 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
               ? Theme.of(context).scaffoldBackgroundColor
               : AppColors.sageGreenAppBar,
           iconTheme: IconThemeData(
-            color: isDark
-                ? AppColors.textPrimaryDark
-                : const Color(0xFF0F172A),
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
         ),
         body: RefreshIndicator(
@@ -705,9 +702,8 @@ class AdminPaymentHistoryView extends GetView<AdminController> {
                 const SizedBox(height: 12),
                 Divider(
                   height: 1,
-                  color: isDark
-                      ? AppColors.darkBorder
-                      : const Color(0xFFF1F5F9),
+                  color:
+                      isDark ? AppColors.darkBorder : const Color(0xFFF1F5F9),
                 ),
                 const SizedBox(height: 10),
 

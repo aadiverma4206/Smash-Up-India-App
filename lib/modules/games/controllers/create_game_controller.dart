@@ -26,12 +26,14 @@ class CreateGameController extends GetxController {
     final ds = GamesRemoteDataSource(dioClient: dio);
     return GamesRepository(remoteDataSource: ds);
   }
+
   bool get isOnline {
     if (Get.isRegistered<ConnectivityService>()) {
       return ConnectivityService.to.isConnected.value;
     }
     return true;
   }
+
   bool checkInternetConnection({String actionName = 'Pitch booking'}) {
     if (!isOnline) {
       ErrorHandler.showErrorSnackBar(
@@ -117,7 +119,8 @@ class CreateGameController extends GetxController {
     if (Get.isRegistered<ConnectivityService>()) {
       ever(ConnectivityService.to.isConnected, (bool online) {
         if (online) {
-          AppLogger.info('📶 Connection restored in CreateGameController: Syncing venues and slots');
+          AppLogger.info(
+              '📶 Connection restored in CreateGameController: Syncing venues and slots');
           loadVenues();
           fetchWalletBalance();
           fetchCourtAvailability();

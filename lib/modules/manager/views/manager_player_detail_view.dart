@@ -1392,7 +1392,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                     color: Colors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.block_rounded, color: Colors.redAccent, size: 22),
+                  child: const Icon(Icons.block_rounded,
+                      color: Colors.redAccent, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1401,7 +1402,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                 ),
@@ -1412,7 +1414,9 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               'Restricting access will prevent $name from joining matches and booking slots at this turf.',
               style: TextStyle(
                 fontSize: 12.5,
-                color: isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : const Color(0xFF475569),
               ),
             ),
             const SizedBox(height: 10),
@@ -1424,20 +1428,26 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                 fontSize: 13,
               ),
               decoration: InputDecoration(
-                hintText: 'Enter reason for blocking (e.g. misconduct, no-show)...',
+                hintText:
+                    'Enter reason for blocking (e.g. misconduct, no-show)...',
                 hintStyle: TextStyle(
-                  color: isDark ? AppColors.textSecondaryDark : const Color(0xFF94A3B8),
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : const Color(0xFF94A3B8),
                   fontSize: 12,
                 ),
                 filled: true,
-                fillColor: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                fillColor:
+                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1),
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
             ),
             const SizedBox(height: 20),
@@ -1447,14 +1457,20 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFCBD5E1)),
                     ),
                     onPressed: () => Get.back(),
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : Colors.grey.shade600,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1534,7 +1550,8 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                 ),
@@ -1545,7 +1562,9 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
               'Are you sure you want to restore match and turf booking access for $name?',
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? AppColors.textSecondaryDark : const Color(0xFF475569),
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : const Color(0xFF475569),
               ),
             ),
             const SizedBox(height: 20),
@@ -1555,14 +1574,20 @@ class _ManagerPlayerDetailViewState extends State<ManagerPlayerDetailView> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFCBD5E1)),
                     ),
                     onPressed: () => Get.back(),
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : Colors.grey.shade600,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

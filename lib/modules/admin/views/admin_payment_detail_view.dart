@@ -35,9 +35,7 @@ class AdminPaymentDetailView extends GetView<AdminController> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            color: isDark
-                ? AppColors.textPrimaryDark
-                : const Color(0xFF0F172A),
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
         ),
         elevation: 0,
@@ -47,9 +45,7 @@ class AdminPaymentDetailView extends GetView<AdminController> {
             ? Theme.of(context).scaffoldBackgroundColor
             : AppColors.sageGreenAppBar,
         iconTheme: IconThemeData(
-          color: isDark
-              ? AppColors.textPrimaryDark
-              : const Color(0xFF0F172A),
+          color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
         ),
       ),
       body: SingleChildScrollView(
@@ -656,9 +652,8 @@ class AdminPaymentDetailView extends GetView<AdminController> {
               'No players assigned to $teamName yet.',
               style: TextStyle(
                 fontSize: 12,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
               ),
             )
           else

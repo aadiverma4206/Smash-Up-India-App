@@ -75,7 +75,8 @@ class ManagerDashboardController extends GetxController
     final clampedIndex = selectedCourtIndex.value.clamp(0, courts.length - 1);
     final targetCourt = courts[clampedIndex];
     final targetIndex = clampedIndex;
-    final targetNum = (targetIndex + 1).toString(); // "1" for Court 1, "2" for Court 2
+    final targetNum =
+        (targetIndex + 1).toString(); // "1" for Court 1, "2" for Court 2
 
     bool isForCurrentCourt(String? cId, String? cName) {
       final targetId = targetCourt.id.toLowerCase().trim();
@@ -415,16 +416,20 @@ class ManagerDashboardController extends GetxController
     final targetStr = 'court_$courtNum';
     final targetName = 'court $courtNum';
 
-    if (cId == targetStr || cId == courtNum.toString() || cId.endsWith(courtNum.toString())) {
+    if (cId == targetStr ||
+        cId == courtNum.toString() ||
+        cId.endsWith(courtNum.toString())) {
       return true;
     }
     if (cName.contains(targetName) || cName.contains(targetStr)) {
       return true;
     }
-    if (courtNum == 1 && (cName.contains('pitch 1') || cId.contains('court_1'))) {
+    if (courtNum == 1 &&
+        (cName.contains('pitch 1') || cId.contains('court_1'))) {
       return true;
     }
-    if (courtNum == 2 && (cName.contains('pitch 2') || cId.contains('court_2'))) {
+    if (courtNum == 2 &&
+        (cName.contains('pitch 2') || cId.contains('court_2'))) {
       return true;
     }
     return false;
@@ -449,9 +454,8 @@ class ManagerDashboardController extends GetxController
       allGamesMap[g.id] = g;
     }
 
-    final courtGames = allGamesMap.values
-        .where((g) => _isGameForCourt(g, courtNum))
-        .toList();
+    final courtGames =
+        allGamesMap.values.where((g) => _isGameForCourt(g, courtNum)).toList();
 
     if (courtGames.isEmpty) return null;
 
@@ -505,7 +509,10 @@ class ManagerDashboardController extends GetxController
 
     for (final g in allClubGames) {
       final st = g.status.toUpperCase();
-      if (st != 'CANCELLED' && st != 'COMPLETED' && st != 'FINISHED' && st != 'REJECTED') {
+      if (st != 'CANCELLED' &&
+          st != 'COMPLETED' &&
+          st != 'FINISHED' &&
+          st != 'REJECTED') {
         if (AppDateUtils.isMatchInFuture(g.matchDate, g.startTime) ||
             AppDateUtils.isMatchInFuture(g.matchDate, g.endTime)) {
           uniqueFutureIds.add('g_${g.id}');
@@ -515,7 +522,10 @@ class ManagerDashboardController extends GetxController
 
     for (final g in clubMatches) {
       final st = g.status.toUpperCase();
-      if (st != 'CANCELLED' && st != 'COMPLETED' && st != 'FINISHED' && st != 'REJECTED') {
+      if (st != 'CANCELLED' &&
+          st != 'COMPLETED' &&
+          st != 'FINISHED' &&
+          st != 'REJECTED') {
         if (AppDateUtils.isMatchInFuture(g.matchDate, g.startTime) ||
             AppDateUtils.isMatchInFuture(g.matchDate, g.endTime)) {
           uniqueFutureIds.add('g_${g.id}');
@@ -527,10 +537,12 @@ class ManagerDashboardController extends GetxController
   }
 
   int get totalBookingsCount {
-    if (clubMetrics['bookings'] != null && (clubMetrics['bookings'] as num) > 0) {
+    if (clubMetrics['bookings'] != null &&
+        (clubMetrics['bookings'] as num) > 0) {
       return (clubMetrics['bookings'] as num).toInt();
     }
-    if (clubMetrics['totalBookings'] != null && (clubMetrics['totalBookings'] as num) > 0) {
+    if (clubMetrics['totalBookings'] != null &&
+        (clubMetrics['totalBookings'] as num) > 0) {
       return (clubMetrics['totalBookings'] as num).toInt();
     }
     if (dashboard.value != null && dashboard.value!.totalBookings > 0) {
@@ -564,7 +576,8 @@ class ManagerDashboardController extends GetxController
   }
 
   int get completedMatchesCount {
-    if (clubMetrics['completedMatches'] != null && (clubMetrics['completedMatches'] as num) > 0) {
+    if (clubMetrics['completedMatches'] != null &&
+        (clubMetrics['completedMatches'] as num) > 0) {
       return (clubMetrics['completedMatches'] as num).toInt();
     }
     if (dashboard.value != null && dashboard.value!.completedMatches > 0) {

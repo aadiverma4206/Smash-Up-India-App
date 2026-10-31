@@ -165,7 +165,8 @@ class CourtsController extends GetxController {
           '/games',
           queryParameters: {'date': dateStr, 'courtId': activeCourt},
         );
-        final raw = response.data is Map ? response.data['data'] : response.data;
+        final raw =
+            response.data is Map ? response.data['data'] : response.data;
         if (raw is List) {
           availabilityData.assignAll(
               raw.map((e) => Map<String, dynamic>.from(e as Map)).toList());

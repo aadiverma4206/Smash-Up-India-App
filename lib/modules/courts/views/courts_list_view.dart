@@ -131,9 +131,8 @@ class CourtsListView extends GetView<CourtsController> {
               hintText: 'Search court name, turf or city...',
               hintStyle: TextStyle(
                 fontSize: 13,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade500,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade500,
               ),
               prefixIcon: const Icon(
                 Icons.search_rounded,
@@ -141,9 +140,8 @@ class CourtsListView extends GetView<CourtsController> {
                 size: 20,
               ),
               filled: true,
-              fillColor: isDark
-                  ? const Color(0xFF0F172A)
-                  : const Color(0xFFF8FAFC),
+              fillColor:
+                  isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               border: OutlineInputBorder(
@@ -265,8 +263,7 @@ class CourtsListView extends GetView<CourtsController> {
     );
   }
 
-  Widget _buildCourtCard(
-      BuildContext context, CourtModel court, bool isDark) {
+  Widget _buildCourtCard(BuildContext context, CourtModel court, bool isDark) {
     final status = court.status.toUpperCase();
     Color statusColor;
     Color statusBgColor;
@@ -458,8 +455,7 @@ class CourtsListView extends GetView<CourtsController> {
                         onPressed: isAvailable
                             ? () {
                                 if (Get.isRegistered<ConnectivityService>() &&
-                                    !ConnectivityService
-                                        .to.isConnected.value) {
+                                    !ConnectivityService.to.isConnected.value) {
                                   ErrorHandler.showErrorSnackBar(
                                     'No Internet Connection',
                                     'Pitch booking requires an active internet connection. Please turn on mobile data or Wi-Fi to proceed.',
@@ -519,9 +515,8 @@ class CourtsListView extends GetView<CourtsController> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
               ),
             ),
           ],
@@ -803,9 +798,10 @@ class CourtsListView extends GetView<CourtsController> {
                                           Positioned(
                                             top: 6,
                                             child: Container(
-                                              padding: const EdgeInsets
-                                                  .symmetric(
-                                                  horizontal: 3, vertical: 1),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 3,
+                                                      vertical: 1),
                                               decoration: BoxDecoration(
                                                 color: Colors.black54,
                                                 borderRadius:
@@ -863,17 +859,13 @@ class CourtsListView extends GetView<CourtsController> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildLegendItem(
-                        const Color(0xFF10B981), 'Available'),
+                    _buildLegendItem(const Color(0xFF10B981), 'Available'),
                     const SizedBox(width: 14),
-                    _buildLegendItem(
-                        const Color(0xFFEF4444), 'Booked'),
+                    _buildLegendItem(const Color(0xFFEF4444), 'Booked'),
                     const SizedBox(width: 14),
-                    _buildLegendItem(
-                        const Color(0xFFF59E0B), 'Pending'),
+                    _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
                     const SizedBox(width: 14),
-                    _buildLegendItem(
-                        const Color(0xFF64748B), 'Closed'),
+                    _buildLegendItem(const Color(0xFF64748B), 'Closed'),
                   ],
                 ),
               ],
@@ -889,9 +881,7 @@ class CourtsListView extends GetView<CourtsController> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: isDark
-                ? AppColors.textPrimaryDark
-                : const Color(0xFF0F172A),
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
         ),
         const SizedBox(height: 8),
@@ -966,8 +956,8 @@ class CourtsListView extends GetView<CourtsController> {
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 11, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
@@ -1124,7 +1114,8 @@ class CourtsListView extends GetView<CourtsController> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Pitch Status:', style: TextStyle(color: Colors.grey)),
+                const Text('Pitch Status:',
+                    style: TextStyle(color: Colors.grey)),
                 Text(
                   slot.status,
                   style: TextStyle(
@@ -1142,7 +1133,8 @@ class CourtsListView extends GetView<CourtsController> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Hourly Rate:', style: TextStyle(color: Colors.grey)),
+                const Text('Hourly Rate:',
+                    style: TextStyle(color: Colors.grey)),
                 Text('₹${slot.price.toStringAsFixed(0)} / hr',
                     style: const TextStyle(fontWeight: FontWeight.bold)),
               ],

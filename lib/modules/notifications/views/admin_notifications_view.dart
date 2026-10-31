@@ -374,8 +374,8 @@ class AdminNotificationsView extends GetView<NotificationsController> {
                           if (filtered.isEmpty) {
                             return RefreshIndicator(
                               color: AppColors.primary,
-                              onRefresh: () async =>
-                                  controller.fetchNotifications(isRefresh: true),
+                              onRefresh: () async => controller
+                                  .fetchNotifications(isRefresh: true),
                               child: SingleChildScrollView(
                                 physics: const AlwaysScrollableScrollPhysics(
                                     parent: BouncingScrollPhysics()),
@@ -591,143 +591,168 @@ class AdminNotificationsView extends GetView<NotificationsController> {
       final isSelected = controller.selectedIds.contains(item.id);
       final isSelectionMode = controller.isSelectionMode;
 
-      return Card(
-        elevation: isSelected ? 2.0 : 0,
+      return Container(
         margin: EdgeInsets.zero,
-        color: isSelected
-            ? (isDark
-                ? AppColors.primary.withValues(alpha: 0.22)
-                : AppColors.primary.withValues(alpha: 0.12))
-            : Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
+          border: Border.all(
             color: isSelected
                 ? AppColors.primary
                 : (item.isRead
                     ? (isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0))
-                    : AppColors.primary.withValues(alpha: 0.6)),
-            width: isSelected ? 2.0 : (item.isRead ? 1.0 : 1.6),
+                    : AppColors.primary.withValues(alpha: 0.5)),
+            width: isSelected ? 2.0 : (item.isRead ? 0.8 : 1.2),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: InkWell(
-          onTap: () => controller.markAsReadAndNavigate(item),
-          onLongPress: () => controller.toggleSelection(item.id),
+        child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: iconColor.withValues(alpha: 0.25),
-                      width: 1,
-                    ),
-                  ),
-                  child: Center(
-                    child: Icon(iconData, color: iconColor, size: 20),
-                  ),
+          child: Stack(
+            children: [
+              if (isSelected)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  child: Container(color: AppColors.primary),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: iconColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              badgeLabel,
-                              style: TextStyle(
-                                color: iconColor,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
-                              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => controller.markAsReadAndNavigate(item),
+                  onLongPress: () => controller.toggleSelection(item.id),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14.0, vertical: 12.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: iconColor.withValues(alpha: 0.25),
+                              width: 1,
                             ),
                           ),
-                          const Spacer(),
-                          if (timeAgo.isNotEmpty)
-                            Text(
-                              timeAgo,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : Colors.grey.shade600,
+                          child: Center(
+                            child: Icon(iconData, color: iconColor, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: iconColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      badgeLabel,
+                                      style: TextStyle(
+                                        color: iconColor,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (timeAgo.isNotEmpty)
+                                    Text(
+                                      timeAgo,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark
+                                            ? AppColors.textSecondaryDark
+                                            : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                ],
                               ),
+                              const SizedBox(height: 6),
+                              Text(
+                                item.title,
+                                style: TextStyle(
+                                  fontWeight: item.isRead
+                                      ? FontWeight.w600
+                                      : FontWeight.bold,
+                                  fontSize: 14,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : const Color(0xFF0F172A),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                item.body,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : const Color(0xFF475569),
+                                  height: 1.3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelectionMode) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            isSelected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade400,
+                            size: 22,
+                          ),
+                        ] else if (!item.isRead) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.only(top: 6),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
                             ),
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        item.title,
-                        style: TextStyle(
-                          fontWeight:
-                              item.isRead ? FontWeight.w600 : FontWeight.bold,
-                          fontSize: 14,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : const Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        item.body,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : Colors.grey.shade700,
-                          height: 1.3,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (isSelectionMode) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    isSelected
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: isSelected ? AppColors.primary : Colors.grey,
-                    size: 22,
-                  ),
-                ] else if (!item.isRead) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.only(top: 6),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
+                      ],
                     ),
                   ),
-                ],
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
       );

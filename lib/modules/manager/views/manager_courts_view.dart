@@ -646,7 +646,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                     color: Colors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 22),
+                  child: const Icon(Icons.cancel_outlined,
+                      color: Colors.redAccent, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -655,7 +656,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                 ),
@@ -666,7 +668,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
               'Enter rejection reason for player host:',
               style: TextStyle(
                 fontSize: 12.5,
-                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
               ),
             ),
             const SizedBox(height: 10),
@@ -681,15 +684,22 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                 hintText: 'e.g. Court time slot conflict',
                 hintStyle: TextStyle(
                   fontSize: 12,
-                  color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade400,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : Colors.grey.shade400,
                 ),
                 filled: true,
-                fillColor: isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
+                fillColor:
+                    isDark ? AppColors.darkInputBg : const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                  borderSide: BorderSide(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : const Color(0xFFE2E8F0)),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
             ),
             const SizedBox(height: 20),
@@ -699,11 +709,18 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0)),
                     ),
                     onPressed: () => Get.back(),
-                    child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+                    child: Text('Cancel',
+                        style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -712,7 +729,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () {
@@ -720,7 +738,9 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                       Get.back();
                       controller.rejectPlayerGame(gameId, reason);
                     },
-                    child: const Text('Confirm Reject', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text('Confirm Reject',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],

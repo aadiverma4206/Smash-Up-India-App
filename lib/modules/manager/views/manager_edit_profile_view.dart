@@ -40,7 +40,8 @@ class _ManagerEditProfileViewState extends State<ManagerEditProfileView> {
 
     nameController = TextEditingController(text: user?.name ?? '');
     cityController = TextEditingController(text: user?.city ?? '');
-    bioController = TextEditingController(text: 'Managing All Stars Arena Turf');
+    bioController =
+        TextEditingController(text: 'Managing All Stars Arena Turf');
     avatarUrl.value = user?.profileImageUrl ?? '';
 
     _loadManagerProfileData();
@@ -239,7 +240,8 @@ class _ManagerEditProfileViewState extends State<ManagerEditProfileView> {
     );
   }
 
-  void _openProfileImageViewer(BuildContext context, String name, String? imageUrl) {
+  void _openProfileImageViewer(
+      BuildContext context, String name, String? imageUrl) {
     Get.to(
       () => ProfileImageViewerPage(
         name: name,
@@ -693,10 +695,8 @@ class _ManagerEditProfileViewState extends State<ManagerEditProfileView> {
                         ),
                         decoration: InputDecoration(
                           hintText: 'Enter city',
-                          prefixIcon: const Icon(
-                              Icons.location_city_rounded,
-                              color: AppColors.primary,
-                              size: 22),
+                          prefixIcon: const Icon(Icons.location_city_rounded,
+                              color: AppColors.primary, size: 22),
                           filled: true,
                           fillColor: fieldFillColor,
                           contentPadding: const EdgeInsets.symmetric(

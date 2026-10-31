@@ -42,9 +42,11 @@ class ManagerGamesController extends GetxController {
 
           bool matchesCourt = cId == courtFilter || cName == courtFilter;
           if (courtFilter.contains('1')) {
-            matchesCourt = matchesCourt || cId.contains('1') || cName.contains('1');
+            matchesCourt =
+                matchesCourt || cId.contains('1') || cName.contains('1');
           } else if (courtFilter.contains('2')) {
-            matchesCourt = matchesCourt || cId.contains('2') || cName.contains('2');
+            matchesCourt =
+                matchesCourt || cId.contains('2') || cName.contains('2');
           }
           if (!matchesCourt) continue;
         }
@@ -72,9 +74,11 @@ class ManagerGamesController extends GetxController {
 
           bool matchesCourt = cId == courtFilter || cName == courtFilter;
           if (courtFilter.contains('1')) {
-            matchesCourt = matchesCourt || cId.contains('1') || cName.contains('1');
+            matchesCourt =
+                matchesCourt || cId.contains('1') || cName.contains('1');
           } else if (courtFilter.contains('2')) {
-            matchesCourt = matchesCourt || cId.contains('2') || cName.contains('2');
+            matchesCourt =
+                matchesCourt || cId.contains('2') || cName.contains('2');
           }
           if (!matchesCourt) continue;
         }
@@ -406,8 +410,8 @@ class ManagerGamesController extends GetxController {
   Future<void> startGame(String gameId, {int? durationMinutes}) async {
     isLoading.value = true;
     try {
-      final updated = await repository.startGame(gameId,
-          durationMinutes: durationMinutes);
+      final updated =
+          await repository.startGame(gameId, durationMinutes: durationMinutes);
       selectedGame.value = updated;
       fetchClubGames();
       final endFormatted = AppDateUtils.formatTime(updated.endTime);
@@ -480,8 +484,8 @@ class ManagerGamesController extends GetxController {
       selectedGame.value = updated;
       fetchClubGames();
       await fetchMatchRecording(gameId);
-      ErrorHandler.showSuccessSnackBar(
-          'Match Completed', 'Match stopped. CCTV camera will continue recording for +5 minutes post-match buffer.');
+      ErrorHandler.showSuccessSnackBar('Match Completed',
+          'Match stopped. CCTV camera will continue recording for +5 minutes post-match buffer.');
     } catch (e) {
       ErrorHandler.showErrorSnackBar('Complete Error', e);
     } finally {

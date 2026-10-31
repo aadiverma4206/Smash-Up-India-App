@@ -992,7 +992,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                 ],
@@ -1000,9 +1001,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.darkInputBg
-                      : const Color(0xFFE8F5E9),
+                  color:
+                      isDark ? AppColors.darkInputBg : const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: AppColors.primary.withValues(alpha: 0.4),
@@ -1067,7 +1067,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
       badgeTextColor = Colors.orange.shade800;
       badgeLabel = '🔴 ONGOING';
     } else {
-      themeColor = const Color(0xFF1E88E5); // Vibrant Blue theme for Future/Upcoming
+      themeColor =
+          const Color(0xFF1E88E5); // Vibrant Blue theme for Future/Upcoming
       badgeBgColor = const Color(0xFF1E88E5).withValues(alpha: 0.12);
       badgeTextColor = const Color(0xFF1E88E5);
       badgeLabel = '🗓️ UPCOMING';
@@ -1077,9 +1078,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
         ? AppDateUtils.formatDate(game.matchDate, format: 'dd MMM yyyy')
         : 'Today';
 
-    final timeDisplay = hasGame && (game.startTime.isNotEmpty || game.endTime.isNotEmpty)
-        ? AppDateUtils.formatTimeRange(game.startTime, game.endTime)
-        : '';
+    final timeDisplay =
+        hasGame && (game.startTime.isNotEmpty || game.endTime.isNotEmpty)
+            ? AppDateUtils.formatTimeRange(game.startTime, game.endTime)
+            : '';
 
     return Container(
       width: double.infinity,
@@ -1122,7 +1124,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      color:
+                          isDark ? AppColors.textPrimaryDark : Colors.black87,
                     ),
                   ),
                 ],
@@ -1191,9 +1194,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkInputBg
-                        : Colors.grey.shade100,
+                    color:
+                        isDark ? AppColors.darkInputBg : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -1271,8 +1273,10 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
                 ),
                 onPressed: () {
                   if (Get.isRegistered<ManagerGamesController>()) {
-                    Get.find<ManagerGamesController>().selectedGame.value = game;
-                    Get.find<ManagerGamesController>().fetchMatchRecording(game.id);
+                    Get.find<ManagerGamesController>().selectedGame.value =
+                        game;
+                    Get.find<ManagerGamesController>()
+                        .fetchMatchRecording(game.id);
                   }
                   Get.toNamed(
                     '/manager/games/details',
@@ -1301,9 +1305,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               'No active or upcoming match scheduled for $courtName.',
               style: TextStyle(
                 fontSize: 12,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : Colors.grey.shade600,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade600,
               ),
             ),
             const SizedBox(height: 10),
@@ -1384,9 +1387,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkInputBg
-                    : const Color(0xFFE8F5E9),
+                color: isDark ? AppColors.darkInputBg : const Color(0xFFE8F5E9),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: AppColors.primary.withValues(alpha: 0.4),
@@ -1440,11 +1441,11 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
               _buildSmallStatCard(
                   context, 'Courts', courtsCount, Icons.stadium_outlined),
               const SizedBox(width: 6),
-              _buildSmallStatCard(
-                  context, 'Bookings', bookingsCount, Icons.confirmation_number_outlined),
+              _buildSmallStatCard(context, 'Bookings', bookingsCount,
+                  Icons.confirmation_number_outlined),
               const SizedBox(width: 6),
-              _buildSmallStatCard(
-                  context, 'Completed', completedMatchesCount, Icons.emoji_events_outlined),
+              _buildSmallStatCard(context, 'Completed', completedMatchesCount,
+                  Icons.emoji_events_outlined),
             ],
           );
         }),

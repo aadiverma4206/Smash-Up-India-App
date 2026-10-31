@@ -33,8 +33,7 @@ class AdminUsersView extends GetView<AdminController> {
               ? Theme.of(context).scaffoldBackgroundColor
               : AppColors.sageGreenAppBar,
           iconTheme: IconThemeData(
-            color:
-                isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
         ),
         body: Column(

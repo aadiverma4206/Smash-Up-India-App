@@ -77,12 +77,14 @@ class ManagerDashboardModel {
 
     if (json['court1Match'] is Map<String, dynamic>) {
       try {
-        c1Match = GameModel.fromJson(json['court1Match'] as Map<String, dynamic>);
+        c1Match =
+            GameModel.fromJson(json['court1Match'] as Map<String, dynamic>);
       } catch (_) {}
     }
     if (json['court2Match'] is Map<String, dynamic>) {
       try {
-        c2Match = GameModel.fromJson(json['court2Match'] as Map<String, dynamic>);
+        c2Match =
+            GameModel.fromJson(json['court2Match'] as Map<String, dynamic>);
       } catch (_) {}
     }
     if (json['courtMatches'] is Map<String, dynamic>) {
@@ -155,10 +157,8 @@ class ManagerDashboardModel {
         ? rawCctv.toInt()
         : int.tryParse(rawCctv.toString()) ?? 0;
 
-    final rawPlayers = json['totalPlayers'] ??
-        metrics?['players'] ??
-        json['players'] ??
-        0;
+    final rawPlayers =
+        json['totalPlayers'] ?? metrics?['players'] ?? json['players'] ?? 0;
     final int players = rawPlayers is num
         ? rawPlayers.toInt()
         : int.tryParse(rawPlayers.toString()) ?? 0;

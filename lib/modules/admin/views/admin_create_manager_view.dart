@@ -59,8 +59,7 @@ class AdminCreateManagerView extends GetView<AdminController> {
             alignment: Alignment.topCenter,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.symmetric(
                 horizontal: isTabletOrDesktop ? 24.0 : 16.0,
                 vertical: 16.0,
@@ -73,9 +72,8 @@ class AdminCreateManagerView extends GetView<AdminController> {
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isDark
-                        ? AppColors.darkBorder
-                        : const Color(0xFFE2E8F0),
+                    color:
+                        isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0),
                     width: 1,
                   ),
                   boxShadow: const [
@@ -97,8 +95,7 @@ class AdminCreateManagerView extends GetView<AdminController> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.primary.withValues(alpha: 0.12),
+                              color: AppColors.primary.withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(

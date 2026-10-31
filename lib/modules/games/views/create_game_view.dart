@@ -213,7 +213,8 @@ class CreateGameView extends StatelessWidget {
   }
 
   Widget _buildOfflineWarningBanner(BuildContext context) {
-    if (!Get.isRegistered<ConnectivityService>()) return const SizedBox.shrink();
+    if (!Get.isRegistered<ConnectivityService>())
+      return const SizedBox.shrink();
     return Obx(() {
       final isOnline = ConnectivityService.to.isConnected.value;
       if (isOnline) return const SizedBox.shrink();
@@ -228,7 +229,8 @@ class CreateGameView extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.wifi_off_rounded, color: Colors.redAccent, size: 24),
+            const Icon(Icons.wifi_off_rounded,
+                color: Colors.redAccent, size: 24),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1107,7 +1109,8 @@ class CreateGameView extends StatelessWidget {
                     : court != null
                         ? 'Book ${controller.selectedGameTitle.value} (${court.name}) • ₹${totalAmount.toStringAsFixed(0)}'
                         : 'Select Pitch / Court to Book',
-                isLoading: controller.isLoading.value || controller.isProcessing.value,
+                isLoading:
+                    controller.isLoading.value || controller.isProcessing.value,
                 onPressed: () {
                   if (!isOnline) {
                     ErrorHandler.showErrorSnackBar(

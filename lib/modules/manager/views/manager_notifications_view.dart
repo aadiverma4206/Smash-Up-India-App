@@ -125,7 +125,8 @@ class ManagerNotificationsView extends GetView<NotificationsController> {
                     color: Colors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
+                  child: const Icon(Icons.delete_sweep_rounded,
+                      color: Colors.redAccent, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -134,7 +135,9 @@ class ManagerNotificationsView extends GetView<NotificationsController> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF0F172A),
                     ),
                   ),
                 ),
@@ -145,7 +148,8 @@ class ManagerNotificationsView extends GetView<NotificationsController> {
               'Are you sure you want to delete $count selected notification(s)? This action cannot be undone.',
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
+                color:
+                    isDark ? AppColors.textSecondaryDark : Colors.grey.shade700,
               ),
             ),
             const SizedBox(height: 20),
@@ -155,11 +159,18 @@ class ManagerNotificationsView extends GetView<NotificationsController> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: isDark ? AppColors.darkBorder : const Color(0xFFE2E8F0)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : const Color(0xFFE2E8F0)),
                     ),
                     onPressed: () => Get.back(),
-                    child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+                    child: Text('Cancel',
+                        style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -168,14 +179,17 @@ class ManagerNotificationsView extends GetView<NotificationsController> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () {
                       Get.back();
                       controller.deleteSelectedNotifications();
                     },
-                    child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text('Delete',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],

@@ -1207,8 +1207,6 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
-
-
   Widget _buildReferAdBanner(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String referImagePath = isDark

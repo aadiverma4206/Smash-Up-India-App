@@ -211,8 +211,8 @@ class _MatchDatePickerDialogState extends State<MatchDatePickerDialog> {
 
             // Bottom Actions
             Padding(
-              padding:
-                  const EdgeInsets.only(right: 16, bottom: 12, top: 4, left: 16),
+              padding: const EdgeInsets.only(
+                  right: 16, bottom: 12, top: 4, left: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -393,8 +393,7 @@ class _MatchDatePickerDialogState extends State<MatchDatePickerDialog> {
           return const SizedBox();
         }
         final dayNum = index - leadingEmptySlots + 1;
-        final dayDate =
-            DateTime(monthDate.year, monthDate.month, dayNum);
+        final dayDate = DateTime(monthDate.year, monthDate.month, dayNum);
         final isSelected = dayDate.year == _selectedDate.year &&
             dayDate.month == _selectedDate.month &&
             dayDate.day == _selectedDate.day;
@@ -402,7 +401,8 @@ class _MatchDatePickerDialogState extends State<MatchDatePickerDialog> {
         final dateKey =
             '${dayDate.year}-${dayDate.month.toString().padLeft(2, '0')}-${dayDate.day.toString().padLeft(2, '0')}';
         final hasMatch = _normalizedMatchDates.contains(dateKey);
-        final hasUpcomingMatch = _normalizedUpcomingMatchDates.contains(dateKey);
+        final hasUpcomingMatch =
+            _normalizedUpcomingMatchDates.contains(dateKey);
 
         final now = DateTime.now();
         final isToday = dayDate.year == now.year &&
@@ -410,8 +410,8 @@ class _MatchDatePickerDialogState extends State<MatchDatePickerDialog> {
             dayDate.day == now.day;
 
         final dayStart = DateTime(dayDate.year, dayDate.month, dayDate.day);
-        final firstStart = DateTime(
-            widget.firstDate.year, widget.firstDate.month, widget.firstDate.day);
+        final firstStart = DateTime(widget.firstDate.year,
+            widget.firstDate.month, widget.firstDate.day);
         final lastStart = DateTime(
             widget.lastDate.year, widget.lastDate.month, widget.lastDate.day);
 
@@ -462,8 +462,9 @@ class _MatchDatePickerDialogState extends State<MatchDatePickerDialog> {
               if (hasMatch)
                 Builder(
                   builder: (context) {
-                    final badgeColor =
-                        hasUpcomingMatch ? const Color(0xFF2196F3) : AppColors.primary;
+                    final badgeColor = hasUpcomingMatch
+                        ? const Color(0xFF2196F3)
+                        : AppColors.primary;
 
                     return Positioned(
                       top: 2,
@@ -471,11 +472,14 @@ class _MatchDatePickerDialogState extends State<MatchDatePickerDialog> {
                       child: Container(
                         padding: const EdgeInsets.all(1.5),
                         decoration: BoxDecoration(
-                          color: badgeColor, // Blue for upcoming matches ahead, Green for past matches
+                          color:
+                              badgeColor, // Blue for upcoming matches ahead, Green for past matches
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isSelected
-                                ? (hasUpcomingMatch ? AppColors.primary : Colors.white)
+                                ? (hasUpcomingMatch
+                                    ? AppColors.primary
+                                    : Colors.white)
                                 : (isDark ? AppColors.darkCard : Colors.white),
                             width: 1,
                           ),

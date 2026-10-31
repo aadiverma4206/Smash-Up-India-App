@@ -68,8 +68,8 @@ class PlayerStatsModel {
       goalsScored: _toInt(json['goalsScored'] ?? json['goals_scored']),
       assists: _toInt(json['assists']),
       motmCount: _toInt(json['motmCount'] ?? json['motm_count']),
-      winRatePercentage: _toDouble(
-          json['winRatePercentage'] ?? json['win_rate_percentage']),
+      winRatePercentage:
+          _toDouble(json['winRatePercentage'] ?? json['win_rate_percentage']),
       customStats: customList,
     );
   }

@@ -189,7 +189,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           _buildCircularActionsGrid(context),
                           const SizedBox(height: 20),
                           _buildMetricsSection(context),
-                              const SizedBox(height: 20),
+                          const SizedBox(height: 20),
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -818,7 +818,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       },
       {
         'label': 'Courts',
-        'value': '${(d?.totalClubs != null && d!.totalClubs > 0) ? d.totalClubs : 2}',
+        'value':
+            '${(d?.totalClubs != null && d!.totalClubs > 0) ? d.totalClubs : 2}',
         'icon': Icons.stadium_outlined,
       },
       {
@@ -1029,6 +1030,4 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       ),
     );
   }
-
-
 }

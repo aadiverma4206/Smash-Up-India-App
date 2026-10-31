@@ -200,7 +200,8 @@ class AuditLogModel {
     return AuditLogModel(
       id: (json['id'] ?? '').toString(),
       adminId: json['admin_id']?.toString() ?? json['adminId']?.toString(),
-      adminName: json['admin_name']?.toString() ?? json['adminName']?.toString(),
+      adminName:
+          json['admin_name']?.toString() ?? json['adminName']?.toString(),
       userId: json['user_id']?.toString() ?? json['userId']?.toString(),
       action: (json['action'] ?? 'SYSTEM_EVENT').toString(),
       target: json['target']?.toString(),
