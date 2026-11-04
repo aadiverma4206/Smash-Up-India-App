@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import '../../../core/config/env_config.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/storage/secure_storage_service.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../data/models/notification_model.dart';
@@ -95,6 +96,16 @@ class SocketNotificationService extends GetxService {
         if (!exists) {
           controller.notifications.insert(0, model);
         }
+      }
+
+      // TRIGGER TOP NOTIFICATION BAR ALERT
+      if (Get.isRegistered<NotificationService>()) {
+        NotificationService.to.showNotificationBarAlert(
+          title: model.title,
+          body: model.body,
+          payloadRoute: model.data?['route']?.toString() ?? '/notifications',
+          id: model.id.hashCode.abs(),
+        );
       }
     } catch (e) {
       AppLogger.warning('Error handling socket notification payload: $e');

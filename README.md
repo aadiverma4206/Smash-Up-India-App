@@ -149,10 +149,10 @@ ALTER TYPE public.foot_preference OWNER TO postgres;
 
 --
 -- TOC entry 1268 (class 1247 OID 17712)
--- Name: football_position; Type: TYPE; Schema: public; Owner: postgres
+-- Name: pickle_position; Type: TYPE; Schema: public; Owner: postgres
 --
 
-CREATE TYPE public.football_position AS ENUM (
+CREATE TYPE public.pickle_position AS ENUM (
     'GK',
     'CB',
     'LB',
@@ -175,7 +175,7 @@ CREATE TYPE public.football_position AS ENUM (
 );
 
 
-ALTER TYPE public.football_position OWNER TO postgres;
+ALTER TYPE public.pickle_position OWNER TO postgres;
 
 --
 -- TOC entry 1283 (class 1247 OID 17786)
@@ -1486,7 +1486,7 @@ CREATE FUNCTION public.join_game_with_wallet(p_user_id character varying, p_game
           END IF;
 
           INSERT INTO public.game_players (game_id, user_id, team, position, payment_status)
-          VALUES (p_game_id, p_user_id, v_assigned_team, UPPER(p_position)::public.football_position, 'PAID')
+          VALUES (p_game_id, p_user_id, v_assigned_team, UPPER(p_position)::public.pickle_position, 'PAID')
           RETURNING id INTO v_roster_id;
 
           IF v_current_count + 1 >= v_max_players THEN
@@ -1502,10 +1502,10 @@ ALTER FUNCTION public.join_game_with_wallet(p_user_id character varying, p_game_
 
 --
 -- TOC entry 426 (class 1255 OID 19860)
--- Name: join_game_with_wallet(character varying, character varying, public.football_position); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: join_game_with_wallet(character varying, character varying, public.pickle_position); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.join_game_with_wallet(p_user_id character varying, p_game_id character varying, p_position public.football_position) RETURNS bigint
+CREATE FUNCTION public.join_game_with_wallet(p_user_id character varying, p_game_id character varying, p_position public.pickle_position) RETURNS bigint
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
@@ -1874,7 +1874,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.join_game_with_wallet(p_user_id character varying, p_game_id character varying, p_position public.football_position) OWNER TO postgres;
+ALTER FUNCTION public.join_game_with_wallet(p_user_id character varying, p_game_id character varying, p_position public.pickle_position) OWNER TO postgres;
 
 --
 -- TOC entry 575 (class 1255 OID 19746)
@@ -3176,7 +3176,7 @@ CREATE TABLE public.cctv_recordings (
     manual_stop boolean DEFAULT false,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     playback_status character varying(32) DEFAULT 'PROCESSING'::character varying,
-    storage_bucket character varying(128) DEFAULT 'all-stars-arena-recordings'::character varying
+    storage_bucket character varying(128) DEFAULT 'smash-up-india-recordings'::character varying
 );
 
 
@@ -3375,7 +3375,7 @@ CREATE TABLE public.game_players (
     game_id character varying(64) NOT NULL,
     user_id character varying(64) NOT NULL,
     team public.team_side NOT NULL,
-    "position" public.football_position DEFAULT 'MID'::public.football_position NOT NULL,
+    "position" public.pickle_position DEFAULT 'MID'::public.pickle_position NOT NULL,
     joined_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     payment_status character varying(32) DEFAULT 'PAID'::character varying,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -3467,7 +3467,7 @@ CREATE TABLE public.game_waitlist (
     game_id character varying(64) NOT NULL,
     user_id character varying(64) NOT NULL,
     team_preference public.team_side,
-    "position" public.football_position DEFAULT 'MID'::public.football_position NOT NULL,
+    "position" public.pickle_position DEFAULT 'MID'::public.pickle_position NOT NULL,
     waitlist_order integer DEFAULT 1 NOT NULL,
     joined_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT game_waitlist_waitlist_order_check CHECK ((waitlist_order > 0))
@@ -3529,7 +3529,7 @@ CREATE TABLE public.games (
     cancellation_reason text,
     video_playback_url character varying(512),
     entry_fee numeric(10,2) DEFAULT 200.00 NOT NULL,
-    club_id character varying(64) DEFAULT 'all_stars_arena_club'::character varying,
+    club_id character varying(64) DEFAULT 'smash_up_india_club'::character varying,
     per_player_fee numeric(10,2) DEFAULT 0.00,
     CONSTRAINT chk_game_times CHECK ((end_time > start_time)),
     CONSTRAINT games_approval_status_check CHECK (((approval_status)::text = ANY ((ARRAY['PENDING_APPROVAL'::character varying, 'APPROVED'::character varying, 'REJECTED'::character varying])::text[]))),

@@ -113,14 +113,14 @@ class PlayerController extends GetxController {
         id: 'joined',
         label: 'Joined',
         value: '${s.matchesJoined}',
-        icon: Icons.sports_soccer_rounded,
+        icon: Icons.sports_tennis_rounded,
         color: const Color(0xFF00C853),
       ),
       DynamicStatCardModel(
         id: 'played',
         label: 'Played',
         value: '${s.matchesPlayed}',
-        icon: Icons.sports_football_rounded,
+        icon: Icons.sports_tennis_rounded,
         color: const Color(0xFF0288D1),
       ),
       DynamicStatCardModel(

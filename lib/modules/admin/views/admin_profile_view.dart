@@ -296,7 +296,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
       appBar: AppBar(
         backgroundColor: isDark
             ? Theme.of(context).scaffoldBackgroundColor
-            : AppColors.sageGreenAppBar,
+            : AppColors.lightBlueAppBar,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -361,7 +361,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
               (profileData['name'] ?? user?.name ?? 'System Administrator')
                   .toString();
           final String email =
-              (profileData['email'] ?? user?.email ?? 'admin@allstarsarena.com')
+              (profileData['email'] ?? user?.email ?? 'admin@smashupindia.com')
                   .toString();
           final String phone =
               (profileData['phone'] ?? user?.phone ?? '+91 9999999999')
@@ -763,7 +763,7 @@ class _AdminProfileViewState extends State<AdminProfileView> {
                     const SizedBox(height: 24),
                     const Center(
                       child: Text(
-                        'ALL STARS ARENA • ADMIN PORTAL v1.0.0',
+                        'SMASH UP INDIA • ADMIN PORTAL v1.0.0',
                         style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey,

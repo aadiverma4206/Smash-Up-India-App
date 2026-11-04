@@ -646,12 +646,11 @@ class CourtsListView extends GetView<CourtsController> {
             }
 
             final activeCourt = controller.chartCourtId.value;
+            final courtName = activeCourt == 'court_1' ? 'Court 1' : 'Court 2';
             final slots = controller.getSlotsForActiveCourt();
             final freeCount = controller.activeCourtAvailableSlotsCount;
             final bookedCount = controller.activeCourtBookedSlotsCount;
             final closedCount = controller.activeCourtUnavailableSlotsCount;
-
-            final courtName = activeCourt == 'court_1' ? 'Court 1' : 'Court 2';
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -898,7 +897,6 @@ class CourtsListView extends GetView<CourtsController> {
           }
 
           final activeCourt = controller.chartCourtId.value;
-          final courtName = activeCourt == 'court_1' ? 'Court 1' : 'Court 2';
           final slots = controller.getSlotsForActiveCourt();
 
           return SingleChildScrollView(

@@ -25,7 +25,7 @@ class ClubModel {
   factory ClubModel.fromJson(Map<String, dynamic> json) {
     return ClubModel(
       id: (json['id'] ?? json['club_id'] ?? '').toString(),
-      name: (json['name'] ?? json['club_name'] ?? 'All Stars Turf').toString(),
+      name: (json['name'] ?? json['club_name'] ?? 'Smash Up India').toString(),
       city: (json['city'] ?? 'Raipur').toString(),
       address: (json['address'] ?? 'VIP Road, Raipur').toString(),
     );

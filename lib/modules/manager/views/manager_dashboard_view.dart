@@ -546,7 +546,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
       ),
       child: ClipOval(
         child: Image.asset(
-          'assets/images/App_Logo/all_stars_arena_logo.png',
+          'assets/images/App_Logo/smash_up_india.png',
           width: 38,
           height: 38,
           fit: BoxFit.cover,
@@ -563,7 +563,7 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
   Widget _buildTitleWidget(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(
-      'All Stars Arena',
+      'Smash Up India',
       style: TextStyle(
         color: isDark ? AppColors.textPrimaryDark : const Color(0xFF2D1B69),
         fontSize: 17,

@@ -66,15 +66,15 @@ class CreateGameController extends GetxController {
 
   final availableClubs = <ClubModel>[].obs;
   final Rx<ClubModel> selectedClub = ClubModel(
-    id: 'all_stars_arena_club',
-    name: 'All Stars Turf Raipur',
+    id: 'smash_up_india_club',
+    name: 'Smash Up India',
     city: 'Raipur',
     address: 'VIP Road, Raipur',
   ).obs;
 
   final availableCourts = <CourtModel>[].obs;
   final Rxn<CourtModel> selectedCourt = Rxn<CourtModel>();
-  final RxString selectedGameTitle = 'Football'.obs;
+  final RxString selectedGameTitle = 'Pickle'.obs;
 
   final Rxn<DateTime> selectedDate = Rxn<DateTime>();
   final Rxn<TimeOfDay> startTime = Rxn<TimeOfDay>();
@@ -128,7 +128,7 @@ class CreateGameController extends GetxController {
       });
     }
 
-    selectedGameTitle.value = 'Football';
+    selectedGameTitle.value = 'Pickle';
     descriptionController.clear();
     selectedDate.value = null;
     startTime.value = null;
@@ -202,10 +202,10 @@ class CreateGameController extends GetxController {
     } else if (availableCourts.isEmpty) {
       final clubId = selectedClub.value.id.isNotEmpty
           ? selectedClub.value.id
-          : 'all_stars_arena_club';
+          : 'smash_up_india_club';
       final clubName = selectedClub.value.name.isNotEmpty
           ? selectedClub.value.name
-          : 'All Stars Turf Raipur';
+          : 'Smash Up India';
 
       final court1 = CourtModel(
         id: 'court_1',
@@ -482,7 +482,7 @@ class CreateGameController extends GetxController {
   bool validateForm() {
     if (selectedGameTitle.value.trim().isEmpty) {
       ErrorHandler.showErrorSnackBar(
-          'Validation Error', 'Please select a sport (Football or Basketball)');
+          'Validation Error', 'Please select a sport (Pickle or Padel)');
       return false;
     }
 
@@ -614,7 +614,7 @@ class CreateGameController extends GetxController {
             (user != null && user.phone.isNotEmpty) ? user.phone : '9876543210';
         final email = (user != null && user.email.isNotEmpty)
             ? user.email
-            : 'player@allstarsarena.com';
+            : 'player@smashupindia.com';
 
         final key =
             order.keyId.isNotEmpty ? order.keyId : ApiConstants.razorpayKey;
@@ -627,7 +627,7 @@ class CreateGameController extends GetxController {
           'key': key,
           'amount':
               order.amountPaisa > 0 ? order.amountPaisa : (fee * 100).toInt(),
-          'name': 'ALL STARS ARENA',
+          'name': 'SMASH UP INDIA',
           'description': '$sportTitle Booking - $courtTitle',
           if (order.orderId.isNotEmpty &&
               !order.orderId.startsWith('rzp_order_mock_'))
@@ -848,16 +848,16 @@ class CreateGameController extends GetxController {
     final fee = pitchBookingAmount;
     final sportTitle = selectedGameTitle.value.trim().isNotEmpty
         ? selectedGameTitle.value.trim()
-        : 'Football';
+        : 'Pickle';
     final formatKey =
-        sportTitle.toLowerCase() == 'basketball' ? '5v5' : '11v11';
+        sportTitle.toLowerCase() == 'padel' ? '5v5' : '11v11';
 
     try {
       final newGame = await repository.createGame({
         'title': sportTitle,
         'clubId': selectedClub.value.id.isNotEmpty
             ? selectedClub.value.id
-            : 'all_stars_arena_club',
+            : 'smash_up_india_club',
         'courtId': courtId,
         'courtName': courtName,
         'format': formatKey,

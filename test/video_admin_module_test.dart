@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/data/models/admin_models.dart';
-import 'package:all_stars_arena/data/models/video_model.dart';
+import 'package:smash_up_india/data/models/admin_models.dart';
+import 'package:smash_up_india/data/models/video_model.dart';
 
 void main() {
-  group('ALL STARS ARENA Video & Admin Module Unit Tests', () {
+  group('SMASH UP INDIA Video & Admin Module Unit Tests', () {
     test('AdminDashboardModel deserializes platform analytics correctly', () {
       final json = {
         'totalUsers': 1250,
@@ -102,11 +102,11 @@ void main() {
         'id': 'vid_501',
         'gameId': 'gam_e101',
         'title': 'Weekend Match Final',
-        'clubName': 'All Stars Turf Raipur',
+        'clubName': 'Smash Up India',
         'courtName': 'Pitch 1',
         'matchDate': '2026-09-28',
         'playbackUrl':
-            'https://all-stars-arena-recordings.s3.ap-south-1.amazonaws.com/recordings/test.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA...',
+            'https://smash-up-india-recordings.s3.ap-south-1.amazonaws.com/recordings/test.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA...',
         'durationSeconds': 5400,
       };
 

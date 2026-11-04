@@ -1,42 +1,61 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF00C853);
-  static const Color primaryDark = Color(0xFF00A843);
-  static const Color primaryLight = Color(0xFF5EFC82);
-  static const Color secondary = Color(0xFFFFB300);
-  static const Color accent = Color(0xFF00E676);
-  static const Color vibrantRed = Color(0xFFFF3B30);
+  // Light Mode Primary Color (Sky Blue matching requested image swatch)
+  static const Color primary = Color(0xFF51B5FF); // Sky Blue Primary
+  static const Color primaryDark = Color(0xFF1D4ED8); // Deep Royal Blue Accent
+  static const Color primaryLight = Color(0xFF80CAFF); // Light Sky Accent
+  static const Color secondary = Color(0xFFFFB300); // Gold Accent
+  static const Color accent = Color(0xFF38BDF8); // Bright Cyan Accent
+  static const Color vibrantRed = Color(0xFFFF3B30); // Red Accent
 
-  static const Color sageGreenAppBar = Color(0xFFA7D7B5);
-  static const Color darkAppBar = Color(0xFF130722);
+  // Light Mode Primary Color Reference
+  static const Color lightPrimary = Color(0xFF51B5FF);
 
-  static const Color darkBackground = Color(0xFF07120E);
-  static const Color darkCard = Color(0xFF0E1E19);
-  static const Color darkInputBg = Color(0xFF132822);
-  static const Color darkBorder = Color(0xFF1C3830);
+  // AppBar & Action Colors (Light Mode Sky Blue & Dark Mode Deep Navy)
+  static const Color lightBlueAppBar = Color(0xFF51B5FF); // Sky Blue Header
+  static const Color sageGreenAppBar =
+      lightBlueAppBar; // Alias for backward compatibility
+  static const Color lightBlueBg =
+      Color(0xFFE0F2FE); // Soft Light Blue Background
+  static const Color lightBlueBorder = Color(0xFF93C5FD); // Light Blue Border
+  static const Color darkAppBar = Color(0xFF01163C); // Deep Navy Header
 
-  static const Color lightBackground = Color(0xFFF8FAFC);
-  static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightInputBg = Color(0xFFF1F5F9);
-  static const Color lightBorder = Color(0xFFE2E8F0);
+  // Neutral Colors - Dark Mode
+  static const Color darkBackground =
+      Color(0xFF040812); // Pitch Dark Navy Background
+  static const Color darkCard =
+      Color(0xFF0A1424); // Rich Dark Navy Surface Card
+  static const Color darkInputBg = Color(0xFF101E32); // Input Field Fill Navy
+  static const Color darkBorder = Color(0xFF1A2E4C); // Subtle Navy Border Color
 
-  static const Color textPrimaryDark = Color(0xFFF1F8F5);
-  static const Color textSecondaryDark = Color(0xFF8BA69E);
-  static const Color textMutedDark = Color(0xFF5A786E);
+  // Neutral Colors - Light Mode
+  static const Color lightBackground = Color(0xFFF8FAFC); // Clean Light Slate
+  static const Color lightCard = Color(0xFFFFFFFF); // Pure White Surface
+  static const Color lightInputBg = Color(0xFFF1F5F9); // Light Gray Input
+  static const Color lightBorder = Color(0xFFE2E8F0); // Subtle Light Border
 
+  // Text Colors - Dark Mode
+  static const Color textPrimaryDark = Color(0xFFF8FAFC); // Crisp White Slate
+  static const Color textSecondaryDark =
+      Color(0xFF94A3B8); // Muted Secondary Slate Blue
+  static const Color textMutedDark = Color(0xFF64748B); // Muted Dark Text
+
+  // Text Colors - Light Mode
   static const Color textPrimaryLight = Color(0xFF0F172A);
   static const Color textSecondaryLight = Color(0xFF64748B);
   static const Color textMutedLight = Color(0xFF94A3B8);
 
+  // Status Colors
   static const Color success = Color(0xFF00C853);
   static const Color error = Color(0xFFFF3B30);
   static const Color warning = Color(0xFFFFB300);
 
+  // Hero Image Overlay Gradient
   static const List<Color> heroGradientDark = [
     Colors.transparent,
-    Color(0xCC07120E),
-    Color(0xFF07120E),
+    Color(0xCC040812),
+    Color(0xFF040812),
   ];
 
   static const List<Color> heroGradientLight = [
@@ -48,6 +67,8 @@ class AppColors {
 
 extension ThemeContextExtension on BuildContext {
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
+  Color get appBarColor =>
+      isDark ? AppColors.darkAppBar : AppColors.lightBlueAppBar;
   Color get backgroundColor =>
       isDark ? AppColors.darkBackground : AppColors.lightBackground;
   Color get cardColor => isDark ? AppColors.darkCard : AppColors.lightCard;

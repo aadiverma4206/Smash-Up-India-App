@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = 'ALL STARS ARENA';
+  static const String appName = 'SMASH UP INDIA';
 
   static const double maxTextScaleFactor = 1.3;
 

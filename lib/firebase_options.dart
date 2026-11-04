@@ -32,45 +32,45 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyDVDtJ4AJU7_CLLeVc2oc98XdzMPEHRT7U',
     appId: '1:246194507604:web:c81ea269b3aa0072e6c2c1',
     messagingSenderId: '246194507604',
-    projectId: 'all-stars-arena',
-    authDomain: 'all-stars-arena.firebaseapp.com',
-    storageBucket: 'all-stars-arena.firebasestorage.app',
+    projectId: 'smash-up-india',
+    authDomain: 'smash-up-india.firebaseapp.com',
+    storageBucket: 'smash-up-india.firebasestorage.app',
     measurementId: 'G-YT4JFQZDZN',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD5owclfhh04GXawIjWhwrBNO_kukGyLhI',
-    appId: '1:246194507604:android:5a222a70f60fd5f3e6c2c1',
-    messagingSenderId: '246194507604',
-    projectId: 'all-stars-arena',
-    storageBucket: 'all-stars-arena.firebasestorage.app',
+    apiKey: 'AIzaSyDwiKMzhFxUhWW0phUnhTf6K4Kp5xH-Dbc',
+    appId: '1:445926000796:android:f5d1987bec0334549c4559',
+    messagingSenderId: '445926000796',
+    projectId: 'smash-up-india',
+    storageBucket: 'smash-up-india.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB7wGvh9oyP9bfNoY7VrmQe6tfCdwmo4T4',
-    appId: '1:246194507604:ios:44e3ecc36658c400e6c2c1',
-    messagingSenderId: '246194507604',
-    projectId: 'all-stars-arena',
-    storageBucket: 'all-stars-arena.firebasestorage.app',
-    iosBundleId: 'com.example.allStarsArena',
+    apiKey: 'AIzaSyA8dg5_OUKFftnT_3OY3rkhJOI2WTKna-8',
+    appId: '1:445926000796:ios:10c07f578e76053a9c4559',
+    messagingSenderId: '445926000796',
+    projectId: 'smash-up-india',
+    storageBucket: 'smash-up-india.firebasestorage.app',
+    iosBundleId: 'com.example.smash-up-india',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyB7wGvh9oyP9bfNoY7VrmQe6tfCdwmo4T4',
-    appId: '1:246194507604:ios:44e3ecc36658c400e6c2c1',
-    messagingSenderId: '246194507604',
-    projectId: 'all-stars-arena',
-    storageBucket: 'all-stars-arena.firebasestorage.app',
-    iosBundleId: 'com.example.allStarsArena',
+    apiKey: 'AIzaSyA8dg5_OUKFftnT_3OY3rkhJOI2WTKna-8',
+    appId: '1:445926000796:ios:10c07f578e76053a9c4559',
+    messagingSenderId: '445926000796',
+    projectId: 'smash-up-india',
+    storageBucket: 'smash-up-india.firebasestorage.app',
+    iosBundleId: 'com.example.smash-up-india',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyDVDtJ4AJU7_CLLeVc2oc98XdzMPEHRT7U',
     appId: '1:246194507604:web:7402a9e4c923262ae6c2c1',
     messagingSenderId: '246194507604',
-    projectId: 'all-stars-arena',
-    authDomain: 'all-stars-arena.firebaseapp.com',
-    storageBucket: 'all-stars-arena.firebasestorage.app',
+    projectId: 'smash-up-india',
+    authDomain: 'smash-up-india.firebaseapp.com',
+    storageBucket: 'smash-up-india.firebasestorage.app',
     measurementId: 'G-G6M2XC1KXZ',
   );
 }

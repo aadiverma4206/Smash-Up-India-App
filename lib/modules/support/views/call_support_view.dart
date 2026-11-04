@@ -9,7 +9,7 @@ class CallSupportView extends StatelessWidget {
 
   static const String tollFreeNumber = '1800-123-4567';
   static const String directPhone = '+91 98765 43210';
-  static const String supportEmail = 'support@allstarsarena.com';
+  static const String supportEmail = 'support@smashupindia.com';
 
   void _copyToClipboard(BuildContext context, String text, String label) {
     Clipboard.setData(ClipboardData(text: text));

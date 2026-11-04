@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "all_stars_arena" "\0"
+            VALUE "FileDescription", "smash_up_india" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "all_stars_arena" "\0"
+            VALUE "InternalName", "smash_up_india" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "all_stars_arena.exe" "\0"
-            VALUE "ProductName", "all_stars_arena" "\0"
+            VALUE "OriginalFilename", "smash_up_india.exe" "\0"
+            VALUE "ProductName", "smash_up_india" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

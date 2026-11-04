@@ -14,27 +14,27 @@ Implement robust backend business logic and frontend UI for manager match histor
 
 ## Proposed Changes
 
-### Backend (`all_stars_arena_backend/`)
+### Backend (`smash_up_india_backend/`)
 
-#### [MODIFY] [manager.repository.ts](file:///C:/Users/PCv/StudioProjects/all_stars_arena/all_stars_arena_backend/src/modules/manager/manager.repository.ts)
+#### [MODIFY] [manager.repository.ts](file:///C:/Users/PCv/StudioProjects/smash_up_india/smash_up_india_backend/src/modules/manager/manager.repository.ts)
 - Add pagination support (`LIMIT $x OFFSET $y`) for club history matches (`COMPLETED` or `CANCELLED`).
 - Fetch complete player roster (`game_players` with user details, positions, payment statuses, and amounts) and CCTV recordings.
 
-#### [MODIFY] [manager.service.ts](file:///C:/Users/PCv/StudioProjects/all_stars_arena/all_stars_arena_backend/src/modules/manager/manager.service.ts)
+#### [MODIFY] [manager.service.ts](file:///C:/Users/PCv/StudioProjects/smash_up_india/smash_up_india_backend/src/modules/manager/manager.service.ts)
 - Enforce business rules for match completion time (End Time + 15 mins).
 - Enforce score submission and locking rules (Manager can add score once; only Admin can edit submitted scores).
 - Prevent managers from starting or editing completed matches.
 
 ### Frontend (`lib/`)
 
-#### [MODIFY] [manager_courts_view.dart](file:///C:/Users/PCv/StudioProjects/all_stars_arena/lib/modules/manager/views/manager_courts_view.dart)
+#### [MODIFY] [manager_courts_view.dart](file:///C:/Users/PCv/StudioProjects/smash_up_india/lib/modules/manager/views/manager_courts_view.dart)
 - Ensure completed matches (`COMPLETED`) are filtered out of the active court matches view.
 
-#### [MODIFY] [manager_history_view.dart](file:///C:/Users/PCv/StudioProjects/all_stars_arena/lib/modules/manager/views/manager_history_view.dart)
+#### [MODIFY] [manager_history_view.dart](file:///C:/Users/PCv/StudioProjects/smash_up_india/lib/modules/manager/views/manager_history_view.dart)
 - Implement UI matching `ManagerCourtsView` (compact cards, date filters, search bar, scrollbar, theme-aware).
 - Implement infinite scroll pagination (loads 20 items at a time, loading more on scroll end).
 
-#### [MODIFY] [manager_game_details_view.dart](file:///C:/Users/PCv/StudioProjects/all_stars_arena/lib/modules/manager/views/manager_game_details_view.dart)
+#### [MODIFY] [manager_game_details_view.dart](file:///C:/Users/PCv/StudioProjects/smash_up_india/lib/modules/manager/views/manager_game_details_view.dart)
 - Restrict "Start Match" and "Edit" buttons for completed/history matches.
 - Implement score submission form for managers (locked once added unless user is Admin).
 - Display CCTV camera recording videos section below cameras.

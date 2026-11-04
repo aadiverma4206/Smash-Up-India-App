@@ -110,7 +110,7 @@ class ProfileView extends GetView<PlayerController> {
                   child: Column(
                     children: const [
                       Text(
-                        'ALL STARS ARENA • v1.0.0',
+                        'SMASH UP INDIA • v1.0.0',
                         style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey,

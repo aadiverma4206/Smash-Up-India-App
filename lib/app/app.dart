@@ -7,8 +7,8 @@ import 'theme/app_theme.dart';
 import '../core/constants/app_constants.dart';
 import '../core/services/theme_service.dart';
 
-class AllStarsArenaApp extends StatelessWidget {
-  const AllStarsArenaApp({super.key});
+class SmashUpIndiaApp extends StatelessWidget {
+  const SmashUpIndiaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +22,7 @@ class AllStarsArenaApp extends StatelessWidget {
       builder: (context, child) {
         return Obx(
           () => GetMaterialApp(
-            title: 'ALL STARS ARENA',
+            title: 'SMASH UP INDIA',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,

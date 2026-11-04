@@ -31,7 +31,7 @@ class PrivacyPolicyView extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('All Stars Arena Privacy Notice',
+                      Text('Smash Up India Privacy Notice',
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
                       Text('Your Privacy & Data Protection Commitment',
@@ -53,7 +53,7 @@ class PrivacyPolicyView extends StatelessWidget {
                 context,
                 title: '2. Payment & Financial Data Security',
                 content:
-                    'All credit card, debit card, UPI, and net banking transactions are processed through end-to-end encrypted Razorpay payment gateways. All Stars Arena does not store raw credit card numbers or banking passwords on its servers.',
+                    'All credit card, debit card, UPI, and net banking transactions are processed through end-to-end encrypted Razorpay payment gateways. Smash Up India does not store raw credit card numbers or banking passwords on its servers.',
               ),
               _buildSection(
                 context,
@@ -71,12 +71,12 @@ class PrivacyPolicyView extends StatelessWidget {
                 context,
                 title: '5. Account Deletion & Rights',
                 content:
-                    'You retain full rights to inspect, update, or request the deletion of your personal data and account details by contacting privacy@allstarsarena.com or reaching out through Chat Support.',
+                    'You retain full rights to inspect, update, or request the deletion of your personal data and account details by contacting privacy@smashupindia.com or reaching out through Chat Support.',
               ),
               const SizedBox(height: 20),
               Center(
                 child: Text(
-                  'ALL STARS ARENA • PRIVACY & DATA SAFETY',
+                  'SMASH UP INDIA • PRIVACY & DATA SAFETY',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,

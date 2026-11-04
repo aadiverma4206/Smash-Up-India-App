@@ -106,14 +106,14 @@ class WalletController extends GetxController {
         'amount': order.amountPaisa > 0
             ? order.amountPaisa
             : (amountRupees * 100).toInt(),
-        'name': 'ALL STARS ARENA',
+        'name': 'SMASH UP INDIA',
         'description': 'Player Wallet Topup',
         if (order.orderId.isNotEmpty &&
             !order.orderId.startsWith('rzp_order_mock_'))
           'order_id': order.orderId,
         'prefill': {
           'contact': '+919876543210',
-          'email': 'player@allstarsarena.com',
+          'email': 'player@smashupindia.com',
         },
         'theme': {'color': '#2EA44F'},
       };

@@ -473,7 +473,7 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
                             ),
                             children: [
                               TextSpan(
-                                text: ' • All Stars Arena Turf',
+                                text: ' • Smash Up India Turf',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.normal,
@@ -580,8 +580,8 @@ class ManagerCourtsView extends GetView<ManagerDashboardController> {
         gamesCtrl.selectedGame.value = GameModel(
           id: gameId,
           title: gameTitle,
-          clubId: 'all_stars_arena_club',
-          clubName: 'All Stars Arena Turf',
+          clubId: 'smash_up_india_club',
+          clubName: 'Smash Up India Turf',
           courtId: slot['court_id'] ?? slot['courtId'] ?? 'court_1',
           courtName: courtName,
           matchDate: slot['match_date'] ?? DateTime.now().toIso8601String(),

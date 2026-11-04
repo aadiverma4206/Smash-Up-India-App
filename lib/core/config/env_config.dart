@@ -6,7 +6,7 @@ class EnvConfig {
   static const String _prefBaseUrlKey = 'app_custom_base_url';
 
   static String get appName =>
-      dotenv.env['APP_NAME']?.trim() ?? 'ALL STARS ARENA';
+      dotenv.env['APP_NAME']?.trim() ?? 'SMASH UP INDIA';
 
   static String get baseUrl {
     final envUrl = dotenv.env['BASE_URL'];

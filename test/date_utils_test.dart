@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/core/utils/app_date_utils.dart';
+import 'package:smash_up_india/core/utils/app_date_utils.dart';
 
 void main() {
   group('AppDateUtils Unit Tests', () {

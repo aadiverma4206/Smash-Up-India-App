@@ -42,7 +42,7 @@ class _SplashViewState extends State<SplashView> {
               ),
               const SizedBox(height: 24),
               AutoFitText(
-                'ALL STARS ARENA',
+                'SMASH UP INDIA',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 26,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:all_stars_arena/modules/manager/repositories/manager_repository.dart';
+import 'package:smash_up_india/modules/manager/repositories/manager_repository.dart';
 import '../../../data/models/manager_models.dart';
 import '../../../data/models/court_model.dart';
 import '../../../data/models/booking_model.dart';

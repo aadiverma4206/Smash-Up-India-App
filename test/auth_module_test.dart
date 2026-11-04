@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/data/models/login_request_model.dart';
-import 'package:all_stars_arena/data/models/user_model.dart';
+import 'package:smash_up_india/data/models/login_request_model.dart';
+import 'package:smash_up_india/data/models/user_model.dart';
 
 void main() {
-  group('ALL STARS ARENA Authentication Module Unit Tests', () {
+  group('SMASH UP INDIA Authentication Module Unit Tests', () {
     test('LoginRequestModel converts correctly for Email and Mobile login', () {
       final emailLogin = LoginRequestModel(
         identifier: 'player@example.com',

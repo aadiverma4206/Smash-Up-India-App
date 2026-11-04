@@ -311,7 +311,7 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
               (profileData['name'] ?? user?.name ?? 'Club Manager').toString();
           final String email = (profileData['email'] ??
                   user?.email ??
-                  'manager@allstarsarena.com')
+                  'manager@smashupindia.com')
               .toString();
           final String phone =
               (profileData['phone'] ?? user?.phone ?? '+91 9876543210')
@@ -321,7 +321,7 @@ class _ManagerProfileViewState extends State<ManagerProfileView> {
                   .toString();
           final String resolvedAvatarUrl = rawAvatarUrl.resolvedImageUrl ?? '';
           final String clubName =
-              (profileData['club_name'] ?? 'All Stars Arena Turf').toString();
+              (profileData['club_name'] ?? 'Smash Up India Turf').toString();
           final String clubAddress =
               (profileData['club_address'] ?? 'VIP Road, Raipur').toString();
 

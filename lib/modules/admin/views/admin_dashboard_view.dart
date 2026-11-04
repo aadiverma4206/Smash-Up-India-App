@@ -543,7 +543,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       ),
       child: ClipOval(
         child: Image.asset(
-          'assets/images/App_Logo/all_stars_arena_logo.png',
+          'assets/images/App_Logo/smash_up_india.png',
           width: 38,
           height: 38,
           fit: BoxFit.cover,

@@ -8,6 +8,7 @@ import '../../../core/utils/app_date_utils.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/errors/error_handler.dart';
+import '../../../core/services/notification_service.dart';
 
 class PlayerNotificationItem {
   final String id;
@@ -135,7 +136,7 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
         PlayerNotificationItem(
           id: 'mock_2',
           title: 'Match approved',
-          subtitle: 'Friday Night Football · 8 players joined',
+          subtitle: 'Friday Night Pickle · 8 players joined',
           badgeText: 'Approved',
           badgeBgColor: const Color(0xFFDCFCE7),
           badgeTextColor: const Color(0xFF16A34A),
@@ -207,7 +208,7 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
         PlayerNotificationItem(
           id: 'mock_7',
           title: '5 players joined your match',
-          subtitle: 'Weekend Football · Court 1',
+          subtitle: 'Weekend Pickle · Court 1',
           badgeText: null,
           category: 'PLAYER',
           icon: Icons.groups_rounded,
@@ -1231,6 +1232,19 @@ class _PlayerNotificationViewState extends State<PlayerNotificationView> {
                 Get.back();
                 _controller.fetchNotifications(isRefresh: true);
                 _loadAndPrepareItems();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_active_rounded,
+                  color: AppColors.primary),
+              title: const Text('Test Notification Bar Alert'),
+              subtitle: const Text('Send a test alert to phone status bar'),
+              onTap: () async {
+                Get.back();
+                if (Get.isRegistered<NotificationService>()) {
+                  NotificationService.to.triggerLocalTestAlert();
+                  await NotificationService.to.testBackendNotificationPush();
+                }
               },
             ),
           ],

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/data/models/cctv_models.dart';
+import 'package:smash_up_india/data/models/cctv_models.dart';
 
 void main() {
-  group('ALL STARS ARENA Manager CCTV Management Unit Tests', () {
+  group('SMASH UP INDIA Manager CCTV Management Unit Tests', () {
     test(
         'CctvCameraModel deserializes camera metadata securely without raw RTSP secrets',
         () {

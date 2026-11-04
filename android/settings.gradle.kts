@@ -41,3 +41,4 @@ plugins {
 }
 
 include(":app")
+rootProject.name = "smash_up_india"

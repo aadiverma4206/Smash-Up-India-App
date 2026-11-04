@@ -104,7 +104,7 @@ class _LoginViewState extends State<LoginView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       AutoFitText(
-                        'ALL STARS ARENA',
+                        'SMASH UP INDIA',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -199,7 +199,7 @@ class _LoginViewState extends State<LoginView> {
                           size: 64, color: AppColors.primary),
                       SizedBox(height: 12),
                       AutoFitText(
-                        'ALL STARS ARENA',
+                        'SMASH UP INDIA',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,

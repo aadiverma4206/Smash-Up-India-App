@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
@@ -7,6 +8,7 @@ import 'core/config/env_config.dart';
 import 'core/storage/preferences_service.dart';
 import 'core/storage/database_service.dart';
 import 'core/services/auth_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/utils/app_logger.dart';
 import 'firebase_options.dart';
 
@@ -21,6 +23,7 @@ Future<void> bootstrap({String envFile = '.env'}) async {
       );
       AppLogger.info('🔥 Firebase initialized successfully during bootstrap.');
     }
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e) {
     AppLogger.warning(
         'Firebase initialization skipped or failed during bootstrap: $e');

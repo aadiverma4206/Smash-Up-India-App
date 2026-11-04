@@ -249,7 +249,7 @@ class AdminNotificationsView extends GetView<NotificationsController> {
         return AppBar(
           backgroundColor: isDark
               ? Theme.of(context).scaffoldBackgroundColor
-              : AppColors.sageGreenAppBar,
+              : AppColors.lightBlueAppBar,
           elevation: 0,
           scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,

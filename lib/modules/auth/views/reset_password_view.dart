@@ -122,7 +122,7 @@ class ResetPasswordView extends GetView<AuthController> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Set a new secure password for your All Stars Arena account.',
+                        'Set a new secure password for your Smash Up India account.',
                         style: TextStyle(
                           color: secondaryTextColor,
                           fontSize: 14,

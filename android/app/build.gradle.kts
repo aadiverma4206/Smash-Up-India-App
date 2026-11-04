@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.all_stars_arena"
+    namespace = "com.example.smash_up_india"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.all_stars_arena"
+        applicationId = "com.example.smash_up_india"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode

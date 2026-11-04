@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/data/models/wallet_models.dart';
+import 'package:smash_up_india/data/models/wallet_models.dart';
 
 void main() {
-  group('ALL STARS ARENA Wallet & Razorpay Module Unit Tests', () {
+  group('SMASH UP INDIA Wallet & Razorpay Module Unit Tests', () {
     test('WalletBalanceModel deserializes backend balance correctly', () {
       final json = {
         'balance': 2500.50,

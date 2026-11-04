@@ -257,10 +257,10 @@ class GameModel {
   factory GameModel.fromJson(Map<String, dynamic> json) {
     return GameModel(
       id: (json['id'] ?? json['game_id'] ?? '').toString(),
-      title: (json['title'] ?? 'Football Match').toString(),
+      title: (json['title'] ?? 'Pickle Match').toString(),
       clubId: (json['clubId'] ?? json['club_id'] ?? '').toString(),
       clubName:
-          (json['clubName'] ?? json['club_name'] ?? 'Arena Turf').toString(),
+          (json['clubName'] ?? json['club_name'] ?? 'Smash Up India').toString(),
       courtId: json['courtId']?.toString() ?? json['court_id']?.toString(),
       courtName: _parseCourtName(
         json['courtName'] ?? json['court_name'],

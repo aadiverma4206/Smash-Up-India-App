@@ -1,4 +1,4 @@
-import 'package:all_stars_arena/app/theme/app_colors.dart';
+import 'package:smash_up_india/app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/wallet_controller.dart';

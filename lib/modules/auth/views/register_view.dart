@@ -111,7 +111,7 @@ class RegisterView extends GetView<AuthController> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset(
-                        'assets/images/App_Logo/all_stars_arena_logo.png',
+                        'assets/images/App_Logo/smash_up_india.png',
                         height: 65,
                         fit: BoxFit.contain,
                         errorBuilder: (context, err, stack) => const Icon(
@@ -122,7 +122,7 @@ class RegisterView extends GetView<AuthController> {
                       ),
                       const SizedBox(height: 8),
                       const AutoFitText(
-                        'ALL STARS ARENA',
+                        'SMASH UP INDIA',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -223,7 +223,7 @@ class RegisterView extends GetView<AuthController> {
             context,
             titleNormal: 'Create',
             titleGreen: 'Account',
-            subtitle: 'Join All Stars Arena & unlock sports features',
+            subtitle: 'Join Smash Up India & unlock sports features',
           ),
           _buildProgressBar(currentStep: 1, totalSteps: 3),
           const SizedBox(height: 24),
@@ -406,7 +406,7 @@ class RegisterView extends GetView<AuthController> {
             context,
             titleNormal: 'Create',
             titleGreen: 'Password',
-            subtitle: 'Set a strong password for your All Stars Arena account',
+            subtitle: 'Set a strong password for your Smash Up India account',
           ),
           _buildProgressBar(currentStep: 3, totalSteps: 3),
           const SizedBox(height: 24),

@@ -138,7 +138,7 @@ class MyRequestsView extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              req.gameTitle ?? 'Football Match',
+              req.gameTitle ?? 'Pickle Match',
               style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,

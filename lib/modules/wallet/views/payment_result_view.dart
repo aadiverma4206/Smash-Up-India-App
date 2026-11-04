@@ -59,8 +59,8 @@ class PaymentResultView extends StatelessWidget {
                 Text(
                   isSuccess
                       ? (isGamePayment
-                          ? '₹${amount ?? "200"} Paid • Your 11v11 match "${gameTitle ?? "Football Showdown"}" is now live on ALL STARS ARENA lobby!'
-                          : '₹${amount ?? "1000"} added to your ALL STARS ARENA wallet.')
+                          ? '₹${amount ?? "200"} Paid • Your match "${gameTitle ?? "Pickle Showdown"}" is now live on SMASH UP INDIA lobby!'
+                          : '₹${amount ?? "1000"} added to your SMASH UP INDIA wallet.')
                       : (error ??
                           'Payment could not be completed. Please try again.'),
                   textAlign: TextAlign.center,

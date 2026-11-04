@@ -47,7 +47,7 @@ class BookingModel {
       clubName: (json['clubName'] ??
               json['club_name'] ??
               json['club_id'] ??
-              'All Stars Arena')
+              'Smash Up India')
           .toString(),
       bookingDate:
           (json['bookingDate'] ?? json['booking_date'] ?? '').toString(),

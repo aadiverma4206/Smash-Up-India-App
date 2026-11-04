@@ -19,7 +19,7 @@ class AppLogoWidget extends StatelessWidget {
   });
 
   static const String logoAssetPath =
-      'assets/images/App_Logo/all_stars_arena_logo.png';
+      'assets/images/App_Logo/smash_up_india.png';
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +63,7 @@ class AppLogoWidget extends StatelessWidget {
         logoImage,
         const SizedBox(height: 8),
         AutoFitText(
-          'ALL STARS ARENA',
+          'SMASH UP INDIA',
           style: TextStyle(
             fontSize: height * 0.28,
             fontWeight: FontWeight.w900,

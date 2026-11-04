@@ -114,7 +114,7 @@ class LandingView extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               const AutoFitText(
-                                'ALL STARS ARENA',
+                                'SMASH UP INDIA',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: Colors.white,

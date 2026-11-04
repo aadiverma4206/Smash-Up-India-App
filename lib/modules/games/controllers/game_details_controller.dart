@@ -250,7 +250,7 @@ class GameDetailsController extends GetxController {
           (user != null && user.phone.isNotEmpty) ? user.phone : '9876543210';
       final email = (user != null && user.email.isNotEmpty)
           ? user.email
-          : 'player@allstarsarena.com';
+          : 'player@smashupindia.com';
 
       final key =
           order.keyId.isNotEmpty ? order.keyId : ApiConstants.razorpayKey;
@@ -259,9 +259,9 @@ class GameDetailsController extends GetxController {
         'key': key,
         'amount':
             order.amountPaisa > 0 ? order.amountPaisa : (fee * 100).toInt(),
-        'name': 'ALL STARS ARENA',
+        'name': 'SMASH UP INDIA',
         'description':
-            'Player Entry Fee - ${game.value?.title ?? "Football Match"}',
+            'Player Entry Fee - ${game.value?.title ?? "Pickle Match"}',
         if (order.orderId.isNotEmpty &&
             !order.orderId.startsWith('rzp_order_mock_'))
           'order_id': order.orderId,

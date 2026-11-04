@@ -213,8 +213,9 @@ class CreateGameView extends StatelessWidget {
   }
 
   Widget _buildOfflineWarningBanner(BuildContext context) {
-    if (!Get.isRegistered<ConnectivityService>())
+    if (!Get.isRegistered<ConnectivityService>()) {
       return const SizedBox.shrink();
+    }
     return Obx(() {
       final isOnline = ConnectivityService.to.isConnected.value;
       if (isOnline) return const SizedBox.shrink();
@@ -295,11 +296,11 @@ class CreateGameView extends StatelessWidget {
 
         final sports = [
           {
-            'name': 'Football',
+            'name': 'Pickle',
             'subtitle': 'Turf Pitch',
           },
           {
-            'name': 'Basketball',
+            'name': 'Padel',
             'subtitle': 'Standard Court',
           },
         ];
@@ -1015,7 +1016,7 @@ class CreateGameView extends StatelessWidget {
         decoration: InputDecoration(
           labelText: 'Pitch Booking Notes & Special Requests (Optional)',
           hintText:
-              'e.g. Need warm-up bibs, extra footballs or basketballs, etc.',
+              'e.g. Need warm-up bibs, extra pickle balls or padel balls, etc.',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),

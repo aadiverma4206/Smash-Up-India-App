@@ -1,18 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/data/models/game_model.dart';
-import 'package:all_stars_arena/data/models/court_model.dart';
-import 'package:all_stars_arena/data/models/booking_model.dart';
-import 'package:all_stars_arena/data/models/tournament_model.dart';
-import 'package:all_stars_arena/data/models/leaderboard_model.dart';
+import 'package:smash_up_india/data/models/game_model.dart';
+import 'package:smash_up_india/data/models/court_model.dart';
+import 'package:smash_up_india/data/models/booking_model.dart';
+import 'package:smash_up_india/data/models/tournament_model.dart';
+import 'package:smash_up_india/data/models/leaderboard_model.dart';
 
 void main() {
-  group('ALL STARS ARENA Player Game Ecosystem Unit Tests', () {
+  group('SMASH UP INDIA Player Game Ecosystem Unit Tests', () {
     test('GameModel deserializes game details and roster correctly', () {
       final json = {
         'id': 'gam_e101',
         'title': 'Weekend 5v5 Match',
         'clubId': 'clb_001',
-        'clubName': 'All Stars Turf Raipur',
+        'clubName': 'Smash Up India',
         'courtName': 'Pitch 1',
         'matchDate': '2026-09-28',
         'startTime': '18:00:00',

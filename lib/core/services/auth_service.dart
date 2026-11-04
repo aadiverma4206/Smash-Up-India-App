@@ -35,6 +35,12 @@ class AuthService extends GetxService {
     } else if (token != null && token.isNotEmpty) {
       isLoggedIn.value = true;
     }
+
+    if (isLoggedIn.value && Get.isRegistered<NotificationService>()) {
+      try {
+        Get.find<NotificationService>().registerFcmTokenWithBackend();
+      } catch (_) {}
+    }
   }
 
   void setLoggedInUser(

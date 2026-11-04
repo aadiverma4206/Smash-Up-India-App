@@ -31,7 +31,7 @@ class AdminUsersView extends GetView<AdminController> {
           surfaceTintColor: Colors.transparent,
           backgroundColor: isDark
               ? Theme.of(context).scaffoldBackgroundColor
-              : AppColors.sageGreenAppBar,
+              : AppColors.lightBlueAppBar,
           iconTheme: IconThemeData(
             color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
@@ -42,7 +42,7 @@ class AdminUsersView extends GetView<AdminController> {
             Container(
               color: isDark
                   ? Theme.of(context).scaffoldBackgroundColor
-                  : AppColors.sageGreenAppBar,
+                  : AppColors.lightBlueAppBar,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Container(
                 height: 38,

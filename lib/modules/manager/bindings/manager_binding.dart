@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import '../datasources/manager_remote_datasource.dart';
-import 'package:all_stars_arena/modules/manager/repositories/manager_repository.dart';
+import 'package:smash_up_india/modules/manager/repositories/manager_repository.dart';
 import '../controllers/manager_dashboard_controller.dart';
 import '../controllers/manager_games_controller.dart';
 import '../../cctv/datasources/cctv_remote_datasource.dart';

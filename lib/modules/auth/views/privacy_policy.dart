@@ -63,7 +63,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ALL STARS ARENA',
+                            'SMASH UP INDIA',
                             style: TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
@@ -107,7 +107,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 icon: Icons.lock_outline_rounded,
                 title: '2. Payment & Financial Data Security',
                 content:
-                    'All wallet top-ups and turf booking payments are processed securely through end-to-end encrypted Razorpay payment gateways. All Stars Arena never stores raw credit card details, UPI PINs, or banking passwords.',
+                    'All wallet top-ups and turf booking payments are processed securely through end-to-end encrypted Razorpay payment gateways. Smash Up India never stores raw credit card details, UPI PINs, or banking passwords.',
               ),
               _buildPolicyCard(
                 context,
@@ -128,7 +128,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 icon: Icons.verified_user_outlined,
                 title: '5. User Rights & Account Control',
                 content:
-                    'You maintain complete control over your account data. You can request data inspection or full account deletion at any time by contacting support@allstarsarena.com or through Chat Support in app.',
+                    'You maintain complete control over your account data. You can request data inspection or full account deletion at any time by contacting support@smashupindia.com or through Chat Support in app.',
               ),
               const SizedBox(height: 12),
               Center(
@@ -143,7 +143,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'ALL STARS ARENA • SAFE & SECURE PLAY',
+                        'SMASH UP INDIA • SAFE & SECURE PLAY',
                         style: TextStyle(
                           color: subTextColor,
                           fontSize: 11,

@@ -1,16 +1,5 @@
 part of 'game_model.dart';
 
-Map<String, dynamic> _$GameRosterPlayerModelToJson(
-        GameRosterPlayerModel instance) =>
-    <String, dynamic>{
-      'userId': instance.userId,
-      'name': instance.name,
-      'profileImageUrl': instance.profileImageUrl,
-      'team': instance.team,
-      'position': instance.position,
-      'ovr': instance.ovr,
-    };
-
 Map<String, dynamic> _$GameModelToJson(GameModel instance) => <String, dynamic>{
       'id': instance.id,
       'title': instance.title,

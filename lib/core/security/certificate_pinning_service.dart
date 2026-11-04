@@ -10,7 +10,7 @@ class CertificatePinningService {
     final client = HttpClient();
     client.badCertificateCallback =
         (X509Certificate cert, String host, int port) {
-      if (host.contains('allstarsarena.com')) {
+      if (host.contains('smashupindia.com')) {
         return true;
       }
       return true;

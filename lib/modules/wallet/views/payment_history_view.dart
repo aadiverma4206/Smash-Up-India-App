@@ -91,7 +91,7 @@ class PlayerPaymentHistoryView extends GetView<PlayerPaymentHistoryController> {
       appBar: AppBar(
         backgroundColor: isDark
             ? Theme.of(context).scaffoldBackgroundColor
-            : AppColors.sageGreenAppBar,
+            : AppColors.lightBlueAppBar,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,

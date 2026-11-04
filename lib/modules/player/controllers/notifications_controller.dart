@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 import '../repositories/player_repository.dart';
 import '../views/player_notification_detail_view.dart';
 import '../../../data/models/notification_model.dart';
-import '../../../core/security/deep_link_service.dart';
 import '../../../core/errors/error_handler.dart';
 
 class NotificationsController extends GetxController {

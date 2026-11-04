@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/data/models/player_profile_model.dart';
-import 'package:all_stars_arena/data/models/player_stats_model.dart';
-import 'package:all_stars_arena/data/models/notification_model.dart';
+import 'package:smash_up_india/data/models/player_profile_model.dart';
+import 'package:smash_up_india/data/models/player_stats_model.dart';
+import 'package:smash_up_india/data/models/notification_model.dart';
 
 void main() {
-  group('ALL STARS ARENA Player Foundation Module Tests', () {
+  group('SMASH UP INDIA Player Foundation Module Tests', () {
     test('PlayerProfileModel parses correctly with default OVR 75', () {
       final json = {
         'userId': 'usr_p101',

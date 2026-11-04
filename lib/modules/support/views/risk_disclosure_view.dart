@@ -47,7 +47,7 @@ class RiskDisclosureView extends StatelessWidget {
                 context,
                 title: '1. Assumption of Athletic Risk',
                 content:
-                    'Participating in football, cricket, basketball, or other turf sports involves inherent physical risks, including but not limited to sprains, fractures, muscle tears, or accidental collisions with other players or pitch netting.',
+                    'Participating in pickle, cricket, padel, or other turf sports involves inherent physical risks, including but not limited to sprains, fractures, muscle tears, or accidental collisions with other players or pitch netting.',
               ),
               _buildSection(
                 context,
@@ -71,12 +71,12 @@ class RiskDisclosureView extends StatelessWidget {
                 context,
                 title: '5. Limitation of Liability',
                 content:
-                    'All Stars Arena and affiliated turf club managers shall not be held liable for personal injuries, physical accidents, or loss of personal belongings occurring on ground premises beyond gross negligence.',
+                    'Smash Up India and affiliated turf club managers shall not be held liable for personal injuries, physical accidents, or loss of personal belongings occurring on ground premises beyond gross negligence.',
               ),
               const SizedBox(height: 20),
               Center(
                 child: Text(
-                  'ALL STARS ARENA • ATHLETIC SAFETY & DISCLOSURE',
+                  'SMASH UP INDIA • ATHLETIC SAFETY & DISCLOSURE',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,

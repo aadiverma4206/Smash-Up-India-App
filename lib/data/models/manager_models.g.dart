@@ -18,18 +18,6 @@ Map<String, dynamic> _$ManagerClubModelToJson(ManagerClubModel instance) =>
       'status': instance.status,
     };
 
-ManagerDashboardModel _$ManagerDashboardModelFromJson(
-        Map<String, dynamic> json) =>
-    ManagerDashboardModel(
-      club: ManagerClubModel.fromJson(json['club'] as Map<String, dynamic>),
-      totalRevenue: (json['totalRevenue'] as num).toDouble(),
-      totalBookings: (json['totalBookings'] as num).toInt(),
-      activeMatches: (json['activeMatches'] as num).toInt(),
-      occupancyRatePercentage:
-          (json['occupancyRatePercentage'] as num).toDouble(),
-      onlineCctvCount: (json['onlineCctvCount'] as num).toInt(),
-    );
-
 Map<String, dynamic> _$ManagerDashboardModelToJson(
         ManagerDashboardModel instance) =>
     <String, dynamic>{

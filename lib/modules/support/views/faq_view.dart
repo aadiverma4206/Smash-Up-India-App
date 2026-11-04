@@ -26,7 +26,7 @@ class _FaqViewState extends State<FaqView> {
   final List<Map<String, String>> _faqs = [
     {
       'category': 'Bookings',
-      'question': 'How do I book a turf slot on All Stars Arena?',
+      'question': 'How do I book a turf slot on Smash Up India?',
       'answer':
           'Navigate to the Courts tab or Game Finder, select your desired turf pitch, choose a date and time slot, and proceed to payment. Once confirmed, you will receive an instant booking pass.',
     },

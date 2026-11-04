@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "246194507604",
-    "project_id": "all-stars-arena",
-    "storage_bucket": "all-stars-arena.firebasestorage.app"
+    "project_number": "445926000796",
+    "project_id": "smash-up-india",
+    "storage_bucket": "smash-up-india.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:246194507604:android:5a222a70f60fd5f3e6c2c1",
+        "mobilesdk_app_id": "1:445926000796:android:f5d1987bec0334549c4559",
         "android_client_info": {
-          "package_name": "com.example.all_stars_arena"
+          "package_name": "com.example.smash_up_india"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD5owclfhh04GXawIjWhwrBNO_kukGyLhI"
+          "current_key": "AIzaSyDwiKMzhFxUhWW0phUnhTf6K4Kp5xH-Dbc"
         }
       ],
       "services": {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/core/constants/app_constants.dart';
+import 'package:smash_up_india/core/constants/app_constants.dart';
 
 void main() {
   testWidgets('Centralized TextScaling Policy Clamps Scale Factor to 1.3',

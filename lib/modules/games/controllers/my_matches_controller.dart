@@ -83,9 +83,12 @@ class MyMatchesController extends GetxController {
       final endDt = AppDateUtils.parseMatchDateTime(m.matchDate, m.endTime);
 
       if (selectedTab.value == 'UPCOMING') {
-        if (endDt != null && endDt.isBefore(now)) return false; // Past match!
-        if (startDt != null && startDt.isAfter(now))
-          return true; // Future match!
+        if (endDt != null && endDt.isBefore(now)) {
+          return false;
+        }
+        if (startDt != null && startDt.isAfter(now)) {
+          return true;
+        }
         return statusUpper != 'ONGOING';
       } else if (selectedTab.value == 'ONGOING') {
         if (statusUpper == 'ONGOING') return true;

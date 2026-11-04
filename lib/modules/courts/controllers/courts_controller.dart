@@ -112,8 +112,8 @@ class CourtsController extends GetxController {
         courts.assignAll([
           CourtModel(
             id: 'court_1',
-            clubId: 'all_stars_arena_club',
-            clubName: 'All Stars Turf Raipur',
+            clubId: 'smash_up_india_club',
+            clubName: 'Smash Up India',
             name: 'Court 1',
             surfaceType: '3G Turf',
             basePricePerHour: 1200.0,
@@ -123,8 +123,8 @@ class CourtsController extends GetxController {
           ),
           CourtModel(
             id: 'court_2',
-            clubId: 'all_stars_arena_club',
-            clubName: 'All Stars Turf Raipur',
+            clubId: 'smash_up_india_club',
+            clubName: 'Smash Up India',
             name: 'Court 2',
             surfaceType: '3G Turf',
             basePricePerHour: 1200.0,

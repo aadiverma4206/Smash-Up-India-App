@@ -35,25 +35,23 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
     }
   }
 
-  String _getHumanTitle(String rawAction) {
+  String _getHumanTitle(String rawAction, AuditLogParsedData parsed) {
+    if (parsed.isMatchCancelled) {
+      return 'Match Cancelled & Refunded';
+    }
+    if (parsed.isUserBlockUnblock) {
+      return parsed.isBlocked ? 'Player Account Blocked' : 'Player Account Unblocked';
+    }
+    if (parsed.isMatchCreated) {
+      return 'New Match Created';
+    }
+
     final act = rawAction.trim().toUpperCase();
     switch (act) {
       case 'MANAGER_ACCOUNT_CREATED':
         return 'Manager Account Created';
       case 'ADMIN_ACCOUNT_CREATED':
         return 'Admin Account Created';
-      case 'USER_SUSPENDED':
-        return 'User Account Suspended';
-      case 'USER_REACTIVATED':
-        return 'User Account Reactivated';
-      case 'MATCH_CREATED':
-      case 'GAME_CREATED':
-        return 'New Match Created';
-      case 'MATCH_CANCELLED':
-      case 'PITCH_BOOKING_CANCELLED':
-        return 'Match Cancelled & Refunded';
-      case 'MATCH_COMPLETED':
-        return 'Match Completed';
       case 'CLUB_VENUE_APPROVED':
         return 'Turf Venue Approved';
       case 'MATCH_DISPUTE_RESOLVED':
@@ -72,56 +70,28 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
     }
   }
 
-  String _sanitizeTarget(String? rawTarget) {
-    if (rawTarget == null || rawTarget.trim().isEmpty) return 'N/A';
-    final target = rawTarget.trim();
-    if (target.startsWith('User:usr_') || target.startsWith('usr_')) {
-      final cleanId = target.replaceFirst('User:', '').trim();
-      if (cleanId.length > 12) {
-        return 'User Account (${cleanId.substring(0, 10)}...)';
-      }
-      return 'User Account ($cleanId)';
-    }
-    return target;
-  }
-
-  Color _getBadgeColor(String action) {
-    final act = action.toLowerCase();
-    if (act.contains('approved') ||
-        act.contains('success') ||
-        act.contains('confirm') ||
-        act.contains('completed')) {
-      return const Color(0xFF00C853);
-    }
-    if (act.contains('refund') ||
-        act.contains('cancel') ||
-        act.contains('suspend')) {
+  Color _getBadgeColor(AuditLogParsedData parsed) {
+    if (parsed.isMatchCancelled) {
       return const Color(0xFFE53935);
     }
-    if (act.contains('create') ||
-        act.contains('user') ||
-        act.contains('manager')) {
-      return const Color(0xFF8E24AA);
+    if (parsed.isUserBlockUnblock) {
+      return parsed.isBlocked ? const Color(0xFFE65100) : const Color(0xFF00C853);
+    }
+    if (parsed.isMatchCreated) {
+      return const Color(0xFF00C853);
     }
     return const Color(0xFF1E88E5);
   }
 
-  IconData _getCategoryIcon(String action) {
-    final act = action.toLowerCase();
-    if (act.contains('approved') || act.contains('confirm')) {
-      return Icons.check_circle_rounded;
-    }
-    if (act.contains('refund') || act.contains('payment')) {
-      return Icons.receipt_long_outlined;
-    }
-    if (act.contains('cancel')) {
+  IconData _getCategoryIcon(AuditLogParsedData parsed) {
+    if (parsed.isMatchCancelled) {
       return Icons.cancel_rounded;
     }
-    if (act.contains('score') || act.contains('match')) {
-      return Icons.sports_soccer_rounded;
+    if (parsed.isUserBlockUnblock) {
+      return parsed.isBlocked ? Icons.block_rounded : Icons.check_circle_rounded;
     }
-    if (act.contains('user') || act.contains('manager')) {
-      return Icons.person_outline_rounded;
+    if (parsed.isMatchCreated) {
+      return Icons.sports_soccer_rounded;
     }
     return Icons.security_rounded;
   }
@@ -129,10 +99,10 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final badgeColor = _getBadgeColor(log.action);
-    final iconData = _getCategoryIcon(log.action);
-    final humanTitle = _getHumanTitle(log.action);
-    final cleanTarget = _sanitizeTarget(log.target);
+    final parsed = log.parsed;
+    final badgeColor = _getBadgeColor(parsed);
+    final iconData = _getCategoryIcon(parsed);
+    final humanTitle = _getHumanTitle(log.action, parsed);
 
     final actorName = (log.adminName != null && log.adminName!.isNotEmpty)
         ? log.adminName!
@@ -156,7 +126,7 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
         surfaceTintColor: Colors.transparent,
         backgroundColor: isDark
             ? Theme.of(context).scaffoldBackgroundColor
-            : AppColors.sageGreenAppBar,
+            : AppColors.lightBlueAppBar,
         iconTheme: IconThemeData(
           color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
         ),
@@ -253,14 +223,15 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Event Summary Narrative Banner
-                      _buildSummaryNarrativeCard(
-                        context,
-                        actor: actorName,
-                        target: cleanTarget,
-                        actionTitle: humanTitle,
-                        details: log.details,
-                      ),
+                      // Dedicated Information Section based on Category
+                      if (parsed.isMatchCancelled)
+                        _buildMatchCancelledDetailSection(context, parsed)
+                      else if (parsed.isUserBlockUnblock)
+                        _buildUserBlockUnblockDetailSection(context, parsed)
+                      else if (parsed.isMatchCreated)
+                        _buildMatchCreatedDetailSection(context, parsed)
+                      else
+                        _buildNarrativeBanner(context, actorName, humanTitle, log.details),
 
                       const SizedBox(height: 16),
 
@@ -282,7 +253,7 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Event Description & Notes',
+                              'Event Notes & Details',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -309,7 +280,7 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Metadata Card
+                      // Actor & Metadata Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
@@ -346,8 +317,12 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                             _buildMetaRow(
                               context,
                               Icons.badge_outlined,
-                              'Target Entity Affected',
-                              cleanTarget,
+                              'Target Entity',
+                              parsed.isUserBlockUnblock
+                                  ? parsed.playerName
+                                  : (parsed.isMatchCancelled || parsed.isMatchCreated
+                                      ? parsed.matchTitle
+                                      : (log.target ?? 'System Entity')),
                             ),
                             _buildMetaRow(
                               context,
@@ -378,13 +353,184 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
     );
   }
 
-  Widget _buildSummaryNarrativeCard(
-    BuildContext context, {
-    required String actor,
-    required String target,
-    required String actionTitle,
-    required String? details,
-  }) {
+  // 1. MATCH CANCELLED DETAIL SECTION
+  Widget _buildMatchCancelledDetailSection(
+      BuildContext context, AuditLogParsedData parsed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF5A1E24) : const Color(0xFFFECDD3),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.cancel_outlined,
+                  color: Color(0xFFE53935), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Match Cancellation Breakdown',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          _buildMetaRow(context, Icons.sports_soccer_rounded, 'Match Name',
+              parsed.matchTitle),
+          _buildMetaRow(context, Icons.cancel_schedule_send_rounded,
+              'Cancelled By', parsed.cancelledBy),
+          _buildMetaRow(
+              context, Icons.star_rounded, 'Match Host', parsed.hostName),
+          _buildMetaRow(context, Icons.access_time_rounded,
+              'Scheduled Match Time', parsed.scheduledTime),
+          _buildMetaRow(context, Icons.payments_outlined, 'Match Entry Fee',
+              parsed.matchAmount),
+          _buildMetaRow(context, Icons.replay_rounded, 'Total Refund Processed',
+              parsed.refundAmount,
+              valueColor: const Color(0xFF00C853)),
+          _buildMetaRow(context, Icons.help_outline_rounded,
+              'Cancellation Reason', parsed.cancellationReason),
+        ],
+      ),
+    );
+  }
+
+  // 2. PLAYER BLOCK / UNBLOCK DETAIL SECTION
+  Widget _buildUserBlockUnblockDetailSection(
+      BuildContext context, AuditLogParsedData parsed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBlocked = parsed.isBlocked;
+    final badgeColor =
+        isBlocked ? const Color(0xFFE65100) : const Color(0xFF00C853);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: badgeColor.withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isBlocked ? Icons.block_rounded : Icons.check_circle_rounded,
+                color: badgeColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isBlocked
+                    ? 'Player Account Suspension'
+                    : 'Player Account Restoration',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          _buildMetaRow(
+              context, Icons.person_rounded, 'Player Name', parsed.playerName),
+          _buildMetaRow(context, Icons.phone_android_rounded, 'Mobile Number',
+              parsed.playerPhone),
+          _buildMetaRow(context, Icons.email_outlined, 'Email Address',
+              parsed.playerEmail),
+          _buildMetaRow(context, Icons.security_rounded, 'Status',
+              isBlocked ? 'BLOCKED / SUSPENDED' : 'ACTIVE / UNBLOCKED',
+              valueColor: badgeColor),
+          _buildMetaRow(context, Icons.admin_panel_settings_outlined,
+              'Action Performed By', parsed.actionBy),
+          _buildMetaRow(context, Icons.info_outline_rounded, 'Reason / Note',
+              parsed.userActionReason),
+        ],
+      ),
+    );
+  }
+
+  // 3. MATCH CREATED DETAIL SECTION
+  Widget _buildMatchCreatedDetailSection(
+      BuildContext context, AuditLogParsedData parsed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF00C853).withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.sports_soccer_rounded,
+                  color: Color(0xFF00C853), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Match Creation Setup',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          _buildMetaRow(context, Icons.sports_soccer_rounded, 'Match Title',
+              parsed.matchTitle),
+          _buildMetaRow(context, Icons.person_outline_rounded, 'Created By',
+              parsed.createdBy),
+          _buildMetaRow(
+              context, Icons.star_rounded, 'Host Player', parsed.hostName),
+          _buildMetaRow(
+              context, Icons.grass_rounded, 'Turf Court', parsed.courtName),
+          _buildMetaRow(context, Icons.sports_rounded, 'Format',
+              parsed.matchFormat),
+          _buildMetaRow(context, Icons.confirmation_number_outlined,
+              'Entry Fee', parsed.entryFee),
+          _buildMetaRow(context, Icons.access_time_rounded, 'Scheduled Time',
+              parsed.scheduledTime),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNarrativeBanner(
+      BuildContext context, String actor, String title, String? details) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -409,55 +555,15 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      height: 1.4,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : const Color(0xFF0F172A),
-                    ),
-                    children: [
-                      TextSpan(
-                        text: actor,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const TextSpan(text: ' executed '),
-                      TextSpan(
-                        text: actionTitle,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      if (target != 'N/A') ...[
-                        const TextSpan(text: ' on '),
-                        TextSpan(
-                          text: target,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                      const TextSpan(text: '.'),
-                    ],
-                  ),
-                ),
-                if (details != null && details.trim().isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'Notes: ${details.trim()}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ],
+            child: Text(
+              '$actor executed $title.',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
+              ),
             ),
           ),
         ],
@@ -466,7 +572,12 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
   }
 
   Widget _buildMetaRow(
-      BuildContext context, IconData icon, String label, String value) {
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -495,9 +606,10 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : const Color(0xFF0F172A),
+                    color: valueColor ??
+                        (isDark
+                            ? AppColors.textPrimaryDark
+                            : const Color(0xFF0F172A)),
                   ),
                 ),
               ],

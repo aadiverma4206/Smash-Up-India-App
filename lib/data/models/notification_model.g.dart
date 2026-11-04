@@ -1,16 +1,5 @@
 part of 'notification_model.dart';
 
-NotificationModel _$NotificationModelFromJson(Map<String, dynamic> json) =>
-    NotificationModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      body: json['body'] as String,
-      type: json['type'] as String,
-      data: json['data'] as Map<String, dynamic>?,
-      isRead: json['isRead'] as bool? ?? false,
-      createdAt: json['createdAt'] as String,
-    );
-
 Map<String, dynamic> _$NotificationModelToJson(NotificationModel instance) =>
     <String, dynamic>{
       'id': instance.id,

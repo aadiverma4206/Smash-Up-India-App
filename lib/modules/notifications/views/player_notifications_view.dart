@@ -6,8 +6,8 @@ import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/app_date_utils.dart';
+import '../../../core/services/notification_service.dart';
 import '../../player/controllers/notifications_controller.dart';
-import 'notification_detail_view.dart';
 
 class PlayerNotificationsView extends GetView<NotificationsController> {
   PlayerNotificationsView({super.key});
@@ -180,7 +180,7 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
         return AppBar(
           backgroundColor: isDark
               ? Theme.of(context).scaffoldBackgroundColor
-              : AppColors.sageGreenAppBar,
+              : AppColors.lightBlueAppBar,
           elevation: 0,
           scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,
@@ -197,6 +197,21 @@ class PlayerNotificationsView extends GetView<NotificationsController> {
             color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
           ),
           actions: [
+            IconButton(
+              icon: Icon(
+                Icons.notifications_active_rounded,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF0F172A),
+              ),
+              onPressed: () async {
+                if (Get.isRegistered<NotificationService>()) {
+                  NotificationService.to.triggerLocalTestAlert();
+                  await NotificationService.to.testBackendNotificationPush();
+                }
+              },
+              tooltip: 'Test Notification Bar Alert',
+            ),
             IconButton(
               icon: Icon(
                 Icons.done_all_rounded,

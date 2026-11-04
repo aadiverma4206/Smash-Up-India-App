@@ -249,9 +249,9 @@ class GameCheckoutView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  sportTitle == 'Basketball'
-                      ? Icons.sports_basketball_rounded
-                      : Icons.sports_soccer_rounded,
+                  sportTitle == 'Padel'
+                      ? Icons.sports_tennis_rounded
+                      : Icons.sports_tennis_rounded,
                   color: AppColors.primary,
                   size: 24,
                 ),
@@ -271,7 +271,7 @@ class GameCheckoutView extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$surface • ${sportTitle == 'Basketball' ? 'Basketball Court' : 'Turf Pitch'}',
+                      '$surface • ${sportTitle == 'Padel' ? 'Padel Court' : 'Pickle Pitch'}',
                       style: TextStyle(
                         fontSize: 12,
                         color: context.textSecondary,

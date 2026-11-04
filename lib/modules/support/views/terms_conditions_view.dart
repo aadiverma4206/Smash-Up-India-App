@@ -31,7 +31,7 @@ class TermsConditionsView extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('All Stars Arena Terms of Service',
+                      Text('Smash Up India Terms of Service',
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
                       Text('Last updated: May 2024 • Version 1.2',
@@ -47,7 +47,7 @@ class TermsConditionsView extends StatelessWidget {
                 context,
                 title: '1. Acceptance of Terms',
                 content:
-                    'By downloading, installing, or using the All Stars Arena application and booking services, you agree to be bound by these Terms and Conditions. If you do not agree to all terms, please refrain from using our services.',
+                    'By downloading, installing, or using the Smash Up India application and booking services, you agree to be bound by these Terms and Conditions. If you do not agree to all terms, please refrain from using our services.',
               ),
               _buildSection(
                 context,
@@ -77,12 +77,12 @@ class TermsConditionsView extends StatelessWidget {
                 context,
                 title: '6. Live Streaming & Media Rights',
                 content:
-                    'Match highlights and CCTV streams recorded on All Stars Arena pitches may be processed for leaderboard analytics, MVP highlight clips, and tournament playback features within the app.',
+                    'Match highlights and CCTV streams recorded on Smash Up India pitches may be processed for leaderboard analytics, MVP highlight clips, and tournament playback features within the app.',
               ),
               const SizedBox(height: 20),
               Center(
                 child: Text(
-                  'ALL STARS ARENA • LEGAL DEPARTMENT',
+                  'SMASH UP INDIA • LEGAL DEPARTMENT',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,

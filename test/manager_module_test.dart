@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:all_stars_arena/data/models/manager_models.dart';
+import 'package:smash_up_india/data/models/manager_models.dart';
 
 void main() {
-  group('ALL STARS ARENA Manager Module Unit Tests', () {
+  group('SMASH UP INDIA Manager Module Unit Tests', () {
     test('ManagerDashboardModel deserializes club analytics correctly', () {
       final json = {
         'club': {
           'id': 'clb_101',
-          'name': 'All Stars Turf Raipur',
+          'name': 'Smash Up India',
           'city': 'Raipur',
           'address': 'VIP Road',
           'status': 'ACTIVE',
@@ -21,7 +21,7 @@ void main() {
 
       final dashboard = ManagerDashboardModel.fromJson(json);
       expect(dashboard.club.id, 'clb_101');
-      expect(dashboard.club.name, 'All Stars Turf Raipur');
+      expect(dashboard.club.name, 'Smash Up India');
       expect(dashboard.totalRevenue, 48500.0);
       expect(dashboard.occupancyRatePercentage, 82.5);
       expect(dashboard.onlineCctvCount, 4);
@@ -33,7 +33,7 @@ void main() {
       final json = {
         'club': {
           'id': 'clb_103',
-          'name': 'Raipur Football Arena',
+          'name': 'Raipur Pickle Arena',
         },
         'stats': {
           'totalGames': 8,
@@ -49,7 +49,7 @@ void main() {
 
       final dashboard = ManagerDashboardModel.fromJson(json);
       expect(dashboard.club.id, 'clb_103');
-      expect(dashboard.club.name, 'Raipur Football Arena');
+      expect(dashboard.club.name, 'Raipur Pickle Arena');
       expect(dashboard.totalRevenue, 22500.0);
       expect(dashboard.totalBookings, 15);
       expect(dashboard.activeMatches, 8);

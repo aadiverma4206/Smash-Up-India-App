@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
-import 'package:all_stars_arena/core/errors/error_mapper.dart';
-import 'package:all_stars_arena/core/errors/app_exception.dart';
-import 'package:all_stars_arena/core/security/encryption_service.dart';
+import 'package:smash_up_india/core/errors/error_mapper.dart';
+import 'package:smash_up_india/core/errors/app_exception.dart';
+import 'package:smash_up_india/core/security/encryption_service.dart';
 
 void main() {
   setUpAll(() {
@@ -109,7 +109,7 @@ void main() {
   group('Encryption & Security Layer Tests', () {
     test('EncryptionService encrypts and decrypts string correctly', () {
       final encryptionService =
-          EncryptionService(secretKey: 'all_stars_arena_secure_aes_key');
+          EncryptionService(secretKey: 'smash_up_india_secure_aes_key');
       const plainText = 'rtsp://admin:secret123@192.168.1.100:554/stream1';
 
       final encrypted = encryptionService.encrypt(plainText);

@@ -510,7 +510,7 @@ class _MediaServerCctvScreenState extends State<MediaServerCctvScreen> {
           ],
         ),
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
-            (isDark ? AppColors.darkAppBar : AppColors.sageGreenAppBar),
+            (isDark ? AppColors.darkAppBar : AppColors.lightBlueAppBar),
         elevation: 0,
         iconTheme: IconThemeData(
           color: isDark ? Colors.white : Colors.black87,

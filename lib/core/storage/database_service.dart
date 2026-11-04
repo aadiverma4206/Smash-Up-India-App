@@ -8,7 +8,7 @@ class DatabaseService {
 
   Future<void> init() async {
     final docsDir = await getApplicationDocumentsDirectory();
-    final path = join(docsDir.path, 'all_stars_arena.db');
+    final path = join(docsDir.path, 'smash_up_india.db');
 
     _db = await openDatabase(
       path,

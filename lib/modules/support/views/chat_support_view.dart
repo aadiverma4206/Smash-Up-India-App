@@ -17,7 +17,7 @@ class _ChatSupportViewState extends State<ChatSupportView> {
     {
       'sender': 'agent',
       'text':
-          'Hello! Welcome to All Stars Arena Support. How can we help you today?',
+          'Hello! Welcome to Smash Up India Support. How can we help you today?',
       'time': 'Just now',
     },
   ];
@@ -69,7 +69,7 @@ class _ChatSupportViewState extends State<ChatSupportView> {
     } else if (lower.contains('turf') ||
         lower.contains('location') ||
         lower.contains('court')) {
-      return 'All Stars Arena turfs are equipped with FIFA-approved turf grass and high-intensity LED floodlights. Directions are available on the Court Details screen.';
+      return 'Smash Up India turfs are equipped with FIFA-approved turf grass and high-intensity LED floodlights. Directions are available on the Court Details screen.';
     } else {
       return 'Thank you for contacting us! A support specialist has received your query and will assist you shortly.';
     }

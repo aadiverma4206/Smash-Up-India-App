@@ -31,7 +31,7 @@ class CommunityView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Footballer ${index + 1}',
+                              'Pickle Player ${index + 1}',
                               style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: context.textPrimary),
