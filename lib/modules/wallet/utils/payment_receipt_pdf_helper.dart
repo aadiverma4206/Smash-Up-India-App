@@ -1,19 +1,29 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:open_filex/open_filex.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../data/models/wallet_models.dart';
 import '../../../core/utils/app_logger.dart';
 
 class PaymentReceiptPdfHelper {
   static bool _isProcessing = false;
+
+  static String _cleanText(String? input) {
+    if (input == null || input.isEmpty) return '';
+    return input
+        .replaceAll('₹', 'INR ')
+        .replaceAll('\u20b9', 'INR ')
+        .replaceAll('•', '-')
+        .replaceAll('–', '-')
+        .replaceAll('—', '-')
+        .replaceAll('\u2013', '-')
+        .replaceAll('\u2014', '-')
+        .trim();
+  }
 
   static bool isWalletPayment(WalletTransactionModel tx) {
     final typeUpper = tx.transactionType.toUpperCase();
@@ -77,10 +87,20 @@ class PaymentReceiptPdfHelper {
       [PdfPageFormat pageFormat = PdfPageFormat.a4]) async {
     final pdf = pw.Document();
 
+    pw.Font fontRegular;
+    pw.Font fontBold;
+    try {
+      fontRegular = await PdfGoogleFonts.robotoRegular();
+      fontBold = await PdfGoogleFonts.robotoBold();
+    } catch (_) {
+      fontRegular = pw.Font.helvetica();
+      fontBold = pw.Font.helveticaBold();
+    }
+
     final isWallet = isWalletPayment(tx);
     final paymentMethodStr =
         isWallet ? 'Smash Up India Player Wallet' : 'Razorpay Payment Gateway';
-    final purposeStr = getPaymentPurpose(tx);
+    final purposeStr = _cleanText(getPaymentPurpose(tx));
 
     String formattedDate = tx.createdAt;
     try {
@@ -91,205 +111,204 @@ class PaymentReceiptPdfHelper {
     } catch (_) {}
 
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: pageFormat,
-        margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context pdfContext) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+        margin: const pw.EdgeInsets.all(28),
+        theme: pw.ThemeData.withFont(
+          base: fontRegular,
+          bold: fontBold,
+        ),
+        build: (pw.Context pdfContext) => [
+          // Header Banner
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(16),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.teal900,
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'SMASH UP INDIA',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 22,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Official Digital Payment Receipt & Slip',
+                      style: const pw.TextStyle(
+                        color: PdfColors.teal100,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.amber,
+                    borderRadius: pw.BorderRadius.circular(6),
+                  ),
+                  child: pw.Text(
+                    'RECEIPT SLIP',
+                    style: pw.TextStyle(
+                      color: PdfColors.black,
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 20),
+
+          // Amount & Status Box
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(16),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              borderRadius: pw.BorderRadius.circular(8),
+              border: pw.Border.all(color: PdfColors.grey300),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'AMOUNT PAID',
+                      style: pw.TextStyle(
+                        color: PdfColors.grey700,
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'INR ${tx.amount.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: 24,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.teal900,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
+                  decoration: pw.BoxDecoration(
+                    color: tx.status.toUpperCase() == 'SUCCESS' ||
+                            tx.status.toUpperCase() == 'COMPLETED'
+                        ? PdfColors.green100
+                        : PdfColors.orange100,
+                    borderRadius: pw.BorderRadius.circular(6),
+                    border: pw.Border.all(
+                      color: tx.status.toUpperCase() == 'SUCCESS' ||
+                              tx.status.toUpperCase() == 'COMPLETED'
+                          ? PdfColors.green
+                          : PdfColors.orange,
+                    ),
+                  ),
+                  child: pw.Text(
+                    tx.status.toUpperCase(),
+                    style: pw.TextStyle(
+                      color: tx.status.toUpperCase() == 'SUCCESS' ||
+                              tx.status.toUpperCase() == 'COMPLETED'
+                          ? PdfColors.green900
+                          : PdfColors.orange900,
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 20),
+
+          // Section Label
+          pw.Text(
+            'PAYMENT BREAKDOWN & PARTICULARS',
+            style: pw.TextStyle(
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.grey800,
+            ),
+          ),
+          pw.SizedBox(height: 8),
+
+          // Table of Details
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.8),
             children: [
-              // Header Banner
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.all(18),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.teal900,
-                  borderRadius: pw.BorderRadius.circular(10),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          'SMASH UP INDIA',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 24,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'Official Digital Payment Receipt & Slip',
-                          style: const pw.TextStyle(
-                            color: PdfColors.teal100,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.amber,
-                        borderRadius: pw.BorderRadius.circular(6),
-                      ),
-                      child: pw.Text(
-                        'RECEIPT SLIP',
-                        style: pw.TextStyle(
-                          color: PdfColors.black,
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 24),
+              _buildPdfRow('Payment Reason / Purpose', purposeStr,
+                  isBold: true),
+              _buildPdfRow('Payment Method (Paid Via)', paymentMethodStr,
+                  isHighlight: true),
+              _buildPdfRow('Transaction ID', _cleanText(tx.id)),
+              if (tx.referenceId != null && tx.referenceId!.isNotEmpty)
+                _buildPdfRow('Reference / Order ID', _cleanText(tx.referenceId)),
+              if (tx.providerPaymentId != null &&
+                  tx.providerPaymentId!.isNotEmpty)
+                _buildPdfRow(
+                    'Razorpay Payment ID', _cleanText(tx.providerPaymentId)),
+              _buildPdfRow('Date & Time', _cleanText(formattedDate)),
+              _buildPdfRow('Wallet Balance After',
+                  'INR ${tx.balanceAfter.toStringAsFixed(2)}'),
+              _buildPdfRow('Issuer', 'Smash Up India Sports Management'),
+            ],
+          ),
 
-              // Amount & Status Box
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.all(18),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey100,
-                  borderRadius: pw.BorderRadius.circular(10),
-                  border: pw.Border.all(color: PdfColors.grey300),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          'AMOUNT PAID',
-                          style: pw.TextStyle(
-                            color: PdfColors.grey700,
-                            fontSize: 10,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'INR ${tx.amount.toStringAsFixed(2)}',
-                          style: pw.TextStyle(
-                            fontSize: 26,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.teal900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: pw.BoxDecoration(
-                        color: tx.status.toUpperCase() == 'SUCCESS' ||
-                                tx.status.toUpperCase() == 'COMPLETED'
-                            ? PdfColors.green100
-                            : PdfColors.orange100,
-                        borderRadius: pw.BorderRadius.circular(6),
-                        border: pw.Border.all(
-                          color: tx.status.toUpperCase() == 'SUCCESS' ||
-                                  tx.status.toUpperCase() == 'COMPLETED'
-                              ? PdfColors.green
-                              : PdfColors.orange,
-                        ),
-                      ),
-                      child: pw.Text(
-                        tx.status.toUpperCase(),
-                        style: pw.TextStyle(
-                          color: tx.status.toUpperCase() == 'SUCCESS' ||
-                                  tx.status.toUpperCase() == 'COMPLETED'
-                              ? PdfColors.green900
-                              : PdfColors.orange900,
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 24),
+          pw.SizedBox(height: 28),
+          pw.Divider(color: PdfColors.grey400),
+          pw.SizedBox(height: 10),
 
-              // Section Label
-              pw.Text(
-                'PAYMENT BREAKDOWN & PARTICULARS',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.grey800,
-                ),
-              ),
-              pw.SizedBox(height: 10),
-
-              // Table of Details
-              pw.Table(
-                border:
-                    pw.TableBorder.all(color: PdfColors.grey300, width: 0.8),
+          // Footer Note
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  _buildPdfRow('Payment Reason / Purpose', purposeStr,
-                      isBold: true),
-                  _buildPdfRow('Payment Method (Paid Via)', paymentMethodStr,
-                      isHighlight: true),
-                  _buildPdfRow('Transaction ID', tx.id),
-                  if (tx.referenceId != null && tx.referenceId!.isNotEmpty)
-                    _buildPdfRow('Reference / Order ID', tx.referenceId!),
-                  if (tx.providerPaymentId != null &&
-                      tx.providerPaymentId!.isNotEmpty)
-                    _buildPdfRow('Razorpay Payment ID', tx.providerPaymentId!),
-                  _buildPdfRow('Date & Time', formattedDate),
-                  _buildPdfRow('Wallet Balance After',
-                      'INR ${tx.balanceAfter.toStringAsFixed(2)}'),
-                  _buildPdfRow('Issuer', 'Smash Up India Sports Management'),
-                ],
-              ),
-
-              pw.SizedBox(height: 36),
-              pw.Divider(color: PdfColors.grey400),
-              pw.SizedBox(height: 12),
-
-              // Footer Note
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'Smash Up India Sports Technologies',
-                        style: pw.TextStyle(
-                          fontSize: 10,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey800,
-                        ),
-                      ),
-                      pw.Text(
-                        'Computer Generated Slip - Valid without physical signature',
-                        style: const pw.TextStyle(
-                            fontSize: 8, color: PdfColors.grey600),
-                      ),
-                    ],
+                  pw.Text(
+                    'Smash Up India Sports Technologies',
+                    style: pw.TextStyle(
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey800,
+                    ),
                   ),
                   pw.Text(
-                    'VERIFIED RECEIPT',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.green800,
-                    ),
+                    'Computer Generated Slip - Valid without physical signature',
+                    style: const pw.TextStyle(
+                        fontSize: 8, color: PdfColors.grey600),
                   ),
                 ],
               ),
+              pw.Text(
+                'VERIFIED RECEIPT',
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.green800,
+                ),
+              ),
             ],
-          );
-        },
+          ),
+        ],
       ),
     );
 
@@ -305,12 +324,7 @@ class PaymentReceiptPdfHelper {
 
     try {
       final pdfBytes = await buildPdfBytes(tx);
-
-      final directory = await getApplicationDocumentsDirectory();
       final fileName = 'Smash_Up_India_Receipt_${tx.id}.pdf';
-      final filePath = '${directory.path}/$fileName';
-      final file = File(filePath);
-      await file.writeAsBytes(pdfBytes);
 
       if (!context.mounted) return;
 
@@ -444,22 +458,19 @@ class PaymentReceiptPdfHelper {
                   // Action Buttons Row
                   Row(
                     children: [
-                      // View PDF
+                      // View PDF using Printing.layoutPdf (Native PDF Viewer with full read access)
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () async {
                             Get.back();
                             try {
-                              final result = await OpenFilex.open(filePath);
-                              if (result.type != ResultType.done) {
-                                await Printing.layoutPdf(
-                                  onLayout: (PdfPageFormat format) async =>
-                                      pdfBytes,
-                                  name: fileName,
-                                );
-                              }
+                              await Printing.layoutPdf(
+                                onLayout: (PdfPageFormat format) async =>
+                                    pdfBytes,
+                                name: fileName,
+                              );
                             } catch (e) {
-                              AppLogger.warning('OpenFilex error: $e');
+                              AppLogger.warning('Printing.layoutPdf error: $e');
                             }
                           },
                           icon: const Icon(Icons.remove_red_eye_rounded,
@@ -477,7 +488,7 @@ class PaymentReceiptPdfHelper {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      // Share / Print PDF
+                      // Share PDF using Printing.sharePdf (Native Content Provider)
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () async {
@@ -536,22 +547,22 @@ class PaymentReceiptPdfHelper {
     return pw.TableRow(
       children: [
         pw.Padding(
-          padding: const pw.EdgeInsets.all(10),
+          padding: const pw.EdgeInsets.all(8),
           child: pw.Text(
-            label,
+            _cleanText(label),
             style: pw.TextStyle(
-              fontSize: 10,
+              fontSize: 9.5,
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.grey700,
             ),
           ),
         ),
         pw.Padding(
-          padding: const pw.EdgeInsets.all(10),
+          padding: const pw.EdgeInsets.all(8),
           child: pw.Text(
-            value,
+            _cleanText(value),
             style: pw.TextStyle(
-              fontSize: 10,
+              fontSize: 9.5,
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
               color: isHighlight ? PdfColors.teal900 : PdfColors.black,
             ),
