@@ -11,8 +11,13 @@ import '../../../core/utils/app_logger.dart';
 import 'payment_receipt_pdf_helper.dart';
 
 class PaymentReceiptExcelHelper {
+  static bool _isProcessing = false;
+
   static Future<void> generateAndExportExcel(
       BuildContext context, WalletTransactionModel tx) async {
+    if (_isProcessing || Get.isDialogOpen == true) return;
+    _isProcessing = true;
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     try {
@@ -240,6 +245,8 @@ class PaymentReceiptExcelHelper {
         borderRadius: 12,
         duration: const Duration(seconds: 3),
       );
+    } finally {
+      _isProcessing = false;
     }
   }
 }

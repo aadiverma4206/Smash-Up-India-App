@@ -13,6 +13,8 @@ import '../../../data/models/wallet_models.dart';
 import '../../../core/utils/app_logger.dart';
 
 class PaymentReceiptPdfHelper {
+  static bool _isProcessing = false;
+
   static bool isWalletPayment(WalletTransactionModel tx) {
     final typeUpper = tx.transactionType.toUpperCase();
     final descLower = tx.description.toLowerCase();
@@ -296,6 +298,9 @@ class PaymentReceiptPdfHelper {
 
   static Future<void> generateAndSharePdf(
       BuildContext context, WalletTransactionModel tx) async {
+    if (_isProcessing || Get.isDialogOpen == true) return;
+    _isProcessing = true;
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     try {
@@ -521,6 +526,8 @@ class PaymentReceiptPdfHelper {
         borderRadius: 12,
         duration: const Duration(seconds: 3),
       );
+    } finally {
+      _isProcessing = false;
     }
   }
 
