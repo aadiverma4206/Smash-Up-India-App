@@ -14,7 +14,9 @@ dbPool.on("connect", async (client) => {
   try {
     const res = await client.query("SELECT current_database();");
     const dbName = res.rows[0]?.current_database;
-    logger.info(`Connected strictly to PostgreSQL Database (${dbName}) from .env`);
+    logger.info(
+      `Connected strictly to PostgreSQL Database (${dbName}) from .env`,
+    );
   } catch (err) {
     logger.info("Connected to PostgreSQL Database from .env");
   }
@@ -28,7 +30,9 @@ export const initDbTables = async () => {
   try {
     const checkRes = await dbPool.query("SELECT current_database();");
     const currentDb = checkRes.rows[0]?.current_database;
-    logger.info(`🔒 Verified target database: [${currentDb}] from .env. Proceeding with schema sync...`);
+    logger.info(
+      `🔒 Verified target database: [${currentDb}] from .env. Proceeding with schema sync...`,
+    );
 
     await dbPool.query(`
       ALTER TABLE public.users ADD COLUMN IF NOT EXISTS latest_otp VARCHAR(10);
@@ -56,6 +60,10 @@ export const initDbTables = async () => {
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
       ALTER TABLE public.games ADD COLUMN IF NOT EXISTS manager_id VARCHAR(64) REFERENCES public.users(id) ON DELETE SET NULL;
+      ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cctv_recording_enabled BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE public.games ADD COLUMN IF NOT EXISTS cctv_recording_fee NUMERIC(10,2) NOT NULL DEFAULT 0.00;
+      ALTER TABLE public.court_bookings ADD COLUMN IF NOT EXISTS cctv_recording_enabled BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE public.court_bookings ADD COLUMN IF NOT EXISTS cctv_recording_fee NUMERIC(10,2) NOT NULL DEFAULT 0.00;
       ALTER TABLE public.games DROP CONSTRAINT IF EXISTS games_approval_status_check;
       ALTER TABLE public.games ADD CONSTRAINT games_approval_status_check CHECK (approval_status IN ('PENDING_APPROVAL', 'APPROVED', 'REJECTED'));
 
@@ -798,43 +806,17 @@ export const initDbTables = async () => {
       VALUES ('smash_up_india_club', 'Smash Up India', 'VIP Road', 'Raipur', 'ACTIVE')
       ON CONFLICT (id) DO UPDATE SET name = 'Smash Up India', status = 'ACTIVE';
 
-      -- 2. Ensure canonical courts 'court_1' and 'court_2' exist
+      -- 2. Ensure canonical courts exist without overwriting or deleting user-configured courts (e.g. court_3, padel_court_1)
       INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)
       VALUES
         ('court_1', 'smash_up_india_club', 'Court 1', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE'),
         ('court_2', 'smash_up_india_club', 'Court 2', 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')
-      ON CONFLICT (id) DO UPDATE SET
-        club_id = 'smash_up_india_club',
-        name = EXCLUDED.name,
-        surface = EXCLUDED.surface,
-        status = 'AVAILABLE';
+      ON CONFLICT (id) DO NOTHING;
 
-      -- 3. Normalize all games strictly to smash_up_india_club and court_1 / court_2
+      -- 3. Ensure games belong to smash_up_india_club
       UPDATE public.games
-      SET
-        club_id = 'smash_up_india_club',
-        court_id = CASE
-          WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
-          ELSE 'court_1'
-        END
-      WHERE club_id <> 'smash_up_india_club' OR court_id NOT IN ('court_1', 'court_2');
-
-      DO $$
-      BEGIN
-        UPDATE public.court_bookings
-        SET court_id = CASE
-          WHEN court_id ILIKE '%2%' OR court_id = 'court_2' THEN 'court_2'
-          ELSE 'court_1'
-        END
-        WHERE court_id NOT IN ('court_1', 'court_2');
-      EXCEPTION WHEN OTHERS THEN
-        NULL;
-      END $$;
-
-      -- Clean up any non-canonical courts that are safely unreferenced
-      DELETE FROM public.courts WHERE id NOT IN ('court_1', 'court_2')
-      AND NOT EXISTS (SELECT 1 FROM public.court_bookings cb WHERE cb.court_id = courts.id)
-      AND NOT EXISTS (SELECT 1 FROM public.games g WHERE g.court_id = courts.id);
+      SET club_id = 'smash_up_india_club'
+      WHERE club_id IS NULL OR club_id = '';
 
       -- Multi-camera CCTV cataloging: add cctv_id to game_videos
       ALTER TABLE public.game_videos ADD COLUMN IF NOT EXISTS cctv_id VARCHAR(64) REFERENCES public.cctv_cameras(id) ON DELETE SET NULL;
@@ -914,10 +896,16 @@ export const initDbTables = async () => {
           IF p_court IS NULL OR TRIM(p_court) = '' THEN
               RETURN 'court_1';
           END IF;
-          IF LOWER(p_court) ILIKE '%2%' THEN
+          IF LOWER(p_court) ILIKE '%padel%' THEN
+              RETURN 'padel_court_1';
+          ELSIF LOWER(p_court) ILIKE '%3%' THEN
+              RETURN 'court_3';
+          ELSIF LOWER(p_court) ILIKE '%2%' THEN
               RETURN 'court_2';
-          ELSE
+          ELSIF LOWER(p_court) ILIKE '%1%' THEN
               RETURN 'court_1';
+          ELSE
+              RETURN LOWER(TRIM(p_court));
           END IF;
       END;
       $$ LANGUAGE plpgsql IMMUTABLE;

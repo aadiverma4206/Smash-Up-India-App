@@ -40,8 +40,7 @@ class _ManagerEditProfileViewState extends State<ManagerEditProfileView> {
 
     nameController = TextEditingController(text: user?.name ?? '');
     cityController = TextEditingController(text: user?.city ?? '');
-    bioController =
-        TextEditingController(text: 'Managing Smash Up India Turf');
+    bioController = TextEditingController(text: 'Managing Smash Up India Turf');
     avatarUrl.value = user?.profileImageUrl ?? '';
 
     _loadManagerProfileData();

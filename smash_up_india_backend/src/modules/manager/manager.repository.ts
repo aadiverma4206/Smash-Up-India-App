@@ -1,5 +1,6 @@
 import { dbPool } from "../../config/db.config.js";
 import { ApiError } from "../../utils/apiResponse.js";
+import { CourtsService } from "../courts/courts.service.js";
 
 export class ManagerRepository {
   static async getManagerClub(userId?: string) {
@@ -346,9 +347,7 @@ export class ManagerRepository {
     privacy: string;
     description?: string;
   }) {
-    const normalizedCourtId = (data.courtId || "").toLowerCase().includes("2")
-      ? "court_2"
-      : "court_1";
+    const normalizedCourtId = CourtsService.normalizeCourtId(data.courtId);
 
     const cleanDate = (data.matchDate || "").includes("T")
       ? data.matchDate.split("T")[0]
@@ -401,7 +400,7 @@ export class ManagerRepository {
     if (parseInt(overlapRes.rows[0]?.total_overlap_count || "0", 10) > 0) {
       throw new ApiError(
         409,
-        `Court ${normalizedCourtId === "court_2" ? "2" : "1"} is already booked or occupied for the selected time slot (${data.startTime} - ${data.endTime})`,
+        `${CourtsService.getCourtDisplayName(normalizedCourtId)} is already booked or occupied for the selected time slot (${data.startTime} - ${data.endTime})`,
         "COURT_SLOT_CONFLICT",
       );
     }
@@ -640,17 +639,13 @@ export class ManagerRepository {
     }
 
     if (courtFilter && courtFilter.trim().toUpperCase() !== "ALL") {
-      const courtUpper = courtFilter.trim().toUpperCase();
-      if (courtUpper.includes("2")) {
-        conditions.push("g.court_id = 'court_2'");
-      } else if (courtUpper.includes("1")) {
-        conditions.push("g.court_id = 'court_1'");
-      }
+      const normalizedFilter = CourtsService.normalizeCourtId(courtFilter);
+      conditions.push(`g.court_id = '${normalizedFilter}'`);
     }
 
     const query = `
       SELECT g.*,
-             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
+             CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
              (SELECT COUNT(*) FROM public.game_slot_requests req WHERE req.game_id = g.id AND req.status = 'PENDING') as pending_requests_count,
              (
@@ -695,7 +690,7 @@ export class ManagerRepository {
     const values: any[] = [];
     let idx = 1;
 
-    const targetClubId = clubId || 'smash_up_india_club';
+    const targetClubId = clubId || "smash_up_india_club";
     conditions.push(`g.club_id = $${idx++}`);
     values.push(targetClubId);
 
@@ -710,9 +705,8 @@ export class ManagerRepository {
     }
 
     if (courtFilter && courtFilter.trim().toUpperCase() !== "ALL") {
-      const courtUpper = courtFilter.trim().toUpperCase();
       conditions.push(`g.court_id = $${idx++}`);
-      values.push(courtUpper.includes("2") ? "court_2" : "court_1");
+      values.push(CourtsService.normalizeCourtId(courtFilter));
     }
 
     values.push(limit, offset);
@@ -745,7 +739,7 @@ export class ManagerRepository {
                )
                ELSE NULL
              END as video_playback_url,
-             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
+             CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') * g.entry_fee as total_amount_collected,
@@ -780,7 +774,7 @@ export class ManagerRepository {
   }
 
   static async getCourtsByClub(clubId: string) {
-    const targetClubId = clubId || 'smash_up_india_club';
+    const targetClubId = clubId || "smash_up_india_club";
     const clubCheck = await dbPool.query(
       `SELECT id FROM public.clubs WHERE id = $1;`,
       [targetClubId],
@@ -801,6 +795,8 @@ export class ManagerRepository {
           CASE
               WHEN crt.id = 'court_1' THEN 1
               WHEN crt.id = 'court_2' THEN 2
+              WHEN crt.id = 'court_3' THEN 3
+              WHEN crt.id = 'padel_court_1' THEN 4
               ELSE 999
           END,
           crt.name;
@@ -810,7 +806,7 @@ export class ManagerRepository {
   }
 
   static async getCourtById(courtId: string) {
-    const normalizedId = courtId.includes("2") ? "court_2" : "court_1";
+    const normalizedId = CourtsService.normalizeCourtId(courtId);
     const res = await dbPool.query(
       `SELECT crt.*, 'Smash Up India' as club_name, 'VIP Road, Raipur' as club_address
        FROM public.courts crt
@@ -937,8 +933,7 @@ export class ManagerRepository {
       }
     } catch (_) {}
 
-    const normalizedCourtId =
-      courtId && courtId.includes("2") ? "court_2" : "court_1";
+    const normalizedCourtId = CourtsService.normalizeCourtId(courtId);
     const conditions: string[] = [
       "g.court_id = $1",
       "g.status NOT IN ('CANCELLED', 'COMPLETED')",
@@ -976,7 +971,7 @@ export class ManagerRepository {
              g.created_by_player, g.creator_role_name, g.rejection_reason,
              g.team_a_score, g.team_b_score, g.winner_team,
              u.id as host_user_id, u.name as host_name, u.phone as host_phone, u.profile_image_url as host_image,
-             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
+             CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id AND gp.payment_status = 'PAID') as paid_players_count,
              cam.id as camera_id, cam.status as camera_status,
@@ -1004,7 +999,7 @@ export class ManagerRepository {
   static async getPendingPlayerGames(_clubId?: string) {
     const query = `
       SELECT g.*,
-             CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
+             CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
              u.id as host_user_id, u.name as host_name, u.email as host_email, u.phone as host_phone,
              u.profile_image_url as host_image,
              (SELECT COUNT(*) FROM public.game_players gp WHERE gp.game_id = g.id) as current_players_count

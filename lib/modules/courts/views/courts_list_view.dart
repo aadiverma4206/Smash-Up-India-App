@@ -646,7 +646,16 @@ class CourtsListView extends GetView<CourtsController> {
             }
 
             final activeCourt = controller.chartCourtId.value;
-            final courtName = activeCourt == 'court_1' ? 'Court 1' : 'Court 2';
+            final matchedCourt = controller.courts.firstWhereOrNull(
+                (c) => c.id.toLowerCase() == activeCourt.toLowerCase());
+            final courtName = matchedCourt?.name ??
+                (activeCourt == 'padel_court_1'
+                    ? 'Padel Court 1'
+                    : activeCourt == 'court_3'
+                        ? 'Court 3'
+                        : activeCourt == 'court_2'
+                            ? 'Court 2'
+                            : 'Court 1');
             final slots = controller.getSlotsForActiveCourt();
             final freeCount = controller.activeCourtAvailableSlotsCount;
             final bookedCount = controller.activeCourtBookedSlotsCount;

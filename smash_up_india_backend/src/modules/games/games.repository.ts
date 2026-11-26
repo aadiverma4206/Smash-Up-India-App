@@ -1,4 +1,5 @@
 import { dbPool } from "../../config/db.config.js";
+import { CourtsService } from "../courts/courts.service.js";
 
 export class GamesRepository {
   static async getGames(filters: {
@@ -57,13 +58,17 @@ export class GamesRepository {
     }
     if (filters.court && filters.court.trim().toUpperCase() !== "ALL") {
       const courtUpper = filters.court.trim().toUpperCase();
-      if (
-        courtUpper === "COURT_1" ||
-        courtUpper === "COURT 1" ||
-        courtUpper.endsWith("1")
+      if (courtUpper.includes("PADEL")) {
+        conditions.push(
+          `(crt.name ILIKE '%Padel%' OR g.court_id = 'padel_court_1')`,
+        );
+      } else if (
+        courtUpper === "COURT_3" ||
+        courtUpper === "COURT 3" ||
+        courtUpper.endsWith("3")
       ) {
         conditions.push(
-          `(crt.name ILIKE '%Court 1%' OR g.court_id ILIKE '%court_1%' OR g.court_id ILIKE '%1')`,
+          `(crt.name ILIKE '%Court 3%' OR g.court_id = 'court_3')`,
         );
       } else if (
         courtUpper === "COURT_2" ||
@@ -71,7 +76,15 @@ export class GamesRepository {
         courtUpper.endsWith("2")
       ) {
         conditions.push(
-          `(crt.name ILIKE '%Court 2%' OR g.court_id ILIKE '%court_2%' OR g.court_id ILIKE '%2')`,
+          `(crt.name ILIKE '%Court 2%' OR g.court_id = 'court_2')`,
+        );
+      } else if (
+        courtUpper === "COURT_1" ||
+        courtUpper === "COURT 1" ||
+        courtUpper.endsWith("1")
+      ) {
+        conditions.push(
+          `(crt.name ILIKE '%Court 1%' OR g.court_id = 'court_1')`,
         );
       } else {
         conditions.push(`g.court_id = $${idx++}`);
@@ -94,7 +107,7 @@ export class GamesRepository {
              COALESCE(c.name, 'Smash Up India') as club_name, 
              c.address as club_address, 
              c.city, 
-             COALESCE(crt.name, CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
+             COALESCE(crt.name, CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
              CASE 
                WHEN g.format = '5v5' THEN 10 
                WHEN g.format = '7v7' THEN 14 
@@ -119,6 +132,8 @@ export class GamesRepository {
     const res = await dbPool.query(
       `SELECT g.id, g.title, g.court_id, g.creator_id, g.creator_role_name, g.created_by_player,
               g.format, g.entry_fee, COALESCE(g.per_player_fee, 0.00) as per_player_fee, g.status, g.approval_status,
+              COALESCE(g.cctv_recording_enabled, false) as cctv_recording_enabled,
+              COALESCE(g.cctv_recording_fee, 0.00) as cctv_recording_fee,
               g.team_a_score, g.team_b_score, g.winner_team, g.description,
               g.created_at, g.updated_at,
               TO_CHAR(g.match_date, 'YYYY-MM-DD') as match_date,
@@ -126,7 +141,7 @@ export class GamesRepository {
               TO_CHAR(g.end_time, 'HH24:MI:SS') as end_time,
               COALESCE(crt.club_id, 'smash_up_india_club') as club_id,
               COALESCE(c.name, 'Smash Up India') as club_name, 
-              COALESCE(crt.name, CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
+              COALESCE(crt.name, CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
               CASE 
                 WHEN g.format = '5v5' THEN 10 
                 WHEN g.format = '7v7' THEN 14 
@@ -181,9 +196,7 @@ export class GamesRepository {
     endTime: string,
     excludeGameId?: string,
   ): Promise<boolean> {
-    const normalizedCourtId = (courtId || "").toLowerCase().includes("2")
-      ? "court_2"
-      : "court_1";
+    const normalizedCourtId = CourtsService.normalizeCourtId(courtId);
 
     const res = await dbPool.query(
       `SELECT (
@@ -223,17 +236,23 @@ export class GamesRepository {
       description?: string;
       approvalStatus?: string;
       managerId?: string;
+      cctvRecordingEnabled?: boolean;
+      cctvRecordingFee?: number;
     },
     dbClient: any = dbPool,
   ) {
     const approvalStatus = (data as any).approvalStatus || "APPROVED";
     const managerId = (data as any).managerId || null;
+    const cctvRecordingEnabled = Boolean(data.cctvRecordingEnabled);
+    const cctvRecordingFee = cctvRecordingEnabled
+      ? Number(data.cctvRecordingFee ?? 100.0)
+      : 0.0;
 
     if (data.id) {
       const query = `
         INSERT INTO public.games
-        (id, title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, description, manager_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'OPEN_FOR_JOINING', $12, $13, $14)
+        (id, title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, description, manager_id, cctv_recording_enabled, cctv_recording_fee)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'OPEN_FOR_JOINING', $12, $13, $14, $15, $16)
         RETURNING *;
       `;
       const res = await dbClient.query(query, [
@@ -251,13 +270,15 @@ export class GamesRepository {
         approvalStatus,
         data.description || null,
         managerId,
+        cctvRecordingEnabled,
+        cctvRecordingFee,
       ]);
       return res.rows[0];
     } else {
       const query = `
         INSERT INTO public.games
-        (title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, description, manager_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'OPEN_FOR_JOINING', $11, $12, $13)
+        (title, court_id, creator_id, creator_role_name, created_by_player, format, entry_fee, match_date, start_time, end_time, status, approval_status, description, manager_id, cctv_recording_enabled, cctv_recording_fee)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'OPEN_FOR_JOINING', $11, $12, $13, $14, $15)
         RETURNING *;
       `;
       const res = await dbClient.query(query, [
@@ -274,6 +295,8 @@ export class GamesRepository {
         approvalStatus,
         data.description || null,
         managerId,
+        cctvRecordingEnabled,
+        cctvRecordingFee,
       ]);
       return res.rows[0];
     }

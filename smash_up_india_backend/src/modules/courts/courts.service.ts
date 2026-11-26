@@ -23,17 +23,25 @@ export class CourtsService {
       params.push(clubId);
       query += ` AND (crt.club_id = $1 OR crt.club_id = 'smash_up_india_club')`;
     }
-    query += ` ORDER BY crt.name ASC;`;
+    query += ` ORDER BY
+      CASE
+        WHEN crt.id = 'court_1' THEN 1
+        WHEN crt.id = 'court_2' THEN 2
+        WHEN crt.id = 'court_3' THEN 3
+        WHEN crt.id = 'padel_court_1' THEN 4
+        ELSE 5
+      END,
+      crt.name ASC;`;
 
     try {
       const res = await dbPool.query(query, params);
       if (res.rows && res.rows.length > 0) {
         return res.rows.map((row) => ({
           id: row.id,
-          clubId: row.club_id || 'smash_up_india_club',
+          clubId: row.club_id || "smash_up_india_club",
           clubName: row.club_name || "Smash Up India",
           name: row.name || "Court Pitch",
-          surfaceType: row.surface_type || "3G Turf",
+          surfaceType: row.surface_type || row.surface || "3G Turf",
           basePricePerHour: Number(
             row.base_price || row.base_price_per_hour || 1200.0,
           ),
@@ -48,7 +56,7 @@ export class CourtsService {
     return [
       {
         id: "court_1",
-        clubId: 'smash_up_india_club',
+        clubId: "smash_up_india_club",
         clubName: "Smash Up India",
         name: "Court 1",
         surfaceType: "3G Turf",
@@ -60,9 +68,33 @@ export class CourtsService {
       },
       {
         id: "court_2",
-        clubId: 'smash_up_india_club',
+        clubId: "smash_up_india_club",
         clubName: "Smash Up India",
         name: "Court 2",
+        surfaceType: "3G Turf",
+        basePricePerHour: 1200.0,
+        status: "AVAILABLE",
+        city: "Raipur",
+        address: "VIP Road, Raipur",
+        images: [],
+      },
+      {
+        id: "court_3",
+        clubId: "smash_up_india_club",
+        clubName: "Smash Up India",
+        name: "Court 3",
+        surfaceType: "3G Turf",
+        basePricePerHour: 1200.0,
+        status: "AVAILABLE",
+        city: "Raipur",
+        address: "VIP Road, Raipur",
+        images: [],
+      },
+      {
+        id: "padel_court_1",
+        clubId: "smash_up_india_club",
+        clubName: "Smash Up India",
+        name: "Padel Court 1",
         surfaceType: "3G Turf",
         basePricePerHour: 1200.0,
         status: "AVAILABLE",
@@ -89,7 +121,33 @@ export class CourtsService {
   static normalizeCourtId(courtId?: string): string {
     if (!courtId) return "court_1";
     const lower = courtId.toString().toLowerCase().trim();
-    return lower.includes("2") ? "court_2" : "court_1";
+    if (!lower) return "court_1";
+    if (lower.includes("padel")) return "padel_court_1";
+    if (lower === "court_3" || lower === "court 3" || lower.includes("3")) {
+      return "court_3";
+    }
+    if (lower === "court_2" || lower === "court 2" || lower.includes("2")) {
+      return "court_2";
+    }
+    if (lower === "court_1" || lower === "court 1" || lower.includes("1")) {
+      return "court_1";
+    }
+    return lower;
+  }
+
+  static getCourtDisplayName(courtId?: string): string {
+    const normalized = this.normalizeCourtId(courtId);
+    switch (normalized) {
+      case "padel_court_1":
+        return "Padel Court 1";
+      case "court_3":
+        return "Court 3";
+      case "court_2":
+        return "Court 2";
+      case "court_1":
+      default:
+        return "Court 1";
+    }
   }
 
   static async checkAvailability(courtId: string, bookingDate: string) {

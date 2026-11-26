@@ -40,7 +40,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
       return 'Match Cancelled & Refunded';
     }
     if (parsed.isUserBlockUnblock) {
-      return parsed.isBlocked ? 'Player Account Blocked' : 'Player Account Unblocked';
+      return parsed.isBlocked
+          ? 'Player Account Blocked'
+          : 'Player Account Unblocked';
     }
     if (parsed.isMatchCreated) {
       return 'New Match Created';
@@ -75,7 +77,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
       return const Color(0xFFE53935);
     }
     if (parsed.isUserBlockUnblock) {
-      return parsed.isBlocked ? const Color(0xFFE65100) : const Color(0xFF00C853);
+      return parsed.isBlocked
+          ? const Color(0xFFE65100)
+          : const Color(0xFF00C853);
     }
     if (parsed.isMatchCreated) {
       return const Color(0xFF00C853);
@@ -88,7 +92,9 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
       return Icons.cancel_rounded;
     }
     if (parsed.isUserBlockUnblock) {
-      return parsed.isBlocked ? Icons.block_rounded : Icons.check_circle_rounded;
+      return parsed.isBlocked
+          ? Icons.block_rounded
+          : Icons.check_circle_rounded;
     }
     if (parsed.isMatchCreated) {
       return Icons.sports_soccer_rounded;
@@ -231,7 +237,8 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                       else if (parsed.isMatchCreated)
                         _buildMatchCreatedDetailSection(context, parsed)
                       else
-                        _buildNarrativeBanner(context, actorName, humanTitle, log.details),
+                        _buildNarrativeBanner(
+                            context, actorName, humanTitle, log.details),
 
                       const SizedBox(height: 16),
 
@@ -320,7 +327,8 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
                               'Target Entity',
                               parsed.isUserBlockUnblock
                                   ? parsed.playerName
-                                  : (parsed.isMatchCancelled || parsed.isMatchCreated
+                                  : (parsed.isMatchCancelled ||
+                                          parsed.isMatchCreated
                                       ? parsed.matchTitle
                                       : (log.target ?? 'System Entity')),
                             ),
@@ -518,8 +526,8 @@ class _AdminAuditLogDetailViewState extends State<AdminAuditLogDetailView> {
               context, Icons.star_rounded, 'Host Player', parsed.hostName),
           _buildMetaRow(
               context, Icons.grass_rounded, 'Turf Court', parsed.courtName),
-          _buildMetaRow(context, Icons.sports_rounded, 'Format',
-              parsed.matchFormat),
+          _buildMetaRow(
+              context, Icons.sports_rounded, 'Format', parsed.matchFormat),
           _buildMetaRow(context, Icons.confirmation_number_outlined,
               'Entry Fee', parsed.entryFee),
           _buildMetaRow(context, Icons.access_time_rounded, 'Scheduled Time',

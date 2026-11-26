@@ -390,29 +390,33 @@ class ManagerDashboardController extends GetxController
         courtIndex: clamped + 1, date: formattedQueryDate);
   }
 
-  List<GameModel> get court1Games {
+  List<GameModel> _gamesForCourt(int courtNum) {
     final all = <GameModel>[...pendingPlayerGames, ...clubMatches];
     final seen = <String>{};
     return all.where((g) {
       if (seen.contains(g.id)) return false;
       seen.add(g.id);
-      return _isGameForCourt(g, 1);
+      return _isGameForCourt(g, courtNum);
     }).toList();
   }
 
-  List<GameModel> get court2Games {
-    final all = <GameModel>[...pendingPlayerGames, ...clubMatches];
-    final seen = <String>{};
-    return all.where((g) {
-      if (seen.contains(g.id)) return false;
-      seen.add(g.id);
-      return _isGameForCourt(g, 2);
-    }).toList();
-  }
+  List<GameModel> get court1Games => _gamesForCourt(1);
+  List<GameModel> get court2Games => _gamesForCourt(2);
+  List<GameModel> get court3Games => _gamesForCourt(3);
+  List<GameModel> get padelCourtGames => _gamesForCourt(4);
 
   bool _isGameForCourt(GameModel game, int courtNum) {
     final cId = (game.courtId ?? '').toLowerCase().trim();
     final cName = game.courtName.toLowerCase().trim();
+    final isPadel = cId.contains('padel') || cName.contains('padel');
+
+    if (courtNum == 4) {
+      return isPadel;
+    }
+    if (isPadel) {
+      return false;
+    }
+
     final targetStr = 'court_$courtNum';
     final targetName = 'court $courtNum';
 
@@ -430,6 +434,10 @@ class ManagerDashboardController extends GetxController
     }
     if (courtNum == 2 &&
         (cName.contains('pitch 2') || cId.contains('court_2'))) {
+      return true;
+    }
+    if (courtNum == 3 &&
+        (cName.contains('pitch 3') || cId.contains('court_3'))) {
       return true;
     }
     return false;
@@ -486,6 +494,8 @@ class ManagerDashboardController extends GetxController
 
   GameModel? get court1FeaturedMatch => getCourtFeaturedMatch(1);
   GameModel? get court2FeaturedMatch => getCourtFeaturedMatch(2);
+  GameModel? get court3FeaturedMatch => getCourtFeaturedMatch(3);
+  GameModel? get padelCourtFeaturedMatch => getCourtFeaturedMatch(4);
 
   int get futureBookingsCount {
     if (clubMetrics['futureBookings'] != null) {

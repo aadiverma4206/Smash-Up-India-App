@@ -23,6 +23,7 @@ import '../../modules/player/views/player_history_detail_view.dart';
 import '../../modules/notifications/views/notifications_view.dart';
 import '../../modules/games/views/games_list_view.dart';
 import '../../modules/games/views/create_game_view.dart';
+import '../../modules/games/views/book_slot_selection_view.dart';
 import '../../modules/games/views/game_checkout_view.dart';
 import '../../modules/games/views/my_matches_view.dart';
 import '../../modules/games/views/game_details_view.dart';
@@ -37,6 +38,7 @@ import '../../modules/wallet/views/add_money_view.dart';
 import '../../modules/wallet/views/payment_result_view.dart';
 import '../../modules/wallet/views/transaction_history_view.dart';
 import '../../modules/wallet/views/payment_history_view.dart';
+import '../../modules/wallet/views/payment_detail_view.dart';
 import '../../modules/wallet/views/wallet_pin_view.dart';
 import '../../modules/manager/bindings/manager_binding.dart';
 import '../../modules/manager/views/manager_dashboard_view.dart';
@@ -176,6 +178,11 @@ class AppPages {
       binding: WalletBinding(),
     ),
     GetPage(
+      name: Routes.playerPaymentDetail,
+      page: () => const PlayerPaymentDetailView(),
+      binding: WalletBinding(),
+    ),
+    GetPage(
       name: '/notifications',
       page: () => const NotificationsView(),
       binding: PlayerBinding(),
@@ -203,6 +210,11 @@ class AppPages {
     GetPage(
       name: Routes.findGames,
       page: () => const CreateGameView(),
+      binding: CreateGameBinding(),
+    ),
+    GetPage(
+      name: Routes.bookSlot,
+      page: () => const BookSlotSelectionView(),
       binding: CreateGameBinding(),
     ),
     GetPage(

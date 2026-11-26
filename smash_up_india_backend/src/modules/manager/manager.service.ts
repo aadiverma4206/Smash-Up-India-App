@@ -1,4 +1,5 @@
 import { ManagerRepository } from "./manager.repository.js";
+import { CourtsService } from "../courts/courts.service.js";
 import { CctvService } from "../cctv/cctv.service.js";
 import { CctvRepository } from "../cctv/cctv.repository.js";
 import { CctvRecordingService } from "../../services/cctvRecording.service.js";
@@ -18,7 +19,7 @@ import { logger } from "../../utils/logger.js";
 export class ManagerService {
   static async getClubMetrics(userId: string) {
     const club = await ManagerRepository.getManagerClub(userId);
-    const clubId = club?.id || 'smash_up_india_club';
+    const clubId = club?.id || "smash_up_india_club";
     return await ManagerRepository.getClubMetricsData(clubId);
   }
 
@@ -82,10 +83,9 @@ export class ManagerService {
     dateStr?: string,
   ) {
     const club = await ManagerRepository.getManagerClub(userId);
-    const clubId = club?.id || 'smash_up_india_club';
+    const clubId = club?.id || "smash_up_india_club";
 
-    const normalizedCourtId =
-      courtId && courtId.includes("2") ? "court_2" : "court_1";
+    const normalizedCourtId = CourtsService.normalizeCourtId(courtId);
     courtId = normalizedCourtId;
     let court = await ManagerRepository.getCourtById(normalizedCourtId);
 
@@ -1211,11 +1211,17 @@ export class ManagerService {
         client,
       );
 
-      const hostRes = await client.query(`SELECT name FROM public.users WHERE id = $1;`, [game.creator_id]);
+      const hostRes = await client.query(
+        `SELECT name FROM public.users WHERE id = $1;`,
+        [game.creator_id],
+      );
       const hostName = hostRes.rows[0]?.name || "Host Player";
-      const totalRefundedSum = refundNotifications.reduce((acc, curr) => acc + curr.refundAmount, 0);
+      const totalRefundedSum = refundNotifications.reduce(
+        (acc, curr) => acc + curr.refundAmount,
+        0,
+      );
 
-      const cancelDetails = `Match "${game.title || "Match"}" (ID: ${gameId}) scheduled for ${game.match_date ? String(game.match_date).slice(0, 10) : ''} at ${game.start_time || ''} was CANCELLED by ${userRole === 1 ? "Admin" : "Manager"} "${managerName}". Host: ${hostName}. Amount: ₹${game.entry_fee || 0}. Total Refunded: ₹${totalRefundedSum.toFixed(2)}. Reason: ${cancellationReason}`;
+      const cancelDetails = `Match "${game.title || "Match"}" (ID: ${gameId}) scheduled for ${game.match_date ? String(game.match_date).slice(0, 10) : ""} at ${game.start_time || ""} was CANCELLED by ${userRole === 1 ? "Admin" : "Manager"} "${managerName}". Host: ${hostName}. Amount: ₹${game.entry_fee || 0}. Total Refunded: ₹${totalRefundedSum.toFixed(2)}. Reason: ${cancellationReason}`;
 
       await client.query(
         `INSERT INTO public.audit_logs (admin_id, admin_name, action, target, details)
@@ -1316,50 +1322,56 @@ export class ManagerService {
     );
 
     try {
-      const cameras = await CctvRepository.getCamerasByClub(
-        gameRes.rows[0].club_id,
-      );
-      const courtCamera =
-        cameras.find(
-          (c) => c.court_id === gameRes.rows[0].court_id && c.is_enabled,
-        ) ||
-        cameras.find((c) => c.is_enabled) ||
-        (await CctvRepository.getActiveCameraForCourt(
-          gameRes.rows[0].court_id,
-          gameRes.rows[0].club_id,
-        ));
-
-      if (courtCamera) {
-        await dbPool
-          .query(
-            `UPDATE public.cctv_cameras SET status = 'RECORDING', health_status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
-            [courtCamera.id],
-          )
-          .catch(async () => {
-            await dbPool
-              .query(
-                `UPDATE public.cctv_cameras SET health_status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
-                [courtCamera.id],
-              )
-              .catch(() => {});
-          });
-
-        CctvService.startMatchRecording(
-          managerId,
-          managerName,
-          1,
-          gameId,
-          courtCamera.id,
-        ).catch((err) => {
-          logger.error({ err }, `Async CCTV start failed for Game ${gameId}`);
-        });
+      if (originalGame.cctv_recording_enabled !== true) {
         logger.info(
-          `📹 [Manager] Started CCTV recording on camera ${courtCamera.id} for Match ${gameId}`,
+          `📹 [Manager] Skipping CCTV recording for Match ${gameId} (CCTV video recording not opted/paid)`,
         );
       } else {
-        logger.warn(
-          `⚠️ [Manager] No enabled CCTV camera found for court ${gameRes.rows[0].court_id} / club ${gameRes.rows[0].club_id}`,
+        const cameras = await CctvRepository.getCamerasByClub(
+          gameRes.rows[0].club_id,
         );
+        const courtCamera =
+          cameras.find(
+            (c) => c.court_id === gameRes.rows[0].court_id && c.is_enabled,
+          ) ||
+          cameras.find((c) => c.is_enabled) ||
+          (await CctvRepository.getActiveCameraForCourt(
+            gameRes.rows[0].court_id,
+            gameRes.rows[0].club_id,
+          ));
+
+        if (courtCamera) {
+          await dbPool
+            .query(
+              `UPDATE public.cctv_cameras SET status = 'RECORDING', health_status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+              [courtCamera.id],
+            )
+            .catch(async () => {
+              await dbPool
+                .query(
+                  `UPDATE public.cctv_cameras SET health_status = 'RECORDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+                  [courtCamera.id],
+                )
+                .catch(() => {});
+            });
+
+          CctvService.startMatchRecording(
+            managerId,
+            managerName,
+            1,
+            gameId,
+            courtCamera.id,
+          ).catch((err) => {
+            logger.error({ err }, `Async CCTV start failed for Game ${gameId}`);
+          });
+          logger.info(
+            `📹 [Manager] Started CCTV recording on camera ${courtCamera.id} for Match ${gameId}`,
+          );
+        } else {
+          logger.warn(
+            `⚠️ [Manager] No enabled CCTV camera found for court ${gameRes.rows[0].court_id} / club ${gameRes.rows[0].club_id}`,
+          );
+        }
       }
     } catch (cctvErr) {
       logger.error(
@@ -1498,12 +1510,9 @@ export class ManagerService {
       );
     }
 
-    const targetCourtId = (courtId || game.court_id || "court_1")
-      .toString()
-      .toLowerCase()
-      .includes("2")
-      ? "court_2"
-      : "court_1";
+    const targetCourtId = CourtsService.normalizeCourtId(
+      courtId || game.court_id || "court_1",
+    );
 
     const hasOverlap = await GamesRepository.checkCourtOverlap(
       targetCourtId,
@@ -1515,7 +1524,7 @@ export class ManagerService {
     if (hasOverlap) {
       throw new ApiError(
         409,
-        `Cannot reschedule match: Court ${targetCourtId === "court_2" ? "2" : "1"} is already booked or occupied for slot ${startTime} - ${endTime} on ${matchDate}`,
+        `Cannot reschedule match: ${CourtsService.getCourtDisplayName(targetCourtId)} is already booked or occupied for slot ${startTime} - ${endTime} on ${matchDate}`,
         "COURT_SLOT_CONFLICT",
       );
     }
@@ -1758,13 +1767,7 @@ export class ManagerService {
     await dbPool.query(
       `INSERT INTO public.audit_logs (admin_id, admin_name, user_id, action, target, details)
        VALUES ($1, $2, $3, 'BLOCK_PLAYER', $4, $5);`,
-      [
-        managerUserId,
-        managerName,
-        playerId,
-        user.name,
-        blockDetails,
-      ],
+      [managerUserId, managerName, playerId, user.name, blockDetails],
     );
 
     sendUserNotification(playerId, {
@@ -1805,13 +1808,7 @@ export class ManagerService {
     await dbPool.query(
       `INSERT INTO public.audit_logs (admin_id, admin_name, user_id, action, target, details)
        VALUES ($1, $2, $3, 'UNBLOCK_PLAYER', $4, $5);`,
-      [
-        managerUserId,
-        managerName,
-        playerId,
-        user.name,
-        unblockDetails,
-      ],
+      [managerUserId, managerName, playerId, user.name, unblockDetails],
     );
 
     sendUserNotification(playerId, {
@@ -1875,7 +1872,7 @@ export class ManagerService {
       );
       if (
         isClubManager.rows.length === 0 &&
-        game.club_id !== 'smash_up_india_club'
+        game.club_id !== "smash_up_india_club"
       ) {
         throw new ApiError(
           403,

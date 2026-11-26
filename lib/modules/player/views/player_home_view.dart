@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../app/routes/app_routes.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/notifications_controller.dart';
@@ -31,15 +34,35 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
   late final ScrollController _scrollController;
   final ValueNotifier<double> _headerProgress = ValueNotifier<double>(0.0);
 
+  late final PageController _headerPageController;
+  Timer? _headerTimer;
+  int _currentHeaderPage = 0;
+
   @override
   void initState() {
     super.initState();
     controller = Get.find<PlayerController>();
     _scrollController = ScrollController();
+    _headerPageController = PageController(initialPage: 1000);
+    _startHeaderAutoSlide();
+  }
+
+  void _startHeaderAutoSlide() {
+    _headerTimer?.cancel();
+    _headerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_headerPageController.hasClients) {
+        _headerPageController.nextPage(
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _headerTimer?.cancel();
+    _headerPageController.dispose();
     _scrollController.dispose();
     _headerProgress.dispose();
     super.dispose();
@@ -248,7 +271,9 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
                           _buildMatchHighlightsSection(context),
                           const SizedBox(height: 16),
                           _buildStatsSection(context),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
+                          _buildWhatsAppCommunityBanner(context),
+                          const SizedBox(height: 18),
                           _buildReferAdBanner(context),
                           const SizedBox(height: 24),
                         ],
@@ -536,9 +561,18 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
 
   Widget _buildHeaderBackground(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final String homeHeaderImagePath = isDark
-        ? 'assets/images/Home_page/dark.png'
-        : 'assets/images/Home_page/light.png';
+
+    final List<String> sliderImages = isDark
+        ? [
+            'assets/images/Slider/Home_page/dark.png',
+            'assets/images/Slider/find_Games/dark.png',
+            'assets/images/Slider/Register/dark.png',
+          ]
+        : [
+            'assets/images/Slider/Home_page/light.png',
+            'assets/images/Slider/find_Games/light.png',
+            'assets/images/Slider/Register/light.png',
+          ];
 
     return Stack(
       children: [
@@ -548,38 +582,184 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           child: SizedBox(
             height: 250,
             width: double.infinity,
-            child: Image.asset(
-              homeHeaderImagePath,
-              width: double.infinity,
-              height: 250,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color:
-                    isDark ? const Color(0xFF07120E) : const Color(0xFF1E1035),
-                child: const Icon(Icons.sports_soccer_rounded,
-                    color: Colors.white54, size: 40),
-              ),
+            child: PageView.builder(
+              controller: _headerPageController,
+              physics: const BouncingScrollPhysics(),
+              onPageChanged: (index) {
+                if (mounted) {
+                  setState(() {
+                    _currentHeaderPage = index % sliderImages.length;
+                  });
+                }
+              },
+              itemBuilder: (context, index) {
+                final imagePath = sliderImages[index % sliderImages.length];
+                return Image.asset(
+                  imagePath,
+                  width: double.infinity,
+                  height: 250,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  errorBuilder: (context, error, stackTrace) {
+                    final fallback = isDark
+                        ? 'assets/images/Home_page/dark.png'
+                        : 'assets/images/Home_page/light.png';
+                    return Image.asset(
+                      fallback,
+                      width: double.infinity,
+                      height: 250,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                );
+              },
             ),
           ),
         ),
         ClipRRect(
           borderRadius:
               const BorderRadius.vertical(bottom: Radius.circular(28)),
-          child: Container(
-            height: 250,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.50),
-                  Colors.black.withValues(alpha: 0.15),
-                  Colors.transparent,
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+          child: IgnorePointer(
+            child: Container(
+              height: 250,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.50),
+                    Colors.black.withValues(alpha: 0.15),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
+          ),
+        ),
+
+        // Left Navigation Arrow Button
+        Positioned(
+          left: 8,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  if (_headerPageController.hasClients) {
+                    _headerPageController.previousPage(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(30),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chevron_left_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Right Navigation Arrow Button
+        Positioned(
+          right: 8,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  if (_headerPageController.hasClients) {
+                    _headerPageController.nextPage(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(30),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Page Indicator Dots (...) Centered at Bottom
+        Positioned(
+          bottom: 14,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(sliderImages.length, (i) {
+              final isSelected = _currentHeaderPage == i;
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    if (_headerPageController.hasClients) {
+                      final currentPage =
+                          _headerPageController.page?.round() ?? 1000;
+                      final currentMod = currentPage % sliderImages.length;
+                      final diff = i - currentMod;
+                      _headerPageController.animateToPage(
+                        currentPage + diff,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: isSelected ? 22 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.white.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: [
+                          if (isSelected)
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
         ),
       ],
@@ -778,7 +958,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
               );
               return;
             }
-            Get.toNamed('/games/create');
+            Get.toNamed(Routes.bookSlot);
           },
           borderRadius: BorderRadius.circular(30),
           child: Padding(
@@ -817,7 +997,7 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
       {
         'icon': Icons.stadium_rounded,
         'title': 'Book Pitch',
-        'route': '/games/create',
+        'route': Routes.bookSlot,
       },
       {
         'icon': Icons.stadium_outlined,
@@ -841,7 +1021,8 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
             child: InkWell(
               onTap: route.isNotEmpty
                   ? () {
-                      if (route == '/games/create' &&
+                      if ((route == Routes.bookSlot ||
+                              route == '/games/create') &&
                           Get.isRegistered<ConnectivityService>() &&
                           !ConnectivityService.to.isConnected.value) {
                         ErrorHandler.showErrorSnackBar(
@@ -1207,6 +1388,174 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
     );
   }
 
+  Future<void> _shareNativeAppOptions() async {
+    const text =
+        '🎾 Smash Up India! Join me on Smash Up India to book Pickle & Padel court slots easily. Download now: https://smashupindia.in';
+
+    try {
+      await Share.share(
+        text,
+        subject: 'Smash Up India - Pickle & Padel Court Booking App',
+      );
+    } catch (e) {
+      if (e.toString().contains('MissingPluginException')) {
+        ErrorHandler.showWarningSnackBar(
+          'App Restart Required',
+          'Share plugin was installed. Please stop and restart the app to enable native sharing across all apps.',
+        );
+      } else {
+        ErrorHandler.showErrorSnackBar(
+            'Share Error', 'Could not open share options: $e');
+      }
+    }
+  }
+
+  Future<void> _openWhatsAppCommunity() async {
+    final Uri url =
+        Uri.parse('https://whatsapp.com/channel/0029Va9pWnD5Ejy6K369WH1C');
+    try {
+      final launched = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        await launchUrl(
+          url,
+          mode: LaunchMode.platformDefault,
+        );
+      }
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar(
+          'Error', 'Could not open WhatsApp community link.');
+    }
+  }
+
+  Widget _buildWhatsAppCommunityBanner(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const whatsappColor = Color(0xFF25D366);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: whatsappColor.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: whatsappColor.withValues(alpha: isDark ? 0.15 : 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => _openWhatsAppCommunity(),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: whatsappColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.groups_rounded,
+                    color: whatsappColor,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Join WhatsApp Community',
+                            style: TextStyle(
+                              color: context.textPrimary,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: whatsappColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Official',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: whatsappColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Live match updates, announcements & community chats',
+                        style: TextStyle(
+                          color: context.textSecondary,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: whatsappColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        'Join',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildReferAdBanner(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final String referImagePath = isDark
@@ -1225,15 +1574,23 @@ class _PlayerHomeViewState extends State<PlayerHomeView> {
           ),
         ],
       ),
-      child: ClipRRect(
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        child: Image.asset(
-          referImagePath,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return const SizedBox.shrink();
-          },
+        child: InkWell(
+          onTap: () => _shareNativeAppOptions(),
+          borderRadius: BorderRadius.circular(16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              referImagePath,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
         ),
       ),
     );

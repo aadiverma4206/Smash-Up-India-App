@@ -49,9 +49,7 @@ const envSchema = z.object({
   RAZORPAY_KEY_SECRET: z.string().optional().default(""),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(""),
   RESEND_API_KEY: z.string().optional().default(""),
-  EMAIL_FROM: z
-    .string()
-    .default("SMASH UP INDIA <no-reply@smashupindia.com>"),
+  EMAIL_FROM: z.string().default("SMASH UP INDIA <no-reply@smashupindia.com>"),
 
   BACKEND_URL: z.string().default("http://10.0.2.2:8599"),
   AUTO_FREE_PORT: z.string().optional().default("true"),

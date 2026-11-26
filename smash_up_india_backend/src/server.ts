@@ -35,7 +35,10 @@ process.on("unhandledRejection", (reason: any) => {
 
 const PORT = env.PORT || "8599";
 
-export const isPortInUse = (port: number, host = "0.0.0.0"): Promise<boolean> => {
+export const isPortInUse = (
+  port: number,
+  host = "0.0.0.0",
+): Promise<boolean> => {
   return new Promise((resolve) => {
     const tester = net
       .createServer()
@@ -59,7 +62,9 @@ const freePortIfOccupied = async (port: number): Promise<boolean> => {
     return true;
   }
 
-  logger.info(`🔍 Port ${port} is currently occupied. Attempting to auto-free port...`);
+  logger.info(
+    `🔍 Port ${port} is currently occupied. Attempting to auto-free port...`,
+  );
 
   if (process.platform === "win32") {
     try {
@@ -91,13 +96,18 @@ const freePortIfOccupied = async (port: number): Promise<boolean> => {
               execSync(`taskkill /PID ${pid} /F`, { stdio: "ignore" });
               logger.info(`✅ Terminated process PID ${pid}.`);
             } catch (kErr: any) {
-              logger.warn({ err: kErr.message }, `Could not terminate PID ${pid}`);
+              logger.warn(
+                { err: kErr.message },
+                `Could not terminate PID ${pid}`,
+              );
             }
           }
         }
       }
     } catch (netErr: any) {
-      logger.warn(`No process found or netstat lookup failed: ${netErr.message}`);
+      logger.warn(
+        `No process found or netstat lookup failed: ${netErr.message}`,
+      );
     }
   } else {
     try {
@@ -115,12 +125,16 @@ const freePortIfOccupied = async (port: number): Promise<boolean> => {
     await new Promise((r) => setTimeout(r, 200));
     const stillInUse = await isPortInUse(port);
     if (!stillInUse) {
-      logger.info(`✨ Port ${port} is now free and verified available for binding.`);
+      logger.info(
+        `✨ Port ${port} is now free and verified available for binding.`,
+      );
       return true;
     }
   }
 
-  logger.warn(`⚠️ Port ${port} could not be confirmed free within timeout. Proceeding with retry mechanism...`);
+  logger.warn(
+    `⚠️ Port ${port} could not be confirmed free within timeout. Proceeding with retry mechanism...`,
+  );
   return false;
 };
 
@@ -199,7 +213,10 @@ const startServer = async () => {
   try {
     initFirebaseAdmin();
   } catch (fbErr: any) {
-    logger.warn({ fbErr }, "⚠️ Firebase Admin SDK initialization notice on startup");
+    logger.warn(
+      { fbErr },
+      "⚠️ Firebase Admin SDK initialization notice on startup",
+    );
   }
 
   // 3. Start HTTP server with resilient retries

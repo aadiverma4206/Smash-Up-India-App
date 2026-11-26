@@ -365,7 +365,14 @@ export class CctvRecordingService {
       throw new ApiError(404, `Match not found: ${gameId}`, "MATCH_NOT_FOUND");
     }
     const game = gameRes.rows[0];
-    const clubId = params.clubId || game.club_id || 'smash_up_india_club';
+    if (!game.cctv_recording_enabled) {
+      throw new ApiError(
+        403,
+        "CCTV video recording was not opted/paid for this booking (₹100 extra required)",
+        "CCTV_NOT_PURCHASED",
+      );
+    }
+    const clubId = params.clubId || game.club_id || "smash_up_india_club";
     const courtId = params.courtId || game.court_id || "court_1";
     const title = matchTitle || game.title || `Match - ${gameId}`;
     let channel = params.channel;
@@ -913,7 +920,7 @@ export class CctvRecordingService {
         isManual,
         durationSeconds,
         localPath,
-        `recordings/${rec.club_id || 'smash_up_india_club'}/${safeFilename}`,
+        `recordings/${rec.club_id || "smash_up_india_club"}/${safeFilename}`,
         recordingId,
       ],
     );
@@ -963,7 +970,7 @@ export class CctvRecordingService {
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'AVAILABLE');`,
         [
           actualGameId,
-          rec.club_id || rec.g_club_id || 'smash_up_india_club',
+          rec.club_id || rec.g_club_id || "smash_up_india_club",
           rec.court_id || rec.g_court_id || null,
           rec.camera_id || null,
           videoTitle,

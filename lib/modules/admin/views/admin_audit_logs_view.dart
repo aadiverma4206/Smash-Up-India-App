@@ -236,18 +236,16 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                             final targetMatch = (log.target ?? '')
                                 .toLowerCase()
                                 .contains(query);
-                            final playerMatch = parsed.playerName
-                                .toLowerCase()
-                                .contains(query);
+                            final playerMatch =
+                                parsed.playerName.toLowerCase().contains(query);
                             final emailMatch = parsed.playerEmail
                                 .toLowerCase()
                                 .contains(query);
                             final phoneMatch = parsed.playerPhone
                                 .toLowerCase()
                                 .contains(query);
-                            final matchTitleMatch = parsed.matchTitle
-                                .toLowerCase()
-                                .contains(query);
+                            final matchTitleMatch =
+                                parsed.matchTitle.toLowerCase().contains(query);
 
                             return actionMatch ||
                                 detailsMatch ||
@@ -336,20 +334,19 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                               } else if (item is AuditLogCardItem) {
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 10.0),
-                                  child:
-                                      _buildAuditLogCard(context, item.log),
+                                  child: _buildAuditLogCard(context, item.log),
                                 );
                               } else if (item is AuditLogLoadingItem) {
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(
                                       vertical: 16.0),
                                   child: Center(
-                                    child: controller
-                                            .isLoadingMoreAuditLogs.value
-                                        ? const CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.primary)
-                                        : const SizedBox.shrink(),
+                                    child:
+                                        controller.isLoadingMoreAuditLogs.value
+                                            ? const CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppColors.primary)
+                                            : const SizedBox.shrink(),
                                   ),
                                 );
                               }
@@ -381,8 +378,7 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
           allLogs.where((l) => l.parsed.isMatchCancelled).length;
       final countUserBlock =
           allLogs.where((l) => l.parsed.isUserBlockUnblock).length;
-      final countCreated =
-          allLogs.where((l) => l.parsed.isMatchCreated).length;
+      final countCreated = allLogs.where((l) => l.parsed.isMatchCreated).length;
       final countSystem = allLogs
           .where((l) =>
               !l.parsed.isMatchCancelled &&
@@ -399,11 +395,11 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
           children: [
             _buildFilterChip('ALL', 'All Events ($countAll)', current, isDark),
             const SizedBox(width: 8),
-            _buildFilterChip(
-                'CANCELLED', 'Match Cancelled ($countCancelled)', current, isDark),
-            const SizedBox(width: 8),
-            _buildFilterChip('USER_BLOCK', 'Player Block/Unblock ($countUserBlock)',
+            _buildFilterChip('CANCELLED', 'Match Cancelled ($countCancelled)',
                 current, isDark),
+            const SizedBox(width: 8),
+            _buildFilterChip('USER_BLOCK',
+                'Player Block/Unblock ($countUserBlock)', current, isDark),
             const SizedBox(width: 8),
             _buildFilterChip(
                 'CREATED', 'Match Created ($countCreated)', current, isDark),
@@ -461,7 +457,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 14.0, bottom: 8.0, left: 4.0, right: 4.0),
+      padding:
+          const EdgeInsets.only(top: 14.0, bottom: 8.0, left: 4.0, right: 4.0),
       child: Row(
         children: [
           Container(
@@ -475,7 +472,9 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF334155),
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF334155),
               ),
             ),
           ),
@@ -491,7 +490,9 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
             '${item.count} ${item.count == 1 ? "event" : "events"}',
             style: TextStyle(
               fontSize: 11,
-              color: isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B),
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : const Color(0xFF64748B),
             ),
           ),
         ],
@@ -862,7 +863,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00C853).withValues(alpha: isDark ? 0.15 : 0.05),
+            color:
+                const Color(0xFF00C853).withValues(alpha: isDark ? 0.15 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -1063,7 +1065,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E88E5).withValues(alpha: 0.12),
+                              color: const Color(0xFF1E88E5)
+                                  .withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
@@ -1161,9 +1164,8 @@ class _AdminAuditLogsViewState extends State<AdminAuditLogsView> {
       children: [
         Icon(icon,
             size: 13,
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : const Color(0xFF64748B)),
+            color:
+                isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B)),
         const SizedBox(width: 4),
         Expanded(
           child: Column(

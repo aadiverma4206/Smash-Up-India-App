@@ -965,6 +965,8 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
     return Obx(() {
       final court1Game = controller.court1FeaturedMatch;
       final court2Game = controller.court2FeaturedMatch;
+      final court3Game = controller.court3FeaturedMatch;
+      final padelCourtGame = controller.padelCourtFeaturedMatch;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1033,6 +1035,20 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             courtName: 'Court 2',
             courtNum: 2,
             game: court2Game,
+          ),
+          const SizedBox(height: 12),
+          _buildCourtFeaturedCard(
+            context,
+            courtName: 'Court 3',
+            courtNum: 3,
+            game: court3Game,
+          ),
+          const SizedBox(height: 12),
+          _buildCourtFeaturedCard(
+            context,
+            courtName: 'Padel Court 1',
+            courtNum: 4,
+            game: padelCourtGame,
           ),
         ],
       );
@@ -2329,6 +2345,26 @@ class _ManagerDashboardViewState extends State<ManagerDashboardView> {
             courtName: 'COURT 2',
             games: c2Games,
             badgeColor: Colors.deepPurple,
+          );
+        }),
+        const SizedBox(height: 16),
+        Obx(() {
+          final c3Games = controller.court3Games;
+          return _buildCourtSectionCard(
+            context,
+            courtName: 'COURT 3',
+            games: c3Games,
+            badgeColor: Colors.teal,
+          );
+        }),
+        const SizedBox(height: 16),
+        Obx(() {
+          final padelGames = controller.padelCourtGames;
+          return _buildCourtSectionCard(
+            context,
+            courtName: 'PADEL COURT 1',
+            games: padelGames,
+            badgeColor: const Color(0xFF8B5CF6),
           );
         }),
       ],

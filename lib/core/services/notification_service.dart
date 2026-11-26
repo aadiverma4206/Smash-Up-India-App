@@ -26,15 +26,21 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     // If data-only push arrives in background, trigger local notification for top bar
     if (message.notification == null && message.data.isNotEmpty) {
-      final title = message.data['title'] ?? message.data['name'] ?? 'Smash Up India';
+      final title =
+          message.data['title'] ?? message.data['name'] ?? 'Smash Up India';
       final body = message.data['body'] ?? message.data['message'] ?? '';
-      if (title.toString().trim().isNotEmpty || body.toString().trim().isNotEmpty) {
+      if (title.toString().trim().isNotEmpty ||
+          body.toString().trim().isNotEmpty) {
         final localNotif = FlutterLocalNotificationsPlugin();
-        const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+        const androidInit =
+            AndroidInitializationSettings('@mipmap/ic_launcher');
         const initSettings = InitializationSettings(android: androidInit);
         await localNotif.initialize(settings: initSettings);
 
-        final notifId = (message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch).abs() % 2147483647;
+        final notifId = (message.messageId?.hashCode ??
+                    DateTime.now().millisecondsSinceEpoch)
+                .abs() %
+            2147483647;
         await localNotif.show(
           id: notifId,
           title: title.toString(),
@@ -43,7 +49,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
             android: AndroidNotificationDetails(
               'high_importance_channel',
               'High Importance Notifications',
-              channelDescription: 'Channel used for high priority app notifications.',
+              channelDescription:
+                  'Channel used for high priority app notifications.',
               importance: Importance.max,
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',
@@ -129,7 +136,8 @@ class NotificationService extends GetxService with WidgetsBindingObserver {
     if (Get.isRegistered<AuthService>()) {
       ever(Get.find<AuthService>().isLoggedIn, (bool loggedIn) {
         if (loggedIn) {
-          AppLogger.info('🔑 User logged in -> Syncing FCM token with backend.');
+          AppLogger.info(
+              '🔑 User logged in -> Syncing FCM token with backend.');
           registerFcmTokenWithBackend();
         }
       });
@@ -185,8 +193,8 @@ class NotificationService extends GetxService with WidgetsBindingObserver {
           }
         } catch (_) {}
 
-        final androidPlugin = _localNotifications
-            ?.resolvePlatformSpecificImplementation<
+        final androidPlugin =
+            _localNotifications?.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
         await androidPlugin?.requestNotificationsPermission();
       }
@@ -237,7 +245,8 @@ class NotificationService extends GetxService with WidgetsBindingObserver {
           fcmToken.value = tokenToRegister;
         }
       } catch (e) {
-        AppLogger.warning('Failed to fetch FCM token on registration retry: $e');
+        AppLogger.warning(
+            'Failed to fetch FCM token on registration retry: $e');
       }
     }
 
@@ -384,7 +393,10 @@ class NotificationService extends GetxService with WidgetsBindingObserver {
           {
             'id': notifId,
             'title': notif?.title ?? message.data['title'] ?? 'Smash Up India',
-            'body': notif?.body ?? message.data['body'] ?? message.data['message'] ?? '',
+            'body': notif?.body ??
+                message.data['body'] ??
+                message.data['message'] ??
+                '',
             'type': message.data['type'] ?? 'SYSTEM',
             'data': message.data,
             'isRead': false,
@@ -449,10 +461,8 @@ class NotificationService extends GetxService with WidgetsBindingObserver {
           message.data['title'] ??
           message.data['name'] ??
           'Smash Up India';
-      final body = notif?.body ??
-          message.data['body'] ??
-          message.data['message'] ??
-          '';
+      final body =
+          notif?.body ?? message.data['body'] ?? message.data['message'] ?? '';
 
       final payloadRoute = message.data['route'] ?? '/notifications';
       final notifId = notif?.hashCode ?? message.messageId.hashCode;

@@ -20,21 +20,31 @@ int _parseInt(dynamic value, [int defaultValue = 0]) {
 String _parseCourtName(dynamic rawName, dynamic rawCourtId) {
   final nameStr = rawName?.toString().trim() ?? '';
   final idStr = rawCourtId?.toString().trim() ?? '';
+  final nameLower = nameStr.toLowerCase();
+  final idLower = idStr.toLowerCase();
 
-  if (nameStr.toLowerCase().contains('court 2') ||
-      idStr.contains('court_2') ||
-      idStr.endsWith('2')) {
+  if (nameLower.contains('padel') || idLower.contains('padel')) {
+    return nameStr.isNotEmpty ? nameStr : 'Padel Court 1';
+  }
+  if (nameLower.contains('court 3') ||
+      idLower.contains('court_3') ||
+      idLower.endsWith('3')) {
+    return 'Court 3';
+  }
+  if (nameLower.contains('court 2') ||
+      idLower.contains('court_2') ||
+      idLower.endsWith('2')) {
     return 'Court 2';
   }
-  if (nameStr.toLowerCase().contains('court 1') ||
-      idStr.contains('court_1') ||
-      idStr.endsWith('1')) {
+  if (nameLower.contains('court 1') ||
+      idLower.contains('court_1') ||
+      idLower.endsWith('1')) {
     return 'Court 1';
   }
-  if (nameStr.toLowerCase().contains('pitch 1')) {
+  if (nameLower.contains('pitch 1')) {
     return 'Court 1';
   }
-  if (nameStr.toLowerCase().contains('pitch 2')) {
+  if (nameLower.contains('pitch 2')) {
     return 'Court 2';
   }
   if (nameStr.isNotEmpty) {
@@ -147,6 +157,7 @@ class GameModel {
   final String? cancellationReason;
   final String? cancelledBy;
   final String? rejectionReason;
+  final bool cctvRecordingEnabled;
 
   GameModel({
     required this.id,
@@ -181,6 +192,7 @@ class GameModel {
     this.cancellationReason,
     this.cancelledBy,
     this.rejectionReason,
+    this.cctvRecordingEnabled = false,
   });
 
   String get hostDisplayName {
@@ -259,8 +271,8 @@ class GameModel {
       id: (json['id'] ?? json['game_id'] ?? '').toString(),
       title: (json['title'] ?? 'Pickle Match').toString(),
       clubId: (json['clubId'] ?? json['club_id'] ?? '').toString(),
-      clubName:
-          (json['clubName'] ?? json['club_name'] ?? 'Smash Up India').toString(),
+      clubName: (json['clubName'] ?? json['club_name'] ?? 'Smash Up India')
+          .toString(),
       courtId: json['courtId']?.toString() ?? json['court_id']?.toString(),
       courtName: _parseCourtName(
         json['courtName'] ?? json['court_name'],
@@ -325,6 +337,8 @@ class GameModel {
           json['cancelledBy']?.toString() ?? json['cancelled_by']?.toString(),
       rejectionReason: json['rejectionReason']?.toString() ??
           json['rejection_reason']?.toString(),
+      cctvRecordingEnabled: json['cctvRecordingEnabled'] == true ||
+          json['cctv_recording_enabled'] == true,
     );
   }
 

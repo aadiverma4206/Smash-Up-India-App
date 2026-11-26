@@ -394,6 +394,14 @@ export class CctvService {
       );
     }
 
+    if (!game.cctv_recording_enabled) {
+      throw new ApiError(
+        403,
+        "CCTV video recording was not opted/paid for this booking (₹100 extra required)",
+        "CCTV_NOT_PURCHASED",
+      );
+    }
+
     let camera: any = null;
     if (cameraId) {
       camera = await CctvRepository.getCameraById(cameraId);
@@ -877,7 +885,9 @@ export class CctvService {
     let baseOrigin = `http://127.0.0.1:${env.PORT || 8599}`;
     try {
       const rawTarget =
-        backendBaseUrl || env.BACKEND_URL || `http://127.0.0.1:${env.PORT || 8599}`;
+        backendBaseUrl ||
+        env.BACKEND_URL ||
+        `http://127.0.0.1:${env.PORT || 8599}`;
       const parsed = new URL(rawTarget);
       mediaServerHost = parsed.hostname;
       baseOrigin = parsed.origin;

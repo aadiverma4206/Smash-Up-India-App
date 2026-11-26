@@ -34,11 +34,16 @@ dependencies:
   google_fonts: ^6.2.1
   permission_handler: ^11.3.1
   url_launcher: ^6.3.1
+  share_plus: ^10.1.4
   intl: ^0.19.0
   logger: ^2.5.0
   flutter_dotenv: ^5.2.1
   internet_connection_checker_plus: ^2.5.2
   path_provider: ^2.1.5
+  open_file_plus: ^3.4.1+1
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  excel: ^4.0.6
   image_picker: ^1.1.2
   firebase_core: ^3.15.2
   firebase_messaging: ^15.2.10
@@ -79,3 +84,14 @@ flutter:
     - assets/images/find_Games/
     - assets/images/Login/
     - assets/images/Register/
+    - assets/images/Slider/
+    - assets/images/Slider/Home_page/
+    - assets/images/Slider/find_Games/
+    - assets/images/Slider/Register/
+    - assets/images/find_Games/
+    - assets/images/Login/
+    - assets/images/Register/
+    - assets/images/Slider/
+    - assets/images/Slider/Home_page/
+    - assets/images/Slider/find_Games/
+    - assets/images/Slider/Register/

@@ -325,7 +325,7 @@ export class PlayerRepository {
                 (SELECT gv.video_url FROM public.game_videos gv WHERE gv.game_id = g.id AND gv.status = 'AVAILABLE' ORDER BY gv.created_at ASC LIMIT 1),
                 g.video_playback_url
               ) as video_playback_url,
-              CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
+              CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END as court_name,
               c.name as club_name,
               COALESCE(gp.team, 'TEAM_A') as my_team, COALESCE(gp.position, 'MID') as my_position,
               CASE

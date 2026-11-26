@@ -20,9 +20,7 @@ const envSchema = z.object({
   RAZORPAY_KEY_SECRET: z.string().optional().default(""),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(""),
   RESEND_API_KEY: z.string().optional().default(""),
-  EMAIL_FROM: z
-    .string()
-    .default("SMASH UP INDIA <no-reply@smashupindia.com>"),
+  EMAIL_FROM: z.string().default("SMASH UP INDIA <no-reply@smashupindia.com>"),
 
   CAMERA_HOST: z.string().optional().default("192.168.1.2"),
   CAMERA_RTSP_PORT: z.coerce.number().default(554),

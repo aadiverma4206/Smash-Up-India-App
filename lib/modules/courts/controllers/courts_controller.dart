@@ -132,6 +132,28 @@ class CourtsController extends GetxController {
             city: 'Raipur',
             address: 'VIP Road, Raipur',
           ),
+          CourtModel(
+            id: 'court_3',
+            clubId: 'smash_up_india_club',
+            clubName: 'Smash Up India',
+            name: 'Court 3',
+            surfaceType: '3G Turf',
+            basePricePerHour: 1200.0,
+            status: 'AVAILABLE',
+            city: 'Raipur',
+            address: 'VIP Road, Raipur',
+          ),
+          CourtModel(
+            id: 'padel_court_1',
+            clubId: 'smash_up_india_club',
+            clubName: 'Smash Up India',
+            name: 'Padel Court 1',
+            surfaceType: '3G Turf',
+            basePricePerHour: 1200.0,
+            status: 'AVAILABLE',
+            city: 'Raipur',
+            address: 'VIP Road, Raipur',
+          ),
         ]);
       }
     } finally {
@@ -244,9 +266,8 @@ class CourtsController extends GetxController {
         final sCourt = (slot['courtId'] ?? slot['court_id'] ?? '')
             .toString()
             .toLowerCase();
-        if (sCourt.isNotEmpty) {
-          if (activeCourtId == 'court_1' && sCourt.contains('2')) continue;
-          if (activeCourtId == 'court_2' && sCourt.contains('1')) continue;
+        if (sCourt.isNotEmpty && sCourt != activeCourtId.toLowerCase()) {
+          continue;
         }
 
         final status = (slot['status'] ?? '').toString().toUpperCase();

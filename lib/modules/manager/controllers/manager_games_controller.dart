@@ -30,26 +30,36 @@ class ManagerGamesController extends GetxController {
   final Rxn<VideoModel> selectedVideo = Rxn<VideoModel>();
   final RxBool isLoadingVideos = false.obs;
 
+  bool _matchesCourtFilter(GameModel game, String filter) {
+    final f = filter.toLowerCase().trim();
+    if (f == 'all' || f.isEmpty) return true;
+    final cId = (game.courtId ?? '').toLowerCase().trim();
+    final cName = game.courtName.toLowerCase().trim();
+    if (f.contains('padel')) {
+      return cId.contains('padel') || cName.contains('padel');
+    }
+    if (cId.contains('padel') || cName.contains('padel')) {
+      return false;
+    }
+    if (f.contains('3')) {
+      return cId == 'court_3' || cName.contains('court 3') || cId.endsWith('3');
+    }
+    if (f.contains('2')) {
+      return cId == 'court_2' || cName.contains('court 2') || cId.endsWith('2');
+    }
+    if (f.contains('1')) {
+      return cId == 'court_1' || cName.contains('court 1') || cId.endsWith('1');
+    }
+    return cId == f || cName == f;
+  }
+
   Set<String> get scheduledMatchDates {
     final dates = <String>{};
     final courtFilter = selectedCourtFilter.value.toLowerCase().trim();
 
     for (final game in games) {
       if (game.matchDate.isNotEmpty) {
-        if (courtFilter != 'all' && courtFilter.isNotEmpty) {
-          final cId = (game.courtId ?? '').toLowerCase().trim();
-          final cName = game.courtName.toLowerCase().trim();
-
-          bool matchesCourt = cId == courtFilter || cName == courtFilter;
-          if (courtFilter.contains('1')) {
-            matchesCourt =
-                matchesCourt || cId.contains('1') || cName.contains('1');
-          } else if (courtFilter.contains('2')) {
-            matchesCourt =
-                matchesCourt || cId.contains('2') || cName.contains('2');
-          }
-          if (!matchesCourt) continue;
-        }
+        if (!_matchesCourtFilter(game, courtFilter)) continue;
 
         final dt = AppDateUtils.parseDate(game.matchDate);
         if (dt != null) {
@@ -68,20 +78,7 @@ class ManagerGamesController extends GetxController {
 
     for (final game in games) {
       if (game.matchDate.isNotEmpty) {
-        if (courtFilter != 'all' && courtFilter.isNotEmpty) {
-          final cId = (game.courtId ?? '').toLowerCase().trim();
-          final cName = game.courtName.toLowerCase().trim();
-
-          bool matchesCourt = cId == courtFilter || cName == courtFilter;
-          if (courtFilter.contains('1')) {
-            matchesCourt =
-                matchesCourt || cId.contains('1') || cName.contains('1');
-          } else if (courtFilter.contains('2')) {
-            matchesCourt =
-                matchesCourt || cId.contains('2') || cName.contains('2');
-          }
-          if (!matchesCourt) continue;
-        }
+        if (!_matchesCourtFilter(game, courtFilter)) continue;
 
         if (AppDateUtils.isMatchInFuture(game.matchDate, game.startTime)) {
           final dt = AppDateUtils.parseDate(game.matchDate);

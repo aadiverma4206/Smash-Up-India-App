@@ -160,7 +160,9 @@ export const runLifecycleCycle = async () => {
     await client.query("BEGIN");
 
     const startingGames = await client.query(
-      `SELECT g.id, c.club_id, g.court_id, g.title, g.match_date, g.start_time, g.end_time
+      `SELECT g.id, c.club_id, g.court_id, g.title, g.match_date, g.start_time, g.end_time,
+              COALESCE(g.cctv_recording_enabled, false) as cctv_recording_enabled,
+              g.created_by_player, g.creator_id
        FROM public.games g
        LEFT JOIN public.courts c ON c.id = g.court_id
        WHERE g.approval_status = 'APPROVED'
@@ -185,33 +187,60 @@ export const runLifecycleCycle = async () => {
       );
 
       try {
-        const camRes = await client.query(
-          `SELECT id, is_enabled FROM public.cctv_cameras
-           WHERE (court_id = $1 OR club_id = $2 OR court_id IS NULL)
-             AND is_enabled = true
-           ORDER BY (CASE WHEN court_id = $1 THEN 0 WHEN club_id = $2 THEN 1 ELSE 2 END)
-           LIMIT 1;`,
-          [game.court_id, game.club_id],
-        );
+        let shouldRecord = game.cctv_recording_enabled === true;
+        if (shouldRecord && game.created_by_player && game.creator_id) {
+          const paidCheck = await client.query(
+            `SELECT payment_status FROM public.game_players WHERE game_id = $1 AND user_id = $2 LIMIT 1;`,
+            [game.id, game.creator_id],
+          );
+          if (
+            paidCheck.rows.length === 0 ||
+            paidCheck.rows[0].payment_status !== "PAID"
+          ) {
+            shouldRecord = false;
+          }
+        }
 
-        if (camRes.rows.length > 0) {
-          const camera = camRes.rows[0];
-
-          const existingRec = await client.query(
-            `SELECT id FROM public.cctv_recordings WHERE game_id = $1 LIMIT 1;`,
-            [game.id],
+        if (shouldRecord) {
+          const camRes = await client.query(
+            `SELECT id, is_enabled FROM public.cctv_cameras
+             WHERE (court_id = $1 OR club_id = $2 OR court_id IS NULL)
+               AND is_enabled = true
+             ORDER BY (CASE WHEN court_id = $1 THEN 0 WHEN club_id = $2 THEN 1 ELSE 2 END)
+             LIMIT 1;`,
+            [game.court_id, game.club_id],
           );
 
-          if (existingRec.rows.length === 0) {
-            gamesToRecord.push({ gameId: game.id, cameraId: camera.id });
+          if (camRes.rows.length > 0) {
+            const camera = camRes.rows[0];
+
+            const existingRec = await client.query(
+              `SELECT id FROM public.cctv_recordings WHERE game_id = $1 LIMIT 1;`,
+              [game.id],
+            );
+
+            if (existingRec.rows.length === 0) {
+              gamesToRecord.push({ gameId: game.id, cameraId: camera.id });
+            }
           }
+        } else {
+          logger.info(
+            `📹 [LifecycleWorker] Skipping CCTV recording for Match ${game.id} (CCTV video recording not opted/paid)`,
+          );
         }
       } catch (cctvErr: any) {
         logger.error({ cctvErr }, `Failed to query camera for game ${game.id}`);
       }
 
       try {
-        const courtName = game.court_id === "court_2" ? "Court 2" : "Court 1";
+        const courtName =
+          game.court_id === "padel_court_1"
+            ? "Padel Court 1"
+            : game.court_id === "court_3"
+              ? "Court 3"
+              : game.court_id === "court_2"
+                ? "Court 2"
+                : "Court 1";
 
         const managers = await client.query(
           `SELECT user_id FROM public.club_managers WHERE club_id = $1;`,

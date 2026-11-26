@@ -93,6 +93,9 @@ class CreateGameController extends GetxController {
   final selectedPaymentMethod = 'RAZORPAY'.obs;
   final walletBalance = 0.0.obs;
 
+  static const double cctvRecordingExtraFee = 100.0;
+  final RxBool recordVideoWithCctv = false.obs;
+
   int get durationMinutes {
     if (startTime.value == null || endTime.value == null) return 90;
     final startM = startTime.value!.hour * 60 + startTime.value!.minute;
@@ -102,11 +105,16 @@ class CreateGameController extends GetxController {
     return diff;
   }
 
-  double get pitchBookingAmount {
+  double get basePitchAmount {
     final court = selectedCourt.value;
     final hourlyRate = court?.basePricePerHour ?? 1200.0;
     return (hourlyRate * (durationMinutes / 60.0)).roundToDouble();
   }
+
+  double get cctvExtraAmount =>
+      recordVideoWithCctv.value ? cctvRecordingExtraFee : 0.0;
+
+  double get pitchBookingAmount => basePitchAmount + cctvExtraAmount;
 
   @override
   void onInit() {
@@ -133,15 +141,22 @@ class CreateGameController extends GetxController {
     selectedDate.value = null;
     startTime.value = null;
     endTime.value = null;
+    recordVideoWithCctv.value = false;
 
     if (Get.arguments is Map) {
       final args = Get.arguments as Map;
-      if (args['courtId'] != null) {
-        final target = args['courtId'].toString().toLowerCase();
+      if (args['sport'] != null && args['sport'].toString().isNotEmpty) {
+        selectedGameTitle.value = args['sport'].toString();
+      }
+
+      final targetId = args['courtId']?.toString().toLowerCase() ?? '';
+      final targetName = args['courtName']?.toString().toLowerCase() ?? '';
+      if (targetId.isNotEmpty || targetName.isNotEmpty) {
         final match = availableCourts.firstWhereOrNull(
           (c) =>
-              c.id.toLowerCase() == target ||
-              c.name.toLowerCase().contains(target.contains('2') ? '2' : '1'),
+              (targetId.isNotEmpty && c.id.toLowerCase() == targetId) ||
+              (targetName.isNotEmpty && c.name.toLowerCase() == targetName) ||
+              (targetId.isNotEmpty && c.name.toLowerCase().contains(targetId)),
         );
         if (match != null) {
           selectedCourt.value = match;
@@ -231,7 +246,31 @@ class CreateGameController extends GetxController {
         address: 'VIP Road, Raipur',
       );
 
-      availableCourts.assignAll([court1, court2]);
+      final court3 = CourtModel(
+        id: 'court_3',
+        clubId: clubId,
+        clubName: clubName,
+        name: 'Court 3',
+        surfaceType: '3G Turf',
+        basePricePerHour: 1200.0,
+        status: 'AVAILABLE',
+        city: 'Raipur',
+        address: 'VIP Road, Raipur',
+      );
+
+      final padel1 = CourtModel(
+        id: 'padel_court_1',
+        clubId: clubId,
+        clubName: clubName,
+        name: 'Padel Court 1',
+        surfaceType: '3G Turf',
+        basePricePerHour: 1200.0,
+        status: 'AVAILABLE',
+        city: 'Raipur',
+        address: 'VIP Road, Raipur',
+      );
+
+      availableCourts.assignAll([court1, court2, court3, padel1]);
     }
 
     if (availableCourts.isNotEmpty) {
@@ -283,15 +322,75 @@ class CreateGameController extends GetxController {
     fetchCourtAvailability();
   }
 
+  String _resolveCourtId(CourtModel? court) {
+    if (court == null) return 'court_1';
+    final idLower = court.id.toLowerCase().trim();
+    final nameLower = court.name.toLowerCase().trim();
+    if (idLower.contains('padel') || nameLower.contains('padel')) {
+      return idLower.contains('padel') ? court.id : 'padel_court_1';
+    }
+    if (idLower == 'court_3' ||
+        idLower.contains('3') ||
+        nameLower.contains('3')) {
+      return 'court_3';
+    }
+    if (idLower == 'court_2' ||
+        idLower.contains('2') ||
+        nameLower.contains('2')) {
+      return 'court_2';
+    }
+    if (idLower == 'court_1' ||
+        idLower.contains('1') ||
+        nameLower.contains('1')) {
+      return 'court_1';
+    }
+    return court.id.isNotEmpty ? court.id : 'court_1';
+  }
+
+  String _resolveCourtName(CourtModel? court, String resolvedCourtId) {
+    if (court != null && court.name.trim().isNotEmpty) {
+      return court.name.trim();
+    }
+    switch (resolvedCourtId) {
+      case 'padel_court_1':
+        return 'Padel Court 1';
+      case 'court_3':
+        return 'Court 3';
+      case 'court_2':
+        return 'Court 2';
+      case 'court_1':
+      default:
+        return 'Court 1';
+    }
+  }
+
   void switchToAlternateCourt() {
     final current = selectedCourt.value;
-    final alt = availableCourts.firstWhereOrNull(
-      (c) =>
-          c.id != current?.id &&
-          c.name.toLowerCase() != current?.name.toLowerCase() &&
-          c.status.toUpperCase() == 'AVAILABLE',
+    final isPadelSelected =
+        selectedGameTitle.value.trim().toLowerCase() == 'padel';
+
+    final sameSportAlt = availableCourts.firstWhereOrNull(
+      (c) {
+        final isPadel = c.id.toLowerCase().contains('padel') ||
+            c.name.toLowerCase().contains('padel');
+        return isPadel == isPadelSelected &&
+            c.id != current?.id &&
+            c.name.toLowerCase() != current?.name.toLowerCase() &&
+            c.status.toUpperCase() == 'AVAILABLE';
+      },
     );
+
+    final alt = sameSportAlt ??
+        availableCourts.firstWhereOrNull(
+          (c) =>
+              c.id != current?.id &&
+              c.name.toLowerCase() != current?.name.toLowerCase() &&
+              c.status.toUpperCase() == 'AVAILABLE',
+        );
     if (alt != null) {
+      final isAltPadel = alt.id.toLowerCase().contains('padel') ||
+          alt.name.toLowerCase().contains('padel');
+      selectedGameTitle.value = isAltPadel ? 'Padel' : 'Pickle';
       selectCourt(alt);
     }
   }
@@ -313,10 +412,7 @@ class CreateGameController extends GetxController {
       return;
     }
 
-    final courtId = (court.name.toLowerCase().contains('2') ||
-            court.id.toLowerCase().contains('2'))
-        ? 'court_2'
-        : 'court_1';
+    final courtId = _resolveCourtId(court);
     final dateStr = AppDateUtils.formatIsoDate(date);
 
     isFetchingSlots.value = true;
@@ -445,12 +541,48 @@ class CreateGameController extends GetxController {
     fetchCourtAvailability();
   }
 
-  void updateStartTime(TimeOfDay newStart) {
+  void setSlotRange(TimeOfDay? newStart, TimeOfDay? newEnd) {
     startTime.value = newStart;
-    final startMinutes = newStart.hour * 60 + newStart.minute;
-    final autoEndMinutes = (startMinutes + 90) % (24 * 60);
-    endTime.value =
-        TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
+    endTime.value = newEnd;
+    recheckSlotCollision();
+  }
+
+  void setDurationInMinutes(int minutes) {
+    if (startTime.value == null) {
+      final now = DateTime.now();
+      final nextStartHour = (now.hour + 1) % 24;
+      startTime.value = TimeOfDay(hour: nextStartHour, minute: 0);
+    }
+    final startM = startTime.value!.hour * 60 + startTime.value!.minute;
+    final endM = (startM + minutes) % (24 * 60);
+    endTime.value = TimeOfDay(hour: endM ~/ 60, minute: endM % 60);
+    recheckSlotCollision();
+  }
+
+  void updateStartTime(TimeOfDay newStart, {bool autoAdjustEndTime = false}) {
+    final startM = newStart.hour * 60 + newStart.minute;
+    if (startM > 0 && startM < 6 * 60) {
+      ErrorHandler.showErrorSnackBar(
+        'Closed Hours',
+        'Bookings are not allowed between 12:01 AM and 5:59 AM. Turf open hours are 6:00 AM to 12:00 AM (midnight).',
+      );
+      return;
+    }
+
+    startTime.value = newStart;
+
+    if (endTime.value == null || autoAdjustEndTime) {
+      final autoEndMinutes = (startM + 60) % (24 * 60);
+      endTime.value =
+          TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
+    } else {
+      final endM = endTime.value!.hour * 60 + endTime.value!.minute;
+      if (endM <= startM) {
+        final autoEndMinutes = (startM + 60) % (24 * 60);
+        endTime.value =
+            TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
+      }
+    }
     recheckSlotCollision();
   }
 
@@ -462,14 +594,25 @@ class CreateGameController extends GetxController {
     }
 
     final startMinutes = startTime.value!.hour * 60 + startTime.value!.minute;
-    final endMinutes = newEnd.hour * 60 + newEnd.minute;
+    var endMinutes = newEnd.hour * 60 + newEnd.minute;
+    if (endMinutes == 0 && startMinutes >= 6 * 60) {
+      endMinutes = 24 * 60; // 12:00 AM midnight
+    }
 
-    if (endMinutes <= startMinutes && newEnd.hour >= startTime.value!.hour) {
+    if (endMinutes > 0 && endMinutes < 6 * 60 && endMinutes != 24 * 60) {
+      ErrorHandler.showErrorSnackBar(
+        'Closed Hours',
+        'Bookings are not allowed between 12:01 AM and 5:59 AM. Turf open hours are 6:00 AM to 12:00 AM (midnight).',
+      );
+      return;
+    }
+
+    if (endMinutes <= startMinutes) {
       ErrorHandler.showErrorSnackBar(
         'Invalid End Time',
         'Pitch booking end time must be after start time (${AppDateUtils.formatTime(startTime.value!)})',
       );
-      final autoEndMinutes = (startMinutes + 90) % (24 * 60);
+      final autoEndMinutes = (startMinutes + 60) % (24 * 60);
       endTime.value =
           TimeOfDay(hour: autoEndMinutes ~/ 60, minute: autoEndMinutes % 60);
       recheckSlotCollision();
@@ -488,7 +631,7 @@ class CreateGameController extends GetxController {
 
     if (selectedCourt.value == null) {
       ErrorHandler.showErrorSnackBar(
-          'Validation Error', 'Please select Court 1 or Court 2');
+          'Validation Error', 'Please select a court');
       return false;
     }
 
@@ -828,11 +971,8 @@ class CreateGameController extends GetxController {
     }
 
     final court = selectedCourt.value;
-    final courtId = (court?.name.toLowerCase().contains('2') == true ||
-            court?.id.toLowerCase().contains('2') == true)
-        ? 'court_2'
-        : 'court_1';
-    final courtName = courtId == 'court_2' ? 'Court 2' : 'Court 1';
+    final courtId = _resolveCourtId(court);
+    final courtName = _resolveCourtName(court, courtId);
 
     final dateStr = selectedDate.value != null
         ? AppDateUtils.formatIsoDate(selectedDate.value!)
@@ -849,8 +989,7 @@ class CreateGameController extends GetxController {
     final sportTitle = selectedGameTitle.value.trim().isNotEmpty
         ? selectedGameTitle.value.trim()
         : 'Pickle';
-    final formatKey =
-        sportTitle.toLowerCase() == 'padel' ? '5v5' : '11v11';
+    final formatKey = sportTitle.toLowerCase() == 'padel' ? '5v5' : '11v11';
 
     try {
       final newGame = await repository.createGame({
@@ -866,6 +1005,7 @@ class CreateGameController extends GetxController {
         'startTime': startStr,
         'endTime': endStr,
         'description': descriptionController.text.trim(),
+        'cctvRecordingEnabled': recordVideoWithCctv.value,
         'paymentMethod': selectedPaymentMethod.value,
         if (walletPin != null && walletPin.isNotEmpty) 'walletPin': walletPin,
         if (paymentId != null) 'paymentReference': paymentId,

@@ -28,10 +28,7 @@ export const getActivityLogsSchema = z.object({
 
 export const createPlayerGameSchema = z.object({
   body: z.object({
-    title: z
-      .string()
-      .min(3, "Game title is required")
-      .default("Pickle Match"),
+    title: z.string().min(3, "Game title is required").default("Pickle Match"),
     clubId: z.string().min(1, "Club ID is required"),
     courtId: z.string().min(1, "Court ID is required"),
     format: z
@@ -68,6 +65,7 @@ export const createPlayerGameSchema = z.object({
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
     description: z.string().optional(),
+    cctvRecordingEnabled: z.boolean().optional().default(false),
     paymentMethod: z.string().optional(),
     paymentReference: z.string().optional(),
     walletPin: z.string().optional(),

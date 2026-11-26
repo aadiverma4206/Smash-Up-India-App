@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { dbPool } from "../../config/db.config.js";
 import { GamesRepository } from "./games.repository.js";
+import { CourtsService } from "../courts/courts.service.js";
 import { getSignedPlaybackUrl } from "../../services/storage.service.js";
 import {
   joinGameWithWallet,
@@ -172,6 +173,7 @@ export class GamesService {
       startTime: string;
       endTime: string;
       description?: string;
+      cctvRecordingEnabled?: boolean;
       paymentMethod?: string;
       paymentReference?: string;
       walletPin?: string;
@@ -196,23 +198,22 @@ export class GamesService {
         ? "MANAGER"
         : "ADMIN";
 
-    data.clubId = 'smash_up_india_club';
+    data.clubId = "smash_up_india_club";
 
     const courtInput = (data.courtId || (data as any).courtName || "")
       .toString()
-      .toLowerCase();
-    data.courtId = courtInput.includes("2") ? "court_2" : "court_1";
+      .trim();
+    data.courtId = CourtsService.normalizeCourtId(courtInput);
 
     const courtRes = await dbPool.query(
       `SELECT id, name, club_id, status FROM public.courts WHERE id = $1;`,
       [data.courtId],
     );
     if (courtRes.rows.length === 0) {
-      await dbPool.query(
-        `INSERT INTO public.courts (id, club_id, name, environment, surface, base_price, status)
-         VALUES ($1, 'smash_up_india_club', $2, 'Outdoor', '3G Turf', 1200.00, 'AVAILABLE')
-         ON CONFLICT (id) DO NOTHING;`,
-        [data.courtId, data.courtId === "court_2" ? "Court 2" : "Court 1"],
+      throw new ApiError(
+        404,
+        `Selected court (${data.courtId}) not found`,
+        "COURT_NOT_FOUND",
       );
     } else {
       const cStatus = (courtRes.rows[0].status || "").toUpperCase();
@@ -224,6 +225,8 @@ export class GamesService {
         );
       }
     }
+    const resolvedCourtName =
+      courtRes.rows[0].name || CourtsService.getCourtDisplayName(data.courtId);
 
     const formatKey = (data.format || "11v11").toLowerCase().trim();
     const expectedPlayers = FORMAT_PLAYER_COUNTS[formatKey] || 22;
@@ -240,6 +243,28 @@ export class GamesService {
       data.entryFee !== undefined ? Number(data.entryFee) : 200.0;
     if (entryFee < 0) {
       throw new ApiError(400, "Entry fee cannot be negative");
+    }
+
+    const cctvRecordingEnabled = Boolean(data.cctvRecordingEnabled);
+    const cctvRecordingFee = cctvRecordingEnabled ? 100.0 : 0.0;
+    if (isPlayerCreator && cctvRecordingEnabled) {
+      if (entryFee < cctvRecordingFee) {
+        throw new ApiError(
+          400,
+          "CCTV video recording requires ₹100 extra payment",
+          "CCTV_PAYMENT_REQUIRED",
+        );
+      }
+      if (
+        data.paymentMethod !== "WALLET" &&
+        data.paymentMethod !== "RAZORPAY"
+      ) {
+        throw new ApiError(
+          400,
+          "Valid payment method (WALLET or RAZORPAY) is required for CCTV video recording",
+          "PAYMENT_REQUIRED",
+        );
+      }
     }
 
     const cleanDate = (data.matchDate || "").includes("T")
@@ -313,7 +338,7 @@ export class GamesService {
       if (overlapLock.rows.length > 0) {
         throw new ApiError(
           409,
-          `Court ${data.courtId === "court_2" ? "2" : "1"} was just booked by another player for the selected time slot (${data.startTime} - ${data.endTime})`,
+          `${resolvedCourtName} was just booked by another player for the selected time slot (${data.startTime} - ${data.endTime})`,
           "COURT_OCCUPIED",
         );
       }
@@ -328,7 +353,7 @@ export class GamesService {
       if (bookingOverlapLock.rows.length > 0) {
         throw new ApiError(
           409,
-          `Court ${data.courtId === "court_2" ? "2" : "1"} was just booked for the selected time slot (${data.startTime} - ${data.endTime})`,
+          `${resolvedCourtName} was just booked for the selected time slot (${data.startTime} - ${data.endTime})`,
           "COURT_OCCUPIED",
         );
       }
@@ -349,13 +374,15 @@ export class GamesService {
           startTime: data.startTime,
           endTime: data.endTime,
           description: data.description,
+          cctvRecordingEnabled,
+          cctvRecordingFee,
         },
         client,
       );
 
-      newGame.club_id = 'smash_up_india_club';
+      newGame.club_id = "smash_up_india_club";
       newGame.club_name = "Smash Up India";
-      newGame.court_name = data.courtId === "court_2" ? "Court 2" : "Court 1";
+      newGame.court_name = resolvedCourtName;
       newGame.max_players = maxPlayers;
       newGame.privacy = "PUBLIC";
       newGame.skill_requirement = skillReq;
@@ -510,7 +537,10 @@ export class GamesService {
       );
 
       try {
-        const creatorUserRes = await client.query(`SELECT name FROM public.users WHERE id = $1;`, [creatorUserId]);
+        const creatorUserRes = await client.query(
+          `SELECT name FROM public.users WHERE id = $1;`,
+          [creatorUserId],
+        );
         const creatorUserName = creatorUserRes.rows[0]?.name || creatorRoleName;
         const matchCreateDetails = `Match "${newGame.title || "Match"}" created by ${creatorUserName}. Host: ${creatorUserName}. Scheduled: ${data.matchDate} at ${data.startTime}. Entry Fee: ₹${entryFee}. Court: ${newGame.court_name || data.courtId}. Format: ${formatKey}`;
 
@@ -562,8 +592,7 @@ export class GamesService {
       const playerName = playerRes.rows[0]?.name || "Player";
       const formattedAmount = `₹${entryFee.toFixed(0)}`;
       const courtDisplayName =
-        newGame.court_name ||
-        (data.courtId === "court_2" ? "Court 2" : "Court 1");
+        newGame.court_name || CourtsService.getCourtDisplayName(data.courtId);
 
       const mgrRes = await dbPool.query(
         `SELECT DISTINCT u.id as user_id
@@ -571,11 +600,11 @@ export class GamesService {
          LEFT JOIN public.club_managers cm ON cm.user_id = u.id
          WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
             OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
-        [newGame.club_id || 'smash_up_india_club'],
+        [newGame.club_id || "smash_up_india_club"],
       );
 
       const notifTitle = "⚽ New Pitch Booking";
-      const notifBody = `Player "${playerName}" booked & created match "${newGame.title}" on ${courtDisplayName} (${cleanDate} ${cleanStart}). Amount Paid: ${formattedAmount} via ${data.paymentMethod || "WALLET"}.`;
+      const notifBody = `Player "${playerName}" booked & created match "${newGame.title}" on ${courtDisplayName} (${cleanDate} ${cleanStart}). Amount Paid: ${formattedAmount} via ${data.paymentMethod || "WALLET"}${cctvRecordingEnabled ? " (Includes ₹100 CCTV Video Recording)" : ""}.`;
 
       for (const mgr of mgrRes.rows) {
         await NotificationService.createNotification({
@@ -584,7 +613,7 @@ export class GamesService {
           body: notifBody,
           message: notifBody,
           type: "MATCH_BOOKING",
-          clubId: newGame.club_id || 'smash_up_india_club',
+          clubId: newGame.club_id || "smash_up_india_club",
           gameId: newGame.id,
           data: {
             gameId: newGame.id,
@@ -939,8 +968,7 @@ export class GamesService {
       const entryFee = Number(game.entry_fee || 0);
       const formattedAmount = `₹${entryFee.toFixed(0)}`;
       const courtDisplayName =
-        game.court_name ||
-        (game.court_id === "court_2" ? "Court 2" : "Court 1");
+        game.court_name || CourtsService.getCourtDisplayName(game.court_id);
 
       const mgrRes = await dbPool.query(
         `SELECT DISTINCT u.id as user_id
@@ -948,7 +976,7 @@ export class GamesService {
          LEFT JOIN public.club_managers cm ON cm.user_id = u.id
          WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
             OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
-        [game.club_id || 'smash_up_india_club'],
+        [game.club_id || "smash_up_india_club"],
       );
 
       const notifTitle = "⚽ Player Joined Match";
@@ -961,7 +989,7 @@ export class GamesService {
           body: notifBody,
           message: notifBody,
           type: "MATCH_JOINED",
-          clubId: game.club_id || 'smash_up_india_club',
+          clubId: game.club_id || "smash_up_india_club",
           gameId,
           data: {
             gameId,
@@ -1543,11 +1571,17 @@ export class GamesService {
       );
 
       try {
-        const totalRefundedSum = refundNotifications.reduce((acc, curr) => acc + curr.refundAmount, 0);
-        const hostUserRes = await client.query(`SELECT name FROM public.users WHERE id = $1;`, [game.creator_id]);
+        const totalRefundedSum = refundNotifications.reduce(
+          (acc, curr) => acc + curr.refundAmount,
+          0,
+        );
+        const hostUserRes = await client.query(
+          `SELECT name FROM public.users WHERE id = $1;`,
+          [game.creator_id],
+        );
         const hostName = hostUserRes.rows[0]?.name || "Host Player";
 
-        const hostCancelDetails = `Match "${game.title || "Match"}" (ID: ${gameId}) scheduled for ${game.match_date ? String(game.match_date).slice(0, 10) : ''} at ${game.start_time || ''} was CANCELLED by Host Player "${hostName}". Host: ${hostName}. Amount: ₹${game.entry_fee || 0}. Total Refunded: ₹${totalRefundedSum.toFixed(2)}. Reason: ${cancelReasonText}`;
+        const hostCancelDetails = `Match "${game.title || "Match"}" (ID: ${gameId}) scheduled for ${game.match_date ? String(game.match_date).slice(0, 10) : ""} at ${game.start_time || ""} was CANCELLED by Host Player "${hostName}". Host: ${hostName}. Amount: ₹${game.entry_fee || 0}. Total Refunded: ₹${totalRefundedSum.toFixed(2)}. Reason: ${cancelReasonText}`;
 
         await client.query(
           `INSERT INTO public.audit_logs (user_id, admin_name, action, target, details)
@@ -1754,15 +1788,14 @@ export class GamesService {
     // Notify managers
     try {
       const courtDisplayName =
-        game.court_name ||
-        (game.court_id === "court_2" ? "Court 2" : "Court 1");
+        game.court_name || CourtsService.getCourtDisplayName(game.court_id);
       const mgrRes = await dbPool.query(
         `SELECT DISTINCT u.id as user_id
          FROM public.users u
          LEFT JOIN public.club_managers cm ON cm.user_id = u.id
          WHERE (u.role_id = 2 AND u.status = 'ACTIVE')
             OR (cm.club_id = $1 AND u.status = 'ACTIVE');`,
-        [game.club_id || 'smash_up_india_club'],
+        [game.club_id || "smash_up_india_club"],
       );
 
       const notifTitle = "⚽ Player Added to Roster";
@@ -1775,7 +1808,7 @@ export class GamesService {
           body: notifBody,
           message: notifBody,
           type: "MATCH_JOINED",
-          clubId: game.club_id || 'smash_up_india_club',
+          clubId: game.club_id || "smash_up_india_club",
           gameId,
           data: {
             gameId,

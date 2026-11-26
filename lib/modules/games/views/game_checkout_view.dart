@@ -358,6 +358,22 @@ class GameCheckoutView extends StatelessWidget {
                       fontWeight: FontWeight.bold),
                 ),
               ),
+              if (controller.recordVideoWithCctv.value)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'CCTV Video Recording',
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
             ],
           ),
         ],
@@ -417,6 +433,22 @@ class GameCheckoutView extends StatelessWidget {
                       fontSize: 13)),
             ],
           ),
+          if (controller.recordVideoWithCctv.value) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('CCTV Video Recording',
+                    style:
+                        TextStyle(color: context.textSecondary, fontSize: 13)),
+                const Text('+ ₹100',
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14)),
+              ],
+            ),
+          ],
           Divider(color: context.borderColor, height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

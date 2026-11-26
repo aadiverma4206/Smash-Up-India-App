@@ -8,6 +8,7 @@ abstract class Routes {
   static const playerProfile = '/player/profile';
   static const games = '/games';
   static const findGames = '/games/find';
+  static const bookSlot = '/games/book-slot';
   static const createGame = '/games/create';
   static const gameCheckout = '/games/checkout';
   static const gameDetails = '/games/details';
@@ -17,6 +18,7 @@ abstract class Routes {
   static const playerHistoryStandalone = '/player/match-history/standalone';
   static const playerHistoryDetails = '/player/match-history/details';
   static const paymentHistory = '/player/payment-history';
+  static const playerPaymentDetail = '/player/payment-detail';
   static const wallet = '/wallet';
   static const courts = '/courts';
   static const managerPlayers = '/manager/players';

@@ -318,8 +318,7 @@ class AuditLogParsedData {
       if (val != null && val.isNotEmpty) return val;
     }
 
-    final byMatch2 = RegExp(
-            r'CANCELLED by (Manager|Admin)\s*"([^"]+)"',
+    final byMatch2 = RegExp(r'CANCELLED by (Manager|Admin)\s*"([^"]+)"',
             caseSensitive: false)
         .firstMatch(det);
     if (byMatch2 != null) {
@@ -327,7 +326,8 @@ class AuditLogParsedData {
       if (val != null && val.isNotEmpty) return val;
     }
 
-    final bySimple = RegExp(r'by (host player|manager|admin|user):?\s*([^,.\n]+)',
+    final bySimple = RegExp(
+            r'by (host player|manager|admin|user):?\s*([^,.\n]+)',
             caseSensitive: false)
         .firstMatch(det);
     if (bySimple != null) {
@@ -369,22 +369,25 @@ class AuditLogParsedData {
 
   String get scheduledTime {
     final det = rawLog.details ?? '';
-    final timeMatch =
-        RegExp(r'(scheduled for|Scheduled:?)\s*([^\n.,]+)', caseSensitive: false)
-            .firstMatch(det);
+    final timeMatch = RegExp(r'(scheduled for|Scheduled:?)\s*([^\n.,]+)',
+            caseSensitive: false)
+        .firstMatch(det);
     final val = _getGroup(timeMatch, 2) ?? _getGroup(timeMatch, 1);
     if (val != null && val.trim().isNotEmpty) {
       return val.trim();
     }
-    return rawLog.createdAt.isNotEmpty ? rawLog.createdAt : 'Scheduled Time N/A';
+    return rawLog.createdAt.isNotEmpty
+        ? rawLog.createdAt
+        : 'Scheduled Time N/A';
   }
 
   String get matchAmount {
     final det = rawLog.details ?? '';
-    final amtMatch = RegExp(r'Amount:\s*₹?(\d+(?:\.\d+)?)', caseSensitive: false)
-            .firstMatch(det) ??
-        RegExp(r'Fee:\s*₹?(\d+(?:\.\d+)?)', caseSensitive: false)
-            .firstMatch(det);
+    final amtMatch =
+        RegExp(r'Amount:\s*₹?(\d+(?:\.\d+)?)', caseSensitive: false)
+                .firstMatch(det) ??
+            RegExp(r'Fee:\s*₹?(\d+(?:\.\d+)?)', caseSensitive: false)
+                .firstMatch(det);
     final val = _getGroup(amtMatch, 1);
     if (val != null && val.isNotEmpty) {
       return '₹$val';
@@ -402,8 +405,9 @@ class AuditLogParsedData {
       if (val != null && val.isNotEmpty) return '₹$val';
     }
 
-    final refMatch2 = RegExp(r'₹?(\d+(?:\.\d+)?)\s*refunded', caseSensitive: false)
-        .firstMatch(det);
+    final refMatch2 =
+        RegExp(r'₹?(\d+(?:\.\d+)?)\s*refunded', caseSensitive: false)
+            .firstMatch(det);
     if (refMatch2 != null) {
       final val = _getGroup(refMatch2, 1);
       if (val != null && val.isNotEmpty) return '₹$val';
@@ -453,7 +457,8 @@ class AuditLogParsedData {
       if (val != null && val.trim().isNotEmpty) return val.trim();
     }
 
-    final nameMatch2 = RegExp(r'User\s+([A-Za-z0-9\s]+?)\s+was').firstMatch(det);
+    final nameMatch2 =
+        RegExp(r'User\s+([A-Za-z0-9\s]+?)\s+was').firstMatch(det);
     if (nameMatch2 != null) {
       final val = _getGroup(nameMatch2, 1);
       if (val != null && val.trim().isNotEmpty) return val.trim();
@@ -469,9 +474,9 @@ class AuditLogParsedData {
   String get playerEmail {
     final det = rawLog.details ?? '';
     final emailMatch = RegExp(
-            r'Email:\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
-            caseSensitive: false)
-        .firstMatch(det) ??
+                r'Email:\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+                caseSensitive: false)
+            .firstMatch(det) ??
         RegExp(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})')
             .firstMatch(det);
     final val = _getGroup(emailMatch, 1);
@@ -483,10 +488,9 @@ class AuditLogParsedData {
 
   String get playerPhone {
     final det = rawLog.details ?? '';
-    final phoneMatch =
-        RegExp(r'Phone:\s*(\+?\d{10,12})', caseSensitive: false)
-                .firstMatch(det) ??
-            RegExp(r'(\+?\d{10})').firstMatch(det);
+    final phoneMatch = RegExp(r'Phone:\s*(\+?\d{10,12})', caseSensitive: false)
+            .firstMatch(det) ??
+        RegExp(r'(\+?\d{10})').firstMatch(det);
     final val = _getGroup(phoneMatch, 1);
     if (val != null && val.isNotEmpty) {
       return val;
@@ -544,8 +548,9 @@ class AuditLogParsedData {
 
   String get createdBy {
     final det = rawLog.details ?? '';
-    final createdMatch = RegExp(r'created by\s+([^.\n,]+)', caseSensitive: false)
-        .firstMatch(det);
+    final createdMatch =
+        RegExp(r'created by\s+([^.\n,]+)', caseSensitive: false)
+            .firstMatch(det);
     if (createdMatch != null) {
       final val = _getGroup(createdMatch, 1);
       if (val != null && val.trim().isNotEmpty) return val.trim();
@@ -580,8 +585,9 @@ class AuditLogParsedData {
 
   String get entryFee {
     final det = rawLog.details ?? '';
-    final feeMatch = RegExp(r'Entry Fee:\s*₹?(\d+(?:\.\d+)?)', caseSensitive: false)
-        .firstMatch(det);
+    final feeMatch =
+        RegExp(r'Entry Fee:\s*₹?(\d+(?:\.\d+)?)', caseSensitive: false)
+            .firstMatch(det);
     final val = _getGroup(feeMatch, 1);
     if (val != null && val.isNotEmpty) {
       return '₹$val';

@@ -60,3 +60,9 @@ app.*.map.json
 /android/app/release
 *.apk
 *.aab
+
+smash-up-india-firebase.json
+
+*.service-account.json
+
+.env

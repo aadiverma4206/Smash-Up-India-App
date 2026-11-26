@@ -110,9 +110,8 @@ export const sendTestNotificationController = asyncHandler(
     const userId = req.user?.id;
     if (!userId) throw new ApiError(401, "Unauthorized");
 
-    const { sendUserNotification } = await import(
-      "../../services/realtime.service.js"
-    );
+    const { sendUserNotification } =
+      await import("../../services/realtime.service.js");
 
     await sendUserNotification(userId, {
       title: "Smash Up India 🎾",

@@ -208,7 +208,7 @@ export class AdminService {
             g.created_at::text
           ) as match_time,
           COALESCE(c.name, 'Smash Up India') as club_name,
-          COALESCE(crt.name, CASE WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
+          COALESCE(crt.name, CASE WHEN g.court_id = 'padel_court_1' THEN 'Padel Court 1' WHEN g.court_id = 'court_3' THEN 'Court 3' WHEN g.court_id = 'court_2' THEN 'Court 2' ELSE 'Court 1' END) as court_name,
           CASE
             WHEN g.team_a_score IS NOT NULL AND g.team_b_score IS NOT NULL
               THEN CONCAT(g.team_a_score::text, ' - ', g.team_b_score::text)
