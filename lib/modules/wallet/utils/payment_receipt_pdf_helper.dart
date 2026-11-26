@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/wallet_models.dart';
 import '../../../core/utils/app_logger.dart';
@@ -315,12 +315,12 @@ class PaymentReceiptPdfHelper {
       );
 
       try {
-        final result = await OpenFile.open(filePath);
+        final result = await OpenFilex.open(filePath);
         if (result.type == ResultType.done) {
           return;
         }
       } catch (openError) {
-        AppLogger.warning('OpenFile.open failed: $openError');
+        AppLogger.warning('OpenFilex.open failed: $openError');
       }
 
       try {
